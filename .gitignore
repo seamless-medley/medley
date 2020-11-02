@@ -2,5 +2,11 @@ node_modules/
 build/
 dist/
 .vscode/
+.vs/
 
 package-lock.json
+
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
