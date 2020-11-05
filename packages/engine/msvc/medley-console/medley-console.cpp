@@ -2,6 +2,8 @@
 #include <JuceHeader.h>
 #include <Windows.h>
 
+#include <TrackBuffer.h>
+
 using namespace juce;
 
 class TrackPointer;
@@ -175,35 +177,24 @@ class TrackInfo {
 ////////////////////////////////////////////////////////
 
 namespace medley {
-
-    class TrackSource : public AudioTransportSource {
-    public:
-        TrackSource(AudioFormatManager* formatMgr, const File& file) {
-            reader = formatMgr->createReaderFor(file);
-            formatSource = new AudioFormatReaderSource(reader, false);
-            setSource(formatSource);
-        }
-
-        ~TrackSource() {
-            setSource(nullptr);
-            delete formatSource;
-            delete reader;
-        }
-
-        void setPositionFractional(double fraction) {
-            setPosition(getLengthInSeconds() * fraction);
-        }
-
-        AudioFormatReader* reader = nullptr;
-        AudioFormatReaderSource* formatSource = nullptr;
-    };
-
     class Medley {
     public:
 
-        Medley() {
+        Medley()
+            :
+            thread("Read-ahead-thread")
+        {
             deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
             formatMgr.registerBasicFormats();
+
+            fileSource = new TrackBuffer(formatMgr, thread);
+            thread.startThread(8);
+
+            mixer.addInputSource(fileSource, false);
+
+            mainOut.setSource(&mixer);
+            deviceMgr.addAudioCallback(&mainOut);
+            /////
 
             OPENFILENAMEW of{};
             wchar_t files[512]{};
@@ -218,26 +209,29 @@ namespace medley {
             of.lpstrTitle = L"Open file";
             of.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY | OFN_ENABLESIZING;
 
-            if (GetOpenFileName(&of)) {
-                fileSource = new TrackSource(&formatMgr, File(files));
-                fileSource->start();
-                mixer.addInputSource(fileSource, true);
-            }
-            
-            mainOut.setSource(&mixer);
-
-            deviceMgr.addAudioCallback(&mainOut);
+            if (GetOpenFileName(&of)) {                
+                fileSource->loadTrack(File(files));
+                fileSource->start();                
+            }           
         }
 
         ~Medley() {
+            mixer.removeAllInputs();
+            mainOut.setSource(nullptr);
+
+            delete fileSource;
+
+            thread.stopThread(100);
             deviceMgr.closeAudioDevice();
         }
 
         AudioDeviceManager deviceMgr;
         AudioFormatManager formatMgr;
-        TrackSource* fileSource;
+        TrackBuffer* fileSource = nullptr;
         MixerAudioSource mixer;
         AudioSourcePlayer mainOut;
+
+        TimeSliceThread thread;
     };
 }
 
