@@ -4,13 +4,14 @@
 
 using namespace juce;
 
+// TODO: Implement AudioSource as composition
 class TrackBuffer : public AudioTransportSource {
 public:
     class Callback {
     public:
-        virtual void finished() = 0;
+        virtual void finished(TrackBuffer& sender) = 0;
 
-        virtual void unloaded() = 0;
+        virtual void unloaded(TrackBuffer& sender) = 0;
     };
 
     TrackBuffer(AudioFormatManager& formatMgr, TimeSliceThread& readAheadThread);
@@ -26,6 +27,10 @@ public:
     void setPositionFractional(double fraction);
 
     void getNextAudioBlock(const AudioSourceChannelInfo& info) override;
+
+    void addListener(Callback* cb) {
+        listeners.add(cb);
+    }
 
 private:
     AudioFormatManager& formatMgr;

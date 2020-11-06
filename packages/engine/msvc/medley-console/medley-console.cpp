@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include <Windows.h>
 
-#include <TrackBuffer.h>
+#include "TrackBuffer.h"
 
 using namespace juce;
 
@@ -27,8 +27,12 @@ class EngineChannel : public EngineObject {
     virtual EngineBuffer* getEngineBuffer() = 0;
 };
 
-class EngineDeck : public EngineChannel {
+class EnginePregain : public EngineObject {
 
+};
+
+class EngineDeck : public EngineChannel {
+    // Use EnginePregain
 };
 
 class BasePlayer {
@@ -177,27 +181,35 @@ class TrackInfo {
 ////////////////////////////////////////////////////////
 
 namespace medley {
-    class Medley {
+    class Medley : public TrackBuffer::Callback {
     public:
 
         Medley()
             :
-            thread("Read-ahead-thread")
+            readAheadThread("Read-ahead-thread")
         {
             deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
             formatMgr.registerBasicFormats();
 
-            fileSource = new TrackBuffer(formatMgr, thread);
-            thread.startThread(8);
+            deck1 = new TrackBuffer(formatMgr, readAheadThread);
+            deck2 = new TrackBuffer(formatMgr, readAheadThread);
 
-            mixer.addInputSource(fileSource, false);
+            deck1->addListener(this);
+            deck2->addListener(this);
+
+            readAheadThread.startThread(8);
+
+            mixer.addInputSource(deck1, false);
+            mixer.addInputSource(deck2, false);
 
             mainOut.setSource(&mixer);
             deviceMgr.addAudioCallback(&mainOut);
             /////
 
             OPENFILENAMEW of{};
-            wchar_t files[512]{};
+            HeapBlock<WCHAR> files;
+
+            files.calloc(static_cast<size_t> (32768) + 1);
 
             of.lStructSize = OPENFILENAME_SIZE_VERSION_400W;
             of.hwndOwner = 0;
@@ -207,31 +219,69 @@ namespace medley {
             of.nMaxFile = 32768;
             of.lpstrInitialDir = nullptr;
             of.lpstrTitle = L"Open file";
-            of.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY | OFN_ENABLESIZING;
+            of.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY | OFN_ENABLESIZING | OFN_ALLOWMULTISELECT;
+            
+            if (GetOpenFileName(&of)) {
+                if (of.nFileOffset > 0 && files[of.nFileOffset - 1] == 0) {
+                    const wchar_t* filename = files + of.nFileOffset;
 
-            if (GetOpenFileName(&of)) {                
-                fileSource->loadTrack(File(files));
-                fileSource->start();                
-            }           
+
+                    while (*filename != 0)
+                    {
+                        songs.push_back(File(String(files.get())).getChildFile(String(filename)));
+                        filename += wcslen(filename) + 1;
+                    }
+                }
+                else {
+                    songs.push_back(File(String(files.get())));
+                }               
+            }
+
+            loadNextTrack();
+        }
+
+        void loadNextTrack() {
+            auto deck = !deck1->isTrackLoaded() ? deck1 : (!deck2->isTrackLoaded() ? deck2 : nullptr);
+
+            if (deck && !songs.empty()) {
+                DBG("[loadNextTrack] " + songs.front().getFullPathName() + ", Using deck" + (deck == deck1 ? "1" : "2"));
+
+                deck->loadTrack(songs.front());
+                deck->start();
+
+                songs.erase(songs.begin());
+            }            
+        }
+
+        void finished(TrackBuffer& sender) override {
+            loadNextTrack();
+        }
+
+        void unloaded(TrackBuffer& sender) override {
+
         }
 
         ~Medley() {
             mixer.removeAllInputs();
             mainOut.setSource(nullptr);
 
-            delete fileSource;
+            delete deck1;
+            delete deck2;
 
-            thread.stopThread(100);
+            readAheadThread.stopThread(100);
             deviceMgr.closeAudioDevice();
         }
 
         AudioDeviceManager deviceMgr;
         AudioFormatManager formatMgr;
-        TrackBuffer* fileSource = nullptr;
+        TrackBuffer* deck1 = nullptr;
+        TrackBuffer* deck2 = nullptr;
         MixerAudioSource mixer;
         AudioSourcePlayer mainOut;
 
-        TimeSliceThread thread;
+        TimeSliceThread readAheadThread;
+        //
+        std::vector<File> songs;
     };
 }
 

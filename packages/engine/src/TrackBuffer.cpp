@@ -18,21 +18,27 @@ void TrackBuffer::loadTrack(const File& file)
     reader = formatMgr.createReaderFor(file);
 
     if (reader) {
+        DBG("[loadTrack] Creating Reader");
         formatSource = new AudioFormatReaderSource(reader, false);
 
         auto sampleRate = formatSource->getAudioFormatReader()->sampleRate;
-        setSource(formatSource, sampleRate * 0.25, &readAheadThread, sampleRate);
-        setPositionFractional(0.85);
+        setSource(formatSource, sampleRate * 2, &readAheadThread, sampleRate);
     }
     else {
         setSource(nullptr);
     }
+
+    DBG("[loadTrack] Done");
 }
 
 void TrackBuffer::unloadTrack()
 {
-    listeners.call([](Callback& cb) {
-        cb.unloaded();
+    if (!reader) {
+        return;
+    }
+
+    listeners.call([this](Callback& cb) {
+        cb.unloaded(*this);
      });
 
     setSource(nullptr);
@@ -54,13 +60,13 @@ void TrackBuffer::setPositionFractional(double fraction) {
 
 void TrackBuffer::getNextAudioBlock(const AudioSourceChannelInfo& info)
 {
-    auto hadFinished = hasStreamFinished();
+    auto wasPlaying = isPlaying();
 
     AudioTransportSource::getNextAudioBlock(info);
 
-    if (hadFinished && !hasStreamFinished()) {
-        listeners.call([](Callback& cb) {
-            cb.finished();
+    if (wasPlaying && !isPlaying()) {
+        listeners.call([this](Callback& cb) {
+            cb.finished(*this);
         });
 
         unloadTrack();
