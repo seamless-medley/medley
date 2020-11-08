@@ -181,22 +181,34 @@ class TrackInfo {
 ////////////////////////////////////////////////////////
 
 namespace medley {
+    class ITrack {
+    public:
+        virtual String& getFullPath() const = 0;
+        // TODO: ReplayGain
+    };
+
+    class ITrackMetadata {
+
+    };
+
     class Medley : public TrackBuffer::Callback {
     public:
 
         Medley()
             :
+            loadingThread("Loading Thread"),
             readAheadThread("Read-ahead-thread")
         {
             deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
             formatMgr.registerBasicFormats();
 
-            deck1 = new TrackBuffer(formatMgr, readAheadThread);
-            deck2 = new TrackBuffer(formatMgr, readAheadThread);
+            deck1 = new TrackBuffer(formatMgr, loadingThread, readAheadThread);
+            deck2 = new TrackBuffer(formatMgr, loadingThread, readAheadThread);
 
             deck1->addListener(this);
             deck2->addListener(this);
 
+            loadingThread.startThread();
             readAheadThread.startThread(8);
 
             mixer.addInputSource(deck1, false);
@@ -246,8 +258,7 @@ namespace medley {
             if (deck && !songs.empty()) {
                 DBG("[loadNextTrack] " + songs.front().getFullPathName() + ", Using deck" + (deck == deck1 ? "1" : "2"));
 
-                deck->loadTrack(songs.front());
-                deck->start();
+                deck->loadTrack(songs.front(), true);                
 
                 songs.erase(songs.begin());
             }            
@@ -268,6 +279,7 @@ namespace medley {
             delete deck1;
             delete deck2;
 
+            loadingThread.stopThread(100);
             readAheadThread.stopThread(100);
             deviceMgr.closeAudioDevice();
         }
@@ -279,6 +291,7 @@ namespace medley {
         MixerAudioSource mixer;
         AudioSourcePlayer mainOut;
 
+        TimeSliceThread loadingThread;
         TimeSliceThread readAheadThread;
         //
         std::vector<File> songs;
