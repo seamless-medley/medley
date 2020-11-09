@@ -13,12 +13,14 @@ Deck::Deck(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSl
     :
     loader(*this),
     scanningScheduler(*this),
+    playhead(*this),
     formatMgr(formatMgr),
     loadingThread(loadingThread),
     readAheadThread(readAheadThread)
 {
     loadingThread.addTimeSliceClient(&loader);
     loadingThread.addTimeSliceClient(&scanningScheduler);
+    readAheadThread.addTimeSliceClient(&playhead);
 }
 
 Deck::~Deck() {    
@@ -30,6 +32,14 @@ double Deck::getLengthInSeconds() const
 {
     if (sampleRate > 0.0)
         return (double)getTotalLength() / sampleRate;
+
+    return 0.0;
+}
+
+double Deck::getPositionInSeconds() const
+{
+    if (sampleRate > 0.0)
+        return (double)getNextReadPosition() / sampleRate;
 
     return 0.0;
 }
@@ -79,36 +89,36 @@ void Deck::unloadTrackInternal()
     inputStreamEOF = false;
     playing = false;
 
-    bool unloaded = false;
+    bool deckUnloaded = false;
 
     if (resamplerSource) {
         delete resamplerSource;
         resamplerSource = nullptr;
-        unloaded = true;
+        deckUnloaded = true;
     }
 
     if (bufferingSource) {
         delete bufferingSource;
         bufferingSource = nullptr;
-        unloaded = true;
+        deckUnloaded = true;
     }
 
     if (source) {
         delete source;
         source = nullptr;
-        unloaded = true;
+        deckUnloaded = true;
     }
 
     if (reader) {
         delete reader;
         reader = nullptr;
-        unloaded = true;
+        deckUnloaded = true;
     }
 
-    if (unloaded) {
+    if (deckUnloaded) {
         const ScopedLock sl(callbackLock);
         listeners.call([this](Callback& cb) {
-            cb.unloaded(*this);
+            cb.deckUnloaded(*this);
         });
     }
 }
@@ -144,10 +154,33 @@ void Deck::scanTrackInternal()
                 totalSamplesToPlay = endPosition;
                 DBG("New ending=" + String(totalSamplesToPlay / scanningReader->sampleRate));
             }
-        }        
+        }
 
         delete scanningReader;
+
+        calculateTransition();
     }
+}
+
+void Deck::calculateTransition()
+{
+    transitionStartPosition = lastAudibleSoundPosition / sourceSampleRate;
+    transitionEndPosition = transitionStartPosition;
+
+    // if (transitionTime > 0.0)
+    {
+        transitionStartPosition = jmax(2.0, transitionStartPosition - 4.0);
+        transitionCuePosition = jmax(0.0, transitionStartPosition - 2.0);
+    }
+}
+
+void Deck::firePositionChangeCalback(double position)
+{
+    const ScopedLock sl(callbackLock);
+
+    listeners.call([=](Callback& cb) {
+        cb.deckPosition(*this, position);
+    });
 }
 
 void Deck::setPosition(double newPosition)
@@ -168,7 +201,6 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
 
     if (resamplerSource != nullptr && !stopped)
     {
-        // DBG("Position: " + String(getNextReadPosition()));
         resamplerSource->getNextAudioBlock(info);        
 
         if (!playing)
@@ -207,7 +239,7 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
         DBG("STOPPED");
 
         listeners.call([this](Callback& cb) {
-            cb.finished(*this);
+            cb.deckFinished(*this);
         });
 
         unloadTrackInternal();
@@ -269,6 +301,10 @@ void Deck::start()
             playing = true;
             stopped = false;
             inputStreamEOF = false;
+
+            listeners.call([this](Callback& cb) {
+                cb.deckStarted(*this);
+            });
         }
     }
 }
@@ -359,6 +395,10 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
     if (oldResamplerSource != nullptr) {
         oldResamplerSource->releaseResources();
     }
+
+    if (newSource != nullptr) {
+        calculateTransition();
+    }
 }
 
 void Deck::releaseChainedResources()
@@ -407,9 +447,9 @@ void Deck::Loader::load(const File& file)
 
 int Deck::Scanner::useTimeSlice()
 {
-    if (doScan) {
+    if (shouldScan) {
         deck.scanTrackInternal();
-        doScan = false;
+        shouldScan = false;
     }
 
     return 100;
@@ -417,5 +457,20 @@ int Deck::Scanner::useTimeSlice()
 
 void Deck::Scanner::scan()
 {
-    doScan = true;
+    shouldScan = true;
+}
+
+int Deck::PlayHead::useTimeSlice()
+{
+    if (!deck.isPlaying()) {
+        return 250;
+    }
+
+    auto pos = deck.getPositionInSeconds();
+    if (lastPosition != pos) {
+        deck.firePositionChangeCalback(pos);
+        lastPosition = pos;
+    }
+
+    return 33;
 }

@@ -230,18 +230,15 @@ namespace medley {
             mainOut.setSource(&mixer);
             deviceMgr.addAudioCallback(&mainOut);          
 
-            loadNextTrack(nullptr);
+            loadNextTrack(nullptr, true);
         }
 
-        void loadNextTrack(Deck* currentDeck) {
+        void loadNextTrack(Deck* currentDeck, bool play) {
             auto deck = getAnotherDeck(currentDeck);
 
             if (deck && queue.count() > 0) {
                 auto track = queue.fetchNextTrack();
-
-                DBG("[loadNextTrack] " + track->getFullPath() + ", Using deck" + (deck == deck1 ? "1" : "2"));
-
-                deck->loadTrack(track->getFullPath(), true);
+                deck->loadTrack(track->getFullPath(), play);
             }            
         }
 
@@ -257,12 +254,55 @@ namespace medley {
             return (from == deck1) ? deck2 : deck1;
         }
 
-        void finished(Deck& sender) override {
-            loadNextTrack(&sender);
+        String getDeckName(Deck& deck) {
+            return String("deck") + String(&deck == deck1 ? "1" : "2");
         }
 
-        void unloaded(Deck& sender) override {
+        void deckStarted(Deck& sender) override {
+            DBG("[deckStarted] " + getDeckName(sender));
+        }
 
+        void deckFinished(Deck& sender) override {
+            
+        }
+
+        void deckUnloaded(Deck& sender) override {
+            if (&sender == transitingDeck) {
+                transitionState = TransitionState::Idle;
+            }
+        }
+
+        void deckPosition(Deck& sender, double position) override {
+            if (transitionState == TransitionState::Transit) {
+
+            }
+
+            auto nextDeck = getAnotherDeck(&sender);
+            if (nextDeck == nullptr) {
+                return;
+            }
+
+            if (transitionState == TransitionState::Idle) {
+                auto xx = sender.getTransitionCuePosition();
+                if (position > xx) {
+                    DBG("CUE NEXT: " + String(sender.getPositionInSeconds()));
+                    transitionState = TransitionState::Cue;
+                    loadNextTrack(&sender, false);
+                }
+            }
+
+            if (position > sender.getTransitionStartPosition()) {
+                if (transitionState != TransitionState::Transit) {
+                    if (nextDeck->isTrackLoaded()) {
+                        DBG("TRANSIT: " + String(sender.getPositionInSeconds()));
+                        transitionState = TransitionState::Transit;
+                        transitingDeck = &sender;
+                        nextDeck->start();
+                    }
+                }
+
+                // TODO: Do the fading
+            }
         }
 
         ~Medley() {
@@ -288,6 +328,15 @@ namespace medley {
         TimeSliceThread readAheadThread;
 
         IQueue& queue;
+
+        enum class TransitionState {
+            Idle,
+            Cue,
+            Transit
+        };
+
+        TransitionState transitionState = TransitionState::Idle;
+        Deck* transitingDeck = nullptr;
     };
 }
 

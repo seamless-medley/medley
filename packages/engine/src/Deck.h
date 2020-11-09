@@ -8,9 +8,13 @@ class Deck : public PositionableAudioSource {
 public:
     class Callback {
     public:
-        virtual void finished(Deck& sender) = 0;
+        virtual void deckPosition(Deck& sender, double position) = 0;
 
-        virtual void unloaded(Deck& sender) = 0;
+        virtual void deckStarted(Deck& sender) = 0;
+
+        virtual void deckFinished(Deck& sender) = 0;
+
+        virtual void deckUnloaded(Deck& sender) = 0;
     };
 
     Deck(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
@@ -18,6 +22,8 @@ public:
     ~Deck() override;
 
     double getLengthInSeconds() const;
+
+    double getPositionInSeconds() const;
 
     void loadTrack(const File& file, bool play);
 
@@ -53,11 +59,19 @@ public:
 
     int64 getTotalLength() const override;
 
-    bool isLooping() const override;
+    bool isLooping() const override; 
 
     void start();
 
     void stop();
+
+    double getSampleRate() const { return sampleRate; }
+
+    double getTransitionCuePosition() const { return transitionCuePosition; }
+
+    double getTransitionStartPosition() const { return transitionStartPosition; }
+
+    double getTransitionEndPosition() const { return transitionEndPosition; }
 
 private:
     class Loader : public TimeSliceClient {
@@ -81,7 +95,16 @@ private:
         void scan();
     private:
         Deck& deck;
-        bool doScan = false;
+        bool shouldScan = false;
+    };
+
+    class PlayHead : public TimeSliceClient {
+    public:
+        PlayHead(Deck& deck) : deck(deck) {}
+        int useTimeSlice() override;
+    private:
+        Deck& deck;
+        double lastPosition = 0;
     };
 
     void setSource(AudioFormatReaderSource* newSource);
@@ -93,6 +116,17 @@ private:
     void unloadTrackInternal();
 
     void scanTrackInternal();
+
+    void calculateTransition();
+
+    void firePositionChangeCalback(double position);
+
+    inline double getSampleInSeconds(int64 sample) {
+        if (sampleRate > 0.0)
+            return (double)sample / sampleRate;
+
+        return 0.0;
+    }
 
     File file;
 
@@ -126,9 +160,14 @@ private:
     bool playAfterLoading = false;
 
     Scanner scanningScheduler;
+    PlayHead playhead;
 
     int64 firstAudibleSoundPosition = 0;
     int64 lastAudibleSoundPosition = 0;
     int64 totalSamplesToPlay = 0;
+
+    double transitionCuePosition = 0.0;
+    double transitionStartPosition = 0.0;
+    double transitionEndPosition = 0.0;
 };
 
