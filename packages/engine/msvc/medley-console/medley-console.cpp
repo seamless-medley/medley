@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include <Windows.h>
 
-#include "TrackBuffer.h"
+#include "Deck.h"
 
 using namespace juce;
 
