@@ -310,7 +310,7 @@ int main()
             return track;
         }
 
-        std::list<Track*> tracks;
+        std::list<Track::Ptr> tracks;
     };
 
     Queue queue;
