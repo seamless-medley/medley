@@ -209,6 +209,10 @@ namespace medley {
             readAheadThread("Read-ahead-thread")
         {
             deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
+            auto audioSetup = deviceMgr.getAudioDeviceSetup();
+            audioSetup.bufferSize = audioSetup.sampleRate * 0.25;
+            deviceMgr.setAudioDeviceSetup(audioSetup, false);
+
             formatMgr.registerBasicFormats();
 
             deck1 = new Deck(formatMgr, loadingThread, readAheadThread);
