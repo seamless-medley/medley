@@ -9,7 +9,7 @@ namespace {
     constexpr float kLastSoundScanningDurartion = 30.0f;
 }
 
-TrackBuffer::TrackBuffer(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
+Deck::Deck(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
     loader(*this),
     scanningScheduler(*this),
@@ -21,12 +21,12 @@ TrackBuffer::TrackBuffer(AudioFormatManager& formatMgr, TimeSliceThread& loading
     loadingThread.addTimeSliceClient(&scanningScheduler);
 }
 
-TrackBuffer::~TrackBuffer() {    
+Deck::~Deck() {    
     releaseChainedResources();
     unloadTrackInternal();
 }
 
-double TrackBuffer::getLengthInSeconds() const
+double Deck::getLengthInSeconds() const
 {
     if (sampleRate > 0.0)
         return (double)getTotalLength() / sampleRate;
@@ -34,7 +34,7 @@ double TrackBuffer::getLengthInSeconds() const
     return 0.0;
 }
 
-void TrackBuffer::loadTrack(const File& file, bool play)
+void Deck::loadTrack(const File& file, bool play)
 {
     playAfterLoading = play;
     loader.load(file);
@@ -42,13 +42,13 @@ void TrackBuffer::loadTrack(const File& file, bool play)
     this->file = file;
 }
 
-void TrackBuffer::unloadTrack()
+void Deck::unloadTrack()
 {
     setSource(nullptr);
     unloadTrackInternal();
 }
 
-void TrackBuffer::loadTrackInternal(File* file)
+void Deck::loadTrackInternal(File* file)
 {
     auto newReader = formatMgr.createReaderFor(*file);
 
@@ -74,7 +74,7 @@ void TrackBuffer::loadTrackInternal(File* file)
 }
 
 
-void TrackBuffer::unloadTrackInternal()
+void Deck::unloadTrackInternal()
 {
     inputStreamEOF = false;
     playing = false;
@@ -113,7 +113,7 @@ void TrackBuffer::unloadTrackInternal()
     }
 }
 
-void TrackBuffer::scanTrackInternal()
+void Deck::scanTrackInternal()
 {
     if (file.existsAsFile()) {
         auto scanningReader = formatMgr.createReaderFor(file);
@@ -150,17 +150,17 @@ void TrackBuffer::scanTrackInternal()
     }
 }
 
-void TrackBuffer::setPosition(double newPosition)
+void Deck::setPosition(double newPosition)
 {
     if (sampleRate > 0.0)
         setNextReadPosition((int64)(newPosition * sampleRate));
 }
 
-void TrackBuffer::setPositionFractional(double fraction) {
+void Deck::setPositionFractional(double fraction) {
     setPosition(getLengthInSeconds() * fraction);
 }
 
-void TrackBuffer::getNextAudioBlock(const AudioSourceChannelInfo& info)
+void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
 {    
     const ScopedLock sl(callbackLock);
 
@@ -214,7 +214,7 @@ void TrackBuffer::getNextAudioBlock(const AudioSourceChannelInfo& info)
     }
 }
 
-void TrackBuffer::setNextReadPosition(int64 newPosition)
+void Deck::setNextReadPosition(int64 newPosition)
 {
     if (bufferingSource != nullptr)
     {
@@ -229,7 +229,8 @@ void TrackBuffer::setNextReadPosition(int64 newPosition)
         inputStreamEOF = false;
     }
 }
-int64 TrackBuffer::getNextReadPosition() const
+
+int64 Deck::getNextReadPosition() const
 {
     if (bufferingSource != nullptr)
     {
@@ -240,7 +241,7 @@ int64 TrackBuffer::getNextReadPosition() const
     return 0;
 }
 
-int64 TrackBuffer::getTotalLength() const
+int64 Deck::getTotalLength() const
 {
     const ScopedLock sl(callbackLock);
 
@@ -253,13 +254,13 @@ int64 TrackBuffer::getTotalLength() const
     return 0;
 }
 
-bool TrackBuffer::isLooping() const
+bool Deck::isLooping() const
 {
     const ScopedLock sl(callbackLock);
     return bufferingSource != nullptr && bufferingSource->isLooping();
 }
 
-void TrackBuffer::start()
+void Deck::start()
 {
     if ((!playing) && resamplerSource != nullptr)
     {
@@ -272,7 +273,7 @@ void TrackBuffer::start()
     }
 }
 
-void TrackBuffer::stop()
+void Deck::stop()
 {
     if (playing)
     {
@@ -284,12 +285,12 @@ void TrackBuffer::stop()
     }
 }
 
-void TrackBuffer::addListener(Callback* cb) {
+void Deck::addListener(Callback* cb) {
     ScopedLock sl(callbackLock);
     listeners.add(cb);
 }
 
-void TrackBuffer::prepareToPlay(int samplesPerBlockExpected, double newSampleRate)
+void Deck::prepareToPlay(int samplesPerBlockExpected, double newSampleRate)
 {
     const ScopedLock sl(callbackLock);
 
@@ -308,12 +309,12 @@ void TrackBuffer::prepareToPlay(int samplesPerBlockExpected, double newSampleRat
     isPrepared = true;
 }
 
-void TrackBuffer::releaseResources()
+void Deck::releaseResources()
 {
     releaseChainedResources();
 }
 
-void TrackBuffer::setSource(AudioFormatReaderSource* newSource)
+void Deck::setSource(AudioFormatReaderSource* newSource)
 {
     if (source == newSource) {
         if (newSource == nullptr) {
@@ -360,7 +361,7 @@ void TrackBuffer::setSource(AudioFormatReaderSource* newSource)
     }
 }
 
-void TrackBuffer::releaseChainedResources()
+void Deck::releaseChainedResources()
 {
     const ScopedLock sl(callbackLock);
 
@@ -371,7 +372,7 @@ void TrackBuffer::releaseChainedResources()
     isPrepared = false;
 }
 
-TrackBuffer::TrackLoader::~TrackLoader()
+Deck::Loader::~Loader()
 {
     if (file) {
         delete file;
@@ -379,12 +380,12 @@ TrackBuffer::TrackLoader::~TrackLoader()
     }
 }
 
-int TrackBuffer::TrackLoader::useTimeSlice()
+int Deck::Loader::useTimeSlice()
 {
     ScopedLock sl(lock);
 
     if (file != nullptr) {
-        tb.loadTrackInternal(file);
+        deck.loadTrackInternal(file);
 
         delete file;
         file = nullptr;
@@ -393,7 +394,7 @@ int TrackBuffer::TrackLoader::useTimeSlice()
     return 100;
 }
 
-void TrackBuffer::TrackLoader::load(const File& file)
+void Deck::Loader::load(const File& file)
 {
     ScopedLock sl(lock);
 
@@ -404,17 +405,17 @@ void TrackBuffer::TrackLoader::load(const File& file)
     this->file = new File(file);
 }
 
-int TrackBuffer::TrackScanningScheduler::useTimeSlice()
+int Deck::Scanner::useTimeSlice()
 {
     if (doScan) {
-        tb.scanTrackInternal();
+        deck.scanTrackInternal();
         doScan = false;
     }
 
     return 100;
 }
 
-void TrackBuffer::TrackScanningScheduler::scan()
+void Deck::Scanner::scan()
 {
     doScan = true;
 }

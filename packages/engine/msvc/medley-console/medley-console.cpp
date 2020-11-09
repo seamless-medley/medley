@@ -47,11 +47,11 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     virtual EngineDeck* getEngineDeck() const = 0;
 };
 
-// [consolidate]
-class Deck : public BaseTrackPlayerImpl {
-    // change constructor
-
-};
+//// [consolidate]
+//class Deck : public BaseTrackPlayerImpl {
+//    // change constructor
+//
+//};
 
 
 // [not_needed]
@@ -79,18 +79,18 @@ class EngineMaster : public QObject {
 
 ////////////////////////////////////////////////////////
 
-class Track : public QObject {
-    // construct with TrackFile
-
-    // channels
-    // sample rate
-    // bit rate
-    // duration
-    // replay gain value
-    // tags
-    // cue points
-    // wave form
-};
+//class Track : public QObject {
+//    // construct with TrackFile
+//
+//    // channels
+//    // sample rate
+//    // bit rate
+//    // duration
+//    // replay gain value
+//    // tags
+//    // cue points
+//    // wave form
+//};
 
 // Typed Pointer to Track
 class TrackPointer {
@@ -181,29 +181,38 @@ class TrackInfo {
 ////////////////////////////////////////////////////////
 
 namespace medley {
-    class ITrack {
+    class ITrack : public ReferenceCountedObject {
     public:
-        virtual String& getFullPath() const = 0;
+        virtual String getFullPath() const = 0;
         // TODO: ReplayGain
+
+        using Ptr = ReferenceCountedObjectPtr<ITrack>;        
     };
 
     class ITrackMetadata {
 
     };
 
-    class Medley : public TrackBuffer::Callback {
+    class IQueue {
+    public:
+        virtual size_t count() const = 0;
+        virtual ITrack::Ptr fetchNextTrack() = 0;
+    };
+
+    class Medley : public Deck::Callback {
     public:
 
-        Medley()
+        Medley(IQueue& queue)
             :
+            queue(queue),
             loadingThread("Loading Thread"),
             readAheadThread("Read-ahead-thread")
         {
             deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
             formatMgr.registerBasicFormats();
 
-            deck1 = new TrackBuffer(formatMgr, loadingThread, readAheadThread);
-            deck2 = new TrackBuffer(formatMgr, loadingThread, readAheadThread);
+            deck1 = new Deck(formatMgr, loadingThread, readAheadThread);
+            deck2 = new Deck(formatMgr, loadingThread, readAheadThread);
 
             deck1->addListener(this);
             deck2->addListener(this);
@@ -215,39 +224,7 @@ namespace medley {
             mixer.addInputSource(deck2, false);
 
             mainOut.setSource(&mixer);
-            deviceMgr.addAudioCallback(&mainOut);
-            /////
-
-            OPENFILENAMEW of{};
-            HeapBlock<WCHAR> files;
-
-            files.calloc(static_cast<size_t> (32768) + 1);
-
-            of.lStructSize = OPENFILENAME_SIZE_VERSION_400W;
-            of.hwndOwner = 0;
-            of.lpstrFilter = nullptr;
-            of.nFilterIndex = 1;
-            of.lpstrFile = files;
-            of.nMaxFile = 32768;
-            of.lpstrInitialDir = nullptr;
-            of.lpstrTitle = L"Open file";
-            of.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY | OFN_ENABLESIZING | OFN_ALLOWMULTISELECT;
-            
-            if (GetOpenFileName(&of)) {
-                if (of.nFileOffset > 0 && files[of.nFileOffset - 1] == 0) {
-                    const wchar_t* filename = files + of.nFileOffset;
-
-
-                    while (*filename != 0)
-                    {
-                        songs.push_back(File(String(files.get())).getChildFile(String(filename)));
-                        filename += wcslen(filename) + 1;
-                    }
-                }
-                else {
-                    songs.push_back(File(String(files.get())));
-                }               
-            }
+            deviceMgr.addAudioCallback(&mainOut);          
 
             loadNextTrack();
         }
@@ -255,20 +232,20 @@ namespace medley {
         void loadNextTrack() {
             auto deck = !deck1->isTrackLoaded() ? deck1 : (!deck2->isTrackLoaded() ? deck2 : nullptr);
 
-            if (deck && !songs.empty()) {
-                DBG("[loadNextTrack] " + songs.front().getFullPathName() + ", Using deck" + (deck == deck1 ? "1" : "2"));
+            if (deck && queue.count() > 0) {
+                auto track = queue.fetchNextTrack();
 
-                deck->loadTrack(songs.front(), true);                
+                DBG("[loadNextTrack] " + track->getFullPath() + ", Using deck" + (deck == deck1 ? "1" : "2"));
 
-                songs.erase(songs.begin());
+                deck->loadTrack(track->getFullPath(), true);
             }            
         }
 
-        void finished(TrackBuffer& sender) override {
+        void finished(Deck& sender) override {
             loadNextTrack();
         }
 
-        void unloaded(TrackBuffer& sender) override {
+        void unloaded(Deck& sender) override {
 
         }
 
@@ -286,21 +263,91 @@ namespace medley {
 
         AudioDeviceManager deviceMgr;
         AudioFormatManager formatMgr;
-        TrackBuffer* deck1 = nullptr;
-        TrackBuffer* deck2 = nullptr;
+        Deck* deck1 = nullptr;
+        Deck* deck2 = nullptr;
         MixerAudioSource mixer;
         AudioSourcePlayer mainOut;
 
         TimeSliceThread loadingThread;
         TimeSliceThread readAheadThread;
-        //
-        std::vector<File> songs;
+
+        IQueue& queue;
     };
 }
 
 int main()
 {
     static_cast<void>(::CoInitialize(nullptr));
-    medley::Medley medley;
+
+    class Track : public medley::ITrack {
+    public:
+        Track(File& file)
+            :
+            file(file)
+        {
+
+        }
+
+        String getFullPath() const {
+            return file.getFullPathName();
+        }
+
+    private:
+        JUCE_LEAK_DETECTOR(Track)
+
+        File file;
+    };
+
+    class Queue : public medley::IQueue {
+    public:
+        size_t count() const override {
+            return tracks.size();
+        }
+
+        medley::ITrack::Ptr fetchNextTrack() {
+            auto track = tracks.front();
+            tracks.erase(tracks.begin());
+            return track;
+        }
+
+        std::list<Track*> tracks;
+    };
+
+    Queue queue;
+
+    OPENFILENAMEW of{};
+    HeapBlock<WCHAR> files;
+
+    files.calloc(static_cast<size_t> (32768) + 1);
+
+    of.lStructSize = OPENFILENAME_SIZE_VERSION_400W;
+    of.hwndOwner = 0;
+    of.lpstrFilter = nullptr;
+    of.nFilterIndex = 1;
+    of.lpstrFile = files;
+    of.nMaxFile = 32768;
+    of.lpstrInitialDir = nullptr;
+    of.lpstrTitle = L"Open file";
+    of.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY | OFN_ENABLESIZING | OFN_ALLOWMULTISELECT;    
+
+    if (GetOpenFileName(&of)) {
+        if (of.nFileOffset > 0 && files[of.nFileOffset - 1] == 0) {
+            const wchar_t* filename = files + of.nFileOffset;
+
+
+            while (*filename != 0)
+            {
+                queue.tracks.push_back(new Track(File(String(files.get())).getChildFile(String(filename))));
+                filename += wcslen(filename) + 1;
+            }
+        }
+        else {
+            queue.tracks.push_back(new Track(File(String(files.get()))));
+        }
+    }
+
+    medley::Medley medle(queue);
+
+
     static_cast<void>(getchar());
 }

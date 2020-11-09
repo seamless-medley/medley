@@ -4,18 +4,18 @@
 
 using namespace juce;
 
-class TrackBuffer : public PositionableAudioSource {
+class Deck : public PositionableAudioSource {
 public:
     class Callback {
     public:
-        virtual void finished(TrackBuffer& sender) = 0;
+        virtual void finished(Deck& sender) = 0;
 
-        virtual void unloaded(TrackBuffer& sender) = 0;
+        virtual void unloaded(Deck& sender) = 0;
     };
 
-    TrackBuffer(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
+    Deck(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
 
-    ~TrackBuffer() override;
+    ~Deck() override;
 
     double getLengthInSeconds() const;
 
@@ -60,27 +60,27 @@ public:
     void stop();
 
 private:
-    class TrackLoader : public TimeSliceClient {
+    class Loader : public TimeSliceClient {
     public:
-        TrackLoader(TrackBuffer& tb) : tb(tb) {}
-        ~TrackLoader() override;
+        Loader(Deck& deck) : deck(deck) {}
+        ~Loader() override;
         int useTimeSlice() override;
 
         void load(const File& file);
     private:
-        TrackBuffer& tb;
+        Deck& deck;
         File* file = nullptr;
         CriticalSection lock;
     };
 
-    class TrackScanningScheduler : public TimeSliceClient {
+    class Scanner : public TimeSliceClient {
     public:
-        TrackScanningScheduler(TrackBuffer& tb) : tb(tb) {}
+        Scanner(Deck& deck) : deck(deck) {}
         int useTimeSlice() override;
 
         void scan();
     private:
-        TrackBuffer& tb;
+        Deck& deck;
         bool doScan = false;
     };
 
@@ -122,10 +122,10 @@ private:
     //
     ListenerList<Callback> listeners;
     //
-    TrackLoader loader;
+    Loader loader;
     bool playAfterLoading = false;
 
-    TrackScanningScheduler scanningScheduler;
+    Scanner scanningScheduler;
 
     int64 firstAudibleSoundPosition = 0;
     int64 lastAudibleSoundPosition = 0;
