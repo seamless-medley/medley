@@ -230,11 +230,11 @@ namespace medley {
             mainOut.setSource(&mixer);
             deviceMgr.addAudioCallback(&mainOut);          
 
-            loadNextTrack();
+            loadNextTrack(nullptr);
         }
 
-        void loadNextTrack() {
-            auto deck = !deck1->isTrackLoaded() ? deck1 : (!deck2->isTrackLoaded() ? deck2 : nullptr);
+        void loadNextTrack(Deck* currentDeck) {
+            auto deck = getAnotherDeck(currentDeck);
 
             if (deck && queue.count() > 0) {
                 auto track = queue.fetchNextTrack();
@@ -245,8 +245,20 @@ namespace medley {
             }            
         }
 
+        Deck* getAvailableDeck() {
+            return !deck1->isTrackLoaded() ? deck1 : (!deck2->isTrackLoaded() ? deck2 : nullptr);
+        }
+
+        Deck* getAnotherDeck(Deck* from) {
+            if (from == nullptr) {
+                return getAvailableDeck();
+            }
+
+            return (from == deck1) ? deck2 : deck1;
+        }
+
         void finished(Deck& sender) override {
-            loadNextTrack();
+            loadNextTrack(&sender);
         }
 
         void unloaded(Deck& sender) override {
