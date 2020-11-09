@@ -60,7 +60,7 @@
     <ClCompile Include="..\..\juce\include_juce_gui_extra.cpp">
       <Filter>JUCE Library Code</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\TrackBuffer.cpp">
+    <ClCompile Include="..\..\src\Deck.cpp">
       <Filter>Engine Source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -68,7 +68,7 @@
     <ClInclude Include="..\..\juce\JuceHeader.h">
       <Filter>JUCE Library Code</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\TrackBuffer.h">
+    <ClInclude Include="..\..\src\Deck.h">
       <Filter>Engine Source</Filter>
     </ClInclude>
   </ItemGroup>
