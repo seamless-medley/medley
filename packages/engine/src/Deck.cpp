@@ -131,9 +131,11 @@ void Deck::scanTrackInternal()
 
         DBG("Old lastAudibleSoundPosition=" + String(lastAudibleSoundPosition/scanningReader->sampleRate));
 
+        auto tailPosition = jmax(firstAudibleSoundPosition, mid, (int64)(scanningReader->lengthInSamples - scanningReader->sampleRate * kLastSoundScanningDurartion));
+
         auto silencePosition = scanningReader->searchForLevel(
-            jmax(firstAudibleSoundPosition, mid, (int64)(scanningReader->lengthInSamples - scanningReader->sampleRate * kLastSoundScanningDurartion)),
-            scanningReader->lengthInSamples,
+            tailPosition,
+            scanningReader->lengthInSamples - tailPosition,
             0, kEndingSilenceThreshold,
             scanningReader->sampleRate * kLastSoundDuration
         );
@@ -145,7 +147,7 @@ void Deck::scanTrackInternal()
 
             auto endPosition = scanningReader->searchForLevel(
                 silencePosition,
-                scanningReader->lengthInSamples,
+                scanningReader->lengthInSamples - silencePosition,
                 0, kSilenceThreshold,
                 scanningReader->sampleRate * 0.004
             );
@@ -155,6 +157,17 @@ void Deck::scanTrackInternal()
                 DBG("New ending=" + String(totalSamplesToPlay / scanningReader->sampleRate));
             }
         }
+
+        auto trailingPosition = scanningReader->searchForLevel(
+            tailPosition,
+            totalSamplesToPlay - tailPosition,
+            0, Decibels::decibelsToGain(-20.0f),
+            scanningReader->sampleRate * 0.5
+        );
+
+        // TODO: Save trailing for later
+        DBG("Trailing position=" + String(trailingPosition / scanningReader->sampleRate));
+        DBG("Trailing duration=" + String((totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate));
 
         delete scanningReader;
 
@@ -167,8 +180,10 @@ void Deck::calculateTransition()
     transitionStartPosition = lastAudibleSoundPosition / sourceSampleRate;
     transitionEndPosition = transitionStartPosition;
 
+    // TODO: Transition
     // if (transitionTime > 0.0)
     {
+        // TODO: pick the shortest duration from transitionTime or Trailing duration
         transitionStartPosition = jmax(2.0, transitionStartPosition - 4.0);
         transitionCuePosition = jmax(0.0, transitionStartPosition - 2.0);
     }
