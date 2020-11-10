@@ -61,6 +61,10 @@ void Deck::unloadTrack()
 
 void Deck::loadTrackInternal(File* file)
 {
+    if (!file->existsAsFile()) {
+        return;
+    }
+
     auto newReader = formatMgr.createReaderFor(*file);
 
     if (!newReader) {
@@ -130,54 +134,52 @@ void Deck::unloadTrackInternal()
 
 void Deck::scanTrackInternal()
 {
-    if (file.existsAsFile()) {
-        auto scanningReader = formatMgr.createReaderFor(file);
-        auto mid = scanningReader->lengthInSamples / 2;
-
-        DBG("Old lastAudibleSoundPosition=" + String(lastAudibleSoundPosition/scanningReader->sampleRate));
-
-        auto tailPosition = jmax(firstAudibleSoundPosition, mid, (int64)(scanningReader->lengthInSamples - scanningReader->sampleRate * kLastSoundScanningDurartion));
-
-        auto silencePosition = scanningReader->searchForLevel(
-            tailPosition,
-            scanningReader->lengthInSamples - tailPosition,
-            0, kEndingSilenceThreshold,
-            scanningReader->sampleRate * kLastSoundDuration
-        );
-
-        if (silencePosition > firstAudibleSoundPosition) {
-            lastAudibleSoundPosition = silencePosition;
-
-            auto endPosition = scanningReader->searchForLevel(
-                silencePosition,
-                scanningReader->lengthInSamples - silencePosition,
-                0, kSilenceThreshold,
-                scanningReader->sampleRate * 0.004
-            );
-
-            if (endPosition > lastAudibleSoundPosition) {
-                totalSamplesToPlay = endPosition;
-            }
-        }
-
-        trailingPosition = scanningReader->searchForLevel(
-            tailPosition,
-            totalSamplesToPlay - tailPosition,
-            0, kTrailingSilenceThreshold,
-            scanningReader->sampleRate * 0.5
-        );
-
-        if (trailingPosition > -1) {
-            trailingDuration = (totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate;
-        }
-        else {
-            trailingDuration = 0;
-        }
-
-        delete scanningReader;
-
-        calculateTransition();
+    if (!file.existsAsFile()) {
+        return;
     }
+
+    auto scanningReader = formatMgr.createReaderFor(file);
+    auto middlePosition = scanningReader->lengthInSamples / 2;
+    auto tailPosition = jmax(
+        firstAudibleSoundPosition,
+        middlePosition,
+        (int64)(scanningReader->lengthInSamples - scanningReader->sampleRate * kLastSoundScanningDurartion)
+    );
+
+    auto silencePosition = scanningReader->searchForLevel(
+        tailPosition,
+        scanningReader->lengthInSamples - tailPosition,
+        0, kEndingSilenceThreshold,
+        scanningReader->sampleRate * kLastSoundDuration
+    );
+
+    if (silencePosition > firstAudibleSoundPosition) {
+        lastAudibleSoundPosition = silencePosition;
+
+        auto endPosition = scanningReader->searchForLevel(
+            silencePosition,
+            scanningReader->lengthInSamples - silencePosition,
+            0, kSilenceThreshold,
+            scanningReader->sampleRate * 0.004
+        );
+
+        if (endPosition > lastAudibleSoundPosition) {
+            totalSamplesToPlay = endPosition;
+        }
+    }
+
+    trailingPosition = scanningReader->searchForLevel(
+        tailPosition,
+        totalSamplesToPlay - tailPosition,
+        0, kTrailingSilenceThreshold,
+        scanningReader->sampleRate * 0.5
+    );
+
+    trailingDuration = (trailingPosition > -1) ? (totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate : 0;
+
+    delete scanningReader;
+
+    calculateTransition();
 }
 
 void Deck::calculateTransition()
