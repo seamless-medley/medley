@@ -16,6 +16,9 @@
     <Filter Include="JUCE Library Code">
       <UniqueIdentifier>{a106bc92-d838-47c5-93a7-16cd01808eee}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine Source">
+      <UniqueIdentifier>{ad272cae-a9e6-438f-9f2a-f921123d99ef}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="medley-console.cpp">
@@ -57,10 +60,22 @@
     <ClCompile Include="..\..\juce\include_juce_gui_extra.cpp">
       <Filter>JUCE Library Code</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\Deck.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Medley.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h">
       <Filter>JUCE Library Code</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Deck.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Medley.h">
+      <Filter>Engine Source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
