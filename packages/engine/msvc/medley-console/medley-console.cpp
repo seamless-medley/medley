@@ -122,13 +122,18 @@ namespace medley {
         bool loadNextTrack(Deck* currentDeck, bool play) {
             auto deck = getAnotherDeck(currentDeck);
 
-            if (deck && queue.count() > 0) {
-                auto track = queue.fetchNextTrack();
-                deck->loadTrack(track->getFullPath(), play);
-                return true;
+            if (deck == nullptr) {
+                DBG("Could not find another deck for " + getDeckName(*currentDeck));
+                return false;
             }
 
-            return false;
+            if (queue.count() <= 0) {
+                return false;
+            }
+
+            auto track = queue.fetchNextTrack();
+            deck->loadTrack(track->getFullPath(), play);
+            return true;
         }
 
         Deck* getAvailableDeck() {
