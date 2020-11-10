@@ -208,6 +208,8 @@ namespace medley {
             loadingThread("Loading Thread"),
             readAheadThread("Read-ahead-thread")
         {
+            updateFadingFactor();
+
             deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
             auto audioSetup = deviceMgr.getAudioDeviceSetup();
             audioSetup.bufferSize = audioSetup.sampleRate * 0.25;
@@ -310,8 +312,23 @@ namespace medley {
                 }
 
                 auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / (transitionEndPos - transitionStartPos));
-                sender.setVolume(1.0f - transitionProgress);
+                sender.setVolume(pow(1.0 - transitionProgress, fadingFactor));
             }
+        }
+
+        double getFadingCurve() const {
+            return fadingCurve;
+        }
+
+        void setFadingCurve(double curve) {
+            fadingCurve = jlimit(0.0, 100.0, curve);
+            updateFadingFactor();
+        }
+
+        void updateFadingFactor() {
+            double outRange = 1000.0 - 1.0;
+            double inRange = 100.0;
+            fadingFactor = 1000.0 / (((100.0 - fadingCurve) / inRange * outRange) + 1.0);
         }
 
         ~Medley() {
@@ -346,6 +363,9 @@ namespace medley {
 
         TransitionState transitionState = TransitionState::Idle;
         Deck* transitingDeck = nullptr;
+
+        double fadingCurve = 80;
+        float fadingFactor;
     };
 }
 
