@@ -93,10 +93,6 @@ void Medley::deckUnloaded(Deck& sender) {
 }
 
 void Medley::deckPosition(Deck& sender, double position) {
-    if (transitionState == TransitionState::Transit) {
-
-    }
-
     auto nextDeck = getAnotherDeck(&sender);
     if (nextDeck == nullptr) {
         return;
@@ -104,12 +100,13 @@ void Medley::deckPosition(Deck& sender, double position) {
 
     if (transitionState == TransitionState::Idle) {
         if (position > sender.getTransitionCuePosition()) {
-            DBG("CUE NEXT");
-            transitionState = TransitionState::Cue;
             if (!loadNextTrack(&sender, false)) {
                 // No more track, do not transit
                 return;
             }
+
+            DBG("CUE NEXT");
+            transitionState = TransitionState::Cue;
         }
     }
 
