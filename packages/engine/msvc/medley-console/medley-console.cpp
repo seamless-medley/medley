@@ -6,64 +6,6 @@
 
 using namespace juce;
 
-////////////////////////////////////////////////////////
-
-//class Track : public QObject {
-//    // construct with TrackFile
-//
-//    // channels
-//    // sample rate
-//    // bit rate
-//    // duration
-//    // replay gain value
-//    // tags
-//    // cue points
-//    // wave form
-//};
-
-////////////////////////////////////////////////////////
-
-
-///////////////////////////////////////////////////////
-// Signal flows
-//  ------------------ trackLoaded ----------------
-// 
-// CachingReaderWorker::run() // Run by EngineWorkerScheduler, which in turn is registered by EngineBuffer
-// [Invoke] CachingReaderWorker::loadTrack =>
-// [Signal] CachingReaderWorker::trackLoaded =>
-// [Signal] CachingReader::trackLoaded =>
-// [Slot] EngineBuffer::slotTrackLoaded =>
-// [Invoke] EngineBuffer::notifyTrackLoaded
-// [Signal] EngineBuffer::trackLoaded =>
-// [Slot] BaseTrackPlayerImpl::slotTrackLoaded =>
-//  [Signal] Deck::newTrackLoaded =>
-//  [Slot] PlayerManager::slotAnalyzeTrack => 
-//  [Invoke] TrackAnalysisScheduler::scheduleTrackById() // Push track into queue
-//      Analyze various aspects of a track
-//      For any idling TrackAnalysisScheduler::Worker, fetch next track from queue then submit the track to Worker.
-//          [Invoke] AnalyzerThread::submitNextTrack() // Wake up the thread
-//              Initialize Analyzers
-//                  Wave form (From PlayerManager only)
-//                  ReplayGain 1.0 (Disabled by default)
-//                  ReplayGain 2.0 (Enabled by default)
-//                  Beats
-//                  Key
-//                  Silence
-//              AnalyzerThread::analyzeAudioSource()
-//                  read audio block from source
-//                  pass it to each Analyzer's processSamples()
-//                  repeat until finish reading
-//                  storeResults()
-//                  cleanup()
-//                  
-//
-//  [Signal] BaseTrackPlayer::newTrackLoaded =>
-//  [Slot] DeckAttributes::slotTrackLoaded =>
-//  [Signal] DeckAttributes::trackLoaded =>
-//  [Slot] AutoDJProcessor::playerTrackLoaded // then calculate transition
-
-////////////////////////////////////////////////////////
-
 namespace medley {
     class ITrack : public ReferenceCountedObject {
     public:
