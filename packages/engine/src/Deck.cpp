@@ -3,6 +3,7 @@
 namespace {
     static const auto kSilenceThreshold = Decibels::decibelsToGain(-60.0f);
     static const auto kEndingSilenceThreshold = Decibels::decibelsToGain(-45.0f);
+    static const auto kTrailingSilenceThreshold = Decibels::decibelsToGain(-20.0f);
 
     constexpr float kFirstSoundDuration = 1e-3f;
     constexpr float kLastSoundDuration = 1.25f;
@@ -147,8 +148,6 @@ void Deck::scanTrackInternal()
         if (silencePosition > firstAudibleSoundPosition) {
             lastAudibleSoundPosition = silencePosition;
 
-            DBG("New lastAudibleSoundPosition=" + String(lastAudibleSoundPosition / scanningReader->sampleRate));
-
             auto endPosition = scanningReader->searchForLevel(
                 silencePosition,
                 scanningReader->lengthInSamples - silencePosition,
@@ -158,14 +157,13 @@ void Deck::scanTrackInternal()
 
             if (endPosition > lastAudibleSoundPosition) {
                 totalSamplesToPlay = endPosition;
-                DBG("New ending=" + String(totalSamplesToPlay / scanningReader->sampleRate));
             }
         }
 
         trailingPosition = scanningReader->searchForLevel(
             tailPosition,
             totalSamplesToPlay - tailPosition,
-            0, Decibels::decibelsToGain(-20.0f),
+            0, kTrailingSilenceThreshold,
             scanningReader->sampleRate * 0.5
         );
 
@@ -186,10 +184,8 @@ void Deck::calculateTransition()
 {
     transitionStartPosition = lastAudibleSoundPosition / sourceSampleRate;
     transitionEndPosition = transitionStartPosition;
-
-    // TODO: Transition
-    double transitionTime = 4.0;
-    // if (transitionTime > 0.0)
+    
+    if (transitionTime > 0.0)
     {        
 
         if (trailingDuration >= transitionTime) {
@@ -357,6 +353,13 @@ void Deck::updateGain()
     gain = pregain * volume;
 }
 
+void Deck::setTransitionTime(double duration)
+{
+    transitionTime = duration;
+    calculateTransition();
+}
+
+
 void Deck::addListener(Callback* cb) {
     ScopedLock sl(callbackLock);
     listeners.add(cb);
@@ -406,7 +409,6 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
         sourceSampleRate = newSource->getAudioFormatReader()->sampleRate;
 
         newBufferingSource = new BufferingAudioSource(newSource, readAheadThread, false, sourceSampleRate * 2, 2);
-
         newBufferingSource->setNextReadPosition(firstAudibleSoundPosition);
 
         newResamplerSource = new ResamplingAudioSource(newBufferingSource, false, 2);

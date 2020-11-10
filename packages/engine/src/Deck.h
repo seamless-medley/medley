@@ -83,6 +83,10 @@ public:
 
     double getTransitionEndPosition() const { return transitionEndPosition; }
 
+    double getTransitionTime() const { return transitionTime; }
+
+    void setTransitionTime(double duration);
+
 private:
     class Loader : public TimeSliceClient {
     public:
@@ -190,6 +194,8 @@ private:
 
     double transitionCuePosition = 0.0;
     double transitionStartPosition = 0.0;
-    double transitionEndPosition = 0.0;    
+    double transitionEndPosition = 0.0;
+
+    double transitionTime = 3.0;
 };
 

@@ -299,7 +299,7 @@ namespace medley {
             auto transitionStartPos = sender.getTransitionStartPosition();
             auto transitionEndPos = sender.getTransitionEndPosition();
 
-            if (position > sender.getTransitionStartPosition()) {
+            if (position > transitionStartPos) {
                 if (transitionState != TransitionState::Transit) {
                     if (nextDeck->isTrackLoaded()) {
                         DBG("TRANSIT");
