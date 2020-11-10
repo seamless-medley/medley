@@ -253,7 +253,7 @@ namespace medley {
         TransitionState transitionState = TransitionState::Idle;
         Deck* transitingDeck = nullptr;
 
-        double fadingCurve = 80;
+        double fadingCurve = 60;
         float fadingFactor;
     };
 }
