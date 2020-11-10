@@ -36,12 +36,13 @@ Medley::~Medley() {
     mixer.removeAllInputs();
     mainOut.setSource(nullptr);
 
-    delete deck1;
-    delete deck2;
-
     loadingThread.stopThread(100);
     readAheadThread.stopThread(100);
+
     deviceMgr.closeAudioDevice();
+
+    delete deck1;
+    delete deck2;
 }
 
 bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
