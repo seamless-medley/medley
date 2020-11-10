@@ -37,12 +37,6 @@ public:
 
     bool isPlaying() const noexcept { return playing; }
 
-    void setGain(float newGain) noexcept {
-        gain = newGain;
-    }
-
-    float getGain() const noexcept { return gain; }
-
     void addListener(Callback* cb);
 
     void prepareToPlay(int samplesPerBlockExpected, double newSampleRate) override;
@@ -64,6 +58,22 @@ public:
     void start();
 
     void stop();
+
+    float getVolume() const { return volume; }
+
+    void setVolume(float newVolume) {
+        volume = newVolume;
+        updateGain();
+    }
+
+    float getPregain() const { return pregain; }
+
+    void setPregain(float newPre) {
+        pregain = newPre;
+        updateGain();
+    }
+
+    void updateGain();
 
     double getSampleRate() const { return sampleRate; }
 
@@ -121,6 +131,12 @@ private:
 
     void firePositionChangeCalback(double position);
 
+    void setGain(float newGain) noexcept {
+        gain = newGain;
+    }
+
+    float getGain() const noexcept { return gain; }
+
     inline double getSampleInSeconds(int64 sample) {
         if (sampleRate > 0.0)
             return (double)sample / sampleRate;
@@ -136,6 +152,9 @@ private:
     double sampleRate = 44100.0;
     double sourceSampleRate = 0;
 
+    float pregain = 1.0f;
+    float volume = 1.0f;
+    //
     float gain = 1.0f;
     float lastGain = 1.0f;
 
@@ -166,8 +185,11 @@ private:
     int64 lastAudibleSoundPosition = 0;
     int64 totalSamplesToPlay = 0;
 
+    int64 trailingPosition = 0;
+    double trailingDuration = 0.0;
+
     double transitionCuePosition = 0.0;
     double transitionStartPosition = 0.0;
-    double transitionEndPosition = 0.0;
+    double transitionEndPosition = 0.0;    
 };
 

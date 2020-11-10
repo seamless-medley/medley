@@ -6,7 +6,7 @@ namespace {
 
     constexpr float kFirstSoundDuration = 1e-3f;
     constexpr float kLastSoundDuration = 1.25f;
-    constexpr float kLastSoundScanningDurartion = 30.0f;
+    constexpr float kLastSoundScanningDurartion = 20.0f;
 }
 
 Deck::Deck(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
@@ -121,6 +121,10 @@ void Deck::unloadTrackInternal()
             cb.deckUnloaded(*this);
         });
     }
+
+    pregain = 1.0f;
+    volume = 1.0f;
+    updateGain();
 }
 
 void Deck::scanTrackInternal()
@@ -158,16 +162,19 @@ void Deck::scanTrackInternal()
             }
         }
 
-        auto trailingPosition = scanningReader->searchForLevel(
+        trailingPosition = scanningReader->searchForLevel(
             tailPosition,
             totalSamplesToPlay - tailPosition,
             0, Decibels::decibelsToGain(-20.0f),
             scanningReader->sampleRate * 0.5
         );
 
-        // TODO: Save trailing for later
-        DBG("Trailing position=" + String(trailingPosition / scanningReader->sampleRate));
-        DBG("Trailing duration=" + String((totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate));
+        if (trailingPosition > -1) {
+            trailingDuration = (totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate;
+        }
+        else {
+            trailingDuration = 0;
+        }
 
         delete scanningReader;
 
@@ -181,10 +188,19 @@ void Deck::calculateTransition()
     transitionEndPosition = transitionStartPosition;
 
     // TODO: Transition
+    double transitionTime = 4.0;
     // if (transitionTime > 0.0)
-    {
-        // TODO: pick the shortest duration from transitionTime or Trailing duration
-        transitionStartPosition = jmax(2.0, transitionStartPosition - 4.0);
+    {        
+
+        if (trailingDuration >= transitionTime) {
+            transitionStartPosition = trailingPosition / sourceSampleRate;
+            transitionEndPosition = transitionStartPosition + transitionTime;
+        }
+        else {
+            auto actualTransitionTime = jmin(transitionTime, trailingDuration);
+            transitionStartPosition = jmax(2.0, transitionStartPosition - transitionTime);
+        }
+        
         transitionCuePosition = jmax(0.0, transitionStartPosition - 2.0);
     }
 }
@@ -334,6 +350,11 @@ void Deck::stop()
         while (--n >= 0 && !stopped)
             Thread::sleep(2);
     }
+}
+
+void Deck::updateGain()
+{
+    gain = pregain * volume;
 }
 
 void Deck::addListener(Callback* cb) {

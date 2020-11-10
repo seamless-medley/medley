@@ -233,13 +233,16 @@ namespace medley {
             loadNextTrack(nullptr, true);
         }
 
-        void loadNextTrack(Deck* currentDeck, bool play) {
+        bool loadNextTrack(Deck* currentDeck, bool play) {
             auto deck = getAnotherDeck(currentDeck);
 
             if (deck && queue.count() > 0) {
                 auto track = queue.fetchNextTrack();
                 deck->loadTrack(track->getFullPath(), play);
-            }            
+                return true;
+            }
+
+            return false;
         }
 
         Deck* getAvailableDeck() {
@@ -283,25 +286,31 @@ namespace medley {
             }
 
             if (transitionState == TransitionState::Idle) {
-                auto xx = sender.getTransitionCuePosition();
-                if (position > xx) {
-                    DBG("CUE NEXT: " + String(sender.getPositionInSeconds()));
+                if (position > sender.getTransitionCuePosition()) {
+                    DBG("CUE NEXT");
                     transitionState = TransitionState::Cue;
-                    loadNextTrack(&sender, false);
+                    if (!loadNextTrack(&sender, false)) {
+                        // No more track, do not transit
+                        return;
+                    }
                 }
             }
+
+            auto transitionStartPos = sender.getTransitionStartPosition();
+            auto transitionEndPos = sender.getTransitionEndPosition();
 
             if (position > sender.getTransitionStartPosition()) {
                 if (transitionState != TransitionState::Transit) {
                     if (nextDeck->isTrackLoaded()) {
-                        DBG("TRANSIT: " + String(sender.getPositionInSeconds()));
+                        DBG("TRANSIT");
                         transitionState = TransitionState::Transit;
                         transitingDeck = &sender;
                         nextDeck->start();
                     }
                 }
 
-                // TODO: Do the fading
+                auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / (transitionEndPos - transitionStartPos));
+                sender.setVolume(1.0f - transitionProgress);
             }
         }
 
