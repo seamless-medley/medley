@@ -63,12 +63,18 @@
     <ClCompile Include="..\..\src\Deck.cpp">
       <Filter>Engine Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\Medley.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h">
       <Filter>JUCE Library Code</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Deck.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Medley.h">
       <Filter>Engine Source</Filter>
     </ClInclude>
   </ItemGroup>

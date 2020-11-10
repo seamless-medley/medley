@@ -180,11 +180,13 @@
     <ClCompile Include="..\..\juce\include_juce_gui_basics.cpp" />
     <ClCompile Include="..\..\juce\include_juce_gui_extra.cpp" />
     <ClCompile Include="..\..\src\Deck.cpp" />
+    <ClCompile Include="..\..\src\Medley.cpp" />
     <ClCompile Include="medley-console.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h" />
     <ClInclude Include="..\..\src\Deck.h" />
+    <ClInclude Include="..\..\src\Medley.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
