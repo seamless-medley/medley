@@ -78,7 +78,7 @@ int main()
     }
 
     medley::Medley medley(queue);
-
+    medley.play();
 
     static_cast<void>(getchar());
 }

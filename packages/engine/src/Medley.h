@@ -31,9 +31,7 @@ public:
 
     Medley(IQueue& queue);
 
-    ~Medley();
-
-    bool loadNextTrack(Deck* currentDeck, bool play);
+    ~Medley();    
 
     Deck& getDeck1() const { return *deck1; }
 
@@ -43,9 +41,12 @@ public:
 
     void setFadingCurve(double curve);
 
+    void play();
+
     // TODO: Transition time
 
 private:
+    bool loadNextTrack(Deck* currentDeck, bool play);
 
     void deckStarted(Deck& sender) override;
 

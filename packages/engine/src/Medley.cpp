@@ -30,8 +30,6 @@ Medley::Medley(IQueue& queue)
 
     mainOut.setSource(&mixer);
     deviceMgr.addAudioCallback(&mainOut);
-
-    loadNextTrack(nullptr, true);
 }
 
 Medley::~Medley() {
@@ -135,6 +133,11 @@ void Medley::deckPosition(Deck& sender, double position) {
 void Medley::setFadingCurve(double curve) {
     fadingCurve = jlimit(0.0, 100.0, curve);
     updateFadingFactor();
+}
+
+void Medley::play()
+{
+    loadNextTrack(nullptr, true);
 }
 
 void Medley::updateFadingFactor() {
