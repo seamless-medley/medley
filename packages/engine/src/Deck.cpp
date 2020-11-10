@@ -75,7 +75,7 @@ void Deck::loadTrackInternal(File* file)
     reader = newReader;
 
     auto mid = reader->lengthInSamples / 2;
-    firstAudibleSoundPosition = jmax(0i64, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0f, reader->sampleRate * kFirstSoundDuration));
+    firstAudibleSoundPosition = jmax(0i64, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0f, (int)(reader->sampleRate * kFirstSoundDuration)));
     totalSamplesToPlay = reader->lengthInSamples;
     lastAudibleSoundPosition = totalSamplesToPlay;
 
@@ -150,7 +150,7 @@ void Deck::scanTrackInternal()
         tailPosition,
         scanningReader->lengthInSamples - tailPosition,
         0, kEndingSilenceThreshold,
-        scanningReader->sampleRate * kLastSoundDuration
+        (int)(scanningReader->sampleRate * kLastSoundDuration)
     );
 
     if (silencePosition > firstAudibleSoundPosition) {
@@ -160,7 +160,7 @@ void Deck::scanTrackInternal()
             silencePosition,
             scanningReader->lengthInSamples - silencePosition,
             0, kSilenceThreshold,
-            scanningReader->sampleRate * 0.004
+            (int)(scanningReader->sampleRate * 0.004)
         );
 
         if (endPosition > lastAudibleSoundPosition) {
@@ -172,7 +172,7 @@ void Deck::scanTrackInternal()
         tailPosition,
         totalSamplesToPlay - tailPosition,
         0, kTrailingSilenceThreshold,
-        scanningReader->sampleRate * 0.5
+        (int)(scanningReader->sampleRate * 0.5)
     );
 
     trailingDuration = (trailingPosition > -1) ? (totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate : 0;
@@ -410,7 +410,7 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
     if (newSource != nullptr) {
         sourceSampleRate = newSource->getAudioFormatReader()->sampleRate;
 
-        newBufferingSource = new BufferingAudioSource(newSource, readAheadThread, false, sourceSampleRate * 2, 2);
+        newBufferingSource = new BufferingAudioSource(newSource, readAheadThread, false, (int)(sourceSampleRate * 2), 2);
         newBufferingSource->setNextReadPosition(firstAudibleSoundPosition);
 
         newResamplerSource = new ResamplingAudioSource(newBufferingSource, false, 2);

@@ -11,7 +11,7 @@ Medley::Medley(IQueue& queue)
 
     deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
     auto audioSetup = deviceMgr.getAudioDeviceSetup();
-    audioSetup.bufferSize = audioSetup.sampleRate * 0.25;
+    audioSetup.bufferSize = (int)(audioSetup.sampleRate * 0.25);
     deviceMgr.setAudioDeviceSetup(audioSetup, false);
 
     formatMgr.registerBasicFormats();
@@ -127,7 +127,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         }
 
         auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / (transitionEndPos - transitionStartPos));
-        sender.setVolume(pow(1.0 - transitionProgress, fadingFactor));
+        sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
     }
 }
 
@@ -144,7 +144,7 @@ void Medley::play()
 void Medley::updateFadingFactor() {
     double outRange = 1000.0 - 1.0;
     double inRange = 100.0;
-    fadingFactor = 1000.0 / (((100.0 - fadingCurve) / inRange * outRange) + 1.0);
+    fadingFactor = (float)(1000.0 / (((100.0 - fadingCurve) / inRange * outRange) + 1.0));
 }
 
 }
