@@ -324,7 +324,7 @@ int main()
         }
     }
 
-    medley::Medley medle(queue);
+    medley::Medley medley(queue);
 
 
     static_cast<void>(getchar());
