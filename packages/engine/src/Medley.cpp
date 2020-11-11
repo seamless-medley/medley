@@ -79,7 +79,7 @@ inline String Medley::getDeckName(Deck& deck) {
 }
 
 void Medley::deckStarted(Deck& sender) {
-    DBG(String::formatted("[deckStarted] %s", sender.getName()));
+    DBG(String::formatted("[deckStarted] %s", sender.getName().toWideCharPointer()));
 
     ScopedLock sl(callbackLock);
     listeners.call([&sender](Callback& cb) {
