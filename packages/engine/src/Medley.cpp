@@ -16,8 +16,8 @@ Medley::Medley(IQueue& queue)
 
     formatMgr.registerBasicFormats();
 
-    deck1 = new Deck(formatMgr, loadingThread, readAheadThread);
-    deck2 = new Deck(formatMgr, loadingThread, readAheadThread);
+    deck1 = new Deck("Deck A", formatMgr, loadingThread, readAheadThread);
+    deck2 = new Deck("Deck B", formatMgr, loadingThread, readAheadThread);
 
     deck1->addListener(this);
     deck2->addListener(this);
@@ -74,25 +74,55 @@ Deck* Medley::getAnotherDeck(Deck* from) {
     return (from == deck1) ? deck2 : deck1;
 }
 
-String Medley::getDeckName(Deck& deck) {
-    return String("deck") + String(&deck == deck1 ? "1" : "2");
+inline String Medley::getDeckName(Deck& deck) {
+    return deck.getName();
 }
 
 void Medley::deckStarted(Deck& sender) {
-    DBG("[deckStarted] " + getDeckName(sender));
+    DBG(String::formatted("[deckStarted] %s", sender.getName()));
+
+    ScopedLock sl(callbackLock);
+    listeners.call([&sender](Callback& cb) {
+        cb.deckStarted(sender);
+    });
 }
 
 void Medley::deckFinished(Deck& sender) {
+    ScopedLock sl(callbackLock);
+    listeners.call([&sender](Callback& cb) {
+        cb.deckFinished(sender);
+    });
+}
 
+void Medley::deckLoaded(Deck& sender)
+{
+    ScopedLock sl(callbackLock);
+    listeners.call([&sender](Callback& cb) {
+        cb.deckLoaded(sender);
+    });
 }
 
 void Medley::deckUnloaded(Deck& sender) {
     if (&sender == transitingDeck) {
         transitionState = TransitionState::Idle;
     }
+
+    {
+        ScopedLock sl(callbackLock);
+        listeners.call([&](Callback& cb) {
+            cb.deckUnloaded(sender);
+        });
+    }
 }
 
 void Medley::deckPosition(Deck& sender, double position) {
+    {
+        ScopedLock sl(callbackLock);
+        listeners.call([&](Callback& cb) {
+            cb.deckPosition(sender, position);
+        });
+    }
+
     auto nextDeck = getAnotherDeck(&sender);
     if (nextDeck == nullptr) {
         return;
@@ -135,7 +165,20 @@ void Medley::setFadingCurve(double curve) {
 
 void Medley::play()
 {
-    loadNextTrack(nullptr, true);
+    if (!isPlaying()) {
+        loadNextTrack(nullptr, true);
+    }
+}
+
+bool Medley::isPlaying()
+{
+    return deck1->isPlaying() || deck2->isPlaying();
+}
+
+void Medley::addListener(Callback* cb)
+{
+    ScopedLock sl(callbackLock);
+    listeners.add(cb);
 }
 
 void Medley::updateFadingFactor() {

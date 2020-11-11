@@ -29,6 +29,10 @@ public:
 class Medley : public Deck::Callback {
 public:
 
+    class Callback : public Deck::Callback {
+
+    };
+
     Medley(IQueue& queue);
 
     ~Medley();    
@@ -43,6 +47,10 @@ public:
 
     void play();
 
+    bool isPlaying();
+
+    void addListener(Callback* cb);
+
     // TODO: Transition time
 
 private:
@@ -51,6 +59,8 @@ private:
     void deckStarted(Deck& sender) override;
 
     void deckFinished(Deck& sender) override;
+
+    void deckLoaded(Deck& sender) override;
 
     void deckUnloaded(Deck& sender) override;
 
@@ -87,6 +97,9 @@ private:
 
     double fadingCurve = 60;
     float fadingFactor;
+
+    CriticalSection callbackLock;
+    ListenerList<Callback> listeners;
 };
 
 }

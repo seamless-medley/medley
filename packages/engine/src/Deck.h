@@ -14,12 +14,16 @@ public:
 
         virtual void deckFinished(Deck& sender) = 0;
 
+        virtual void deckLoaded(Deck& sender) = 0;
+
         virtual void deckUnloaded(Deck& sender) = 0;
     };
 
-    Deck(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
+    Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
 
     ~Deck() override;
+
+    const String& getName() const { return name; }
 
     double getLengthInSeconds() const;
 
@@ -179,6 +183,7 @@ private:
     //
     ListenerList<Callback> listeners;
     //
+    String name;
     Loader loader;
     bool playAfterLoading = false;
 

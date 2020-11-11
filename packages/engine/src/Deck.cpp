@@ -10,8 +10,9 @@ namespace {
     constexpr float kLastSoundScanningDurartion = 20.0f;
 }
 
-Deck::Deck(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
+Deck::Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
+    name(name),
     loader(*this),
     scanningScheduler(*this),
     playhead(*this),
@@ -80,6 +81,13 @@ void Deck::loadTrackInternal(File* file)
     lastAudibleSoundPosition = totalSamplesToPlay;
 
     setSource(new AudioFormatReaderSource(newReader, false));
+
+    {
+        ScopedLock sl(callbackLock);
+        listeners.call([this](Callback& cb) {
+            cb.deckLoaded(*this);
+        });
+    }
 
     scanningScheduler.scan();
 
