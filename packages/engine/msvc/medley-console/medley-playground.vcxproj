@@ -22,8 +22,9 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{f747bb69-98be-40e1-9d14-338011c444a0}</ProjectGuid>
-    <RootNamespace>medleyconsole</RootNamespace>
+    <RootNamespace>medleyplayground</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>medley-playground</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -181,7 +182,7 @@
     <ClCompile Include="..\..\juce\include_juce_gui_extra.cpp" />
     <ClCompile Include="..\..\src\Deck.cpp" />
     <ClCompile Include="..\..\src\Medley.cpp" />
-    <ClCompile Include="medley-console.cpp" />
+    <ClCompile Include="medley-playground.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h" />
