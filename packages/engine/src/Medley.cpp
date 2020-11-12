@@ -165,9 +165,11 @@ void Medley::deckPosition(Deck& sender, double position) {
     }
 
     if (position > transitionStartPos) {
-        auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / (transitionEndPos - transitionStartPos));
-        // TODO: Fast/Slow fading
-        sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
+        auto transitionDuration = (transitionEndPos - transitionStartPos);
+        auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
+
+        DBG("Fading out...");
+        sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));     
     }
 }
 
