@@ -132,6 +132,7 @@ void Deck::unloadTrackInternal()
 {
     inputStreamEOF = false;
     playing = false;
+    stopped = true;
 
     bool deckUnloaded = false;
 
@@ -239,11 +240,11 @@ void Deck::calculateTransition()
             transitionEndPosition = transitionStartPosition + transitionTime;
         }
         else {
-            auto actualTransitionTime = jmin(transitionTime, trailingDuration);
-            transitionStartPosition = jmax(2.0, transitionStartPosition - transitionTime);
+            transitionStartPosition = jmax(2.0, transitionStartPosition - trailingDuration);
+            transitionEndPosition = transitionStartPosition + trailingDuration;
         }
         
-        transitionCuePosition = jmax(0.0, transitionStartPosition - 5.0);
+        transitionCuePosition = jmax(0.0, transitionStartPosition - 8.0);
     }
 }
 
@@ -379,6 +380,10 @@ void Deck::start()
                 cb.deckStarted(*this);
             });
         }
+    }
+    else {
+        // Something went wrong
+        jassertfalse;
     }
 }
 

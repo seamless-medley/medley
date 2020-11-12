@@ -93,6 +93,8 @@ public:
 
     void setTransitionTime(double duration);
 
+    double getTrailingDuration() const { return trailingDuration; }
+
     int64 getLeadingPosition() const { return leadingPosition; }
 
     double getLeadingDuration() const { return leadingDuration; }
