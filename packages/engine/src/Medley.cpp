@@ -138,6 +138,7 @@ void Medley::deckPosition(Deck& sender, double position) {
     auto transitionCuePoint = sender.getTransitionCuePosition();
     auto transitionStartPos = sender.getTransitionStartPosition();
     auto transitionEndPos = sender.getTransitionEndPosition();
+    auto trailingDuration = sender.getTrailingDuration();
 
     auto leadingDuration = nextDeck->getLeadingDuration();
 
@@ -160,6 +161,15 @@ void Medley::deckPosition(Deck& sender, double position) {
                 transitionState = TransitionState::Transit;
                 transitingDeck = &sender;
                 nextDeck->start();
+            }
+        }
+
+        if (transitionState == TransitionState::Transit) {
+            if (leadingDuration >= 2.0) {
+                auto fadeinProgress = jlimit(0.0, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
+
+                DBG("Fading in...");
+                nextDeck->setVolume((float)pow(fadeinProgress, fadingFactor));
             }
         }
     }
