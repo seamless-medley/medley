@@ -160,6 +160,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                 DBG("TRANSIT");
                 transitionState = TransitionState::Transit;
                 transitingDeck = &sender;
+                nextDeck->setVolume(1.0f);
                 nextDeck->start();
             }
         }
