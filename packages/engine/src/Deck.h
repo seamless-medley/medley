@@ -8,6 +8,8 @@ class Deck : public PositionableAudioSource {
 public:
     class Callback {
     public:
+        virtual void deckTrackScanned(Deck& sender) = 0;
+
         virtual void deckPosition(Deck& sender, double position) = 0;
 
         virtual void deckStarted(Deck& sender) = 0;
@@ -90,6 +92,12 @@ public:
     double getTransitionTime() const { return transitionTime; }
 
     void setTransitionTime(double duration);
+
+    int64 getLeadingPosition() const { return leadingPosition; }
+
+    double getLeadingDuration() const { return leadingDuration; }
+
+    bool shouldPlayAfterLoading() const { return playAfterLoading; }
 
 private:
     class Loader : public TimeSliceClient {
@@ -193,6 +201,9 @@ private:
     int64 firstAudibleSoundPosition = 0;
     int64 lastAudibleSoundPosition = 0;
     int64 totalSamplesToPlay = 0;
+
+    int64 leadingPosition = 0;
+    double leadingDuration = 0.0;
 
     int64 trailingPosition = 0;
     double trailingDuration = 0.0;

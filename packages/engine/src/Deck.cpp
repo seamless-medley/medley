@@ -1,11 +1,12 @@
 #include "Deck.h"
 
 namespace {
+    static const auto kHeadRoomDecibel = 3.0f;
     static const auto kSilenceThreshold = Decibels::decibelsToGain(-60.0f);
     static const auto kEndingSilenceThreshold = Decibels::decibelsToGain(-45.0f);
-    static const auto kTrailingSilenceThreshold = Decibels::decibelsToGain(-20.0f);
+    static const auto kFadingSilenceThreshold = Decibels::decibelsToGain(-20.0f);
 
-    constexpr float kFirstSoundDuration = 1e-3f;
+    constexpr float kFirstSoundDuration = 0.001f;
     constexpr float kLastSoundDuration = 1.25f;
     constexpr float kLastSoundScanningDurartion = 20.0f;
 }
@@ -76,11 +77,41 @@ void Deck::loadTrackInternal(File* file)
     reader = newReader;
 
     auto mid = reader->lengthInSamples / 2;
-    firstAudibleSoundPosition = jmax(0i64, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0f, (int)(reader->sampleRate * kFirstSoundDuration)));
+    firstAudibleSoundPosition = jmax(0i64, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
     totalSamplesToPlay = reader->lengthInSamples;
     lastAudibleSoundPosition = totalSamplesToPlay;
 
-    setSource(new AudioFormatReaderSource(newReader, false));
+    Range<float> maxLevels[2]{};
+    reader->readMaxLevels(firstAudibleSoundPosition, (int)(reader->sampleRate * 10), maxLevels, 2);
+
+    auto leadingDecibel = Decibels::gainToDecibels((maxLevels[0].getEnd() + maxLevels[1].getEnd()) / 2.0f);
+    auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 3.0f));
+
+    leadingPosition = reader->searchForLevel(
+        firstAudibleSoundPosition,
+        (int)(reader->sampleRate * 10.0),
+        leadingLevel, 1.0,
+        (int)(reader->sampleRate * kFirstSoundDuration / 10)
+    );
+
+    if (leadingPosition > -1) {
+        auto lead2 = reader->searchForLevel(
+            jmax(0i64, leadingPosition - (int)(reader->sampleRate * 2.0)),
+            (int)(reader->sampleRate * 2.0),
+            leadingLevel * 0.33, 1.0,
+            0
+        );
+
+        if (lead2 > -1 & lead2 < leadingPosition) {
+            leadingPosition = lead2;
+        }
+    }
+
+    leadingDuration = (leadingPosition > -1) ? (leadingPosition - firstAudibleSoundPosition) / reader->sampleRate : 0;
+
+    DBG(String::formatted("leadingDuration=%.2f, leadingPosition=%d", leadingDuration, leadingPosition));
+
+    setSource(new AudioFormatReaderSource(reader, false));
 
     {
         ScopedLock sl(callbackLock);
@@ -147,6 +178,7 @@ void Deck::scanTrackInternal()
     }
 
     auto scanningReader = formatMgr.createReaderFor(file);
+
     auto middlePosition = scanningReader->lengthInSamples / 2;
     auto tailPosition = jmax(
         firstAudibleSoundPosition,
@@ -179,7 +211,7 @@ void Deck::scanTrackInternal()
     trailingPosition = scanningReader->searchForLevel(
         tailPosition,
         totalSamplesToPlay - tailPosition,
-        0, kTrailingSilenceThreshold,
+        0, kFadingSilenceThreshold,
         (int)(scanningReader->sampleRate * 0.5)
     );
 
@@ -188,6 +220,10 @@ void Deck::scanTrackInternal()
     delete scanningReader;
 
     calculateTransition();
+
+    listeners.call([this](Callback& cb) {
+        cb.deckTrackScanned(*this);
+    });
 }
 
 void Deck::calculateTransition()
@@ -207,7 +243,7 @@ void Deck::calculateTransition()
             transitionStartPosition = jmax(2.0, transitionStartPosition - transitionTime);
         }
         
-        transitionCuePosition = jmax(0.0, transitionStartPosition - 2.0);
+        transitionCuePosition = jmax(0.0, transitionStartPosition - 5.0);
     }
 }
 

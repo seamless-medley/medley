@@ -62,6 +62,11 @@ bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
     return true;
 }
 
+void Medley::deckTrackScanned(Deck& sender)
+{
+
+}
+
 Deck* Medley::getAvailableDeck() {
     return !deck1->isTrackLoaded() ? deck1 : (!deck2->isTrackLoaded() ? deck2 : nullptr);
 }
@@ -96,10 +101,12 @@ void Medley::deckFinished(Deck& sender) {
 
 void Medley::deckLoaded(Deck& sender)
 {
-    ScopedLock sl(callbackLock);
-    listeners.call([&sender](Callback& cb) {
-        cb.deckLoaded(sender);
-    });
+    {
+        ScopedLock sl(callbackLock);
+        listeners.call([&](Callback& cb) {
+            cb.deckLoaded(sender);
+        });
+    }
 }
 
 void Medley::deckUnloaded(Deck& sender) {
@@ -128,8 +135,14 @@ void Medley::deckPosition(Deck& sender, double position) {
         return;
     }
 
+    auto transitionCuePoint = sender.getTransitionCuePosition();
+    auto transitionStartPos = sender.getTransitionStartPosition();
+    auto transitionEndPos = sender.getTransitionEndPosition();
+
+    auto leadingDuration = nextDeck->getLeadingDuration();
+
     if (transitionState == TransitionState::Idle) {
-        if (position > sender.getTransitionCuePosition()) {
+        if (position > transitionCuePoint - leadingDuration) {
             if (!loadNextTrack(&sender, false)) {
                 // No more track, do not transit
                 return;
@@ -140,10 +153,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         }
     }
 
-    auto transitionStartPos = sender.getTransitionStartPosition();
-    auto transitionEndPos = sender.getTransitionEndPosition();
-
-    if (position > transitionStartPos) {
+    if (position > transitionStartPos - leadingDuration) {
         if (transitionState != TransitionState::Transit) {
             if (nextDeck->isTrackLoaded()) {
                 DBG("TRANSIT");
@@ -152,8 +162,11 @@ void Medley::deckPosition(Deck& sender, double position) {
                 nextDeck->start();
             }
         }
+    }
 
+    if (position > transitionStartPos) {
         auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / (transitionEndPos - transitionStartPos));
+        // TODO: Fast/Slow fading
         sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
     }
 }

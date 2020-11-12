@@ -125,6 +125,10 @@ private:
             }
         }
 
+        void deckTrackScanned(Deck& sender) {
+
+        }
+
         void deckPosition(Deck& sender, double position) {
 
         }

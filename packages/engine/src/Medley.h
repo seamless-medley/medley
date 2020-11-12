@@ -56,6 +56,8 @@ public:
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);
 
+    void deckTrackScanned(Deck& sender) override;
+
     void deckStarted(Deck& sender) override;
 
     void deckFinished(Deck& sender) override;
