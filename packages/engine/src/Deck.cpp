@@ -102,7 +102,7 @@ void Deck::loadTrackInternal(File* file)
             0
         );
 
-        if (lead2 > -1 & lead2 < leadingPosition) {
+        if ((lead2 > firstAudibleSoundPosition) && (lead2 < leadingPosition)) {
             leadingPosition = lead2;
         }
     }
