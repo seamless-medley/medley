@@ -45,7 +45,6 @@ public:
     void initialise(const String& commandLine) override
     {
         myMainWindow.reset(new MainWindow());
-        myMainWindow->setBounds(100, 100, 400, 500);
         myMainWindow->setVisible(true);
     }
 
@@ -58,18 +57,57 @@ public:
     const juce::String getApplicationVersion() override { return "1.0.0"; }
 
 private:
-    class MainContentComponent : public Component, public Button::Listener {
+    class QueueModel : public ListBoxModel {
+    public:
+        QueueModel(Queue& queue)
+            : queue(queue)
+        {
+            
+        }
+
+        int getNumRows() override
+        {
+            return queue.count();
+        }
+
+        void paintListBoxItem(int rowNumber, Graphics& g, int width, int height, bool rowIsSelected) override {
+            if (rowIsSelected) {
+                g.fillAll(Colours::lightblue);
+            }
+
+            g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));
+            g.setFont(juce::Font("Tahoma", 16.0f, Font::plain));
+
+            auto at = std::next(queue.tracks.begin(), rowNumber);
+            if (at != queue.tracks.end()) {
+                g.drawText(at->get()->getFullPath(), 0, 0, width, height, Justification::centredLeft);
+            }
+        }
+
+    private:
+        Queue& queue;
+    };
+
+    class MainContentComponent : public Component, public Button::Listener, public medley::Medley::Callback {
     public:
         MainContentComponent() :
             Component(),
+            model(queue),
             medley(queue),
+            queueListBox({}, &model),
             btnOpen("Add")
         {
+            medley.addListener(this);
+
             btnOpen.setBounds(10, 10, 55, 24);
             btnOpen.addListener(this);
-
             addAndMakeVisible(btnOpen);
-            setSize(600, 400);            
+
+            queueListBox.setColour(ListBox::outlineColourId, Colours::grey);
+            queueListBox.setBounds(10, 40, 700, 300);
+            addAndMakeVisible(queueListBox);
+
+            setSize(800, 600);            
         }
 
         void buttonClicked(Button*) override {
@@ -80,16 +118,46 @@ private:
 
                 for (auto f : files) {
                     queue.tracks.push_back(new Track(f));
-                }
+                }                
 
                 medley.play();
+                queueListBox.updateContent();
             }
         }
 
+        void deckPosition(Deck& sender, double position) {
+
+        }
+
+        void deckStarted(Deck& sender) {
+
+        }
+
+        void deckFinished(Deck& sender) {
+
+        }
+
+        void deckLoaded(Deck& sender) {
+            updateQueueListBox();
+        }
+
+        void deckUnloaded(Deck& sender) {
+            
+        }
+
+        void updateQueueListBox() {
+            const MessageManagerLock mml(Thread::getCurrentThread());
+            if (mml.lockWasGained()) {
+                queueListBox.deselectAllRows();
+                queueListBox.updateContent();
+            }
+        }
 
         TextButton btnOpen;
+        ListBox queueListBox;
 
         Queue queue;
+        QueueModel model;
         medley::Medley medley;
     };
 
@@ -100,7 +168,7 @@ private:
         {
             setUsingNativeTitleBar(true);
             setContentOwned(new MainContentComponent(), true);
-            setBounds(100, 50, getWidth(), getHeight());
+            setBounds(100, 50, 800, 600);
             setResizable(true, false);
             setVisible(true);
         }
