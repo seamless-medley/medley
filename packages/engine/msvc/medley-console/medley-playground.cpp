@@ -75,8 +75,7 @@ private:
                 g.fillAll(Colours::lightblue);
             }
 
-            g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));
-            g.setFont(juce::Font("Tahoma", 16.0f, Font::plain));
+            g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));            
 
             auto at = std::next(queue.tracks.begin(), rowNumber);
             if (at != queue.tracks.end()) {
@@ -175,6 +174,8 @@ private:
             setBounds(100, 50, 800, 600);
             setResizable(true, false);
             setVisible(true);
+
+            LookAndFeel::getDefaultLookAndFeel().setDefaultSansSerifTypefaceName("Tahoma");
         }
 
         void closeButtonPressed() override
