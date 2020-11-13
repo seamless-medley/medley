@@ -40,7 +40,7 @@ public:
     std::list<Track::Ptr> tracks;
 };
 
-class MedlayApp : public JUCEApplication {
+class MedleyApp : public JUCEApplication {
 public:
     void initialise(const String& commandLine) override
     {
@@ -187,7 +187,7 @@ private:
 };
 
 juce::JUCEApplicationBase* createApplication() {
-    return new MedlayApp();
+    return new MedleyApp();
 }
 
 int main()
