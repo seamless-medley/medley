@@ -1,4 +1,5 @@
 #include "Deck.h"
+#include <inttypes.h>
 
 namespace {
     static const auto kHeadRoomDecibel = 3.0f;
@@ -109,7 +110,7 @@ void Deck::loadTrackInternal(File* file)
 
     leadingDuration = (leadingPosition > -1) ? (leadingPosition - firstAudibleSoundPosition) / reader->sampleRate : 0;
 
-    DBG(String::formatted("leadingDuration=%.2f, leadingPosition=%d", leadingDuration, leadingPosition));
+    DBG(String::formatted("[%s] Leading: duration=%.2f, position=%d", name.toWideCharPointer(), leadingDuration, leadingPosition));
 
     setSource(new AudioFormatReaderSource(reader, false));
 
@@ -246,6 +247,16 @@ void Deck::calculateTransition()
         
         transitionCuePosition = jmax(0.0, transitionStartPosition - 8.0);
     }
+
+    DBG(String::formatted(
+        "[%s] Transition: start=%.3fs, end=%.3fs, duration=%.2fs, trailing=%.2fs, total=%.2fs",
+        name.toWideCharPointer(),
+        transitionStartPosition,
+        transitionEndPosition,
+        transitionEndPosition - transitionStartPosition,
+        trailingDuration,
+        totalSamplesToPlay / sourceSampleRate
+    ));
 }
 
 void Deck::firePositionChangeCalback(double position)
@@ -310,7 +321,7 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
     lastGain = gain;
 
     if (wasPlaying && !playing) {
-        DBG("STOPPED");
+        DBG(String::formatted("[%s] Stopped", name.toWideCharPointer()));
 
         listeners.call([this](Callback& cb) {
             cb.deckFinished(*this);

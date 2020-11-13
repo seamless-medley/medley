@@ -154,7 +154,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                 return;
             }
 
-            DBG("CUE NEXT");
+            DBG(String::formatted("[%s] cue", nextDeck->getName().toWideCharPointer()));
             transitionState = TransitionState::Cue;
             transitingDeck = &sender;
         }
@@ -163,8 +163,8 @@ void Medley::deckPosition(Deck& sender, double position) {
     if (position > transitionStartPos - leadingDuration) {
         if (transitionState != TransitionState::Transit) {
             if (nextDeck->isTrackLoaded()) {
-                DBG("TRANSIT");
-                transitionState = TransitionState::Transit;
+                DBG(String::formatted("Transiting to [%s]", nextDeck->getName().toWideCharPointer()));
+                transitionState = TransitionState::Transit;                
                 nextDeck->setVolume(1.0f);
                 nextDeck->start();
             }
@@ -174,7 +174,7 @@ void Medley::deckPosition(Deck& sender, double position) {
             if (leadingDuration >= 2.0) {
                 auto fadeinProgress = jlimit(0.0, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
 
-                DBG("Fading in...");
+                DBG(String::formatted("[%s] Fading in: %.2f", nextDeck->getName().toWideCharPointer(), fadeinProgress));
                 nextDeck->setVolume((float)pow(fadeinProgress, fadingFactor));
             }
         }
@@ -184,7 +184,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         auto transitionDuration = (transitionEndPos - transitionStartPos);
         auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
-        DBG("Fading out...");
+        DBG(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
         sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));     
     }
 }
