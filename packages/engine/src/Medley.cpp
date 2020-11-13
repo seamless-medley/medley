@@ -107,7 +107,16 @@ void Medley::deckLoaded(Deck& sender)
 
 void Medley::deckUnloaded(Deck& sender) {
     if (&sender == transitingDeck) {
+        if (transitionState == TransitionState::Cue) {
+            DBG(String::formatted("[%s] stopped before transition would happen, try starting next deck", sender.getName().toWideCharPointer()));
+            auto nextDeck = getAnotherDeck(transitingDeck);
+            if (nextDeck->isTrackLoaded()) {
+                nextDeck->start();
+            }
+        }
+
         transitionState = TransitionState::Idle;
+        transitingDeck = nullptr;
     }
 
     {
