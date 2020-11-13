@@ -551,15 +551,11 @@ void Deck::Scanner::scan()
 
 int Deck::PlayHead::useTimeSlice()
 {
-    if (!deck.isPlaying()) {
-        return 250;
-    }
-
     auto pos = deck.getPositionInSeconds();
     if (lastPosition != pos) {
         deck.firePositionChangeCalback(pos);
         lastPosition = pos;
     }
 
-    return 33;
+    return deck.isPlaying() ? 33 : 250;
 }

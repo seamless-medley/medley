@@ -42,14 +42,14 @@ Medley::~Medley() {
 }
 
 bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
+    if (queue.count() <= 0) {
+        return false;
+    }
+
     auto deck = getAnotherDeck(currentDeck);
 
     if (deck == nullptr) {
         DBG("Could not find another deck for " + getDeckName(*currentDeck));
-        return false;
-    }
-
-    if (queue.count() <= 0) {
         return false;
     }
 
@@ -147,6 +147,7 @@ void Medley::deckPosition(Deck& sender, double position) {
 
             DBG("CUE NEXT");
             transitionState = TransitionState::Cue;
+            transitingDeck = &sender;
         }
     }
 
@@ -155,7 +156,6 @@ void Medley::deckPosition(Deck& sender, double position) {
             if (nextDeck->isTrackLoaded()) {
                 DBG("TRANSIT");
                 transitionState = TransitionState::Transit;
-                transitingDeck = &sender;
                 nextDeck->setVolume(1.0f);
                 nextDeck->start();
             }
@@ -171,7 +171,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         }
     }
 
-    if (position > transitionStartPos) {
+    if (position >= transitionStartPos) {
         auto transitionDuration = (transitionEndPos - transitionStartPos);
         auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
