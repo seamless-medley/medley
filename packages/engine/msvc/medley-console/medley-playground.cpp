@@ -235,41 +235,7 @@ int main()
     static_cast<void>(::CoInitialize(nullptr));
 
     juce::JUCEApplicationBase::createInstance = &createApplication;
-    return juce::JUCEApplicationBase::main();    
-
-    /*OPENFILENAMEW of{};
-    HeapBlock<WCHAR> files;
-
-    files.calloc(static_cast<size_t> (32768) + 1);
-
-    of.lStructSize = OPENFILENAME_SIZE_VERSION_400W;
-    of.hwndOwner = 0;
-    of.lpstrFilter = nullptr;
-    of.nFilterIndex = 1;
-    of.lpstrFile = files;
-    of.nMaxFile = 32768;
-    of.lpstrInitialDir = nullptr;
-    of.lpstrTitle = L"Open file";
-    of.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY | OFN_ENABLESIZING | OFN_ALLOWMULTISELECT;    
-
-    if (GetOpenFileName(&of)) {
-        if (of.nFileOffset > 0 && files[of.nFileOffset - 1] == 0) {
-            const wchar_t* filename = files + of.nFileOffset;
-
-
-            while (*filename != 0)
-            {
-                queue.tracks.push_back(new Track(File(String(files.get())).getChildFile(String(filename))));
-                filename += wcslen(filename) + 1;
-            }
-        }
-        else {
-            queue.tracks.push_back(new Track(File(String(files.get()))));
-        }
-    }*/
-
-    //medley::Medley medley(queue);
-    //medley.play();
+    return juce::JUCEApplicationBase::main();
 
     static_cast<void>(getchar());
 }
