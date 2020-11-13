@@ -84,6 +84,8 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
     firstAudibleSoundPosition = jmax(0i64, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
     totalSamplesToPlay = reader->lengthInSamples;
     lastAudibleSoundPosition = totalSamplesToPlay;
+    trailingPosition = -1;
+    trailingDuration = 0;
 
     Range<float> maxLevels[2]{};
     reader->readMaxLevels(firstAudibleSoundPosition, (int)(reader->sampleRate * 10), maxLevels, 2);
@@ -247,10 +249,10 @@ void Deck::calculateTransition()
         else {
             transitionStartPosition = jmax(2.0, transitionStartPosition - trailingDuration);
             transitionEndPosition = transitionStartPosition + trailingDuration;
-        }
-        
-        transitionCuePosition = jmax(0.0, transitionStartPosition - 8.0);
+        }        
     }
+
+    transitionCuePosition = jmax(0.0, transitionStartPosition - 8.0);
 
     DBG(String::formatted(
         "[%s] Transition: start=%.3fs, end=%.3fs, duration=%.2fs, trailing=%.2fs, total=%.2fs",
