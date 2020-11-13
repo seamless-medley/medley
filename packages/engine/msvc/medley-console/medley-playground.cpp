@@ -93,6 +93,11 @@ private:
 
         }
 
+        void paint(Graphics& g) override {
+            g.setColour(Colours::darkred);
+            g.fillRect(0, 0, getWidth(), getHeight());
+        }
+
         medley::Deck& deck;
     };
 
@@ -137,6 +142,10 @@ private:
         {
             medley.addListener(this);
 
+            deckA = new DeckComponent(medley.getDeck1());
+            deckA->setBounds(10, 10, 100, 100);
+            addAndMakeVisible(deckA);
+
             btnOpen.setBounds(10, 10, 55, 24);
             btnOpen.addListener(this);
             addAndMakeVisible(btnOpen);
@@ -146,6 +155,11 @@ private:
             addAndMakeVisible(queueListBox);
 
             setSize(800, 600);            
+        }
+
+        ~MainContentComponent() {
+            removeChildComponent(deckA);
+            delete deckA;
         }
 
         void buttonClicked(Button*) override {
@@ -197,6 +211,9 @@ private:
 
         TextButton btnOpen;
         ListBox queueListBox;
+
+        DeckComponent* deckA = nullptr;
+        DeckComponent* deckB = nullptr;
 
         Queue queue;
         QueueModel model;
