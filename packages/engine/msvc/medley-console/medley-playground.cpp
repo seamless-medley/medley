@@ -5,6 +5,7 @@
 #include "Medley.h"
 
 using namespace juce;
+using namespace medley;
 
 class Track : public medley::ITrack {
 public:
@@ -15,14 +16,14 @@ public:
 
     }
 
-    String getFullPath() const {
-        return file.getFullPathName();
+    File& getFile() override {
+        return file;
     }
 
 private:
     JUCE_LEAK_DETECTOR(Track)
 
-        File file;
+    File file;
 };
 
 class Queue : public medley::IQueue {
@@ -57,6 +58,44 @@ public:
     const juce::String getApplicationVersion() override { return "1.0.0"; }
 
 private:
+    
+
+    class DeckComponent : public Component, public Deck::Callback {
+    public:
+        DeckComponent(Deck& deck)
+            :
+            deck(deck)
+        {
+            deck.addListener(this);
+        }
+
+        void deckTrackScanned(Deck& sender) {
+
+        }
+
+        void deckPosition(Deck& sender, double position) {
+
+        }
+
+        void deckStarted(Deck& sender) {
+
+        }
+
+        void deckFinished(Deck& sender) {
+
+        }
+
+        void deckLoaded(Deck& sender) {
+            
+        }
+
+        void deckUnloaded(Deck& sender) {
+
+        }
+
+        medley::Deck& deck;
+    };
+
     class QueueModel : public ListBoxModel {
     public:
         QueueModel(Queue& queue)
@@ -79,7 +118,7 @@ private:
 
             auto at = std::next(queue.tracks.begin(), rowNumber);
             if (at != queue.tracks.end()) {
-                g.drawText(at->get()->getFullPath(), 0, 0, width, height, Justification::centredLeft);
+                g.drawText(at->get()->getFile().getFullPathName(), 0, 0, width, height, Justification::centredLeft);
             }
         }
 

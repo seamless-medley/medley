@@ -54,7 +54,7 @@ bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
     }
 
     auto track = queue.fetchNextTrack();
-    deck->loadTrack(track->getFullPath(), play);
+    deck->loadTrack(track, play);
     return true;
 }
 

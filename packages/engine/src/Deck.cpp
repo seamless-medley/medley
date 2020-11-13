@@ -12,6 +12,8 @@ namespace {
     constexpr float kLastSoundScanningDurartion = 20.0f;
 }
 
+namespace medley {
+
 Deck::Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
     name(name),
@@ -48,12 +50,12 @@ double Deck::getPositionInSeconds() const
     return 0.0;
 }
 
-void Deck::loadTrack(const File& file, bool play)
+void Deck::loadTrack(const ITrack::Ptr track, bool play)
 {
     playAfterLoading = play;
-    loader.load(file);
+    loader.load(track);
 
-    this->file = file;
+    this->track = track;
 }
 
 void Deck::unloadTrack()
@@ -62,13 +64,14 @@ void Deck::unloadTrack()
     unloadTrackInternal();
 }
 
-void Deck::loadTrackInternal(File* file)
+void Deck::loadTrackInternal(const ITrack::Ptr track)
 {
-    if (!file->existsAsFile()) {
+    auto file = track.get()->getFile();
+    if (!file.existsAsFile()) {
         return;
     }
 
-    auto newReader = formatMgr.createReaderFor(*file);
+    auto newReader = formatMgr.createReaderFor(file);
 
     if (!newReader) {
         return;
@@ -175,6 +178,7 @@ void Deck::unloadTrackInternal()
 
 void Deck::scanTrackInternal()
 {
+    auto file = track->getFile();
     if (!file.existsAsFile()) {
         return;
     }
@@ -514,35 +518,25 @@ void Deck::releaseChainedResources()
 
 Deck::Loader::~Loader()
 {
-    if (file) {
-        delete file;
-        file = nullptr;
-    }
+    track = nullptr;
 }
 
 int Deck::Loader::useTimeSlice()
 {
     ScopedLock sl(lock);
 
-    if (file != nullptr) {
-        deck.loadTrackInternal(file);
-
-        delete file;
-        file = nullptr;
+    if (track != nullptr) {
+        deck.loadTrackInternal(track);
+        track = nullptr;
     }
 
     return 100;
 }
 
-void Deck::Loader::load(const File& file)
+void Deck::Loader::load(const ITrack::Ptr track)
 {
     ScopedLock sl(lock);
-
-    if (this->file) {
-        delete this->file;
-    }
-
-    this->file = new File(file);
+    this->track = track;
 }
 
 int Deck::Scanner::useTimeSlice()
@@ -569,4 +563,6 @@ int Deck::PlayHead::useTimeSlice()
     }
 
     return deck.isPlaying() ? 33 : 250;
+}
+
 }

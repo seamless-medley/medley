@@ -187,6 +187,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h" />
     <ClInclude Include="..\..\src\Deck.h" />
+    <ClInclude Include="..\..\src\ITrack.h" />
     <ClInclude Include="..\..\src\Medley.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

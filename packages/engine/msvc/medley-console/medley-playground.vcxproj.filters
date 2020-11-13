@@ -77,5 +77,8 @@
     <ClInclude Include="..\..\src\Medley.h">
       <Filter>Engine Source</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\ITrack.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

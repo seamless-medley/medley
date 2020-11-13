@@ -8,17 +8,6 @@ using namespace juce;
 
 namespace medley {
 
-class ITrack : public ReferenceCountedObject {
-public:
-    virtual String getFullPath() const = 0;
-    // TODO: ReplayGain
-
-    using Ptr = ReferenceCountedObjectPtr<ITrack>;
-};
-
-class ITrackMetadata {
-
-};
 
 class IQueue {
 public:

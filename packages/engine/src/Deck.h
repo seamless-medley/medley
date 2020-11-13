@@ -1,8 +1,11 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "ITrack.h"
 
 using namespace juce;
+
+namespace medley {
 
 class Deck : public PositionableAudioSource {
 public:
@@ -31,7 +34,7 @@ public:
 
     double getPositionInSeconds() const;
 
-    void loadTrack(const File& file, bool play);
+    void loadTrack(const ITrack::Ptr track, bool play);
 
     void unloadTrack();
 
@@ -108,10 +111,10 @@ private:
         ~Loader() override;
         int useTimeSlice() override;
 
-        void load(const File& file);
+        void load(const ITrack::Ptr track);
     private:
         Deck& deck;
-        File* file = nullptr;
+        ITrack::Ptr track = nullptr;
         CriticalSection lock;
     };
 
@@ -139,7 +142,7 @@ private:
 
     void releaseChainedResources();
 
-    void loadTrackInternal(File* file);
+    void loadTrackInternal(const ITrack::Ptr track);
 
     void unloadTrackInternal();
 
@@ -162,7 +165,7 @@ private:
         return 0.0;
     }
 
-    File file;
+    ITrack::Ptr track;
 
     std::atomic<bool> playing{ false };
     std::atomic<bool> stopped{ true };
@@ -216,4 +219,6 @@ private:
 
     double transitionTime = 3.0;
 };
+
+}
 
