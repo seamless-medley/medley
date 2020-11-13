@@ -10,10 +10,6 @@ Medley::Medley(IQueue& queue)
     updateFadingFactor();
 
     deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
-    auto audioSetup = deviceMgr.getAudioDeviceSetup();
-    audioSetup.bufferSize = (int)(audioSetup.sampleRate * 0.25);
-    deviceMgr.setAudioDeviceSetup(audioSetup, false);
-
     formatMgr.registerBasicFormats();
 
     deck1 = new Deck("Deck A", formatMgr, loadingThread, readAheadThread);
