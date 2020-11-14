@@ -96,32 +96,38 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
     firstAudibleSoundPosition = jmax(0i64, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
     totalSamplesToPlay = reader->lengthInSamples;
     lastAudibleSoundPosition = totalSamplesToPlay;
+    leadingPosition = -1;
     trailingPosition = -1;
     trailingDuration = 0;
 
-    Range<float> maxLevels[2]{};
-    reader->readMaxLevels(firstAudibleSoundPosition, (int)(reader->sampleRate * 10), maxLevels, 2);
+    auto playDuration = totalSamplesToPlay / reader->sampleRate;
 
-    auto leadingDecibel = Decibels::gainToDecibels((maxLevels[0].getEnd() + maxLevels[1].getEnd()) / 2.0f);
-    auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 3.0f));
+    if (playDuration >= 3) {
+        Range<float> maxLevels[2]{};
+        reader->readMaxLevels(firstAudibleSoundPosition, (int)(reader->sampleRate * 10), maxLevels, 2);
 
-    leadingPosition = reader->searchForLevel(
-        firstAudibleSoundPosition,
-        (int)(reader->sampleRate * 10.0),
-        leadingLevel, 1.0,
-        (int)(reader->sampleRate * kFirstSoundDuration / 10)
-    );
+        auto leadingDecibel = Decibels::gainToDecibels((maxLevels[0].getEnd() + maxLevels[1].getEnd()) / 2.0f);
+        auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 3.0f));
 
-    if (leadingPosition > -1) {
-        auto lead2 = reader->searchForLevel(
-            jmax(0i64, leadingPosition - (int)(reader->sampleRate * 2.0)),
-            (int)(reader->sampleRate * 2.0),
-            leadingLevel * 0.33, 1.0,
-            0
+        leadingPosition = reader->searchForLevel(
+            firstAudibleSoundPosition,
+            (int)(reader->sampleRate * 10.0),
+            leadingLevel, 1.0,
+            (int)(reader->sampleRate * kFirstSoundDuration / 10)
         );
 
-        if ((lead2 > firstAudibleSoundPosition) && (lead2 < leadingPosition)) {
-            leadingPosition = lead2;
+
+        if (leadingPosition > -1) {
+            auto lead2 = reader->searchForLevel(
+                jmax(0i64, leadingPosition - (int)(reader->sampleRate * 2.0)),
+                (int)(reader->sampleRate * 2.0),
+                leadingLevel * 0.33, 1.0,
+                0
+            );
+
+            if ((lead2 > firstAudibleSoundPosition) && (lead2 < leadingPosition)) {
+                leadingPosition = lead2;
+            }
         }
     }
 
@@ -138,7 +144,12 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
         });
     }
 
-    scanningScheduler.scan();
+    if (playDuration >= 3) {
+        scanningScheduler.scan();
+    }
+    else {
+        calculateTransition();
+    }
 
     if (playAfterLoading) {
         start();
@@ -269,8 +280,9 @@ void Deck::calculateTransition()
     transitionCuePosition = jmax(0.0, transitionStartPosition - 8.0);
 
     DBG(String::formatted(
-        "[%s] Transition: start=%.3fs, end=%.3fs, duration=%.2fs, trailing=%.2fs, total=%.2fs",
+        "[%s] Transition: cue=%.3fs, start=%.3fs, end=%.3fs, duration=%.2fs, trailing=%.2fs, total=%.2fs",
         name.toWideCharPointer(),
+        transitionCuePosition,
         transitionStartPosition,
         transitionEndPosition,
         transitionEndPosition - transitionStartPosition,
