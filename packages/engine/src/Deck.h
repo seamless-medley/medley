@@ -38,7 +38,7 @@ public:
 
     void unloadTrack();
 
-    bool isTrackLoaded() const { return reader != nullptr; }
+    bool isTrackLoaded() const { return source != nullptr; }
 
     void setPosition(double newPosition);
 
