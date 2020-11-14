@@ -29,6 +29,9 @@ Medley::Medley(IQueue& queue)
 }
 
 Medley::~Medley() {
+    deck1->removeListener(this);
+    deck2->removeListener(this);
+    //
     mixer.removeAllInputs();
     mainOut.setSource(nullptr);
 
@@ -210,6 +213,12 @@ void Medley::addListener(Callback* cb)
 {
     ScopedLock sl(callbackLock);
     listeners.add(cb);
+}
+
+void Medley::removeListener(Callback* cb)
+{
+    ScopedLock sl(callbackLock);
+    listeners.remove(cb);
 }
 
 void Medley::updateFadingFactor() {

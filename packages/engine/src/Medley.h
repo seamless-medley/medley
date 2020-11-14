@@ -40,6 +40,8 @@ public:
 
     void addListener(Callback* cb);
 
+    void removeListener(Callback* cb);
+
     // TODO: Transition time
 
 private:
