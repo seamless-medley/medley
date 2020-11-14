@@ -186,7 +186,7 @@ void Medley::deckPosition(Deck& sender, double position) {
 
         if (transitionState == TransitionState::Transit) {
             if (leadingDuration >= 2.0) {
-                auto fadeinProgress = jlimit(0.0, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
+                auto fadeInProgress = jlimit(0.25, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
 
                 DBG(String::formatted("[%s] Fading in: %.2f", nextDeck->getName().toWideCharPointer(), fadeinProgress));
                 nextDeck->setVolume((float)pow(fadeinProgress, fadingFactor));
