@@ -196,12 +196,12 @@ void Medley::setFadingCurve(double curve) {
 
 void Medley::play()
 {
-    if (!isPlaying()) {
+    if (!isDeckPlaying()) {
         loadNextTrack(nullptr, true);
     }
 }
 
-bool Medley::isPlaying()
+bool Medley::isDeckPlaying()
 {
     return deck1->isPlaying() || deck2->isPlaying();
 }

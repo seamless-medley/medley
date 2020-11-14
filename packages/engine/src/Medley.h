@@ -36,7 +36,7 @@ public:
 
     void play();
 
-    bool isPlaying();
+    bool isDeckPlaying();
 
     void addListener(Callback* cb);
 
