@@ -433,6 +433,12 @@ void Deck::addListener(Callback* cb) {
     listeners.add(cb);
 }
 
+void Deck::removeListener(Callback* cb)
+{
+    ScopedLock sl(callbackLock);
+    listeners.remove(cb);
+}
+
 void Deck::prepareToPlay(int samplesPerBlockExpected, double newSampleRate)
 {
     const ScopedLock sl(callbackLock);

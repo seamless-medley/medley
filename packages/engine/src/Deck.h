@@ -48,6 +48,8 @@ public:
 
     void addListener(Callback* cb);
 
+    void removeListener(Callback* cb);
+
     void prepareToPlay(int samplesPerBlockExpected, double newSampleRate) override;
 
     void releaseResources() override;
