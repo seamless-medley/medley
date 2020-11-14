@@ -45,10 +45,6 @@ Medley::~Medley() {
 }
 
 bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
-    if (queue.count() <= 0) {
-        return false;
-    }
-
     auto deck = getAnotherDeck(currentDeck);
 
     if (deck == nullptr) {
@@ -56,9 +52,14 @@ bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
         return false;
     }
 
-    auto track = queue.fetchNextTrack();
-    deck->loadTrack(track, play);
-    return true;
+    while (queue.count() > 0) {
+        auto track = queue.fetchNextTrack();
+        if (deck->loadTrack(track, play)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void Medley::deckTrackScanned(Deck& sender)
@@ -127,6 +128,16 @@ void Medley::deckUnloaded(Deck& sender) {
         listeners.call([&](Callback& cb) {
             cb.deckUnloaded(sender);
         });
+    }
+
+    // Just in case
+    if (playing && !isDeckPlaying()) {
+        auto shouldContinuePlaying = queue.count() > 0;
+        playing = shouldContinuePlaying;
+
+        if (shouldContinuePlaying) {
+            loadNextTrack(nullptr, true);
+        }
     }
 }
 
@@ -202,6 +213,8 @@ void Medley::play()
     if (!isDeckPlaying()) {
         loadNextTrack(nullptr, true);
     }
+
+    playing = true;
 }
 
 bool Medley::isDeckPlaying()

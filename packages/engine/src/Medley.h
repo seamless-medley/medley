@@ -77,6 +77,7 @@ private:
     TimeSliceThread loadingThread;
     TimeSliceThread readAheadThread;
 
+    bool playing = false;
     IQueue& queue;
 
     enum class TransitionState {
