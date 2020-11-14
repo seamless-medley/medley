@@ -50,12 +50,24 @@ double Deck::getPositionInSeconds() const
     return 0.0;
 }
 
-void Deck::loadTrack(const ITrack::Ptr track, bool play)
+bool Deck::loadTrack(const ITrack::Ptr track, bool play)
 {
+    if (isTrackLoading) {
+        return false;
+    }
+
+    
+    auto format = formatMgr.findFormatForFileExtension(track->getFile().getFileExtension());
+    if (!format) {
+        return false;
+    }
+
     playAfterLoading = play;
     loader.load(track);
 
     this->track = track;
+    isTrackLoading = true;
+    return true;
 }
 
 void Deck::unloadTrack()
@@ -66,7 +78,7 @@ void Deck::unloadTrack()
 
 void Deck::loadTrackInternal(const ITrack::Ptr track)
 {
-    auto file = track.get()->getFile();
+    auto file = track->getFile();
     if (!file.existsAsFile()) {
         return;
     }
@@ -131,6 +143,8 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
     if (playAfterLoading) {
         start();
     }
+
+    isTrackLoading = false;
 }
 
 

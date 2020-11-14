@@ -34,7 +34,7 @@ public:
 
     double getPositionInSeconds() const;
 
-    void loadTrack(const ITrack::Ptr track, bool play);
+    bool loadTrack(const ITrack::Ptr track, bool play);
 
     void unloadTrack();
 
@@ -167,7 +167,8 @@ private:
         return 0.0;
     }
 
-    ITrack::Ptr track;
+    bool isTrackLoading = false;
+    ITrack::Ptr track = nullptr;
 
     std::atomic<bool> playing{ false };
     std::atomic<bool> stopped{ true };
