@@ -239,12 +239,12 @@ void Deck::calculateTransition()
     transitionStartPosition = lastAudibleSoundPosition / sourceSampleRate;
     transitionEndPosition = transitionStartPosition;
     
-    if (transitionTime > 0.0)
+    if (maxTransitionTime > 0.0)
     {        
 
-        if (trailingDuration >= transitionTime) {
+        if (trailingDuration >= maxTransitionTime) {
             transitionStartPosition = trailingPosition / sourceSampleRate;
-            transitionEndPosition = transitionStartPosition + transitionTime;
+            transitionEndPosition = transitionStartPosition + maxTransitionTime;
         }
         else {
             transitionStartPosition = jmax(2.0, transitionStartPosition - trailingDuration);
@@ -421,9 +421,9 @@ void Deck::updateGain()
     gain = pregain * volume;
 }
 
-void Deck::setTransitionTime(double duration)
+void Deck::setMaxTransitionTime(double duration)
 {
-    transitionTime = duration;
+    maxTransitionTime = duration;
     calculateTransition();
 }
 

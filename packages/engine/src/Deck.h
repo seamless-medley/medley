@@ -92,9 +92,9 @@ public:
 
     double getTransitionEndPosition() const { return transitionEndPosition; }
 
-    double getTransitionTime() const { return transitionTime; }
+    double getMaxTransitionTime() const { return maxTransitionTime; }
 
-    void setTransitionTime(double duration);
+    void setMaxTransitionTime(double duration);
 
     double getTrailingDuration() const { return trailingDuration; }
 
@@ -217,7 +217,7 @@ private:
     double transitionStartPosition = 0.0;
     double transitionEndPosition = 0.0;
 
-    double transitionTime = 3.0;
+    double maxTransitionTime = 3.0;
 };
 
 }
