@@ -53,52 +53,157 @@ public:
         myMainWindow = nullptr;
     }
 
-    const juce::String getApplicationName() override { return "BlockFinder"; }
+    const juce::String getApplicationName() override { return "Medley Playground"; }
 
-    const juce::String getApplicationVersion() override { return "1.0.0"; }
+    const juce::String getApplicationVersion() override { return "0.1.0"; }
 
 private:
+
+    class PlayHead : public Component {
+    public:
+        PlayHead(Deck* deck, Deck* anotherDeck)
+            :
+            deck(deck),
+            anotherDeck(anotherDeck)
+        {
+
+        }
+
+        void updateDecks(Deck* deck, Deck* anotherDeck) {
+            this->deck = deck;
+            this->anotherDeck = anotherDeck;
+        }      
+
+        void paint(Graphics& g) override {
+            auto w = (float)getWidth();
+            auto h = (float)getHeight();
+
+            if (!deck->isTrackLoaded()) {
+                return;
+            }
+
+            // container
+            g.setColour(Colours::lightgrey.darker(0.22));
+            g.fillRect(0.0f, 0.0f, w, h);
+
+            // progress
+            auto pos = (float)deck->getPositionInSeconds();
+            auto duration = deck->getDuration();
+
+            if (duration <= 0) {
+                return;
+            }
+
+            g.setColour(Colours::green);
+            g.fillRect(0.0f, 0.0f, (pos / duration) * w, h);
+
+            auto sr = deck->getSourceSampleRate();
+            auto first = deck->getFirstAudiblePosition();
+            auto last = deck->getEndPosition();
+
+            auto leading = deck->getLeadingSamplePosition() / sr;
+            auto trailing = deck->getTrailingSamplePosition() / sr;
+
+            auto nextLeading = (anotherDeck->isTrackLoaded() ? anotherDeck->getLeadingDuration() : 0);
+            //
+            auto cuePoint = deck->getTransitionCuePosition();
+            auto transitionStart = deck->getTransitionStartPosition() - nextLeading;
+            auto transitionEnd = deck->getTransitionEndPosition();
+
+            g.fillCheckerBoard(juce::Rectangle(0.0f, 0.0f, (float)(first / duration * w), h), 4, 4, Colours::darkgrey, Colours::darkgrey.darker());
+            g.fillCheckerBoard(juce::Rectangle((float)(last / duration * w), 0.0f, w, h), 4, 4, Colours::darkgrey, Colours::darkgrey.darker());
+
+            // cue
+            g.setColour(Colours::yellow);
+            g.drawVerticalLine(cuePoint / duration * w, 0, h);
+
+            // transition
+            {
+                g.setGradientFill(ColourGradient(
+                    Colours::hotpink.withAlpha(0.4f), transitionStart / duration * w, 0,
+                    Colours::lightpink.withAlpha(0.7f), transitionEnd / duration * w, 0,
+                    false
+                ));
+                g.fillRect(
+                    transitionStart / duration * w, 0.0f,
+                    (jmax(transitionEnd, last) - transitionStart) / duration * w, h
+                );
+            }
+
+            // leading
+            g.setColour(Colours::palevioletred);
+            g.drawVerticalLine(leading / duration * w, 0, w);
+
+            // trailing
+            g.setColour(Colours::orangered);
+            g.drawVerticalLine(trailing / duration * w, 0, w);
+        }
+
+        void mouseDown(const MouseEvent& event) override {
+            deck->setPositionFractional((double)event.getMouseDownX() / getWidth());
+        }
+
+        medley::Deck* deck;
+        medley::Deck* anotherDeck;
+    };
     
 
     class DeckComponent : public Component, public Deck::Callback {
     public:
-        DeckComponent(Deck& deck)
+        DeckComponent(Deck& deck, Deck& anotherDeck)
             :
-            deck(deck)
+            deck(deck),
+            playhead(&deck, &anotherDeck)
         {
             deck.addListener(this);
+
+            addAndMakeVisible(playhead);
         }
 
-        void deckTrackScanned(Deck& sender) {
-
+        ~DeckComponent() override {
+            deck.removeListener(this);
         }
 
-        void deckPosition(Deck& sender, double position) {
-
-        }
-
-        void deckStarted(Deck& sender) {
-
-        }
-
-        void deckFinished(Deck& sender) {
+        void deckTrackScanning(Deck& sender) override {
 
         }
 
-        void deckLoaded(Deck& sender) {
+        void deckTrackScanned(Deck& sender) override  {
+
+        }
+
+        void deckPosition(Deck& sender, double position) override {
+
+        }
+
+        void deckStarted(Deck& sender) override {
+
+        }
+
+        void deckFinished(Deck& sender) override {
+
+        }
+
+        void deckLoaded(Deck& sender) override {
             
         }
 
-        void deckUnloaded(Deck& sender) {
+        void deckUnloaded(Deck& sender) override {
 
         }
 
+        void resized() {
+            auto b = getLocalBounds();
+            playhead.setBounds(b.removeFromBottom(24).reduced(4, 4));
+        }
+
         void paint(Graphics& g) override {
-            g.setColour(Colours::darkred);
+            g.setColour(Colours::lightgrey);
             g.fillRect(0, 0, getWidth(), getHeight());
         }
 
         medley::Deck& deck;
+        PlayHead playhead;
     };
 
     class QueueModel : public ListBoxModel {
@@ -123,7 +228,7 @@ private:
 
             auto at = std::next(queue.tracks.begin(), rowNumber);
             if (at != queue.tracks.end()) {
-                g.drawText(at->get()->getFile().getFullPathName(), 0, 0, width, height, Justification::centredLeft);
+                g.drawText(at->get()->getFile().getFullPathName(), 0, 0, width, height, Justification::centredLeft, false);
             }
         }
 
@@ -131,7 +236,7 @@ private:
         Queue& queue;
     };
 
-    class MainContentComponent : public Component, public Button::Listener, public medley::Medley::Callback {
+    class MainContentComponent : public Component, public Timer, public Button::Listener, public medley::Medley::Callback {
     public:
         MainContentComponent() :
             Component(),
@@ -142,24 +247,60 @@ private:
         {
             medley.addListener(this);
 
-            deckA = new DeckComponent(medley.getDeck1());
-            deckA->setBounds(10, 10, 100, 100);
+            deckA = new DeckComponent(medley.getDeck1(), medley.getDeck2());
             addAndMakeVisible(deckA);
 
-            btnOpen.setBounds(10, 10, 55, 24);
+            deckB = new DeckComponent(medley.getDeck2(), medley.getDeck1());
+            addAndMakeVisible(deckB);
+
             btnOpen.addListener(this);
             addAndMakeVisible(btnOpen);
 
+            playhead = new PlayHead(&medley.getDeck1(), &medley.getDeck2());
+            addAndMakeVisible(playhead);
+
             queueListBox.setColour(ListBox::outlineColourId, Colours::grey);
-            queueListBox.setBounds(10, 40, 700, 300);
             addAndMakeVisible(queueListBox);
 
-            setSize(800, 600);            
+            setSize(800, 600);
+
+            startTimerHz(20);
+        }
+
+        void timerCallback() override {
+            deckA->repaint();
+            deckB->repaint();
+            playhead->repaint();
+        }
+
+        void resized() override {
+            auto b = getLocalBounds();
+            {
+                auto deckPanelArea = b.removeFromTop(200).reduced(10, 0);
+                auto w = (deckPanelArea.getWidth() - 10) / 2;
+                deckA->setBounds(deckPanelArea.removeFromLeft(w));
+                deckB->setBounds(deckPanelArea.translated(10, 0).removeFromLeft(w));
+            }
+            {
+                auto controlArea = b.removeFromTop(32).translated(0, 4).reduced(10, 4);
+                btnOpen.setBounds(controlArea.removeFromLeft(55));
+                playhead->setBounds(controlArea.translated(4, 0).reduced(4, 0));
+            }
+            {
+                queueListBox.setBounds(b.reduced(10));
+            }
         }
 
         ~MainContentComponent() {
+            medley.removeListener(this);
+
             removeChildComponent(deckA);
+            removeChildComponent(deckB);
+            removeChildComponent(playhead);
+
             delete deckA;
+            delete deckB;
+            delete playhead;
         }
 
         void buttonClicked(Button*) override {
@@ -177,28 +318,40 @@ private:
             }
         }
 
-        void deckTrackScanned(Deck& sender) {
+        void deckTrackScanning(Deck& sender) override {
 
         }
 
-        void deckPosition(Deck& sender, double position) {
+        void deckTrackScanned(Deck& sender) override {
 
         }
 
-        void deckStarted(Deck& sender) {
+        void deckPosition(Deck& sender, double position) override {
+            
+        }
+
+        void deckStarted(Deck& sender) override {
 
         }
 
-        void deckFinished(Deck& sender) {
+        void deckFinished(Deck& sender) override {
 
         }
 
-        void deckLoaded(Deck& sender) {
+        void deckLoaded(Deck& sender) override {
+            if (auto deck = medley.getActiveDeck()) {
+                auto anotherDeck = medley.getAnotherDeck(deck);
+                playhead->updateDecks(deck, anotherDeck);
+            }
+
             updateQueueListBox();
         }
 
-        void deckUnloaded(Deck& sender) {
-            
+        void deckUnloaded(Deck& sender) override {
+            if (auto deck = medley.getActiveDeck()) {
+                auto anotherDeck = medley.getAnotherDeck(deck);
+                playhead->updateDecks(deck, anotherDeck);
+            }
         }
 
         void updateQueueListBox() {
@@ -212,6 +365,8 @@ private:
         TextButton btnOpen;
         ListBox queueListBox;
 
+        PlayHead* playhead = nullptr;
+
         DeckComponent* deckA = nullptr;
         DeckComponent* deckB = nullptr;
 
@@ -223,7 +378,7 @@ private:
     class MainWindow : public DocumentWindow {
     public:
         explicit MainWindow()
-            : DocumentWindow("Medley", Colours::white, DocumentWindow::allButtons)
+            : DocumentWindow("Medley Playground", Colours::white, DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar(true);
             setContentOwned(new MainContentComponent(), true);
