@@ -1,17 +1,22 @@
 #include "Deck.h"
+#include <inttypes.h>
 
 namespace {
+    static const auto kHeadRoomDecibel = 3.0f;
     static const auto kSilenceThreshold = Decibels::decibelsToGain(-60.0f);
     static const auto kEndingSilenceThreshold = Decibels::decibelsToGain(-45.0f);
-    static const auto kTrailingSilenceThreshold = Decibels::decibelsToGain(-20.0f);
+    static const auto kFadingSilenceThreshold = Decibels::decibelsToGain(-20.0f);
 
-    constexpr float kFirstSoundDuration = 1e-3f;
+    constexpr float kFirstSoundDuration = 0.001f;
     constexpr float kLastSoundDuration = 1.25f;
     constexpr float kLastSoundScanningDurartion = 20.0f;
 }
 
-Deck::Deck(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
+namespace medley {
+
+Deck::Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
+    name(name),
     loader(*this),
     scanningScheduler(*this),
     playhead(*this),
@@ -29,7 +34,7 @@ Deck::~Deck() {
     unloadTrackInternal();
 }
 
-double Deck::getLengthInSeconds() const
+double Deck::getDuration() const
 {
     if (sampleRate > 0.0)
         return (double)getTotalLength() / sampleRate;
@@ -45,12 +50,24 @@ double Deck::getPositionInSeconds() const
     return 0.0;
 }
 
-void Deck::loadTrack(const File& file, bool play)
+bool Deck::loadTrack(const ITrack::Ptr track, bool play)
 {
-    playAfterLoading = play;
-    loader.load(file);
+    if (isTrackLoading) {
+        return false;
+    }
 
-    this->file = file;
+    
+    auto format = formatMgr.findFormatForFileExtension(track->getFile().getFileExtension());
+    if (!format) {
+        return false;
+    }
+
+    playAfterLoading = play;
+    loader.load(track);
+
+    this->track = track;
+    isTrackLoading = true;
+    return true;
 }
 
 void Deck::unloadTrack()
@@ -59,13 +76,14 @@ void Deck::unloadTrack()
     unloadTrackInternal();
 }
 
-void Deck::loadTrackInternal(File* file)
+void Deck::loadTrackInternal(const ITrack::Ptr track)
 {
-    if (!file->existsAsFile()) {
+    auto file = track->getFile();
+    if (!file.existsAsFile()) {
         return;
     }
 
-    auto newReader = formatMgr.createReaderFor(*file);
+    auto newReader = formatMgr.createReaderFor(file);
 
     if (!newReader) {
         return;
@@ -75,17 +93,69 @@ void Deck::loadTrackInternal(File* file)
     reader = newReader;
 
     auto mid = reader->lengthInSamples / 2;
-    firstAudibleSoundPosition = jmax(0i64, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0f, reader->sampleRate * kFirstSoundDuration));
+    firstAudibleSamplePosition = jmax(0i64, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
     totalSamplesToPlay = reader->lengthInSamples;
-    lastAudibleSoundPosition = totalSamplesToPlay;
+    lastAudibleSamplePosition = totalSamplesToPlay;
+    leadingSamplePosition = -1;
+    trailingPosition = -1;
+    trailingDuration = 0;
 
-    setSource(new AudioFormatReaderSource(newReader, false));
+    auto playDuration = getEndPosition();
 
-    scanningScheduler.scan();
+    if (playDuration >= 3) {
+        Range<float> maxLevels[2]{};
+        reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * 10), maxLevels, 2);
+
+        auto leadingDecibel = Decibels::gainToDecibels((maxLevels[0].getEnd() + maxLevels[1].getEnd()) / 2.0f);
+        auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 3.0f));
+
+        leadingSamplePosition = reader->searchForLevel(
+            firstAudibleSamplePosition,
+            (int)(reader->sampleRate * 10.0),
+            leadingLevel, 1.0,
+            (int)(reader->sampleRate * kFirstSoundDuration / 10)
+        );
+
+
+        if (leadingSamplePosition > -1) {
+            auto lead2 = reader->searchForLevel(
+                jmax(0i64, leadingSamplePosition - (int)(reader->sampleRate * 2.0)),
+                (int)(reader->sampleRate * 2.0),
+                leadingLevel * 0.33, 1.0,
+                0
+            );
+
+            if ((lead2 > firstAudibleSamplePosition) && (lead2 < leadingSamplePosition)) {
+                leadingSamplePosition = lead2;
+            }
+        }
+    }
+
+    leadingDuration = (leadingSamplePosition > -1) ? (leadingSamplePosition - firstAudibleSamplePosition) / reader->sampleRate : 0;
+
+    DBG(String::formatted("[%s] Leading: duration=%.2f, position=%d", name.toWideCharPointer(), leadingDuration, leadingSamplePosition));
+
+    setSource(new AudioFormatReaderSource(reader, false));
+
+    {
+        ScopedLock sl(callbackLock);
+        listeners.call([this](Callback& cb) {
+            cb.deckLoaded(*this);
+        });
+    }
+
+    if (playDuration >= 3) {
+        scanningScheduler.scan();
+    }
+    else {
+        calculateTransition();
+    }
 
     if (playAfterLoading) {
         start();
     }
+
+    isTrackLoading = false;
 }
 
 
@@ -93,6 +163,7 @@ void Deck::unloadTrackInternal()
 {
     inputStreamEOF = false;
     playing = false;
+    stopped = true;
 
     bool deckUnloaded = false;
 
@@ -134,14 +205,23 @@ void Deck::unloadTrackInternal()
 
 void Deck::scanTrackInternal()
 {
+    auto file = track->getFile();
     if (!file.existsAsFile()) {
         return;
     }
 
+    {
+        ScopedLock sl(callbackLock);
+        listeners.call([this](Callback& cb) {
+            cb.deckTrackScanning(*this);
+        });
+    }
+
     auto scanningReader = formatMgr.createReaderFor(file);
+
     auto middlePosition = scanningReader->lengthInSamples / 2;
     auto tailPosition = jmax(
-        firstAudibleSoundPosition,
+        firstAudibleSamplePosition,
         middlePosition,
         (int64)(scanningReader->lengthInSamples - scanningReader->sampleRate * kLastSoundScanningDurartion)
     );
@@ -150,20 +230,20 @@ void Deck::scanTrackInternal()
         tailPosition,
         scanningReader->lengthInSamples - tailPosition,
         0, kEndingSilenceThreshold,
-        scanningReader->sampleRate * kLastSoundDuration
+        (int)(scanningReader->sampleRate * kLastSoundDuration)
     );
 
-    if (silencePosition > firstAudibleSoundPosition) {
-        lastAudibleSoundPosition = silencePosition;
+    if (silencePosition > firstAudibleSamplePosition) {
+        lastAudibleSamplePosition = silencePosition;
 
         auto endPosition = scanningReader->searchForLevel(
             silencePosition,
             scanningReader->lengthInSamples - silencePosition,
             0, kSilenceThreshold,
-            scanningReader->sampleRate * 0.004
+            (int)(scanningReader->sampleRate * 0.004)
         );
 
-        if (endPosition > lastAudibleSoundPosition) {
+        if (endPosition > lastAudibleSamplePosition) {
             totalSamplesToPlay = endPosition;
         }
     }
@@ -171,8 +251,8 @@ void Deck::scanTrackInternal()
     trailingPosition = scanningReader->searchForLevel(
         tailPosition,
         totalSamplesToPlay - tailPosition,
-        0, kTrailingSilenceThreshold,
-        scanningReader->sampleRate * 0.5
+        0, kFadingSilenceThreshold,
+        (int)(scanningReader->sampleRate * 0.5)
     );
 
     trailingDuration = (trailingPosition > -1) ? (totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate : 0;
@@ -180,27 +260,45 @@ void Deck::scanTrackInternal()
     delete scanningReader;
 
     calculateTransition();
+
+    {
+        ScopedLock sl(callbackLock);
+        listeners.call([this](Callback& cb) {
+            cb.deckTrackScanned(*this);
+        });
+    }
 }
 
 void Deck::calculateTransition()
 {
-    transitionStartPosition = lastAudibleSoundPosition / sourceSampleRate;
+    transitionStartPosition = lastAudibleSamplePosition / sourceSampleRate;
     transitionEndPosition = transitionStartPosition;
     
-    if (transitionTime > 0.0)
+    if (maxTransitionTime > 0.0)
     {        
 
-        if (trailingDuration >= transitionTime) {
+        if (trailingDuration >= maxTransitionTime) {
             transitionStartPosition = trailingPosition / sourceSampleRate;
-            transitionEndPosition = transitionStartPosition + transitionTime;
+            transitionEndPosition = transitionStartPosition + maxTransitionTime;
         }
         else {
-            auto actualTransitionTime = jmin(transitionTime, trailingDuration);
-            transitionStartPosition = jmax(2.0, transitionStartPosition - transitionTime);
-        }
-        
-        transitionCuePosition = jmax(0.0, transitionStartPosition - 2.0);
+            transitionStartPosition = jmax(2.0, transitionStartPosition - trailingDuration);
+            transitionEndPosition = transitionStartPosition + trailingDuration;
+        }        
     }
+
+    transitionCuePosition = jmax(0.0, transitionStartPosition - 8.0);
+
+    DBG(String::formatted(
+        "[%s] Transition: cue=%.3fs, start=%.3fs, end=%.3fs, duration=%.2fs, trailing=%.2fs, total=%.2fs",
+        name.toWideCharPointer(),
+        transitionCuePosition,
+        transitionStartPosition,
+        transitionEndPosition,
+        transitionEndPosition - transitionStartPosition,
+        trailingDuration,
+        totalSamplesToPlay / sourceSampleRate
+    ));
 }
 
 void Deck::firePositionChangeCalback(double position)
@@ -219,12 +317,12 @@ void Deck::setPosition(double newPosition)
 }
 
 void Deck::setPositionFractional(double fraction) {
-    setPosition(getLengthInSeconds() * fraction);
+    setPosition(getDuration() * fraction);
 }
 
 void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
 {    
-    const ScopedLock sl(callbackLock);
+    const ScopedLock sl(sourceLock);
 
     bool wasPlaying = playing;    
 
@@ -265,7 +363,7 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
     lastGain = gain;
 
     if (wasPlaying && !playing) {
-        DBG("STOPPED");
+        DBG(String::formatted("[%s] Stopped", name.toWideCharPointer()));
 
         listeners.call([this](Callback& cb) {
             cb.deckFinished(*this);
@@ -304,7 +402,7 @@ int64 Deck::getNextReadPosition() const
 
 int64 Deck::getTotalLength() const
 {
-    const ScopedLock sl(callbackLock);
+    const ScopedLock sl(sourceLock);
 
     if (bufferingSource != nullptr)
     {
@@ -317,7 +415,7 @@ int64 Deck::getTotalLength() const
 
 bool Deck::isLooping() const
 {
-    const ScopedLock sl(callbackLock);
+    const ScopedLock sl(sourceLock);
     return bufferingSource != nullptr && bufferingSource->isLooping();
 }
 
@@ -335,6 +433,10 @@ void Deck::start()
                 cb.deckStarted(*this);
             });
         }
+    }
+    else {
+        // Something went wrong
+        jassertfalse;
     }
 }
 
@@ -355,10 +457,19 @@ void Deck::updateGain()
     gain = pregain * volume;
 }
 
-void Deck::setTransitionTime(double duration)
+void Deck::setMaxTransitionTime(double duration)
 {
-    transitionTime = duration;
+    maxTransitionTime = duration;
     calculateTransition();
+}
+
+double Deck::getFirstAudiblePosition() const {
+    return (double)firstAudibleSamplePosition / sourceSampleRate;
+}
+
+double Deck::getEndPosition() const
+{
+    return totalSamplesToPlay / sourceSampleRate;
 }
 
 
@@ -367,9 +478,15 @@ void Deck::addListener(Callback* cb) {
     listeners.add(cb);
 }
 
+void Deck::removeListener(Callback* cb)
+{
+    ScopedLock sl(callbackLock);
+    listeners.remove(cb);
+}
+
 void Deck::prepareToPlay(int samplesPerBlockExpected, double newSampleRate)
 {
-    const ScopedLock sl(callbackLock);
+    const ScopedLock sl(sourceLock);
 
     sampleRate = newSampleRate;
     blockSize = samplesPerBlockExpected;
@@ -410,8 +527,8 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
     if (newSource != nullptr) {
         sourceSampleRate = newSource->getAudioFormatReader()->sampleRate;
 
-        newBufferingSource = new BufferingAudioSource(newSource, readAheadThread, false, sourceSampleRate * 2, 2);
-        newBufferingSource->setNextReadPosition(firstAudibleSoundPosition);
+        newBufferingSource = new BufferingAudioSource(newSource, readAheadThread, false, (int)(sourceSampleRate * 2), 2);
+        newBufferingSource->setNextReadPosition(firstAudibleSamplePosition);
 
         newResamplerSource = new ResamplingAudioSource(newBufferingSource, false, 2);
 
@@ -423,7 +540,7 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
     }
 
     {
-        const ScopedLock sl(callbackLock);
+        const ScopedLock sl(sourceLock);
         source = newSource;
         bufferingSource = newBufferingSource;
         resamplerSource = newResamplerSource;        
@@ -443,7 +560,7 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
 
 void Deck::releaseChainedResources()
 {
-    const ScopedLock sl(callbackLock);
+    const ScopedLock sl(sourceLock);
 
     if (resamplerSource != nullptr) {
         resamplerSource->releaseResources();
@@ -454,35 +571,25 @@ void Deck::releaseChainedResources()
 
 Deck::Loader::~Loader()
 {
-    if (file) {
-        delete file;
-        file = nullptr;
-    }
+    track = nullptr;
 }
 
 int Deck::Loader::useTimeSlice()
 {
     ScopedLock sl(lock);
 
-    if (file != nullptr) {
-        deck.loadTrackInternal(file);
-
-        delete file;
-        file = nullptr;
+    if (track != nullptr) {
+        deck.loadTrackInternal(track);
+        track = nullptr;
     }
 
     return 100;
 }
 
-void Deck::Loader::load(const File& file)
+void Deck::Loader::load(const ITrack::Ptr track)
 {
     ScopedLock sl(lock);
-
-    if (this->file) {
-        delete this->file;
-    }
-
-    this->file = new File(file);
+    this->track = track;
 }
 
 int Deck::Scanner::useTimeSlice()
@@ -502,15 +609,13 @@ void Deck::Scanner::scan()
 
 int Deck::PlayHead::useTimeSlice()
 {
-    if (!deck.isPlaying()) {
-        return 250;
-    }
-
     auto pos = deck.getPositionInSeconds();
     if (lastPosition != pos) {
         deck.firePositionChangeCalback(pos);
         lastPosition = pos;
     }
 
-    return 33;
+    return deck.isPlaying() ? 33 : 250;
+}
+
 }

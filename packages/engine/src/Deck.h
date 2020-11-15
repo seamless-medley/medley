@@ -1,35 +1,46 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "ITrack.h"
 
 using namespace juce;
+
+namespace medley {
 
 class Deck : public PositionableAudioSource {
 public:
     class Callback {
     public:
+        virtual void deckTrackScanning(Deck& sender) = 0;
+
+        virtual void deckTrackScanned(Deck& sender) = 0;
+
         virtual void deckPosition(Deck& sender, double position) = 0;
 
         virtual void deckStarted(Deck& sender) = 0;
 
         virtual void deckFinished(Deck& sender) = 0;
 
+        virtual void deckLoaded(Deck& sender) = 0;
+
         virtual void deckUnloaded(Deck& sender) = 0;
     };
 
-    Deck(AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
+    Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
 
     ~Deck() override;
 
-    double getLengthInSeconds() const;
+    const String& getName() const { return name; }
+
+    double getDuration() const;
 
     double getPositionInSeconds() const;
 
-    void loadTrack(const File& file, bool play);
+    bool loadTrack(const ITrack::Ptr track, bool play);
 
     void unloadTrack();
 
-    bool isTrackLoaded() const { return reader != nullptr; }
+    bool isTrackLoaded() const { return source != nullptr; }
 
     void setPosition(double newPosition);
 
@@ -38,6 +49,8 @@ public:
     bool isPlaying() const noexcept { return playing; }
 
     void addListener(Callback* cb);
+
+    void removeListener(Callback* cb);
 
     void prepareToPlay(int samplesPerBlockExpected, double newSampleRate) override;
 
@@ -53,7 +66,9 @@ public:
 
     int64 getTotalLength() const override;
 
-    bool isLooping() const override; 
+    bool isLooping() const override;
+
+    ITrack::Ptr getTrack() const { return track; }
 
     void start();
 
@@ -77,15 +92,31 @@ public:
 
     double getSampleRate() const { return sampleRate; }
 
+    double getSourceSampleRate() const { return sourceSampleRate; }
+
     double getTransitionCuePosition() const { return transitionCuePosition; }
 
     double getTransitionStartPosition() const { return transitionStartPosition; }
 
     double getTransitionEndPosition() const { return transitionEndPosition; }
 
-    double getTransitionTime() const { return transitionTime; }
+    double getMaxTransitionTime() const { return maxTransitionTime; }
 
-    void setTransitionTime(double duration);
+    void setMaxTransitionTime(double duration);
+
+    double getFirstAudiblePosition() const;
+
+    double getEndPosition() const;
+
+    int64 getLeadingSamplePosition() const { return leadingSamplePosition; }
+
+    double getLeadingDuration() const { return leadingDuration; }
+
+    int64 getTrailingSamplePosition() const { return trailingPosition; }
+
+    double getTrailingDuration() const { return trailingDuration; }
+
+    bool shouldPlayAfterLoading() const { return playAfterLoading; }
 
 private:
     class Loader : public TimeSliceClient {
@@ -94,10 +125,10 @@ private:
         ~Loader() override;
         int useTimeSlice() override;
 
-        void load(const File& file);
+        void load(const ITrack::Ptr track);
     private:
         Deck& deck;
-        File* file = nullptr;
+        ITrack::Ptr track = nullptr;
         CriticalSection lock;
     };
 
@@ -125,7 +156,7 @@ private:
 
     void releaseChainedResources();
 
-    void loadTrackInternal(File* file);
+    void loadTrackInternal(const ITrack::Ptr track);
 
     void unloadTrackInternal();
 
@@ -148,7 +179,8 @@ private:
         return 0.0;
     }
 
-    File file;
+    bool isTrackLoading = false;
+    ITrack::Ptr track = nullptr;
 
     std::atomic<bool> playing{ false };
     std::atomic<bool> stopped{ true };
@@ -175,19 +207,24 @@ private:
     bool isPrepared = false;
     bool inputStreamEOF = false;
 
+    CriticalSection sourceLock;
     CriticalSection callbackLock;
     //
     ListenerList<Callback> listeners;
     //
+    String name;
     Loader loader;
     bool playAfterLoading = false;
 
     Scanner scanningScheduler;
     PlayHead playhead;
 
-    int64 firstAudibleSoundPosition = 0;
-    int64 lastAudibleSoundPosition = 0;
+    int64 firstAudibleSamplePosition = 0;
+    int64 lastAudibleSamplePosition = 0;
     int64 totalSamplesToPlay = 0;
+
+    int64 leadingSamplePosition = 0;
+    double leadingDuration = 0.0;
 
     int64 trailingPosition = 0;
     double trailingDuration = 0.0;
@@ -196,6 +233,8 @@ private:
     double transitionStartPosition = 0.0;
     double transitionEndPosition = 0.0;
 
-    double transitionTime = 3.0;
+    double maxTransitionTime = 3.0;
 };
+
+}
 

@@ -3,22 +3,12 @@
 #include <JuceHeader.h>
 
 #include "Deck.h"
+#include <list>
 
 using namespace juce;
 
 namespace medley {
 
-class ITrack : public ReferenceCountedObject {
-public:
-    virtual String getFullPath() const = 0;
-    // TODO: ReplayGain
-
-    using Ptr = ReferenceCountedObjectPtr<ITrack>;
-};
-
-class ITrackMetadata {
-
-};
 
 class IQueue {
 public:
@@ -29,6 +19,10 @@ public:
 class Medley : public Deck::Callback {
 public:
 
+    class Callback : public Deck::Callback {
+
+    };
+
     Medley(IQueue& queue);
 
     ~Medley();    
@@ -37,28 +31,42 @@ public:
 
     Deck& getDeck2() const { return *deck2; }
 
+    Deck* getActiveDeck() const;
+
+    Deck* getAnotherDeck(Deck* from);
+
     double getFadingCurve() const { return fadingCurve; }
 
     void setFadingCurve(double curve);
 
     void play();
 
+    bool isDeckPlaying();
+
+    void addListener(Callback* cb);
+
+    void removeListener(Callback* cb);
+
     // TODO: Transition time
 
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);
 
+    void deckTrackScanning(Deck& sender) override;
+
+    void deckTrackScanned(Deck& sender) override;
+
     void deckStarted(Deck& sender) override;
 
     void deckFinished(Deck& sender) override;
+
+    void deckLoaded(Deck& sender) override;
 
     void deckUnloaded(Deck& sender) override;
 
     void deckPosition(Deck& sender, double position) override;
 
-    Deck* getAvailableDeck();
-
-    Deck* getAnotherDeck(Deck* from);
+    Deck* getAvailableDeck();    
 
     String getDeckName(Deck& deck);
 
@@ -74,6 +82,7 @@ private:
     TimeSliceThread loadingThread;
     TimeSliceThread readAheadThread;
 
+    bool playing = false;
     IQueue& queue;
 
     enum class TransitionState {
@@ -85,8 +94,15 @@ private:
     TransitionState transitionState = TransitionState::Idle;
     Deck* transitingDeck = nullptr;
 
+    std::list<Deck*> deckQueue;
+
     double fadingCurve = 60;
     float fadingFactor;
+
+    double longLeadingTrackDuration = 2.0;
+
+    CriticalSection callbackLock;
+    ListenerList<Callback> listeners;
 };
 
 }
