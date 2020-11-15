@@ -1,6 +1,7 @@
 #include "Medley.h"
 
 namespace medley {
+
 Medley::Medley(IQueue& queue)
     :
     queue(queue),
@@ -62,6 +63,11 @@ bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
     return false;
 }
 
+void Medley::deckTrackScanning(Deck& sender)
+{
+
+}
+
 void Medley::deckTrackScanned(Deck& sender)
 {
 
@@ -103,6 +109,9 @@ void Medley::deckLoaded(Deck& sender)
 {
     {
         ScopedLock sl(callbackLock);
+
+        deckQueue.push_back(&sender);
+
         listeners.call([&](Callback& cb) {
             cb.deckLoaded(sender);
         });
@@ -125,6 +134,9 @@ void Medley::deckUnloaded(Deck& sender) {
 
     {
         ScopedLock sl(callbackLock);
+
+        deckQueue.remove(&sender);
+
         listeners.call([&](Callback& cb) {
             cb.deckUnloaded(sender);
         });
@@ -162,7 +174,7 @@ void Medley::deckPosition(Deck& sender, double position) {
     auto leadingDuration = nextDeck->getLeadingDuration();
 
     if (transitionState == TransitionState::Idle) {
-        if (position > transitionCuePoint - leadingDuration) {
+        if (position > transitionCuePoint) {
             if (!loadNextTrack(&sender, false)) {
                 // No more track, do not transit
                 return;
@@ -185,7 +197,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         }
 
         if (transitionState == TransitionState::Transit) {
-            if (leadingDuration >= 2.0) { // TODO: Configurable
+            if (leadingDuration >= longLeadingTrackDuration) {
                 auto fadeInProgress = jlimit(0.25, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
 
                 DBG(String::formatted("[%s] Fading in: %.2f", nextDeck->getName().toWideCharPointer(), fadeInProgress));
@@ -201,6 +213,11 @@ void Medley::deckPosition(Deck& sender, double position) {
         DBG(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
         sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));     
     }
+}
+
+Deck* Medley::getActiveDeck() const
+{
+    return deckQueue.empty() ? nullptr : deckQueue.front();
 }
 
 void Medley::setFadingCurve(double curve) {

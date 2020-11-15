@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "Deck.h"
+#include <list>
 
 using namespace juce;
 
@@ -30,6 +31,10 @@ public:
 
     Deck& getDeck2() const { return *deck2; }
 
+    Deck* getActiveDeck() const;
+
+    Deck* getAnotherDeck(Deck* from);
+
     double getFadingCurve() const { return fadingCurve; }
 
     void setFadingCurve(double curve);
@@ -47,6 +52,8 @@ public:
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);
 
+    void deckTrackScanning(Deck& sender) override;
+
     void deckTrackScanned(Deck& sender) override;
 
     void deckStarted(Deck& sender) override;
@@ -59,9 +66,7 @@ private:
 
     void deckPosition(Deck& sender, double position) override;
 
-    Deck* getAvailableDeck();
-
-    Deck* getAnotherDeck(Deck* from);
+    Deck* getAvailableDeck();    
 
     String getDeckName(Deck& deck);
 
@@ -89,8 +94,12 @@ private:
     TransitionState transitionState = TransitionState::Idle;
     Deck* transitingDeck = nullptr;
 
+    std::list<Deck*> deckQueue;
+
     double fadingCurve = 60;
     float fadingFactor;
+
+    double longLeadingTrackDuration = 2.0;
 
     CriticalSection callbackLock;
     ListenerList<Callback> listeners;

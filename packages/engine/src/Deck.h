@@ -11,6 +11,8 @@ class Deck : public PositionableAudioSource {
 public:
     class Callback {
     public:
+        virtual void deckTrackScanning(Deck& sender) = 0;
+
         virtual void deckTrackScanned(Deck& sender) = 0;
 
         virtual void deckPosition(Deck& sender, double position) = 0;
@@ -30,7 +32,7 @@ public:
 
     const String& getName() const { return name; }
 
-    double getLengthInSeconds() const;
+    double getDuration() const;
 
     double getPositionInSeconds() const;
 
@@ -64,7 +66,9 @@ public:
 
     int64 getTotalLength() const override;
 
-    bool isLooping() const override; 
+    bool isLooping() const override;
+
+    ITrack::Ptr getTrack() const { return track; }
 
     void start();
 
@@ -88,6 +92,8 @@ public:
 
     double getSampleRate() const { return sampleRate; }
 
+    double getSourceSampleRate() const { return sourceSampleRate; }
+
     double getTransitionCuePosition() const { return transitionCuePosition; }
 
     double getTransitionStartPosition() const { return transitionStartPosition; }
@@ -98,11 +104,17 @@ public:
 
     void setMaxTransitionTime(double duration);
 
-    double getTrailingDuration() const { return trailingDuration; }
+    double getFirstAudiblePosition() const;
 
-    int64 getLeadingPosition() const { return leadingPosition; }
+    double getEndPosition() const;
+
+    int64 getLeadingSamplePosition() const { return leadingSamplePosition; }
 
     double getLeadingDuration() const { return leadingDuration; }
+
+    int64 getTrailingSamplePosition() const { return trailingPosition; }
+
+    double getTrailingDuration() const { return trailingDuration; }
 
     bool shouldPlayAfterLoading() const { return playAfterLoading; }
 
@@ -195,6 +207,7 @@ private:
     bool isPrepared = false;
     bool inputStreamEOF = false;
 
+    CriticalSection sourceLock;
     CriticalSection callbackLock;
     //
     ListenerList<Callback> listeners;
@@ -206,11 +219,11 @@ private:
     Scanner scanningScheduler;
     PlayHead playhead;
 
-    int64 firstAudibleSoundPosition = 0;
-    int64 lastAudibleSoundPosition = 0;
+    int64 firstAudibleSamplePosition = 0;
+    int64 lastAudibleSamplePosition = 0;
     int64 totalSamplesToPlay = 0;
 
-    int64 leadingPosition = 0;
+    int64 leadingSamplePosition = 0;
     double leadingDuration = 0.0;
 
     int64 trailingPosition = 0;
