@@ -363,13 +363,7 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
     lastGain = gain;
 
     if (wasPlaying && !playing) {
-        DBG(String::formatted("[%s] Stopped", name.toWideCharPointer()));
-
-        listeners.call([this](Callback& cb) {
-            cb.deckFinished(*this);
-        });
-
-        unloadTrackInternal();
+        fireFinishedCallback();
     }
 }
 
@@ -450,6 +444,17 @@ void Deck::stop()
         while (--n >= 0 && !stopped)
             Thread::sleep(2);
     }
+}
+
+void Deck::fireFinishedCallback()
+{
+    DBG(String::formatted("[%s] Stopped", name.toWideCharPointer()));
+
+    listeners.call([this](Callback& cb) {
+        cb.deckFinished(*this);
+    });
+
+    unloadTrackInternal();
 }
 
 void Deck::updateGain()

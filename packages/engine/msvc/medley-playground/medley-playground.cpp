@@ -110,8 +110,28 @@ private:
             auto transitionStart = deck->getTransitionStartPosition() - nextLeading;
             auto transitionEnd = deck->getTransitionEndPosition();
 
-            g.fillCheckerBoard(juce::Rectangle(0.0f, 0.0f, (float)(first / duration * w), h), 4, 4, Colours::darkgrey, Colours::darkgrey.darker());
-            g.fillCheckerBoard(juce::Rectangle((float)(last / duration * w), 0.0f, w, h), 4, 4, Colours::darkgrey, Colours::darkgrey.darker());
+            g.fillCheckerBoard(
+                juce::Rectangle(
+                    0.0f, 0.0f,
+                    (float)(first / duration * w), h
+                ), 4, 4, Colours::darkgrey, Colours::darkgrey.darker()
+            );
+
+            g.fillCheckerBoard(
+                juce::Rectangle(
+                    (float)(transitionEnd / duration * w), 0.0f,
+                    (float)(last / duration * w), h
+                ),
+                4, 4, Colours::darkorchid, Colours::darkorchid.darker()
+            );
+
+            g.fillCheckerBoard(
+                juce::Rectangle(
+                    (float)(last / duration * w), 0.0f,
+                    w, h
+                ),
+                4, 4, Colours::darkgrey, Colours::darkgrey.darker()
+            );
 
             // cue
             g.setColour(Colours::yellow);
@@ -126,7 +146,7 @@ private:
                 ));
                 g.fillRect(
                     transitionStart / duration * w, 0.0f,
-                    (jmax(transitionEnd, last) - transitionStart) / duration * w, h
+                    (transitionEnd - transitionStart) / duration * w, h
                 );
             }
 

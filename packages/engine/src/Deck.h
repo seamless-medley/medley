@@ -166,6 +166,8 @@ private:
 
     void firePositionChangeCalback(double position);
 
+    void fireFinishedCallback();
+
     void setGain(float newGain) noexcept {
         gain = newGain;
     }
