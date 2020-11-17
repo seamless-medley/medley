@@ -38,36 +38,33 @@ bool MiniMP3AudioFormatReader::readSamples(int** destSamples, int numDestChannel
         frameBufferSize = numFrames;
         reallocBuffer();
     }
+    
 
-    auto ssif = startFrameInFile + dec.start_delay / numChannels;
-
-    if (currentPosition != ssif) {
-        if (mp3dec_ex_seek(&dec, (ssif - 1) * numChannels) != 0) {
-            currentPosition = -1;
-            jassertfalse;
-        }
-        else {
-            currentPosition = ssif;
+    if (currentPosition != startFrameInFile) {
+        if (mp3dec_ex_seek(&dec, startFrameInFile * numChannels) == 0) {
+            currentPosition = dec.cur_sample / numChannels;
         }
     }
+    
+    auto framesRead = mp3dec_ex_read(&dec, buffer, numFrames * numChannels) / numChannels;
 
-    mp3d_sample_t** const dst = reinterpret_cast<mp3d_sample_t**> (destSamples);
+    auto dst = (float**)destSamples;
 
-    auto read = mp3dec_ex_read(&dec, buffer, numFrames * numChannels);
-    currentPosition += read / numChannels;
-
-    if (read <= 0) {
-        for (int i = numDestChannels; --i >= 0;)
-            if (destSamples[i] != nullptr)
-                zeromem(destSamples[i] + startOffsetInDestBuffer, (size_t)numFrames * sizeof(float));
-
-        return true;
-    }
-    else {
-        AudioDataConverters::deinterleaveSamples(buffer, (float**)destSamples, read / numChannels, numChannels);
+    if (framesRead > 0) {        
+        AudioDataConverters::deinterleaveSamples(buffer, dst, framesRead, numChannels);
     }
 
-    return read != 0;
+    if (framesRead < numFrames) {
+        for (int i = numDestChannels; --i >= 0;) {
+            if (dst[i] != nullptr) {
+                zeromem(dst[i] + startOffsetInDestBuffer + framesRead, ((size_t)numFrames - framesRead) * sizeof(float));
+            }
+        }
+    }
+
+    currentPosition += numFrames;
+
+    return true;
 }
 
 void MiniMP3AudioFormatReader::reallocBuffer()
@@ -80,10 +77,6 @@ size_t MiniMP3AudioFormatReader::ioRead(void* buf, size_t size, void* user_data)
     auto inst = (MiniMP3AudioFormatReader*)user_data;
 
     if (!inst) {
-        return -1;
-    }
-
-    if (inst->input->isExhausted()) {
         return -1;
     }
 
