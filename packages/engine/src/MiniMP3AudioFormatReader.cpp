@@ -49,14 +49,23 @@ bool MiniMP3AudioFormatReader::readSamples(int** destSamples, int numDestChannel
         else {
             currentPosition = ssif;
         }
-    }    
+    }
 
     mp3d_sample_t** const dst = reinterpret_cast<mp3d_sample_t**> (destSamples);
 
     auto read = mp3dec_ex_read(&dec, buffer, numFrames * numChannels);
     currentPosition += read / numChannels;
 
-    AudioDataConverters::deinterleaveSamples(buffer, (float**)destSamples, read / numChannels, numChannels);
+    if (read <= 0) {
+        for (int i = numDestChannels; --i >= 0;)
+            if (destSamples[i] != nullptr)
+                zeromem(destSamples[i] + startOffsetInDestBuffer, (size_t)numFrames * sizeof(float));
+
+        return true;
+    }
+    else {
+        AudioDataConverters::deinterleaveSamples(buffer, (float**)destSamples, read / numChannels, numChannels);
+    }
 
     return read != 0;
 }
@@ -71,6 +80,10 @@ size_t MiniMP3AudioFormatReader::ioRead(void* buf, size_t size, void* user_data)
     auto inst = (MiniMP3AudioFormatReader*)user_data;
 
     if (!inst) {
+        return -1;
+    }
+
+    if (inst->input->isExhausted()) {
         return -1;
     }
 
