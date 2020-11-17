@@ -229,7 +229,7 @@ void Deck::scanTrackInternal()
     auto silencePosition = scanningReader->searchForLevel(
         tailPosition,
         scanningReader->lengthInSamples - tailPosition,
-        0, kEndingSilenceThreshold,
+        0, kSilenceThreshold,
         (int)(scanningReader->sampleRate * kLastSoundDuration)
     );
 
