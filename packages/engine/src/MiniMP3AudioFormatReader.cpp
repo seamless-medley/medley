@@ -22,7 +22,7 @@ MiniMP3AudioFormatReader::MiniMP3AudioFormatReader(InputStream* const in)
     usesFloatingPointData = true;
     sampleRate = dec.info.hz;
     numChannels = dec.info.channels;
-    currentPosition = dec.start_delay / numChannels;
+    currentPosition = 0;
     lengthInSamples = dec.detected_samples / numChannels;
 
     if (lengthInSamples <= 0) {
