@@ -66,6 +66,12 @@
     <ClCompile Include="medley-playground.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\MiniMP3AudioFormat.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\MiniMP3AudioFormatReader.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h">
@@ -78,6 +84,12 @@
       <Filter>Engine Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\ITrack.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\MiniMP3AudioFormat.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\MiniMP3AudioFormatReader.h">
       <Filter>Engine Source</Filter>
     </ClInclude>
   </ItemGroup>

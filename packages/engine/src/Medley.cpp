@@ -1,4 +1,5 @@
 #include "Medley.h"
+#include "MiniMP3AudioFormat.h"
 
 namespace medley {
 
@@ -11,7 +12,20 @@ Medley::Medley(IQueue& queue)
     updateFadingFactor();
 
     deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
-    formatMgr.registerBasicFormats();
+
+    formatMgr.registerFormat(new MiniMP3AudioFormat(), true);
+    formatMgr.registerFormat(new WavAudioFormat(), false);
+    formatMgr.registerFormat(new AiffAudioFormat(), false);
+    formatMgr.registerFormat(new FlacAudioFormat(), false);
+    formatMgr.registerFormat(new OggVorbisAudioFormat(), false);
+
+#if JUCE_MAC || JUCE_IOS
+    formatMgr.registerFormat(new CoreAudioFormat(), false);
+#endif
+
+#if JUCE_USE_WINDOWS_MEDIA_FORMAT
+    formatMgr.registerFormat(new WindowsMediaAudioFormat(), false);
+#endif    
 
     deck1 = new Deck("Deck A", formatMgr, loadingThread, readAheadThread);
     deck2 = new Deck("Deck B", formatMgr, loadingThread, readAheadThread);
