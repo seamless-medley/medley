@@ -342,11 +342,11 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
             }
         }
 
-        //if (bufferingSource->getNextReadPosition() > totalSamplesToPlay + 1 && !bufferingSource->isLooping())
-        //{
-        //    playing = false;
-        //    inputStreamEOF = true;
-        //}
+        if (bufferingSource->getNextReadPosition() > totalSamplesToPlay + 1 && !bufferingSource->isLooping())
+        {
+            playing = false;
+            inputStreamEOF = true;
+        }
 
         stopped = !playing;
 
