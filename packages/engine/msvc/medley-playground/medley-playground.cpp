@@ -255,7 +255,7 @@ private:
         Queue& queue;
     };
 
-    class MainContentComponent : public Component, public Timer, public Button::Listener, public medley::Medley::Callback {
+    class MainContentComponent : public Component, public Timer, public Button::Listener, public Slider::Listener, public medley::Medley::Callback {
     public:
         MainContentComponent() :
             Component(),
@@ -265,7 +265,8 @@ private:
             btnAdd("Add"),
             btnPlay("Play"),
             btnStop("Stop"),
-            btnPause("Pause")
+            btnPause("Pause"),
+            volumeText({}, "Volume:")
         {
             medley.addListener(this);
 
@@ -286,6 +287,16 @@ private:
 
             btnPause.addListener(this);
             addAndMakeVisible(btnPause);
+
+            addAndMakeVisible(volumeText);
+            volumeText.setColour(Label::textColourId, Colours::black);
+
+            addAndMakeVisible(volumeSlider);
+            volumeSlider.setTextBoxStyle(Slider::TextEntryBoxPosition::NoTextBox, "", 0, 0);
+            volumeSlider.setTextValueSuffix("dB");
+            volumeSlider.setRange(-60.0, 0.0);
+            volumeSlider.setValue(Decibels::gainToDecibels(medley.getGain()));
+            volumeSlider.addListener(this);            
 
             playhead = new PlayHead(&medley.getDeck1(), &medley.getDeck2());
             addAndMakeVisible(playhead);
@@ -314,13 +325,15 @@ private:
             }
             {
                 playhead->setBounds(b.removeFromTop(32).translated(0, 4).reduced(10, 4));
-
+            }
+            {
                 auto controlArea = b.removeFromTop(32).translated(0, 4).reduced(10, 4);
                 btnAdd.setBounds(controlArea.removeFromLeft(55));
                 btnPlay.setBounds(controlArea.removeFromLeft(55));
                 btnStop.setBounds(controlArea.removeFromLeft(55));
                 btnPause.setBounds(controlArea.removeFromLeft(75));
-               
+                volumeText.setBounds(controlArea.removeFromLeft(60));
+                volumeSlider.setBounds(controlArea.reduced(4, 0));
             }
             {
                 queueListBox.setBounds(b.reduced(10));
@@ -372,6 +385,12 @@ private:
             }
         }
 
+        void sliderValueChanged(Slider* slider) override {
+            if (slider == &volumeSlider) {
+                medley.setGain(Decibels::decibelsToGain(slider->getValue()));
+            }
+        }
+
         void deckTrackScanning(Deck& sender) override {
 
         }
@@ -420,6 +439,9 @@ private:
         TextButton btnPlay;
         TextButton btnStop;
         TextButton btnPause;
+
+        Label volumeText;
+        Slider volumeSlider;
 
         ListBox queueListBox;
 

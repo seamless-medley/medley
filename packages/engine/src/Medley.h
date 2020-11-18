@@ -49,6 +49,10 @@ public:
 
     void removeListener(Callback* cb);
 
+    inline void setGain(float newGain) { mainOut.setGain(newGain); }
+
+    inline float getGain() const { return mainOut.getGain(); }
+
     inline bool togglePause() { return mixer.togglePause(); }
 
     void setPositionFractional(double fraction);
