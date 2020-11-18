@@ -59,6 +59,31 @@ Medley::~Medley() {
     delete deck2;
 }
 
+void Medley::setPositionFractional(double fraction)
+{
+    if (auto deck = getActiveDeck()) {
+        deck->setPositionFractional(fraction);
+    }
+}
+
+double Medley::getDuration() const
+{
+    if (auto deck = getActiveDeck()) {
+        return deck->getDuration();
+    }
+
+    return 0.0;
+}
+
+double Medley::getPositionInSeconds() const
+{
+    if (auto deck = getActiveDeck()) {
+        return deck->getPositionInSeconds();
+    }
+
+    return 0.0;
+}
+
 bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
     auto deck = getAnotherDeck(currentDeck);
 
@@ -157,9 +182,9 @@ void Medley::deckUnloaded(Deck& sender) {
     }
 
     // Just in case
-    if (playing && !isDeckPlaying()) {
+    if (keepPlaying && !isDeckPlaying()) {
         auto shouldContinuePlaying = queue.count() > 0;
-        playing = shouldContinuePlaying;
+        keepPlaying = shouldContinuePlaying;
 
         if (shouldContinuePlaying) {
             loadNextTrack(nullptr, true);
@@ -254,7 +279,18 @@ void Medley::play()
         loadNextTrack(nullptr, true);
     }
 
-    playing = true;
+    keepPlaying = true;
+}
+
+void Medley::stop()
+{
+    keepPlaying = false;
+
+    deck1->stop();
+    deck2->stop();
+
+    deck1->unloadTrack();
+    deck2->unloadTrack();    
 }
 
 bool Medley::isDeckPlaying()
@@ -278,6 +314,35 @@ void Medley::updateFadingFactor() {
     double outRange = 1000.0 - 1.0;
     double inRange = 100.0;
     fadingFactor = (float)(1000.0 / (((100.0 - fadingCurve) / inRange * outRange) + 1.0));
+}
+
+bool Medley::Mixer::togglePause() {
+    return paused = !paused;
+}
+
+void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
+    if (!stalled) {
+        MixerAudioSource::getNextAudioBlock(info);
+
+        if (paused) {
+            for (int i = info.buffer->getNumChannels(); --i >= 0;) {
+                info.buffer->applyGainRamp(i, info.startSample, jmin(256, info.numSamples), 1.0f, 0.0f);
+            }
+
+            stalled = true;
+        }
+    }
+    else /* stalled */ {
+        if (!paused) {
+            MixerAudioSource::getNextAudioBlock(info);
+
+            for (int i = info.buffer->getNumChannels(); --i >= 0;) {
+                info.buffer->applyGainRamp(i, info.startSample, jmin(256, info.numSamples), 0.0f, 1.0f);
+            }
+
+            stalled = false;
+        }
+    }
 }
 
 }

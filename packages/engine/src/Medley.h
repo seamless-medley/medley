@@ -41,11 +41,21 @@ public:
 
     void play();
 
+    void stop();
+
     bool isDeckPlaying();
 
     void addListener(Callback* cb);
 
     void removeListener(Callback* cb);
+
+    inline bool togglePause() { return mixer.togglePause(); }
+
+    void setPositionFractional(double fraction);
+
+    double getDuration() const;
+
+    double getPositionInSeconds() const;
 
     // TODO: Transition time
 
@@ -72,17 +82,30 @@ private:
 
     void updateFadingFactor();
 
+    class Mixer : public MixerAudioSource {
+    public:
+        bool togglePause();
+
+        void getNextAudioBlock(const AudioSourceChannelInfo& info) override;
+
+        bool isPaused() const { return paused; }
+
+    private:
+        bool paused = false;
+        bool stalled = false;
+    };
+
     AudioDeviceManager deviceMgr;
     AudioFormatManager formatMgr;
     Deck* deck1 = nullptr;
     Deck* deck2 = nullptr;
-    MixerAudioSource mixer;
+    Mixer mixer;
     AudioSourcePlayer mainOut;
 
     TimeSliceThread loadingThread;
     TimeSliceThread readAheadThread;
 
-    bool playing = false;
+    bool keepPlaying = false;
     IQueue& queue;
 
     enum class TransitionState {
