@@ -75,12 +75,12 @@ private:
         }      
 
         void paint(Graphics& g) override {
-            auto w = (float)getWidth();
-            auto h = (float)getHeight();
-
             if (!deck->isTrackLoaded()) {
                 return;
             }
+
+            auto w = (float)getWidth();
+            auto h = (float)getHeight();
 
             // container
             g.setColour(Colours::lightgrey.darker(0.22));
@@ -167,7 +167,6 @@ private:
         medley::Deck* anotherDeck;
     };
     
-
     class DeckComponent : public Component, public Deck::Callback {
     public:
         DeckComponent(Deck& deck, Deck& anotherDeck)
@@ -263,7 +262,10 @@ private:
             model(queue),
             medley(queue),
             queueListBox({}, &model),
-            btnOpen("Add")
+            btnAdd("Add"),
+            btnPlay("Play"),
+            btnStop("Stop"),
+            btnPause("Pause")
         {
             medley.addListener(this);
 
@@ -273,8 +275,17 @@ private:
             deckB = new DeckComponent(medley.getDeck2(), medley.getDeck1());
             addAndMakeVisible(deckB);
 
-            btnOpen.addListener(this);
-            addAndMakeVisible(btnOpen);
+            btnAdd.addListener(this);
+            addAndMakeVisible(btnAdd);
+
+            btnPlay.addListener(this);
+            addAndMakeVisible(btnPlay);
+
+            btnStop.addListener(this);
+            addAndMakeVisible(btnStop);
+
+            btnPause.addListener(this);
+            addAndMakeVisible(btnPause);
 
             playhead = new PlayHead(&medley.getDeck1(), &medley.getDeck2());
             addAndMakeVisible(playhead);
@@ -302,9 +313,14 @@ private:
                 deckB->setBounds(deckPanelArea.translated(10, 0).removeFromLeft(w));
             }
             {
+                playhead->setBounds(b.removeFromTop(32).translated(0, 4).reduced(10, 4));
+
                 auto controlArea = b.removeFromTop(32).translated(0, 4).reduced(10, 4);
-                btnOpen.setBounds(controlArea.removeFromLeft(55));
-                playhead->setBounds(controlArea.translated(4, 0).reduced(4, 0));
+                btnAdd.setBounds(controlArea.removeFromLeft(55));
+                btnPlay.setBounds(controlArea.removeFromLeft(55));
+                btnStop.setBounds(controlArea.removeFromLeft(55));
+                btnPause.setBounds(controlArea.removeFromLeft(75));
+               
             }
             {
                 queueListBox.setBounds(b.reduced(10));
@@ -323,18 +339,36 @@ private:
             delete playhead;
         }
 
-        void buttonClicked(Button*) override {
-            FileChooser fc("test");
+        void buttonClicked(Button* source) override {
+            if (source == &btnAdd) {
+                FileChooser fc("test");
 
-            if (fc.browseForMultipleFilesToOpen()) {
-                auto files = fc.getResults();
+                if (fc.browseForMultipleFilesToOpen()) {
+                    auto files = fc.getResults();
 
-                for (auto f : files) {
-                    queue.tracks.push_back(new Track(f));
-                }                
+                    for (auto f : files) {
+                        queue.tracks.push_back(new Track(f));
+                    }
 
+                    medley.play();
+                    queueListBox.updateContent();
+                }
+
+                return;
+            }
+
+            if (source == &btnPlay) {
                 medley.play();
-                queueListBox.updateContent();
+                return;
+            }
+
+            if (source == &btnStop) {
+                medley.stop();
+                return;
+            }
+
+            if (source == &btnPause) {
+                btnPause.setButtonText(medley.togglePause() ? "Paused" : "Pause");
             }
         }
 
@@ -382,7 +416,11 @@ private:
             }
         }
 
-        TextButton btnOpen;
+        TextButton btnAdd;
+        TextButton btnPlay;
+        TextButton btnStop;
+        TextButton btnPause;
+
         ListBox queueListBox;
 
         PlayHead* playhead = nullptr;
