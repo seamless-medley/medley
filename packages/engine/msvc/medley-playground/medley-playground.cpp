@@ -213,12 +213,30 @@ private:
 
         void resized() {
             auto b = getLocalBounds();
-            playhead.setBounds(b.removeFromBottom(24).reduced(4, 4));
+            playhead.setBounds(b.removeFromBottom(24));
         }
 
         void paint(Graphics& g) override {
             g.setColour(Colours::lightgrey);
             g.fillRect(0, 0, getWidth(), getHeight());
+            g.setColour(Colours::black);
+
+            if (auto track = deck.getTrack()) {               
+                auto lineHeight = g.getCurrentFont().getHeight();
+                auto b = getLocalBounds().reduced(4);
+                auto topLine = b.removeFromTop(lineHeight);
+
+                auto pos = deck.getPositionInSeconds();
+                auto posStr = String::formatted("%.2d:%.2d.%.3d", (int)pos / 60, (int)pos % 60, (int)(pos * 1000) % 1000);
+
+                g.drawText(posStr, topLine.removeFromRight(120), Justification::topRight);
+                g.drawText(track->getFile().getFileName(), topLine, Justification::topLeft);
+
+                {
+                    auto thisLine = b.removeFromTop(lineHeight);
+                    g.drawText(String::formatted("Volume: %d%%", (int)(deck.getVolume() * 100)), thisLine, Justification::topLeft);
+                }
+            }
         }
 
         medley::Deck& deck;
@@ -294,8 +312,8 @@ private:
             addAndMakeVisible(volumeSlider);
             volumeSlider.setTextBoxStyle(Slider::TextEntryBoxPosition::NoTextBox, "", 0, 0);
             volumeSlider.setTextValueSuffix("dB");
-            volumeSlider.setRange(-60.0, 0.0);
-            volumeSlider.setValue(Decibels::gainToDecibels(medley.getGain()));
+            volumeSlider.setRange(0.0, 1.0);
+            volumeSlider.setValue(medley.getGain());
             volumeSlider.addListener(this);            
 
             playhead = new PlayHead(&medley.getDeck1(), &medley.getDeck2());
@@ -387,7 +405,7 @@ private:
 
         void sliderValueChanged(Slider* slider) override {
             if (slider == &volumeSlider) {
-                medley.setGain(Decibels::decibelsToGain(slider->getValue()));
+                medley.setGain(slider->getValue());
             }
         }
 
