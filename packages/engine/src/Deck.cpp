@@ -64,8 +64,7 @@ bool Deck::loadTrack(const ITrack::Ptr track, bool play)
 
     playAfterLoading = play;
     loader.load(track);
-
-    this->track = track;
+    
     isTrackLoading = true;
     return true;
 }
@@ -145,7 +144,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
     }
 
     if (playDuration >= 3) {
-        scanningScheduler.scan();
+        scanningScheduler.scan(track);
     }
     else {
         calculateTransition();
@@ -155,6 +154,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
         start();
     }
 
+    this->track = track;
     isTrackLoading = false;
 }
 
@@ -163,7 +163,7 @@ void Deck::unloadTrackInternal()
 {
     inputStreamEOF = false;
     playing = false;
-    stopped = true;
+    stopped = true;    
 
     bool deckUnloaded = false;
 
@@ -198,14 +198,15 @@ void Deck::unloadTrackInternal()
         });
     }
 
+    track = nullptr;
     pregain = 1.0f;
     volume = 1.0f;
     updateGain();
 }
 
-void Deck::scanTrackInternal()
+void Deck::scanTrackInternal(ITrack::Ptr trackToScan)
 {
-    auto file = track->getFile();
+    auto file = trackToScan->getFile();
     if (!file.existsAsFile()) {
         return;
     }
@@ -599,17 +600,17 @@ void Deck::Loader::load(const ITrack::Ptr track)
 
 int Deck::Scanner::useTimeSlice()
 {
-    if (shouldScan) {
-        deck.scanTrackInternal();
-        shouldScan = false;
+    if (track) {
+        deck.scanTrackInternal(track);
+        track = nullptr;
     }
 
     return 100;
 }
 
-void Deck::Scanner::scan()
+void Deck::Scanner::scan(const ITrack::Ptr track)
 {
-    shouldScan = true;
+    this->track = track;
 }
 
 int Deck::PlayHead::useTimeSlice()

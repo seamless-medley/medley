@@ -76,11 +76,6 @@ public:
 
     float getVolume() const { return volume; }
 
-    void setVolume(float newVolume) {
-        volume = newVolume;
-        updateGain();
-    }
-
     float getPregain() const { return pregain; }
 
     void setPregain(float newPre) {
@@ -119,6 +114,8 @@ public:
     bool shouldPlayAfterLoading() const { return playAfterLoading; }
 
 private:
+    friend class Medley;
+
     class Loader : public TimeSliceClient {
     public:
         Loader(Deck& deck) : deck(deck) {}
@@ -137,10 +134,10 @@ private:
         Scanner(Deck& deck) : deck(deck) {}
         int useTimeSlice() override;
 
-        void scan();
+        void scan(const ITrack::Ptr track);
     private:
         Deck& deck;
-        bool shouldScan = false;
+        ITrack::Ptr track = nullptr;
     };
 
     class PlayHead : public TimeSliceClient {
@@ -152,6 +149,11 @@ private:
         double lastPosition = 0;
     };
 
+    void setVolume(float newVolume) {
+        volume = newVolume;
+        updateGain();
+    }
+
     void setSource(AudioFormatReaderSource* newSource);
 
     void releaseChainedResources();
@@ -160,7 +162,7 @@ private:
 
     void unloadTrackInternal();
 
-    void scanTrackInternal();
+    void scanTrackInternal(ITrack::Ptr trackToScan);
 
     void calculateTransition();
 
