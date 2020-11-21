@@ -1,4 +1,5 @@
 #include "Medley.h"
+#include "MiniMP3AudioFormat.h"
 
 namespace medley {
 
@@ -11,7 +12,20 @@ Medley::Medley(IQueue& queue)
     updateFadingFactor();
 
     deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
-    formatMgr.registerBasicFormats();
+
+    formatMgr.registerFormat(new MiniMP3AudioFormat(), true);
+    formatMgr.registerFormat(new WavAudioFormat(), false);
+    formatMgr.registerFormat(new AiffAudioFormat(), false);
+    formatMgr.registerFormat(new FlacAudioFormat(), false);
+    formatMgr.registerFormat(new OggVorbisAudioFormat(), false);
+
+#if JUCE_MAC || JUCE_IOS
+    formatMgr.registerFormat(new CoreAudioFormat(), false);
+#endif
+
+#if JUCE_USE_WINDOWS_MEDIA_FORMAT
+    formatMgr.registerFormat(new WindowsMediaAudioFormat(), false);
+#endif    
 
     deck1 = new Deck("Deck A", formatMgr, loadingThread, readAheadThread);
     deck2 = new Deck("Deck B", formatMgr, loadingThread, readAheadThread);
@@ -43,6 +57,55 @@ Medley::~Medley() {
 
     delete deck1;
     delete deck2;
+}
+
+void Medley::setPositionFractional(double fraction)
+{
+    if (auto deck = getMainDeck()) {
+        deck->setPositionFractional(fraction);
+    }
+}
+
+double Medley::getDuration() const
+{
+    if (auto deck = getMainDeck()) {
+        return deck->getDuration();
+    }
+
+    return 0.0;
+}
+
+double Medley::getPositionInSeconds() const
+{
+    if (auto deck = getMainDeck()) {
+        return deck->getPositionInSeconds();
+    }
+
+    return 0.0;
+}
+
+void Medley::setMaxTransitionTime(double value) {
+    maxTransitionTime = value;
+    deck1->setMaxTransitionTime(value);
+    deck2->setMaxTransitionTime(value);
+}
+
+void Medley::fadeOutMainDeck()
+{
+    if (auto deck = getMainDeck()) {
+        forceFadingOut = true;
+
+        if (transitionState == TransitionState::Transit) {
+            deck->unloadTrack();
+            transitionState = TransitionState::Idle;
+
+            deck = getMainDeck();
+        }
+
+        if (deck) {
+            deck->fadeOut();
+        }        
+    }
 }
 
 bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
@@ -111,6 +174,7 @@ void Medley::deckLoaded(Deck& sender)
         ScopedLock sl(callbackLock);
 
         deckQueue.push_back(&sender);
+        deckQueue.front()->markAsMain(true);
 
         listeners.call([&](Callback& cb) {
             cb.deckLoaded(sender);
@@ -130,12 +194,18 @@ void Medley::deckUnloaded(Deck& sender) {
 
         transitionState = TransitionState::Idle;
         transitingDeck = nullptr;
+        forceFadingOut = false;
     }
 
     {
         ScopedLock sl(callbackLock);
 
+        sender.markAsMain(false);
         deckQueue.remove(&sender);
+
+        if (!deckQueue.empty()) {
+            deckQueue.front()->markAsMain(true);
+        }
 
         listeners.call([&](Callback& cb) {
             cb.deckUnloaded(sender);
@@ -143,9 +213,9 @@ void Medley::deckUnloaded(Deck& sender) {
     }
 
     // Just in case
-    if (playing && !isDeckPlaying()) {
+    if (keepPlaying && !isDeckPlaying()) {
         auto shouldContinuePlaying = queue.count() > 0;
-        playing = shouldContinuePlaying;
+        keepPlaying = shouldContinuePlaying;
 
         if (shouldContinuePlaying) {
             loadNextTrack(nullptr, true);
@@ -177,7 +247,9 @@ void Medley::deckPosition(Deck& sender, double position) {
         if (position > transitionCuePoint) {
             if (!loadNextTrack(&sender, false)) {
                 // No more track, do not transit
-                return;
+                if (!forceFadingOut) {
+                    return;
+                }
             }
 
             DBG(String::formatted("[%s] cue", nextDeck->getName().toWideCharPointer()));
@@ -197,7 +269,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         }
 
         if (transitionState == TransitionState::Transit) {
-            if (leadingDuration >= longLeadingTrackDuration) {
+            if (leadingDuration >= maxLeadingDuration) {
                 auto fadeInProgress = jlimit(0.25, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
 
                 DBG(String::formatted("[%s] Fading in: %.2f", nextDeck->getName().toWideCharPointer(), fadeInProgress));
@@ -206,19 +278,24 @@ void Medley::deckPosition(Deck& sender, double position) {
         }
     }
 
-    if (position >= transitionStartPos) {
-        auto transitionDuration = (transitionEndPos - transitionStartPos);
-
-        if (transitionDuration >= 2) { // TODO: Configurable
+    if (sender.isMain()) {
+        if (position >= transitionStartPos) {
+            auto transitionDuration = (transitionEndPos - transitionStartPos);
             auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
             DBG(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
             sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
+
+            if (transitionState != TransitionState::Idle && position > transitionEndPos) {
+                if (transitionProgress >= 1.0) {
+                    sender.unloadTrack();
+                }
+            }
         }
     }
 }
 
-Deck* Medley::getActiveDeck() const
+Deck* Medley::getMainDeck() const
 {
     return deckQueue.empty() ? nullptr : deckQueue.front();
 }
@@ -234,7 +311,18 @@ void Medley::play()
         loadNextTrack(nullptr, true);
     }
 
-    playing = true;
+    keepPlaying = true;
+}
+
+void Medley::stop()
+{
+    keepPlaying = false;
+
+    deck1->stop();
+    deck2->stop();
+
+    deck1->unloadTrack();
+    deck2->unloadTrack();    
 }
 
 bool Medley::isDeckPlaying()
@@ -258,6 +346,35 @@ void Medley::updateFadingFactor() {
     double outRange = 1000.0 - 1.0;
     double inRange = 100.0;
     fadingFactor = (float)(1000.0 / (((100.0 - fadingCurve) / inRange * outRange) + 1.0));
+}
+
+bool Medley::Mixer::togglePause() {
+    return paused = !paused;
+}
+
+void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
+    if (!stalled) {
+        MixerAudioSource::getNextAudioBlock(info);
+
+        if (paused) {
+            for (int i = info.buffer->getNumChannels(); --i >= 0;) {
+                info.buffer->applyGainRamp(i, info.startSample, jmin(256, info.numSamples), 1.0f, 0.0f);
+            }
+
+            stalled = true;
+        }
+    }
+    else /* stalled */ {
+        if (!paused) {
+            MixerAudioSource::getNextAudioBlock(info);
+
+            for (int i = info.buffer->getNumChannels(); --i >= 0;) {
+                info.buffer->applyGainRamp(i, info.startSample, jmin(256, info.numSamples), 0.0f, 1.0f);
+            }
+
+            stalled = false;
+        }
+    }
 }
 
 }

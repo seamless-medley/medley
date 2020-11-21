@@ -75,20 +75,20 @@ private:
         }      
 
         void paint(Graphics& g) override {
-            auto w = (float)getWidth();
-            auto h = (float)getHeight();
-
             if (!deck->isTrackLoaded()) {
                 return;
             }
 
+            auto w = (float)getWidth();
+            auto h = (float)getHeight();
+
             // container
-            g.setColour(Colours::lightgrey.darker(0.22));
+            g.setColour(Colours::lightgrey.darker(0.22f));
             g.fillRect(0.0f, 0.0f, w, h);
 
             // progress
             auto pos = (float)deck->getPositionInSeconds();
-            auto duration = deck->getDuration();
+            auto duration = (float)deck->getDuration();
 
             if (duration <= 0) {
                 return;
@@ -104,18 +104,38 @@ private:
             auto leading = deck->getLeadingSamplePosition() / sr;
             auto trailing = deck->getTrailingSamplePosition() / sr;
 
-            auto nextLeading = (anotherDeck->isTrackLoaded() ? anotherDeck->getLeadingDuration() : 0);
+            auto nextLeading = (float)((anotherDeck->isTrackLoaded() && !anotherDeck->isMain()) ? anotherDeck->getLeadingDuration() : 0);
             //
             auto cuePoint = deck->getTransitionCuePosition();
-            auto transitionStart = deck->getTransitionStartPosition() - nextLeading;
-            auto transitionEnd = deck->getTransitionEndPosition();
+            auto transitionStart = (float)deck->getTransitionStartPosition() - nextLeading;
+            auto transitionEnd = (float)deck->getTransitionEndPosition();
 
-            g.fillCheckerBoard(juce::Rectangle(0.0f, 0.0f, (float)(first / duration * w), h), 4, 4, Colours::darkgrey, Colours::darkgrey.darker());
-            g.fillCheckerBoard(juce::Rectangle((float)(last / duration * w), 0.0f, w, h), 4, 4, Colours::darkgrey, Colours::darkgrey.darker());
+            g.fillCheckerBoard(
+                juce::Rectangle(
+                    0.0f, 0.0f,
+                    (float)(first / duration * w), h
+                ), 4, 4, Colours::darkgrey, Colours::darkgrey.darker()
+            );
+
+            g.fillCheckerBoard(
+                juce::Rectangle(
+                    (float)(transitionEnd / duration * w), 0.0f,
+                    (float)(last / duration * w), h
+                ),
+                4, 4, Colours::darkorchid, Colours::darkorchid.darker()
+            );
+
+            g.fillCheckerBoard(
+                juce::Rectangle(
+                    (float)(last / duration * w), 0.0f,
+                    w, h
+                ),
+                4, 4, Colours::darkgrey, Colours::darkgrey.darker()
+            );
 
             // cue
             g.setColour(Colours::yellow);
-            g.drawVerticalLine(cuePoint / duration * w, 0, h);
+            g.drawVerticalLine((int)(cuePoint / duration * w), 0, h);
 
             // transition
             {
@@ -126,17 +146,17 @@ private:
                 ));
                 g.fillRect(
                     transitionStart / duration * w, 0.0f,
-                    (jmax(transitionEnd, last) - transitionStart) / duration * w, h
+                    (transitionEnd - transitionStart) / duration * w, h
                 );
             }
 
             // leading
             g.setColour(Colours::palevioletred);
-            g.drawVerticalLine(leading / duration * w, 0, w);
+            g.drawVerticalLine((int)(leading / duration * w), 0, w);
 
             // trailing
             g.setColour(Colours::orangered);
-            g.drawVerticalLine(trailing / duration * w, 0, w);
+            g.drawVerticalLine((int)(trailing / duration * w), 0, w);
         }
 
         void mouseDown(const MouseEvent& event) override {
@@ -147,7 +167,6 @@ private:
         medley::Deck* anotherDeck;
     };
     
-
     class DeckComponent : public Component, public Deck::Callback {
     public:
         DeckComponent(Deck& deck, Deck& anotherDeck)
@@ -194,12 +213,30 @@ private:
 
         void resized() {
             auto b = getLocalBounds();
-            playhead.setBounds(b.removeFromBottom(24).reduced(4, 4));
+            playhead.setBounds(b.removeFromBottom(24));
         }
 
         void paint(Graphics& g) override {
-            g.setColour(Colours::lightgrey);
+            g.setColour(deck.isMain() ? Colours::antiquewhite : Colours::lightgrey);
             g.fillRect(0, 0, getWidth(), getHeight());
+            g.setColour(Colours::black);
+
+            if (auto track = deck.getTrack()) {               
+                auto lineHeight = (int)g.getCurrentFont().getHeight();
+                auto b = getLocalBounds().reduced(4);
+                auto topLine = b.removeFromTop(lineHeight);
+
+                auto pos = deck.getPositionInSeconds();
+                auto posStr = String::formatted("%.2d:%.2d.%.3d", (int)pos / 60, (int)pos % 60, (int)(pos * 1000) % 1000);
+
+                g.drawText(posStr, topLine.removeFromRight(120), Justification::topRight);
+                g.drawText(track->getFile().getFileName(), topLine, Justification::topLeft);
+
+                {
+                    auto thisLine = b.removeFromTop(lineHeight);
+                    g.drawText(String::formatted("Volume: %d%%", (int)(deck.getVolume() * 100)), thisLine, Justification::topLeft);
+                }
+            }
         }
 
         medley::Deck& deck;
@@ -236,14 +273,19 @@ private:
         Queue& queue;
     };
 
-    class MainContentComponent : public Component, public Timer, public Button::Listener, public medley::Medley::Callback {
+    class MainContentComponent : public Component, public Timer, public Button::Listener, public Slider::Listener, public medley::Medley::Callback {
     public:
         MainContentComponent() :
             Component(),
             model(queue),
             medley(queue),
             queueListBox({}, &model),
-            btnOpen("Add")
+            btnAdd("Add"),
+            btnPlay("Play"),
+            btnStop("Stop"),
+            btnPause("Pause"),
+            btnFadeOut("Fade Out"),
+            volumeText({}, "Volume:")
         {
             medley.addListener(this);
 
@@ -253,8 +295,30 @@ private:
             deckB = new DeckComponent(medley.getDeck2(), medley.getDeck1());
             addAndMakeVisible(deckB);
 
-            btnOpen.addListener(this);
-            addAndMakeVisible(btnOpen);
+            btnAdd.addListener(this);
+            addAndMakeVisible(btnAdd);
+
+            btnPlay.addListener(this);
+            addAndMakeVisible(btnPlay);
+
+            btnStop.addListener(this);
+            addAndMakeVisible(btnStop);
+
+            btnPause.addListener(this);
+            addAndMakeVisible(btnPause);
+
+            btnFadeOut.addListener(this);
+            addAndMakeVisible(btnFadeOut);
+
+            addAndMakeVisible(volumeText);
+            volumeText.setColour(Label::textColourId, Colours::black);
+
+            addAndMakeVisible(volumeSlider);
+            volumeSlider.setTextBoxStyle(Slider::TextEntryBoxPosition::NoTextBox, "", 0, 0);
+            volumeSlider.setTextValueSuffix("dB");
+            volumeSlider.setRange(0.0, 1.0);
+            volumeSlider.setValue(medley.getGain());
+            volumeSlider.addListener(this);            
 
             playhead = new PlayHead(&medley.getDeck1(), &medley.getDeck2());
             addAndMakeVisible(playhead);
@@ -282,9 +346,17 @@ private:
                 deckB->setBounds(deckPanelArea.translated(10, 0).removeFromLeft(w));
             }
             {
+                playhead->setBounds(b.removeFromTop(32).translated(0, 4).reduced(10, 4));
+            }
+            {
                 auto controlArea = b.removeFromTop(32).translated(0, 4).reduced(10, 4);
-                btnOpen.setBounds(controlArea.removeFromLeft(55));
-                playhead->setBounds(controlArea.translated(4, 0).reduced(4, 0));
+                btnAdd.setBounds(controlArea.removeFromLeft(55));
+                btnPlay.setBounds(controlArea.removeFromLeft(55));
+                btnStop.setBounds(controlArea.removeFromLeft(55));
+                btnPause.setBounds(controlArea.removeFromLeft(75));
+                btnFadeOut.setBounds(controlArea.removeFromLeft(60));
+                volumeText.setBounds(controlArea.removeFromLeft(60));
+                volumeSlider.setBounds(controlArea.reduced(4, 0));
             }
             {
                 queueListBox.setBounds(b.reduced(10));
@@ -303,18 +375,47 @@ private:
             delete playhead;
         }
 
-        void buttonClicked(Button*) override {
-            FileChooser fc("test");
+        void buttonClicked(Button* source) override {
+            if (source == &btnAdd) {
+                FileChooser fc("test");
 
-            if (fc.browseForMultipleFilesToOpen()) {
-                auto files = fc.getResults();
+                if (fc.browseForMultipleFilesToOpen()) {
+                    auto files = fc.getResults();
 
-                for (auto f : files) {
-                    queue.tracks.push_back(new Track(f));
-                }                
+                    for (auto f : files) {
+                        queue.tracks.push_back(new Track(f));
+                    }
 
+                    medley.play();
+                    queueListBox.updateContent();
+                }
+
+                return;
+            }
+
+            if (source == &btnPlay) {
                 medley.play();
-                queueListBox.updateContent();
+                return;
+            }
+
+            if (source == &btnStop) {
+                medley.stop();
+                return;
+            }
+
+            if (source == &btnPause) {
+                btnPause.setButtonText(medley.togglePause() ? "Paused" : "Pause");
+                return;
+            }
+
+            if (source == &btnFadeOut) {
+                medley.fadeOutMainDeck();
+            }
+        }
+
+        void sliderValueChanged(Slider* slider) override {
+            if (slider == &volumeSlider) {
+                medley.setGain((float)slider->getValue());
             }
         }
 
@@ -339,7 +440,7 @@ private:
         }
 
         void deckLoaded(Deck& sender) override {
-            if (auto deck = medley.getActiveDeck()) {
+            if (auto deck = medley.getMainDeck()) {
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
             }
@@ -348,7 +449,7 @@ private:
         }
 
         void deckUnloaded(Deck& sender) override {
-            if (auto deck = medley.getActiveDeck()) {
+            if (auto deck = medley.getMainDeck()) {
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
             }
@@ -362,7 +463,15 @@ private:
             }
         }
 
-        TextButton btnOpen;
+        TextButton btnAdd;
+        TextButton btnPlay;
+        TextButton btnStop;
+        TextButton btnPause;
+        TextButton btnFadeOut;
+
+        Label volumeText;
+        Slider volumeSlider;
+
         ListBox queueListBox;
 
         PlayHead* playhead = nullptr;

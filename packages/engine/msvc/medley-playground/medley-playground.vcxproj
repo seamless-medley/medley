@@ -73,19 +73,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\..\juce;..\..\..\juce\modules;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\juce;..\..\..\juce\modules;..\..\..\minimp3;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\..\juce;..\..\..\juce\modules;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\juce;..\..\..\juce\modules;..\..\..\minimp3;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\..\juce;..\..\..\juce\modules;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\juce;..\..\..\juce\modules;..\..\..\minimp3;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\..\juce;..\..\..\juce\modules;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\juce;..\..\..\juce\modules;..\..\..\minimp3;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -182,6 +182,8 @@
     <ClCompile Include="..\..\juce\include_juce_gui_extra.cpp" />
     <ClCompile Include="..\..\src\Deck.cpp" />
     <ClCompile Include="..\..\src\Medley.cpp" />
+    <ClCompile Include="..\..\src\MiniMP3AudioFormat.cpp" />
+    <ClCompile Include="..\..\src\MiniMP3AudioFormatReader.cpp" />
     <ClCompile Include="medley-playground.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -189,6 +191,8 @@
     <ClInclude Include="..\..\src\Deck.h" />
     <ClInclude Include="..\..\src\ITrack.h" />
     <ClInclude Include="..\..\src\Medley.h" />
+    <ClInclude Include="..\..\src\MiniMP3AudioFormat.h" />
+    <ClInclude Include="..\..\src\MiniMP3AudioFormatReader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

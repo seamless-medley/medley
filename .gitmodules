@@ -1,3 +1,6 @@
 [submodule "packages/juce"]
 	path = packages/juce
 	url = git@github.com:juce-framework/JUCE.git
+[submodule "packages/minimp3"]
+	path = packages/minimp3
+	url = git@github.com:lieff/minimp3.git

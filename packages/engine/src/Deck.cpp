@@ -5,7 +5,7 @@ namespace {
     static const auto kHeadRoomDecibel = 3.0f;
     static const auto kSilenceThreshold = Decibels::decibelsToGain(-60.0f);
     static const auto kEndingSilenceThreshold = Decibels::decibelsToGain(-45.0f);
-    static const auto kFadingSilenceThreshold = Decibels::decibelsToGain(-20.0f);
+    static const auto kFadingSilenceThreshold = Decibels::decibelsToGain(-23.0f);
 
     constexpr float kFirstSoundDuration = 0.001f;
     constexpr float kLastSoundDuration = 1.25f;
@@ -62,10 +62,16 @@ bool Deck::loadTrack(const ITrack::Ptr track, bool play)
         return false;
     }
 
+    pregain = track->getPreGain();
+
+    // negative or zero pregain just doesn't make any sense!
+    if (pregain <= 0.0f) {
+        pregain = 1.0f;
+    }
+
     playAfterLoading = play;
     loader.load(track);
-
-    this->track = track;
+    
     isTrackLoading = true;
     return true;
 }
@@ -104,10 +110,10 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 
     if (playDuration >= 3) {
         Range<float> maxLevels[2]{};
-        reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * 10), maxLevels, 2);
+        reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * jmax(maxTransitionTime, 10.0)), maxLevels, 2);
 
         auto leadingDecibel = Decibels::gainToDecibels((maxLevels[0].getEnd() + maxLevels[1].getEnd()) / 2.0f);
-        auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 3.0f));
+        auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 6.0f));
 
         leadingSamplePosition = reader->searchForLevel(
             firstAudibleSamplePosition,
@@ -145,7 +151,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
     }
 
     if (playDuration >= 3) {
-        scanningScheduler.scan();
+        scanningScheduler.scan(track);
     }
     else {
         calculateTransition();
@@ -155,6 +161,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
         start();
     }
 
+    this->track = track;
     isTrackLoading = false;
 }
 
@@ -163,7 +170,7 @@ void Deck::unloadTrackInternal()
 {
     inputStreamEOF = false;
     playing = false;
-    stopped = true;
+    stopped = true;    
 
     bool deckUnloaded = false;
 
@@ -198,14 +205,15 @@ void Deck::unloadTrackInternal()
         });
     }
 
+    track = nullptr;
     pregain = 1.0f;
     volume = 1.0f;
     updateGain();
 }
 
-void Deck::scanTrackInternal()
+void Deck::scanTrackInternal(ITrack::Ptr trackToScan)
 {
-    auto file = track->getFile();
+    auto file = trackToScan->getFile();
     if (!file.existsAsFile()) {
         return;
     }
@@ -229,7 +237,7 @@ void Deck::scanTrackInternal()
     auto silencePosition = scanningReader->searchForLevel(
         tailPosition,
         scanningReader->lengthInSamples - tailPosition,
-        0, kEndingSilenceThreshold,
+        0, kSilenceThreshold,
         (int)(scanningReader->sampleRate * kLastSoundDuration)
     );
 
@@ -252,7 +260,7 @@ void Deck::scanTrackInternal()
         tailPosition,
         totalSamplesToPlay - tailPosition,
         0, kFadingSilenceThreshold,
-        (int)(scanningReader->sampleRate * 0.5)
+        (int)(scanningReader->sampleRate * 1.0)
     );
 
     trailingDuration = (trailingPosition > -1) ? (totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate : 0;
@@ -274,7 +282,7 @@ void Deck::calculateTransition()
     transitionStartPosition = lastAudibleSamplePosition / sourceSampleRate;
     transitionEndPosition = transitionStartPosition;
     
-    if (maxTransitionTime > 0.0)
+    if (trailingDuration > 0.0 && maxTransitionTime > 0.0)
     {        
 
         if (trailingDuration >= maxTransitionTime) {
@@ -282,12 +290,11 @@ void Deck::calculateTransition()
             transitionEndPosition = transitionStartPosition + maxTransitionTime;
         }
         else {
-            transitionStartPosition = jmax(2.0, transitionStartPosition - trailingDuration);
-            transitionEndPosition = transitionStartPosition + trailingDuration;
-        }        
+            transitionStartPosition = jmax(2.0, transitionEndPosition - trailingDuration);
+        }
     }
 
-    transitionCuePosition = jmax(0.0, transitionStartPosition - 8.0);
+    transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(8.0, maxTransitionTime));
 
     DBG(String::formatted(
         "[%s] Transition: cue=%.3fs, start=%.3fs, end=%.3fs, duration=%.2fs, trailing=%.2fs, total=%.2fs",
@@ -363,13 +370,7 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
     lastGain = gain;
 
     if (wasPlaying && !playing) {
-        DBG(String::formatted("[%s] Stopped", name.toWideCharPointer()));
-
-        listeners.call([this](Callback& cb) {
-            cb.deckFinished(*this);
-        });
-
-        unloadTrackInternal();
+        fireFinishedCallback();
     }
 }
 
@@ -419,7 +420,7 @@ bool Deck::isLooping() const
     return bufferingSource != nullptr && bufferingSource->isLooping();
 }
 
-void Deck::start()
+bool Deck::start()
 {
     if ((!playing) && resamplerSource != nullptr)
     {
@@ -433,11 +434,12 @@ void Deck::start()
                 cb.deckStarted(*this);
             });
         }
+        return true;
     }
-    else {
-        // Something went wrong
-        jassertfalse;
-    }
+
+    // Something went wrong
+    main = false;
+    return false;
 }
 
 void Deck::stop()
@@ -450,6 +452,17 @@ void Deck::stop()
         while (--n >= 0 && !stopped)
             Thread::sleep(2);
     }
+}
+
+void Deck::fireFinishedCallback()
+{
+    DBG(String::formatted("[%s] Stopped", name.toWideCharPointer()));
+
+    listeners.call([this](Callback& cb) {
+        cb.deckFinished(*this);
+    });
+
+    unloadTrackInternal();
 }
 
 void Deck::updateGain()
@@ -470,6 +483,12 @@ double Deck::getFirstAudiblePosition() const {
 double Deck::getEndPosition() const
 {
     return totalSamplesToPlay / sourceSampleRate;
+}
+
+void Deck::fadeOut()
+{
+    transitionCuePosition = transitionStartPosition = getPositionInSeconds();
+    transitionEndPosition = jmin(transitionStartPosition + maxTransitionTime, totalSamplesToPlay * sourceSampleRate);
 }
 
 
@@ -594,17 +613,17 @@ void Deck::Loader::load(const ITrack::Ptr track)
 
 int Deck::Scanner::useTimeSlice()
 {
-    if (shouldScan) {
-        deck.scanTrackInternal();
-        shouldScan = false;
+    if (track) {
+        deck.scanTrackInternal(track);
+        track = nullptr;
     }
 
     return 100;
 }
 
-void Deck::Scanner::scan()
+void Deck::Scanner::scan(const ITrack::Ptr track)
 {
-    shouldScan = true;
+    this->track = track;
 }
 
 int Deck::PlayHead::useTimeSlice()

@@ -31,7 +31,7 @@ public:
 
     Deck& getDeck2() const { return *deck2; }
 
-    Deck* getActiveDeck() const;
+    Deck* getMainDeck() const;
 
     Deck* getAnotherDeck(Deck* from);
 
@@ -41,13 +41,37 @@ public:
 
     void play();
 
+    void stop();
+
     bool isDeckPlaying();
 
     void addListener(Callback* cb);
 
     void removeListener(Callback* cb);
 
-    // TODO: Transition time
+    inline void setGain(float newGain) { mainOut.setGain(newGain); }
+
+    inline float getGain() const { return mainOut.getGain(); }
+
+    inline bool togglePause() { return mixer.togglePause(); }
+
+    void setPositionFractional(double fraction);
+
+    double getDuration() const;
+
+    double getPositionInSeconds() const;
+
+    double getMaxLeadingDuration() const { return maxLeadingDuration; }
+
+    void setMaxLeadingDuration(double value) {
+        maxLeadingDuration = value;
+    }
+
+    double getMaxTransitionTime() const { return maxTransitionTime; }
+
+    void setMaxTransitionTime(double value);
+
+    void fadeOutMainDeck();
 
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);
@@ -72,17 +96,30 @@ private:
 
     void updateFadingFactor();
 
+    class Mixer : public MixerAudioSource {
+    public:
+        bool togglePause();
+
+        void getNextAudioBlock(const AudioSourceChannelInfo& info) override;
+
+        bool isPaused() const { return paused; }
+
+    private:
+        bool paused = false;
+        bool stalled = false;
+    };
+
     AudioDeviceManager deviceMgr;
     AudioFormatManager formatMgr;
     Deck* deck1 = nullptr;
     Deck* deck2 = nullptr;
-    MixerAudioSource mixer;
+    Mixer mixer;
     AudioSourcePlayer mainOut;
 
     TimeSliceThread loadingThread;
     TimeSliceThread readAheadThread;
 
-    bool playing = false;
+    bool keepPlaying = false;
     IQueue& queue;
 
     enum class TransitionState {
@@ -99,7 +136,10 @@ private:
     double fadingCurve = 60;
     float fadingFactor;
 
-    double longLeadingTrackDuration = 2.0;
+    double maxLeadingDuration = 2.5;
+    double maxTransitionTime = 3.0;
+
+    bool forceFadingOut = false;
 
     CriticalSection callbackLock;
     ListenerList<Callback> listeners;
