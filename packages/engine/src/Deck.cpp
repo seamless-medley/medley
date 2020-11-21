@@ -62,6 +62,13 @@ bool Deck::loadTrack(const ITrack::Ptr track, bool play)
         return false;
     }
 
+    pregain = track->getPreGain();
+
+    // negative or zero pregain just doesn't make any sense!
+    if (pregain <= 0.0f) {
+        pregain = 1.0f;
+    }
+
     playAfterLoading = play;
     loader.load(track);
     
