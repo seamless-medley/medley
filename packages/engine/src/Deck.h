@@ -113,6 +113,8 @@ public:
 
     bool shouldPlayAfterLoading() const { return playAfterLoading; }
 
+    inline bool isMain() const { return main; }
+
 private:
     friend class Medley;
 
@@ -183,6 +185,10 @@ private:
         return 0.0;
     }
 
+    inline void markAsMain(const bool mark) {
+        main = mark;
+    }
+
     bool isTrackLoading = false;
     ITrack::Ptr track = nullptr;
 
@@ -238,6 +244,8 @@ private:
     double transitionEndPosition = 0.0;
 
     double maxTransitionTime = 3.0;
+
+    bool main = false;
 };
 
 }

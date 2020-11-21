@@ -31,7 +31,7 @@ public:
 
     Deck& getDeck2() const { return *deck2; }
 
-    Deck* getActiveDeck() const;
+    Deck* getMainDeck() const;
 
     Deck* getAnotherDeck(Deck* from);
 

@@ -104,7 +104,7 @@ private:
             auto leading = deck->getLeadingSamplePosition() / sr;
             auto trailing = deck->getTrailingSamplePosition() / sr;
 
-            auto nextLeading = (anotherDeck->isTrackLoaded() ? anotherDeck->getLeadingDuration() : 0);
+            auto nextLeading = (anotherDeck->isTrackLoaded() && !anotherDeck->isMain()) ? anotherDeck->getLeadingDuration() : 0;
             //
             auto cuePoint = deck->getTransitionCuePosition();
             auto transitionStart = deck->getTransitionStartPosition() - nextLeading;
@@ -217,7 +217,7 @@ private:
         }
 
         void paint(Graphics& g) override {
-            g.setColour(Colours::lightgrey);
+            g.setColour(deck.isMain() ? Colours::antiquewhite : Colours::lightgrey);
             g.fillRect(0, 0, getWidth(), getHeight());
             g.setColour(Colours::black);
 
@@ -430,7 +430,7 @@ private:
         }
 
         void deckLoaded(Deck& sender) override {
-            if (auto deck = medley.getActiveDeck()) {
+            if (auto deck = medley.getMainDeck()) {
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
             }
@@ -439,7 +439,7 @@ private:
         }
 
         void deckUnloaded(Deck& sender) override {
-            if (auto deck = medley.getActiveDeck()) {
+            if (auto deck = medley.getMainDeck()) {
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
             }

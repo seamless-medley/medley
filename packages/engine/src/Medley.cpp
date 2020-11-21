@@ -61,14 +61,14 @@ Medley::~Medley() {
 
 void Medley::setPositionFractional(double fraction)
 {
-    if (auto deck = getActiveDeck()) {
+    if (auto deck = getMainDeck()) {
         deck->setPositionFractional(fraction);
     }
 }
 
 double Medley::getDuration() const
 {
-    if (auto deck = getActiveDeck()) {
+    if (auto deck = getMainDeck()) {
         return deck->getDuration();
     }
 
@@ -77,7 +77,7 @@ double Medley::getDuration() const
 
 double Medley::getPositionInSeconds() const
 {
-    if (auto deck = getActiveDeck()) {
+    if (auto deck = getMainDeck()) {
         return deck->getPositionInSeconds();
     }
 
@@ -149,6 +149,10 @@ void Medley::deckLoaded(Deck& sender)
     {
         ScopedLock sl(callbackLock);
 
+        if (deckQueue.empty()) {
+            sender.markAsMain(true);
+        }
+
         deckQueue.push_back(&sender);
 
         listeners.call([&](Callback& cb) {
@@ -175,6 +179,9 @@ void Medley::deckUnloaded(Deck& sender) {
         ScopedLock sl(callbackLock);
 
         deckQueue.remove(&sender);
+
+        sender.markAsMain(false);
+        getAnotherDeck(&sender)->markAsMain(true);
 
         listeners.call([&](Callback& cb) {
             cb.deckUnloaded(sender);
@@ -263,7 +270,7 @@ void Medley::deckPosition(Deck& sender, double position) {
     }
 }
 
-Deck* Medley::getActiveDeck() const
+Deck* Medley::getMainDeck() const
 {
     return deckQueue.empty() ? nullptr : deckQueue.front();
 }
