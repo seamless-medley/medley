@@ -70,7 +70,7 @@ public:
 
     ITrack::Ptr getTrack() const { return track; }
 
-    void start();
+    bool start();
 
     void stop();
 

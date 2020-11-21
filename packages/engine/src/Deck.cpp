@@ -413,7 +413,7 @@ bool Deck::isLooping() const
     return bufferingSource != nullptr && bufferingSource->isLooping();
 }
 
-void Deck::start()
+bool Deck::start()
 {
     if ((!playing) && resamplerSource != nullptr)
     {
@@ -427,11 +427,12 @@ void Deck::start()
                 cb.deckStarted(*this);
             });
         }
+        return true;
     }
-    else {
-        // Something went wrong
-        jassertfalse;
-    }
+
+    // Something went wrong
+    main = false;
+    return false;
 }
 
 void Deck::stop()
