@@ -478,6 +478,12 @@ double Deck::getEndPosition() const
     return totalSamplesToPlay / sourceSampleRate;
 }
 
+void Deck::fadeOut()
+{
+    transitionCuePosition = transitionStartPosition = getPositionInSeconds();
+    transitionEndPosition = jmin(transitionStartPosition + maxTransitionTime, totalSamplesToPlay * sourceSampleRate);
+}
+
 
 void Deck::addListener(Callback* cb) {
     ScopedLock sl(callbackLock);

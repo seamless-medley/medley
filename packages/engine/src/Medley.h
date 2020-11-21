@@ -71,6 +71,8 @@ public:
 
     void setMaxTransitionTime(double value);
 
+    void fadeOutMainDeck();
+
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);
 
@@ -137,6 +139,7 @@ private:
     double maxLeadingDuration = 2.5;
     double maxTransitionTime = 3.0;
 
+    bool forceFadingOut = false;
 
     CriticalSection callbackLock;
     ListenerList<Callback> listeners;

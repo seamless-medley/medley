@@ -89,6 +89,25 @@ void Medley::setMaxTransitionTime(double value) {
     deck1->setMaxTransitionTime(value);
     deck2->setMaxTransitionTime(value);
 }
+
+void Medley::fadeOutMainDeck()
+{
+    if (auto deck = getMainDeck()) {
+        forceFadingOut = true;
+
+        if (transitionState == TransitionState::Transit) {
+            deck->unloadTrack();
+            transitionState = TransitionState::Idle;
+
+            deck = getMainDeck();
+        }
+
+        if (deck) {
+            deck->fadeOut();
+        }        
+    }
+}
+
 bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
     auto deck = getAnotherDeck(currentDeck);
 
@@ -175,6 +194,7 @@ void Medley::deckUnloaded(Deck& sender) {
 
         transitionState = TransitionState::Idle;
         transitingDeck = nullptr;
+        forceFadingOut = false;
     }
 
     {
@@ -227,7 +247,9 @@ void Medley::deckPosition(Deck& sender, double position) {
         if (position > transitionCuePoint) {
             if (!loadNextTrack(&sender, false)) {
                 // No more track, do not transit
-                return;
+                if (!forceFadingOut) {
+                    return;
+                }
             }
 
             DBG(String::formatted("[%s] cue", nextDeck->getName().toWideCharPointer()));

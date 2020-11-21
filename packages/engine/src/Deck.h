@@ -189,6 +189,8 @@ private:
         main = mark;
     }
 
+    void fadeOut();
+
     bool isTrackLoading = false;
     ITrack::Ptr track = nullptr;
 
