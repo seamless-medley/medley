@@ -288,7 +288,7 @@ void Deck::calculateTransition()
         }        
     }
 
-    transitionCuePosition = jmax(0.0, transitionStartPosition - 8.0);
+    transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(8.0, maxTransitionTime));
 
     DBG(String::formatted(
         "[%s] Transition: cue=%.3fs, start=%.3fs, end=%.3fs, duration=%.2fs, trailing=%.2fs, total=%.2fs",
