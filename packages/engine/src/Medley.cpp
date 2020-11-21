@@ -154,11 +154,8 @@ void Medley::deckLoaded(Deck& sender)
     {
         ScopedLock sl(callbackLock);
 
-        if (deckQueue.empty()) {
-            sender.markAsMain(true);
-        }
-
         deckQueue.push_back(&sender);
+        deckQueue.front()->markAsMain(true);
 
         listeners.call([&](Callback& cb) {
             cb.deckLoaded(sender);
@@ -183,10 +180,12 @@ void Medley::deckUnloaded(Deck& sender) {
     {
         ScopedLock sl(callbackLock);
 
+        sender.markAsMain(false);
         deckQueue.remove(&sender);
 
-        sender.markAsMain(false);
-        getAnotherDeck(&sender)->markAsMain(true);
+        if (!deckQueue.empty()) {
+            deckQueue.front()->markAsMain(true);
+        }
 
         listeners.call([&](Callback& cb) {
             cb.deckUnloaded(sender);
@@ -265,7 +264,7 @@ void Medley::deckPosition(Deck& sender, double position) {
             DBG(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
             sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
 
-            if (transitionState == TransitionState::Transit && position > transitionEndPos) {
+            if (transitionState != TransitionState::Idle && position > transitionEndPos) {
                 if (transitionProgress >= 1.0) {
                     sender.unloadTrack();
                 }
