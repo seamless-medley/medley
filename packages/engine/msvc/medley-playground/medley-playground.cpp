@@ -284,6 +284,7 @@ private:
             btnPlay("Play"),
             btnStop("Stop"),
             btnPause("Pause"),
+            btnFadeOut("Fade Out"),
             volumeText({}, "Volume:")
         {
             medley.addListener(this);
@@ -305,6 +306,9 @@ private:
 
             btnPause.addListener(this);
             addAndMakeVisible(btnPause);
+
+            btnFadeOut.addListener(this);
+            addAndMakeVisible(btnFadeOut);
 
             addAndMakeVisible(volumeText);
             volumeText.setColour(Label::textColourId, Colours::black);
@@ -350,6 +354,7 @@ private:
                 btnPlay.setBounds(controlArea.removeFromLeft(55));
                 btnStop.setBounds(controlArea.removeFromLeft(55));
                 btnPause.setBounds(controlArea.removeFromLeft(75));
+                btnFadeOut.setBounds(controlArea.removeFromLeft(60));
                 volumeText.setBounds(controlArea.removeFromLeft(60));
                 volumeSlider.setBounds(controlArea.reduced(4, 0));
             }
@@ -400,6 +405,11 @@ private:
 
             if (source == &btnPause) {
                 btnPause.setButtonText(medley.togglePause() ? "Paused" : "Pause");
+                return;
+            }
+
+            if (source == &btnFadeOut) {
+                medley.fadeOutMainDeck();
             }
         }
 
@@ -457,6 +467,7 @@ private:
         TextButton btnPlay;
         TextButton btnStop;
         TextButton btnPause;
+        TextButton btnFadeOut;
 
         Label volumeText;
         Slider volumeSlider;
