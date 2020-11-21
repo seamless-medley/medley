@@ -83,12 +83,12 @@ private:
             auto h = (float)getHeight();
 
             // container
-            g.setColour(Colours::lightgrey.darker(0.22));
+            g.setColour(Colours::lightgrey.darker(0.22f));
             g.fillRect(0.0f, 0.0f, w, h);
 
             // progress
             auto pos = (float)deck->getPositionInSeconds();
-            auto duration = deck->getDuration();
+            auto duration = (float)deck->getDuration();
 
             if (duration <= 0) {
                 return;
@@ -104,11 +104,11 @@ private:
             auto leading = deck->getLeadingSamplePosition() / sr;
             auto trailing = deck->getTrailingSamplePosition() / sr;
 
-            auto nextLeading = (anotherDeck->isTrackLoaded() && !anotherDeck->isMain()) ? anotherDeck->getLeadingDuration() : 0;
+            auto nextLeading = (float)((anotherDeck->isTrackLoaded() && !anotherDeck->isMain()) ? anotherDeck->getLeadingDuration() : 0);
             //
             auto cuePoint = deck->getTransitionCuePosition();
-            auto transitionStart = deck->getTransitionStartPosition() - nextLeading;
-            auto transitionEnd = deck->getTransitionEndPosition();
+            auto transitionStart = (float)deck->getTransitionStartPosition() - nextLeading;
+            auto transitionEnd = (float)deck->getTransitionEndPosition();
 
             g.fillCheckerBoard(
                 juce::Rectangle(
@@ -135,7 +135,7 @@ private:
 
             // cue
             g.setColour(Colours::yellow);
-            g.drawVerticalLine(cuePoint / duration * w, 0, h);
+            g.drawVerticalLine((int)(cuePoint / duration * w), 0, h);
 
             // transition
             {
@@ -152,11 +152,11 @@ private:
 
             // leading
             g.setColour(Colours::palevioletred);
-            g.drawVerticalLine(leading / duration * w, 0, w);
+            g.drawVerticalLine((int)(leading / duration * w), 0, w);
 
             // trailing
             g.setColour(Colours::orangered);
-            g.drawVerticalLine(trailing / duration * w, 0, w);
+            g.drawVerticalLine((int)(trailing / duration * w), 0, w);
         }
 
         void mouseDown(const MouseEvent& event) override {
@@ -222,7 +222,7 @@ private:
             g.setColour(Colours::black);
 
             if (auto track = deck.getTrack()) {               
-                auto lineHeight = g.getCurrentFont().getHeight();
+                auto lineHeight = (int)g.getCurrentFont().getHeight();
                 auto b = getLocalBounds().reduced(4);
                 auto topLine = b.removeFromTop(lineHeight);
 
@@ -415,7 +415,7 @@ private:
 
         void sliderValueChanged(Slider* slider) override {
             if (slider == &volumeSlider) {
-                medley.setGain(slider->getValue());
+                medley.setGain((float)slider->getValue());
             }
         }
 
