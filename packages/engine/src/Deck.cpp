@@ -275,7 +275,7 @@ void Deck::calculateTransition()
     transitionStartPosition = lastAudibleSamplePosition / sourceSampleRate;
     transitionEndPosition = transitionStartPosition;
     
-    if (maxTransitionTime > 0.0)
+    if (trailingDuration > 0.0 && maxTransitionTime > 0.0)
     {        
 
         if (trailingDuration >= maxTransitionTime) {
@@ -283,9 +283,8 @@ void Deck::calculateTransition()
             transitionEndPosition = transitionStartPosition + maxTransitionTime;
         }
         else {
-            transitionStartPosition = jmax(2.0, transitionStartPosition - trailingDuration);
-            transitionEndPosition = transitionStartPosition + trailingDuration;
-        }        
+            transitionStartPosition = jmax(2.0, transitionEndPosition - trailingDuration);
+        }
     }
 
     transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(8.0, maxTransitionTime));
