@@ -54,7 +54,7 @@ bool MiniMP3AudioFormatReader::readSamples(int** destSamples, int numDestChannel
         AudioDataConverters::deinterleaveSamples(buffer, dst, framesRead, numChannels);
     }
 
-    if (framesRead < numFrames) {
+    if (framesRead < (unsigned int)numFrames) {
         for (int i = numDestChannels; --i >= 0;) {
             if (dst[i] != nullptr) {
                 zeromem(dst[i] + startOffsetInDestBuffer + framesRead, ((size_t)numFrames - framesRead) * sizeof(float));
