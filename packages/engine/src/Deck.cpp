@@ -5,7 +5,7 @@ namespace {
     static const auto kHeadRoomDecibel = 3.0f;
     static const auto kSilenceThreshold = Decibels::decibelsToGain(-60.0f);
     static const auto kEndingSilenceThreshold = Decibels::decibelsToGain(-45.0f);
-    static const auto kFadingSilenceThreshold = Decibels::decibelsToGain(-20.0f);
+    static const auto kFadingSilenceThreshold = Decibels::decibelsToGain(-23.0f);
 
     constexpr float kFirstSoundDuration = 0.001f;
     constexpr float kLastSoundDuration = 1.25f;
@@ -103,10 +103,10 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 
     if (playDuration >= 3) {
         Range<float> maxLevels[2]{};
-        reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * 10), maxLevels, 2);
+        reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * jmax(maxTransitionTime, 10.0)), maxLevels, 2);
 
         auto leadingDecibel = Decibels::gainToDecibels((maxLevels[0].getEnd() + maxLevels[1].getEnd()) / 2.0f);
-        auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 3.0f));
+        auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 6.0f));
 
         leadingSamplePosition = reader->searchForLevel(
             firstAudibleSamplePosition,
@@ -253,7 +253,7 @@ void Deck::scanTrackInternal(ITrack::Ptr trackToScan)
         tailPosition,
         totalSamplesToPlay - tailPosition,
         0, kFadingSilenceThreshold,
-        (int)(scanningReader->sampleRate * 0.5)
+        (int)(scanningReader->sampleRate * 1.0)
     );
 
     trailingDuration = (trailingPosition > -1) ? (totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate : 0;
