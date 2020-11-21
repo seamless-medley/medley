@@ -126,7 +126,7 @@ private:
     double fadingCurve = 60;
     float fadingFactor;
 
-    double longLeadingTrackDuration = 2.0;
+    double longLeadingTrackDuration = 2.5;
 
     CriticalSection callbackLock;
     ListenerList<Callback> listeners;

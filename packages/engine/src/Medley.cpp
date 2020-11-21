@@ -252,19 +252,18 @@ void Medley::deckPosition(Deck& sender, double position) {
         }
     }
 
-    if (position >= transitionStartPos) {
-        auto transitionDuration = (transitionEndPos - transitionStartPos);
-        auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
-
-        if (transitionDuration >= 2.0) { // TODO: Configurable            
+    if (sender.isMain()) {
+        if (position >= transitionStartPos) {
+            auto transitionDuration = (transitionEndPos - transitionStartPos);
+            auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
             DBG(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
             sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
-        }
 
-        if (transitionState == TransitionState::Transit && position > transitionEndPos) {
-            if (transitionProgress >= 1.0) {
-                sender.unloadTrack();
+            if (transitionState == TransitionState::Transit && position > transitionEndPos) {
+                if (transitionProgress >= 1.0) {
+                    sender.unloadTrack();
+                }
             }
         }
     }
