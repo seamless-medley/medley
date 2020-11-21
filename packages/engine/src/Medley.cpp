@@ -84,6 +84,11 @@ double Medley::getPositionInSeconds() const
     return 0.0;
 }
 
+void Medley::setMaxTransitionTime(double value) {
+    maxTransitionTime = value;
+    deck1->setMaxTransitionTime(value);
+    deck2->setMaxTransitionTime(value);
+}
 bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
     auto deck = getAnotherDeck(currentDeck);
 
@@ -243,7 +248,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         }
 
         if (transitionState == TransitionState::Transit) {
-            if (leadingDuration >= longLeadingTrackDuration) {
+            if (leadingDuration >= maxLeadingDuration) {
                 auto fadeInProgress = jlimit(0.25, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
 
                 DBG(String::formatted("[%s] Fading in: %.2f", nextDeck->getName().toWideCharPointer(), fadeInProgress));

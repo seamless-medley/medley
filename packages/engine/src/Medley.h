@@ -61,7 +61,15 @@ public:
 
     double getPositionInSeconds() const;
 
-    // TODO: Transition time
+    double getMaxLeadingDuration() const { return maxLeadingDuration; }
+
+    void setMaxLeadingDuration(double value) {
+        maxLeadingDuration = value;
+    }
+
+    double getMaxTransitionTime() const { return maxTransitionTime; }
+
+    void setMaxTransitionTime(double value);
 
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);
@@ -126,7 +134,9 @@ private:
     double fadingCurve = 60;
     float fadingFactor;
 
-    double longLeadingTrackDuration = 2.5;
+    double maxLeadingDuration = 2.5;
+    double maxTransitionTime = 3.0;
+
 
     CriticalSection callbackLock;
     ListenerList<Callback> listeners;
