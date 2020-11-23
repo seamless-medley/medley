@@ -217,7 +217,16 @@ private:
         }
 
         void paint(Graphics& g) override {
-            g.setColour(deck.isMain() ? Colours::antiquewhite : Colours::lightgrey);
+            if (deck.isMain()) {
+                g.setColour(Colours::antiquewhite);
+            }
+            else if (deck.isTrackLoaded()) {
+                g.setColour(deck.isPlaying() ? Colours::lightseagreen : Colours::lightsalmon);
+            }
+            else {
+                g.setColour(Colours::lightgrey);
+            }
+
             g.fillRect(0, 0, getWidth(), getHeight());
             g.setColour(Colours::black);
 
@@ -263,9 +272,11 @@ private:
 
             g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));            
 
-            auto at = std::next(queue.tracks.begin(), rowNumber);
-            if (at != queue.tracks.end()) {
-                g.drawText(at->get()->getFile().getFullPathName(), 0, 0, width, height, Justification::centredLeft, false);
+            if (rowNumber < queue.tracks.size()) {
+                auto at = std::next(queue.tracks.begin(), rowNumber);
+                if (at != queue.tracks.end()) {
+                    g.drawText(at->get()->getFile().getFullPathName(), 0, 0, width, height, Justification::centredLeft, false);
+                }
             }
         }
 
