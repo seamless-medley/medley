@@ -168,34 +168,38 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 
 void Deck::unloadTrackInternal()
 {
+    isTrackLoading = false;
     inputStreamEOF = false;
     playing = false;
-    stopped = true;    
+    stopped = true;
 
     bool deckUnloaded = false;
+    {
+        const ScopedLock sl(sourceLock);        
 
-    if (resamplerSource) {
-        delete resamplerSource;
-        resamplerSource = nullptr;
-        deckUnloaded = true;
-    }
+        if (resamplerSource) {
+            delete resamplerSource;
+            resamplerSource = nullptr;
+            deckUnloaded = true;
+        }
 
-    if (bufferingSource) {
-        delete bufferingSource;
-        bufferingSource = nullptr;
-        deckUnloaded = true;
-    }
+        if (bufferingSource) {
+            delete bufferingSource;
+            bufferingSource = nullptr;
+            deckUnloaded = true;
+        }
 
-    if (source) {
-        delete source;
-        source = nullptr;
-        deckUnloaded = true;
-    }
+        if (source) {
+            delete source;
+            source = nullptr;
+            deckUnloaded = true;
+        }
 
-    if (reader) {
-        delete reader;
-        reader = nullptr;
-        deckUnloaded = true;
+        if (reader) {
+            delete reader;
+            reader = nullptr;
+            deckUnloaded = true;
+        }        
     }
 
     if (deckUnloaded) {
