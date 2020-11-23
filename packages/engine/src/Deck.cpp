@@ -456,9 +456,9 @@ void Deck::stop()
     {
         playing = false;
 
-        int n = 500;
-        while (--n >= 0 && !stopped)
-            Thread::sleep(2);
+        //int n = 500;
+        //while (--n >= 0 && !stopped)
+        //    Thread::sleep(2);
     }
 }
 

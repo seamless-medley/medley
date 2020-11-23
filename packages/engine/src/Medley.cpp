@@ -104,6 +104,7 @@ void Medley::fadeOutMainDeck()
 
         if (deck) {
             deck->fadeOut();
+            mixer.setPause(false);
         }        
     }
 }
@@ -337,6 +338,7 @@ void Medley::play()
     }
 
     keepPlaying = true;
+    mixer.setPause(false);
 }
 
 void Medley::stop()
@@ -347,7 +349,7 @@ void Medley::stop()
     deck2->stop();
 
     deck1->unloadTrack();
-    deck2->unloadTrack();    
+    deck2->unloadTrack();
 }
 
 bool Medley::isDeckPlaying()
