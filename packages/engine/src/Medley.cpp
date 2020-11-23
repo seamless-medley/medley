@@ -112,8 +112,13 @@ bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
     auto deck = getAnotherDeck(currentDeck);
 
     if (deck == nullptr) {
-        DBG("Could not find another deck for " + getDeckName(*currentDeck));
+        DBG("Could not find another deck for " + currentDeck->getName());
         return false;
+    }
+
+    if (deck->isTrackLoading) {        
+        DBG("Deck is busy loading some track!!!");
+        deck->unloadTrack();
     }
 
     while (queue.count() > 0) {
@@ -256,10 +261,14 @@ void Medley::deckPosition(Deck& sender, double position) {
             transitionState = TransitionState::Cue;
             transitingDeck = &sender;
         }
+
+        if (!sender.isMain() && nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
+            nextDeck->fireFinishedCallback();
+        }
     }
 
     if (position > transitionStartPos - leadingDuration) {
-        if (transitionState != TransitionState::Transit) {
+        if (transitionState == TransitionState::Cue) {
             if (nextDeck->isTrackLoaded()) {
                 DBG(String::formatted("Transiting to [%s]", nextDeck->getName().toWideCharPointer()));
                 transitionState = TransitionState::Transit;                
@@ -298,9 +307,15 @@ void Medley::deckPosition(Deck& sender, double position) {
 
             if (transitionState != TransitionState::Idle && position > transitionEndPos) {
                 if (transitionProgress >= 1.0) {
-                    sender.unloadTrack();
+                    sender.fireFinishedCallback();
                 }
             }
+        }
+    }
+    // Just in case
+    else if (!deckQueue.empty()) {
+        if (deckQueue.front() == &sender) {
+            sender.markAsMain(true);
         }
     }
 }
