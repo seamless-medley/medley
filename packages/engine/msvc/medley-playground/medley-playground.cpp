@@ -346,6 +346,8 @@ private:
             deckA->repaint();
             deckB->repaint();
             playhead->repaint();
+
+            updatePlayButton();
         }
 
         void resized() override {
@@ -397,7 +399,7 @@ private:
                         queue.tracks.push_back(new Track(f));
                     }
 
-                    medley.play();
+                    // medley.play();
                     queueListBox.updateContent();
                 }
 
@@ -406,6 +408,7 @@ private:
 
             if (source == &btnPlay) {
                 medley.play();
+                updatePauseButton();
                 return;
             }
 
@@ -415,7 +418,8 @@ private:
             }
 
             if (source == &btnPause) {
-                btnPause.setButtonText(medley.togglePause() ? "Paused" : "Pause");
+                medley.togglePause();
+                updatePauseButton();
                 return;
             }
 
@@ -443,11 +447,20 @@ private:
         }
 
         void deckStarted(Deck& sender) override {
-
+            
         }
 
         void deckFinished(Deck& sender) override {
+            
+        }
 
+        void updatePauseButton() {
+            btnPause.setButtonText(medley.isPaused() ? "Paused" : "Pause");
+        }
+
+        void updatePlayButton() {
+            btnPlay.setColour(TextButton::buttonColourId, medley.isDeckPlaying() ? Colours::lightgreen : getLookAndFeel().findColour(TextButton::buttonColourId));
+            updatePauseButton();
         }
 
         void deckLoaded(Deck& sender) override {
@@ -456,7 +469,7 @@ private:
                 playhead->updateDecks(deck, anotherDeck);
             }
 
-            updateQueueListBox();
+            updateQueueListBox();            
         }
 
         void deckUnloaded(Deck& sender) override {
@@ -464,6 +477,8 @@ private:
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
             }
+
+            updatePlayButton();
         }
 
         void updateQueueListBox() {
