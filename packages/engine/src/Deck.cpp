@@ -245,26 +245,30 @@ void Deck::scanTrackInternal(ITrack::Ptr trackToScan)
         (int)(scanningReader->sampleRate * kLastSoundDuration)
     );
 
+    if (silencePosition < 0) {
+        silencePosition = 0;
+    }
+
     if (silencePosition > firstAudibleSamplePosition) {
         lastAudibleSamplePosition = silencePosition;
+    }
 
-        auto endPosition = scanningReader->searchForLevel(
-            silencePosition,
-            scanningReader->lengthInSamples - silencePosition,
-            0, kSilenceThreshold,
-            (int)(scanningReader->sampleRate * 0.004)
-        );
+    auto endPosition = scanningReader->searchForLevel(
+        silencePosition,
+        scanningReader->lengthInSamples - silencePosition,
+        0, kSilenceThreshold,
+        (int)(scanningReader->sampleRate * 0.004)
+    );
 
-        if (endPosition > lastAudibleSamplePosition) {
-            totalSamplesToPlay = endPosition;
-        }
+    if (endPosition > lastAudibleSamplePosition) {
+        totalSamplesToPlay = endPosition;
     }
 
     trailingPosition = scanningReader->searchForLevel(
         tailPosition,
         totalSamplesToPlay - tailPosition,
         0, kFadingSilenceThreshold,
-        (int)(scanningReader->sampleRate * 1.0)
+        (int)(scanningReader->sampleRate * 0.8)
     );
 
     trailingDuration = (trailingPosition > -1) ? (totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate : 0;
