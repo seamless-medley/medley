@@ -342,12 +342,21 @@ private:
             startTimerHz(20);
         }
 
+        int lastQueueCount = 0;
+
         void timerCallback() override {
             deckA->repaint();
             deckB->repaint();
             playhead->repaint();
 
             updatePlayButton();
+
+            if (queue.count() != lastQueueCount) {
+                queueListBox.deselectAllRows();
+                queueListBox.updateContent();
+
+                lastQueueCount = queue.count();
+            }
         }
 
         void resized() override {
@@ -467,9 +476,7 @@ private:
             if (auto deck = medley.getMainDeck()) {
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
-            }
-
-            updateQueueListBox();            
+            }                      
         }
 
         void deckUnloaded(Deck& sender) override {
@@ -479,14 +486,6 @@ private:
             }
 
             updatePlayButton();
-        }
-
-        void updateQueueListBox() {
-            const MessageManagerLock mml(Thread::getCurrentThread());
-            if (mml.lockWasGained()) {
-                queueListBox.deselectAllRows();
-                queueListBox.updateContent();
-            }
         }
 
         TextButton btnAdd;
