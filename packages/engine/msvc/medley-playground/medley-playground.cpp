@@ -484,8 +484,6 @@ private:
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
             }
-
-            updatePlayButton();
         }
 
         TextButton btnAdd;
