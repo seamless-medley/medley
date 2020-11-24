@@ -334,6 +334,22 @@ private:
             playhead = new PlayHead(&medley.getDeck1(), &medley.getDeck2());
             addAndMakeVisible(playhead);
 
+            {
+                auto& types = medley.getAvailableDeviceTypes();
+                for (int i = 0; i < types.size(); i++) {
+                    comboDeviceTypes.addItem(types.getUnchecked(i)->getTypeName(), i + 1);
+                }
+
+                comboDeviceTypes.setText(medley.getCurrentAudioDeviceType()->getTypeName(), dontSendNotification);
+                addAndMakeVisible(comboDeviceTypes);
+                comboDeviceTypes.onChange = [this] { updateDeviceType();  };
+
+                addAndMakeVisible(comboDeviceNames);
+                comboDeviceNames.onChange = [this] { updateDevice(); };
+
+                updateDeviceType();
+            }            
+
             queueListBox.setColour(ListBox::outlineColourId, Colours::grey);
             addAndMakeVisible(queueListBox);
 
@@ -359,10 +375,36 @@ private:
             }
         }
 
+        void updateDeviceType() {
+            if (auto type = medley.getAvailableDeviceTypes()[comboDeviceTypes.getSelectedId() - 1])
+            {
+                medley.setCurrentAudioDeviceType(*type);
+                comboDeviceTypes.setText(type->getTypeName());
+
+                comboDeviceNames.clear(dontSendNotification);
+
+                auto names = type->getDeviceNames(false);
+                for (int i = 0; i < names.size(); i++) {
+                    comboDeviceNames.addItem(names[i], i + 1);
+                }
+
+                comboDeviceNames.setSelectedId(medley.getIndexOfCurrentDevice() + 1);
+            }
+        }
+
+        void updateDevice() {
+            medley.setAudioDeviceByIndex(comboDeviceNames.getSelectedId() - 1);
+        }
+
         void resized() override {
             auto b = getLocalBounds();
             {
-                auto deckPanelArea = b.removeFromTop(200).reduced(10, 0);
+                auto devicePanelArea = b.removeFromTop(34).reduced(10, 2);
+                comboDeviceTypes.setBounds(devicePanelArea.removeFromLeft(250));
+                comboDeviceNames.setBounds(devicePanelArea.removeFromLeft(250).translated(4, 0));
+            }
+            {
+                auto deckPanelArea = b.removeFromTop(120).reduced(10, 2);
                 auto w = (deckPanelArea.getWidth() - 10) / 2;
                 deckA->setBounds(deckPanelArea.removeFromLeft(w));
                 deckB->setBounds(deckPanelArea.translated(10, 0).removeFromLeft(w));
@@ -501,6 +543,9 @@ private:
 
         DeckComponent* deckA = nullptr;
         DeckComponent* deckB = nullptr;
+
+        ComboBox comboDeviceTypes;
+        ComboBox comboDeviceNames;
 
         Queue queue;
         QueueModel model;

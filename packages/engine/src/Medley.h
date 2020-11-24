@@ -25,11 +25,43 @@ public:
 
     Medley(IQueue& queue);
 
-    ~Medley();    
+    ~Medley();
 
-    Deck& getDeck1() const { return *deck1; }
+    inline const auto& getAvailableDeviceTypes() {
+        return deviceMgr.getAvailableDeviceTypes();
+    }    
 
-    Deck& getDeck2() const { return *deck2; }
+    inline void setCurrentAudioDeviceType(AudioIODeviceType& type) {
+        deviceMgr.setCurrentAudioDeviceType(type.getTypeName(), true);
+    }
+
+    inline auto getCurrentAudioDeviceType() const {
+        return deviceMgr.getCurrentDeviceTypeObject();
+    }
+
+    inline auto getDeviceNames() const {
+        return getCurrentAudioDeviceType()->getDeviceNames();
+    }
+
+    inline auto getIndexOfCurrentDevice() const {       
+        return getCurrentAudioDeviceType()->getIndexOfDevice(deviceMgr.getCurrentAudioDevice(), false);
+    }
+
+    inline auto getDefaultDeviceIndex() const {
+        return getCurrentAudioDeviceType()->getDefaultDeviceIndex(false);
+    }
+
+    inline void setAudioDeviceByIndex(int index) {
+        auto config = deviceMgr.getAudioDeviceSetup();
+        config.outputDeviceName = getDeviceNames()[index];
+        deviceMgr.setAudioDeviceSetup(config, true);
+    }
+
+    inline const AudioFormatManager& getAudioFormatManager() const { return formatMgr; }
+
+    inline Deck& getDeck1() const { return *deck1; }
+
+    inline Deck& getDeck2() const { return *deck2; }
 
     Deck* getMainDeck() const;
 
