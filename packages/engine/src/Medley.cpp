@@ -104,6 +104,7 @@ void Medley::fadeOutMainDeck()
 
         if (deck) {
             deck->fadeOut();
+            mixer.setPause(false);
         }        
     }
 }
@@ -112,8 +113,13 @@ bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
     auto deck = getAnotherDeck(currentDeck);
 
     if (deck == nullptr) {
-        DBG("Could not find another deck for " + getDeckName(*currentDeck));
+        DBG("Could not find another deck for " + currentDeck->getName());
         return false;
+    }
+
+    if (deck->isTrackLoading) {        
+        DBG("Deck is busy loading some track!!!");
+        deck->unloadTrack();
     }
 
     while (queue.count() > 0) {
@@ -256,10 +262,14 @@ void Medley::deckPosition(Deck& sender, double position) {
             transitionState = TransitionState::Cue;
             transitingDeck = &sender;
         }
+
+        if (!sender.isMain() && nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
+            nextDeck->fireFinishedCallback();
+        }
     }
 
     if (position > transitionStartPos - leadingDuration) {
-        if (transitionState != TransitionState::Transit) {
+        if (transitionState == TransitionState::Cue) {
             if (nextDeck->isTrackLoaded()) {
                 DBG(String::formatted("Transiting to [%s]", nextDeck->getName().toWideCharPointer()));
                 transitionState = TransitionState::Transit;                
@@ -283,14 +293,30 @@ void Medley::deckPosition(Deck& sender, double position) {
             auto transitionDuration = (transitionEndPos - transitionStartPos);
             auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
-            DBG(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
-            sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
+            auto fadingDuration = jmax(0.0, forceFadingOut ? transitionDuration : trailingDuration - transitionDuration);
+
+            if (fadingDuration > 0.0) {
+                auto fadingStart = forceFadingOut ? transitionStartPos : transitionEndPos - fadingDuration;
+
+                if (position >= fadingStart) {
+                    auto fadingProgress = jlimit(0.0, 1.0, (position - fadingStart) / fadingDuration);
+
+                    DBG(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), fadingProgress));
+                    sender.setVolume((float)pow(1.0f - fadingProgress, fadingFactor));
+                }
+            }
 
             if (transitionState != TransitionState::Idle && position > transitionEndPos) {
                 if (transitionProgress >= 1.0) {
-                    sender.unloadTrack();
+                    sender.stop();
                 }
             }
+        }
+    }
+    // Just in case
+    else if (!deckQueue.empty()) {
+        if (deckQueue.front() == &sender) {
+            sender.markAsMain(true);
         }
     }
 }
@@ -312,6 +338,7 @@ void Medley::play()
     }
 
     keepPlaying = true;
+    mixer.setPause(false);
 }
 
 void Medley::stop()
@@ -322,7 +349,7 @@ void Medley::stop()
     deck2->stop();
 
     deck1->unloadTrack();
-    deck2->unloadTrack();    
+    deck2->unloadTrack();
 }
 
 bool Medley::isDeckPlaying()

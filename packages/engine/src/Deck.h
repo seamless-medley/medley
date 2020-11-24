@@ -220,7 +220,6 @@ private:
     bool inputStreamEOF = false;
 
     CriticalSection sourceLock;
-    CriticalSection callbackLock;
     //
     ListenerList<Callback> listeners;
     //

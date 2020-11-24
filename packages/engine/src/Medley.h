@@ -55,6 +55,8 @@ public:
 
     inline bool togglePause() { return mixer.togglePause(); }
 
+    inline bool isPaused() const { return mixer.isPaused(); }
+
     void setPositionFractional(double fraction);
 
     double getDuration() const;
@@ -103,6 +105,10 @@ private:
         void getNextAudioBlock(const AudioSourceChannelInfo& info) override;
 
         bool isPaused() const { return paused; }
+
+        void setPause(bool p) {
+            paused = p;
+        }
 
     private:
         bool paused = false;

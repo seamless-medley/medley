@@ -217,7 +217,16 @@ private:
         }
 
         void paint(Graphics& g) override {
-            g.setColour(deck.isMain() ? Colours::antiquewhite : Colours::lightgrey);
+            if (deck.isMain()) {
+                g.setColour(Colours::antiquewhite);
+            }
+            else if (deck.isTrackLoaded()) {
+                g.setColour(deck.isPlaying() ? Colours::lightseagreen : Colours::lightsalmon);
+            }
+            else {
+                g.setColour(Colours::lightgrey);
+            }
+
             g.fillRect(0, 0, getWidth(), getHeight());
             g.setColour(Colours::black);
 
@@ -263,9 +272,11 @@ private:
 
             g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));            
 
-            auto at = std::next(queue.tracks.begin(), rowNumber);
-            if (at != queue.tracks.end()) {
-                g.drawText(at->get()->getFile().getFullPathName(), 0, 0, width, height, Justification::centredLeft, false);
+            if (rowNumber < queue.tracks.size()) {
+                auto at = std::next(queue.tracks.begin(), rowNumber);
+                if (at != queue.tracks.end()) {
+                    g.drawText(at->get()->getFile().getFullPathName(), 0, 0, width, height, Justification::centredLeft, false);
+                }
             }
         }
 
@@ -331,10 +342,21 @@ private:
             startTimerHz(20);
         }
 
+        int lastQueueCount = 0;
+
         void timerCallback() override {
             deckA->repaint();
             deckB->repaint();
             playhead->repaint();
+
+            updatePlayButton();
+
+            if (queue.count() != lastQueueCount) {
+                queueListBox.deselectAllRows();
+                queueListBox.updateContent();
+
+                lastQueueCount = queue.count();
+            }
         }
 
         void resized() override {
@@ -386,7 +408,7 @@ private:
                         queue.tracks.push_back(new Track(f));
                     }
 
-                    medley.play();
+                    // medley.play();
                     queueListBox.updateContent();
                 }
 
@@ -395,6 +417,7 @@ private:
 
             if (source == &btnPlay) {
                 medley.play();
+                updatePauseButton();
                 return;
             }
 
@@ -404,7 +427,8 @@ private:
             }
 
             if (source == &btnPause) {
-                btnPause.setButtonText(medley.togglePause() ? "Paused" : "Pause");
+                medley.togglePause();
+                updatePauseButton();
                 return;
             }
 
@@ -432,20 +456,27 @@ private:
         }
 
         void deckStarted(Deck& sender) override {
-
+            
         }
 
         void deckFinished(Deck& sender) override {
+            
+        }
 
+        void updatePauseButton() {
+            btnPause.setButtonText(medley.isPaused() ? "Paused" : "Pause");
+        }
+
+        void updatePlayButton() {
+            btnPlay.setColour(TextButton::buttonColourId, medley.isDeckPlaying() ? Colours::lightgreen : getLookAndFeel().findColour(TextButton::buttonColourId));
+            updatePauseButton();
         }
 
         void deckLoaded(Deck& sender) override {
             if (auto deck = medley.getMainDeck()) {
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
-            }
-
-            updateQueueListBox();
+            }                      
         }
 
         void deckUnloaded(Deck& sender) override {
@@ -453,14 +484,8 @@ private:
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
             }
-        }
 
-        void updateQueueListBox() {
-            const MessageManagerLock mml(Thread::getCurrentThread());
-            if (mml.lockWasGained()) {
-                queueListBox.deselectAllRows();
-                queueListBox.updateContent();
-            }
+            updatePlayButton();
         }
 
         TextButton btnAdd;
