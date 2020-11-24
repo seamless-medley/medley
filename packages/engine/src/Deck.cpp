@@ -144,10 +144,6 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 
     setSource(new AudioFormatReaderSource(reader, false));
 
-    listeners.call([this](Callback& cb) {
-        cb.deckLoaded(*this);
-    });
-
     if (playDuration >= 3) {
         scanningScheduler.scan(track);
     }
@@ -161,6 +157,10 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 
     this->track = track;
     isTrackLoading = false;
+
+    listeners.call([this](Callback& cb) {
+        cb.deckLoaded(*this);
+    });
 }
 
 
