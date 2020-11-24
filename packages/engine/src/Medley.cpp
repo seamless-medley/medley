@@ -93,7 +93,7 @@ void Medley::setMaxTransitionTime(double value) {
 void Medley::fadeOutMainDeck()
 {
     if (auto deck = getMainDeck()) {
-        forceFadingOut = true;
+        forceFadingOut++;
 
         if (transitionState == TransitionState::Transit) {
             deck->unloadTrack();
@@ -200,7 +200,7 @@ void Medley::deckUnloaded(Deck& sender) {
 
         transitionState = TransitionState::Idle;
         transitingDeck = nullptr;
-        forceFadingOut = false;
+        forceFadingOut--;
     }
 
     {
@@ -253,7 +253,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         if (position > transitionCuePoint) {
             if (!loadNextTrack(&sender, false)) {
                 // No more track, do not transit
-                if (!forceFadingOut) {
+                if (forceFadingOut <= 0) {
                     return;
                 }
             }
@@ -293,10 +293,10 @@ void Medley::deckPosition(Deck& sender, double position) {
             auto transitionDuration = (transitionEndPos - transitionStartPos);
             auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
-            auto fadingDuration = jmax(0.0, forceFadingOut ? transitionDuration : trailingDuration - transitionDuration);
+            auto fadingDuration = jmax(0.0, forceFadingOut > 0 ? transitionDuration : trailingDuration - transitionDuration);
 
             if (fadingDuration > 0.0) {
-                auto fadingStart = forceFadingOut ? transitionStartPos : transitionEndPos - fadingDuration;
+                auto fadingStart = forceFadingOut > 0 ? transitionStartPos : transitionEndPos - fadingDuration;
 
                 if (position >= fadingStart) {
                     auto fadingProgress = jlimit(0.0, 1.0, (position - fadingStart) / fadingDuration);
