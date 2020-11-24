@@ -9,6 +9,7 @@ namespace {
 
     constexpr float kFirstSoundDuration = 0.001f;
     constexpr float kLastSoundDuration = 1.25f;
+    constexpr auto kLeadingScanningDuration = 10.0;
     constexpr float kLastSoundScanningDurartion = 20.0f;
 }
 
@@ -110,14 +111,14 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 
     if (playDuration >= 3) {
         Range<float> maxLevels[2]{};
-        reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * jmax(maxTransitionTime, 10.0)), maxLevels, 2);
+        reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * jmax(maxTransitionTime, kLeadingScanningDuration)), maxLevels, 2);
 
         auto leadingDecibel = Decibels::gainToDecibels((maxLevels[0].getEnd() + maxLevels[1].getEnd()) / 2.0f);
         auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 6.0f));
 
         leadingSamplePosition = reader->searchForLevel(
             firstAudibleSamplePosition,
-            (int)(reader->sampleRate * 10.0),
+            (int)(reader->sampleRate * kLeadingScanningDuration),
             leadingLevel, 1.0,
             (int)(reader->sampleRate * kFirstSoundDuration / 10)
         );
@@ -292,7 +293,7 @@ void Deck::calculateTransition()
         }
     }
 
-    transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(8.0, maxTransitionTime));
+    transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(kLeadingScanningDuration, maxTransitionTime));
 
     DBG(String::formatted(
         "[%s] Transition: cue=%.3fs, start=%.3fs, end=%.3fs, duration=%.2fs, trailing=%.2fs, total=%.2fs",
