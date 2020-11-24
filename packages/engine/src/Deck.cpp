@@ -143,12 +143,9 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 
     setSource(new AudioFormatReaderSource(reader, false));
 
-    {
-        ScopedLock sl(callbackLock);
-        listeners.call([this](Callback& cb) {
-            cb.deckLoaded(*this);
-        });
-    }
+    listeners.call([this](Callback& cb) {
+        cb.deckLoaded(*this);
+    });
 
     if (playDuration >= 3) {
         scanningScheduler.scan(track);
@@ -203,7 +200,6 @@ void Deck::unloadTrackInternal()
     }
 
     if (deckUnloaded) {
-        const ScopedLock sl(callbackLock);
         listeners.call([this](Callback& cb) {
             cb.deckUnloaded(*this);
         });
@@ -222,12 +218,9 @@ void Deck::scanTrackInternal(ITrack::Ptr trackToScan)
         return;
     }
 
-    {
-        ScopedLock sl(callbackLock);
-        listeners.call([this](Callback& cb) {
-            cb.deckTrackScanning(*this);
-        });
-    }
+    listeners.call([this](Callback& cb) {
+        cb.deckTrackScanning(*this);
+    });
 
     auto scanningReader = formatMgr.createReaderFor(file);
 
@@ -277,12 +270,9 @@ void Deck::scanTrackInternal(ITrack::Ptr trackToScan)
 
     calculateTransition();
 
-    {
-        ScopedLock sl(callbackLock);
-        listeners.call([this](Callback& cb) {
-            cb.deckTrackScanned(*this);
-        });
-    }
+    listeners.call([this](Callback& cb) {
+        cb.deckTrackScanned(*this);
+    });
 }
 
 void Deck::calculateTransition()
@@ -318,8 +308,6 @@ void Deck::calculateTransition()
 
 void Deck::firePositionChangeCalback(double position)
 {
-    const ScopedLock sl(callbackLock);
-
     listeners.call([=](Callback& cb) {
         cb.deckPosition(*this, position);
     });
@@ -336,10 +324,10 @@ void Deck::setPositionFractional(double fraction) {
 }
 
 void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
-{    
+{
     const ScopedLock sl(sourceLock);
 
-    bool wasPlaying = playing;    
+    bool wasPlaying = !stopped;
 
     if (resamplerSource != nullptr && !stopped)
     {
@@ -377,7 +365,7 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
 
     lastGain = gain;
 
-    if (wasPlaying && !playing) {
+    if (wasPlaying && stopped) {
         fireFinishedCallback();
     }
 }
@@ -418,7 +406,6 @@ int64 Deck::getTotalLength() const
         const double ratio = (sampleRate > 0 && sourceSampleRate > 0) ? sampleRate / sourceSampleRate : 1.0;
         return (int64)((double)bufferingSource->getTotalLength() * ratio);
     }
-
     return 0;
 }
 
@@ -432,16 +419,13 @@ bool Deck::start()
 {
     if ((!playing) && resamplerSource != nullptr)
     {
-        {
-            const ScopedLock sl(callbackLock);
-            playing = true;
-            stopped = false;
-            inputStreamEOF = false;
+        playing = true;
+        stopped = false;
+        inputStreamEOF = false;
 
-            listeners.call([this](Callback& cb) {
-                cb.deckStarted(*this);
-            });
-        }
+        listeners.call([this](Callback& cb) {
+            cb.deckStarted(*this);
+        });
         return true;
     }
 
@@ -464,11 +448,13 @@ void Deck::stop()
 
 void Deck::fireFinishedCallback()
 {
-    DBG(String::formatted("[%s] Stopped", name.toWideCharPointer()));
+    if (!stopped) {
+        DBG(String::formatted("[%s] Stopped", name.toWideCharPointer()));
 
-    listeners.call([this](Callback& cb) {
-        cb.deckFinished(*this);
-    });
+        listeners.call([this](Callback& cb) {
+            cb.deckFinished(*this);
+        });
+    }
 
     unloadTrackInternal();
 }
@@ -501,13 +487,11 @@ void Deck::fadeOut()
 
 
 void Deck::addListener(Callback* cb) {
-    ScopedLock sl(callbackLock);
     listeners.add(cb);
 }
 
 void Deck::removeListener(Callback* cb)
 {
-    ScopedLock sl(callbackLock);
     listeners.remove(cb);
 }
 

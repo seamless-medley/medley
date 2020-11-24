@@ -308,7 +308,7 @@ void Medley::deckPosition(Deck& sender, double position) {
 
             if (transitionState != TransitionState::Idle && position > transitionEndPos) {
                 if (transitionProgress >= 1.0) {
-                    sender.fireFinishedCallback();
+                    sender.stop();
                 }
             }
         }
