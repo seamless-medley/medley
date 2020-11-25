@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "Deck.h"
+#include "LevelTracker.h"
 #include <list>
 
 using namespace juce;
@@ -107,6 +108,14 @@ public:
 
     void fadeOutMainDeck();
 
+    inline double getLevel(int channel) const {
+        return mixer.getLevel(channel);
+    }
+
+    inline double getPeakLevel(int channel) const {
+        return mixer.getPeak(channel);
+    }
+
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);
 
@@ -142,12 +151,21 @@ private:
             paused = p;
         }
 
-        void changeListenerCallback(ChangeBroadcaster* source) {
+        void changeListenerCallback(ChangeBroadcaster* source);
+
+        inline double getLevel(int channel) const {
+            return levelTracker.getLevel(channel);
+        }
+
+        inline double getPeak(int channel) const {
+            return levelTracker.getPeak(channel);
         }
 
     private:
         bool paused = false;
         bool stalled = false;
+
+        LevelTracker levelTracker;
     };
 
     AudioDeviceManager deviceMgr;

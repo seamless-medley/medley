@@ -413,6 +413,18 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
             stalled = false;
         }
     }
+
+    levelTracker.process(*info.buffer);
+}
+
+void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
+    if (auto deviceMgr = dynamic_cast<AudioDeviceManager*>(source)) {
+        auto config = deviceMgr->getAudioDeviceSetup();
+        levelTracker.prepare(
+            deviceMgr->getCurrentAudioDevice()->getOutputChannelNames().size(),
+            (int)(config.sampleRate * 0.1 / config.bufferSize)
+        );
+    }
 }
 
 }

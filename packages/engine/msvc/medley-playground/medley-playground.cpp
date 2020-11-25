@@ -252,6 +252,61 @@ private:
         PlayHead playhead;
     };
 
+    class VUMeter : public Component {
+    public:
+        VUMeter(Medley& medley)
+            : medley(medley)
+        {
+
+        }
+
+        void resized() {
+            auto b = getLocalBounds();
+            gradient = ColourGradient(
+                Colours::green, 0.0f, 0.0f,
+                Colours::red, b.getWidth(), 0.0f,
+                false
+            );
+
+            gradient.addColour(0.80, Colours::green);
+            gradient.addColour(0.95, Colours::yellow);
+        }
+
+        void paint(Graphics& g) override {
+            g.setColour(Colours::lightgrey);
+            g.fillAll();
+
+            g.setColour(Colours::green);
+
+            auto h = (float)getHeight();
+            auto mh = h / 2.0f;
+
+            auto peakLeft = Decibels::gainToDecibels(medley.getPeakLevel(0));
+            auto peakRight = Decibels::gainToDecibels(medley.getPeakLevel(1));
+
+            g.setGradientFill(gradient);
+            g.fillRect(0.0f, 0.0f, getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(0)) / 100), mh);
+            g.fillRect(0.0f, mh, getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(1)) / 100), mh);
+
+            auto getPeakColour = [](double db) {
+                if (db > -0.3) return Colours::red;
+                if (db > -5.0) return Colours::yellow;
+                return Colours::white;
+            };
+
+            g.setColour(getPeakColour(peakLeft));
+            g.drawVerticalLine(getWidth() * (1 + peakLeft / 100) - 1, 0, mh);
+           
+
+            g.setColour(getPeakColour(peakRight));
+            g.drawVerticalLine(getWidth() * (1 + peakRight / 100) - 1, mh, h);
+        }
+
+    private:
+        Medley& medley;
+        ColourGradient gradient;
+    };
+
     class QueueModel : public ListBoxModel {
     public:
         QueueModel(Queue& queue)
@@ -272,7 +327,7 @@ private:
 
             g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));            
 
-            if (rowNumber < queue.tracks.size()) {
+            if (rowNumber < (int)queue.tracks.size()) {
                 auto at = std::next(queue.tracks.begin(), rowNumber);
                 if (at != queue.tracks.end()) {
                     g.drawText(at->get()->getFile().getFullPathName(), 0, 0, width, height, Justification::centredLeft, false);
@@ -348,6 +403,9 @@ private:
                 comboDeviceNames.onChange = [this] { updateDevice(); };
 
                 updateDeviceType();
+
+                vuMeter = new VUMeter(medley);
+                addAndMakeVisible(vuMeter);
             }            
 
             queueListBox.setColour(ListBox::outlineColourId, Colours::grey);
@@ -355,7 +413,7 @@ private:
 
             setSize(800, 600);
 
-            startTimerHz(20);
+            startTimerHz(40);
         }
 
         int lastQueueCount = 0;
@@ -364,6 +422,7 @@ private:
             deckA->repaint();
             deckB->repaint();
             playhead->repaint();
+            vuMeter->repaint();
 
             updatePlayButton();
 
@@ -402,6 +461,7 @@ private:
                 auto devicePanelArea = b.removeFromTop(34).reduced(10, 2);
                 comboDeviceTypes.setBounds(devicePanelArea.removeFromLeft(250));
                 comboDeviceNames.setBounds(devicePanelArea.removeFromLeft(250).translated(4, 0));
+                vuMeter->setBounds(devicePanelArea.reduced(4, 0).translated(4, 0));
             }
             {
                 auto deckPanelArea = b.removeFromTop(120).reduced(10, 2);
@@ -433,10 +493,12 @@ private:
             removeChildComponent(deckA);
             removeChildComponent(deckB);
             removeChildComponent(playhead);
+            removeChildComponent(vuMeter);
 
             delete deckA;
             delete deckB;
             delete playhead;
+            delete vuMeter;
         }
 
         void buttonClicked(Button* source) override {
@@ -546,6 +608,8 @@ private:
 
         ComboBox comboDeviceTypes;
         ComboBox comboDeviceNames;
+
+        VUMeter* vuMeter = nullptr;
 
         Queue queue;
         QueueModel model;
