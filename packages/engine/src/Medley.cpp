@@ -11,7 +11,8 @@ Medley::Medley(IQueue& queue)
 {
     updateFadingFactor();
 
-    deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
+    deviceMgr.addChangeListener(&mixer);
+    deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);    
 
     formatMgr.registerFormat(new MiniMP3AudioFormat(), true);
     formatMgr.registerFormat(new WavAudioFormat(), false);

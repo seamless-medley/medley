@@ -262,7 +262,7 @@ private:
 
         int getNumRows() override
         {
-            return queue.count();
+            return (int)queue.count();
         }
 
         void paintListBoxItem(int rowNumber, Graphics& g, int width, int height, bool rowIsSelected) override {
@@ -371,7 +371,7 @@ private:
                 queueListBox.deselectAllRows();
                 queueListBox.updateContent();
 
-                lastQueueCount = queue.count();
+                lastQueueCount = (int)queue.count();
             }
         }
 

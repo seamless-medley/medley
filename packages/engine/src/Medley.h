@@ -130,16 +130,19 @@ private:
 
     void updateFadingFactor();
 
-    class Mixer : public MixerAudioSource {
+    class Mixer : public MixerAudioSource, public ChangeListener {
     public:
         bool togglePause();
 
         void getNextAudioBlock(const AudioSourceChannelInfo& info) override;
 
-        bool isPaused() const { return paused; }
+        inline bool isPaused() const { return paused; }
 
-        void setPause(bool p) {
+        inline void setPause(bool p) {
             paused = p;
+        }
+
+        void changeListenerCallback(ChangeBroadcaster* source) {
         }
 
     private:
