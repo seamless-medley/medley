@@ -268,7 +268,7 @@ private:
                 false
             );
 
-            gradient.addColour(0.80, Colours::green);
+            gradient.addColour(0.90, Colours::green);
             gradient.addColour(0.95, Colours::yellow);
         }
 
@@ -289,7 +289,7 @@ private:
             g.fillRect(0.0f, mh, getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(1)) / 100), mh);
 
             auto getPeakColour = [](double db) {
-                if (db > -0.3) return Colours::red;
+                if (db > -3.0) return Colours::red;
                 if (db > -5.0) return Colours::yellow;
                 return Colours::white;
             };
