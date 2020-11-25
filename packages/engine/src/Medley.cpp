@@ -200,7 +200,10 @@ void Medley::deckUnloaded(Deck& sender) {
 
         transitionState = TransitionState::Idle;
         transitingDeck = nullptr;
-        forceFadingOut--;
+
+        if (forceFadingOut > 0) {
+            forceFadingOut--;
+        }
     }
 
     {
@@ -276,8 +279,8 @@ void Medley::deckPosition(Deck& sender, double position) {
                 nextDeck->setVolume(1.0f);
 
                 if (forceFadingOut > 0) {
-                    if (leadingDuration >= maxLeadingDuration) {
-                        nextDeck->setPosition(leadingDuration - maxLeadingDuration);
+                    if (leadingDuration >= maxLeadingDuration) {                        
+                        nextDeck->setPosition(nextDeck->getFirstAudiblePosition() + leadingDuration - maxLeadingDuration);
                     }
                 }
 
