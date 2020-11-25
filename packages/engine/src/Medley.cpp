@@ -274,6 +274,13 @@ void Medley::deckPosition(Deck& sender, double position) {
                 DBG(String::formatted("Transiting to [%s]", nextDeck->getName().toWideCharPointer()));
                 transitionState = TransitionState::Transit;                
                 nextDeck->setVolume(1.0f);
+
+                if (forceFadingOut > 0) {
+                    if (leadingDuration >= maxLeadingDuration) {
+                        nextDeck->setPosition(leadingDuration - maxLeadingDuration);
+                    }
+                }
+
                 nextDeck->start();
             }
         }
