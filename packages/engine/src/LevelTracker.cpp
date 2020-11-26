@@ -39,24 +39,27 @@ void LevelTracker::LevelInfo::setLevels(const int64 time, const double newLevel,
         clip = true;
     }
 
-    auto newPeak = getAverageLevel();
+    auto avgPeak = getAverageLevel();
 
-    if (newPeak >= peak)
+    if (avgPeak >= peak)
     {
-        peak = jmin(1.0, newPeak);
+        holdingPeak = peak = jmin(1.0, avgPeak);
         hold = time + newHoldMSecs;
     }
     else if (time > hold)
-    {      
-        peak -= (time - hold) / 1000;
-        if (peak < level) {
-            peak = level;
-        }
+    {
+        auto decay = jmin(1.0, exp((time - hold) / 1000.0) * 0.4);
 
+        peak = holdingPeak - decay;
         clip = peak > 1.0;
     }
 
     push(jmin(1.0, newLevel));
+
+    avgPeak = getAverageLevel();
+    if (peak < avgPeak) {
+        peak = avgPeak;
+    }
 }
 
 double LevelTracker::LevelInfo::getAverageLevel() const

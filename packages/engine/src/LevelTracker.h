@@ -32,7 +32,8 @@ private:
         int64 hold = 0;
 
         double level = 0.0;
-        double peak = 0.0f;
+        double peak = 0.0;
+        double holdingPeak = 0.0;
         std::vector<double> backlog;
         int index = 0;
     };
