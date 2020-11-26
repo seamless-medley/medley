@@ -15,6 +15,8 @@ public:
 
     double getPeak(int channel) const;
 
+    bool isClipping(int channel) const;
+
 private:   
     class LevelInfo {
     public:

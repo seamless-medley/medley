@@ -26,6 +26,11 @@ double LevelTracker::getPeak(int channel) const
     return channel < (int)levels.size() ? levels[channel].peak : 0.0;
 }
 
+bool LevelTracker::isClipping(int channel) const
+{
+    return channel < (int)levels.size() ? levels[channel].clip : false;
+}
+
 LevelTracker::LevelInfo::LevelInfo(int backlogSize)
     :
     backlog(backlogSize, 0.0)

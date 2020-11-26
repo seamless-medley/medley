@@ -116,6 +116,10 @@ public:
         return mixer.getPeak(channel);
     }
 
+    inline bool isClipping(int channel) const {
+        return mixer.isClipping(channel);
+    }
+
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);
 
@@ -159,6 +163,10 @@ private:
 
         inline double getPeak(int channel) const {
             return levelTracker.getPeak(channel);
+        }
+
+        inline bool isClipping(int channel) const {
+            return levelTracker.isClipping(channel);
         }
 
     private:
