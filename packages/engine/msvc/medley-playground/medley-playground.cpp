@@ -264,7 +264,7 @@ private:
             auto b = getLocalBounds();
             gradient = ColourGradient(
                 Colours::green, 0.0f, 0.0f,
-                Colours::red, b.getWidth(), 0.0f,
+                Colours::red, (float)b.getWidth(), 0.0f,
                 false
             );
 
@@ -285,8 +285,8 @@ private:
             auto peakRight = Decibels::gainToDecibels(medley.getPeakLevel(1));
 
             g.setGradientFill(gradient);
-            g.fillRect(0.0f, 0.0f, getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(0)) / 100), mh);
-            g.fillRect(0.0f, mh, getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(1)) / 100), mh);
+            g.fillRect(0.0f, 0.0f, (float)(getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(0)) / 100)), mh);
+            g.fillRect(0.0f, mh, (float)(getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(1)) / 100)), mh);
 
             auto getPeakColour = [](double db) {
                 if (db > -3.0) return Colours::red;
@@ -295,11 +295,11 @@ private:
             };
 
             g.setColour(getPeakColour(peakLeft));
-            g.drawVerticalLine(getWidth() * (1 + peakLeft / 100) - 1, 0, mh);
+            g.drawVerticalLine((int)(getWidth() * (1 + peakLeft / 100)) - 1, 0, mh);
            
 
             g.setColour(getPeakColour(peakRight));
-            g.drawVerticalLine(getWidth() * (1 + peakRight / 100) - 1, mh, h);
+            g.drawVerticalLine((int)(getWidth() * (1 + peakRight / 100)) - 1, mh, h);
         }
 
     private:

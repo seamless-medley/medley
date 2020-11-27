@@ -23,7 +23,7 @@ void LevelTracker::process(AudioSampleBuffer& buffer)
 
 void LevelTracker::prepare(const int channels, const int sampleRate, const int latencyInSamples, const int backlogSize)
 {    
-    samplesPerBlock = sampleRate * 0.1 / (double)backlogSize;
+    samplesPerBlock = (int)(sampleRate * 0.1 / (double)backlogSize);
 
     levels.clear();
     levels.resize(channels, LevelInfo(sampleRate, latencyInSamples / samplesPerBlock + 1, backlogSize));
@@ -84,7 +84,7 @@ void LevelTracker::LevelInfo::setLevels(const int64 time, const double newLevel,
     lv.peak = peak;
 
     results.push(lv);
-    if (results.size() > resultSize) {
+    if (results.size() > (size_t)resultSize) {
         results.pop();
     }
 }

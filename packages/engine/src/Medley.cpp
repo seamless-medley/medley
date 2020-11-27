@@ -425,7 +425,7 @@ void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
 
         levelTracker.prepare(
             deviceMgr->getCurrentAudioDevice()->getOutputChannelNames().size(),
-            config.sampleRate,
+            (int)config.sampleRate,
             latencyInSamples,
             10
         );
