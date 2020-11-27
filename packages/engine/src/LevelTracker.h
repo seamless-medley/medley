@@ -9,7 +9,7 @@ class LevelTracker
 public:
     void process(AudioSampleBuffer& buffer);
 
-    void prepare(const int channels, const int backlogSize);
+    void prepare(const int channels, const int sampleRate, const int backlogSize);
 
     double getLevel(int channel) const;
 
@@ -20,25 +20,29 @@ public:
 private:   
     class LevelInfo {
     public:
-        LevelInfo(int backlogSize);        
+        LevelInfo(int sampleRate, int backlogSize);
 
         double getAverageLevel() const;
 
         void setLevels(const int64 time, const double newLevel, const int64 newHoldMSecs);
 
         friend class LevelTracker;
-    private:        
+    private:
+
         void push(double level);
+
+        int backlogSize;
 
         bool clip = false;
         int64 hold = 0;
 
         double level = 0.0;
         double peak = 0.0;
-        double holdingPeak = 0.0;
         std::vector<double> backlog;
         int index = 0;
     };
+
+    int samplesPerBlock = 440;
 
     std::vector<LevelInfo> levels;
 

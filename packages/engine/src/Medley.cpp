@@ -415,7 +415,8 @@ void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
         auto config = deviceMgr->getAudioDeviceSetup();
         levelTracker.prepare(
             deviceMgr->getCurrentAudioDevice()->getOutputChannelNames().size(),
-            (int)(config.sampleRate * 0.1 / config.bufferSize)
+            config.sampleRate,
+            10
         );
     }
 }
