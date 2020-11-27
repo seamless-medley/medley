@@ -265,7 +265,7 @@ void Deck::scanTrackInternal(ITrack::Ptr trackToScan)
         (int)(scanningReader->sampleRate * 0.8)
     );
 
-    trailingDuration = (trailingPosition > -1) ? (totalSamplesToPlay - trailingPosition) / scanningReader->sampleRate : 0;
+    trailingDuration = (trailingPosition > -1) ? (lastAudibleSamplePosition - trailingPosition) / scanningReader->sampleRate : 0;
 
     delete scanningReader;
 
