@@ -108,15 +108,15 @@ public:
 
     void fadeOutMainDeck();
 
-    inline double getLevel(int channel) const {
+    inline double getLevel(int channel) {
         return mixer.getLevel(channel);
     }
 
-    inline double getPeakLevel(int channel) const {
+    inline double getPeakLevel(int channel) {
         return mixer.getPeak(channel);
     }
 
-    inline bool isClipping(int channel) const {
+    inline bool isClipping(int channel) {
         return mixer.isClipping(channel);
     }
 
@@ -157,15 +157,15 @@ private:
 
         void changeListenerCallback(ChangeBroadcaster* source);
 
-        inline double getLevel(int channel) const {
+        inline double getLevel(int channel) {
             return levelTracker.getLevel(channel);
         }
 
-        inline double getPeak(int channel) const {
+        inline double getPeak(int channel) {
             return levelTracker.getPeak(channel);
         }
 
-        inline bool isClipping(int channel) const {
+        inline bool isClipping(int channel) {
             return levelTracker.isClipping(channel);
         }
 
