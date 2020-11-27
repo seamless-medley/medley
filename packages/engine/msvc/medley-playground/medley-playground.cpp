@@ -252,6 +252,61 @@ private:
         PlayHead playhead;
     };
 
+    class VUMeter : public Component {
+    public:
+        VUMeter(Medley& medley)
+            : medley(medley)
+        {
+
+        }
+
+        void resized() {
+            auto b = getLocalBounds();
+            gradient = ColourGradient(
+                Colours::green, 0.0f, 0.0f,
+                Colours::red, (float)b.getWidth(), 0.0f,
+                false
+            );
+
+            gradient.addColour(0.90, Colours::green);
+            gradient.addColour(0.95, Colours::yellow);
+        }
+
+        void paint(Graphics& g) override {
+            g.setColour(Colours::lightgrey);
+            g.fillAll();
+
+            g.setColour(Colours::green);
+
+            auto h = (float)getHeight();
+            auto mh = h / 2.0f;
+
+            auto peakLeft = Decibels::gainToDecibels(medley.getPeakLevel(0));
+            auto peakRight = Decibels::gainToDecibels(medley.getPeakLevel(1));
+
+            g.setGradientFill(gradient);
+            g.fillRect(0.0f, 0.0f, (float)(getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(0)) / 100)), mh);
+            g.fillRect(0.0f, mh, (float)(getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(1)) / 100)), mh);
+
+            auto getPeakColour = [](double db) {
+                if (db > -3.0) return Colours::red;
+                if (db > -5.0) return Colours::yellow;
+                return Colours::white;
+            };
+
+            g.setColour(getPeakColour(peakLeft));
+            g.drawVerticalLine((int)(getWidth() * (1 + peakLeft / 100)) - 1, 0, mh);
+           
+
+            g.setColour(getPeakColour(peakRight));
+            g.drawVerticalLine((int)(getWidth() * (1 + peakRight / 100)) - 1, mh, h);
+        }
+
+    private:
+        Medley& medley;
+        ColourGradient gradient;
+    };
+
     class QueueModel : public ListBoxModel {
     public:
         QueueModel(Queue& queue)
@@ -262,7 +317,7 @@ private:
 
         int getNumRows() override
         {
-            return queue.count();
+            return (int)queue.count();
         }
 
         void paintListBoxItem(int rowNumber, Graphics& g, int width, int height, bool rowIsSelected) override {
@@ -272,7 +327,7 @@ private:
 
             g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));            
 
-            if (rowNumber < queue.tracks.size()) {
+            if (rowNumber < (int)queue.tracks.size()) {
                 auto at = std::next(queue.tracks.begin(), rowNumber);
                 if (at != queue.tracks.end()) {
                     g.drawText(at->get()->getFile().getFullPathName(), 0, 0, width, height, Justification::centredLeft, false);
@@ -334,12 +389,31 @@ private:
             playhead = new PlayHead(&medley.getDeck1(), &medley.getDeck2());
             addAndMakeVisible(playhead);
 
+            {
+                auto& types = medley.getAvailableDeviceTypes();
+                for (int i = 0; i < types.size(); i++) {
+                    comboDeviceTypes.addItem(types.getUnchecked(i)->getTypeName(), i + 1);
+                }
+
+                comboDeviceTypes.setText(medley.getCurrentAudioDeviceType()->getTypeName(), dontSendNotification);
+                addAndMakeVisible(comboDeviceTypes);
+                comboDeviceTypes.onChange = [this] { updateDeviceType();  };
+
+                addAndMakeVisible(comboDeviceNames);
+                comboDeviceNames.onChange = [this] { updateDevice(); };
+
+                updateDeviceType();
+
+                vuMeter = new VUMeter(medley);
+                addAndMakeVisible(vuMeter);
+            }            
+
             queueListBox.setColour(ListBox::outlineColourId, Colours::grey);
             addAndMakeVisible(queueListBox);
 
             setSize(800, 600);
 
-            startTimerHz(20);
+            startTimerHz(40);
         }
 
         int lastQueueCount = 0;
@@ -348,6 +422,7 @@ private:
             deckA->repaint();
             deckB->repaint();
             playhead->repaint();
+            vuMeter->repaint();
 
             updatePlayButton();
 
@@ -355,14 +430,41 @@ private:
                 queueListBox.deselectAllRows();
                 queueListBox.updateContent();
 
-                lastQueueCount = queue.count();
+                lastQueueCount = (int)queue.count();
             }
+        }
+
+        void updateDeviceType() {
+            if (auto type = medley.getAvailableDeviceTypes()[comboDeviceTypes.getSelectedId() - 1])
+            {
+                medley.setCurrentAudioDeviceType(*type);
+                comboDeviceTypes.setText(type->getTypeName());
+
+                comboDeviceNames.clear(dontSendNotification);
+
+                auto names = type->getDeviceNames(false);
+                for (int i = 0; i < names.size(); i++) {
+                    comboDeviceNames.addItem(names[i], i + 1);
+                }
+
+                comboDeviceNames.setSelectedId(medley.getIndexOfCurrentDevice() + 1);
+            }
+        }
+
+        void updateDevice() {
+            medley.setAudioDeviceByIndex(comboDeviceNames.getSelectedId() - 1);
         }
 
         void resized() override {
             auto b = getLocalBounds();
             {
-                auto deckPanelArea = b.removeFromTop(200).reduced(10, 0);
+                auto devicePanelArea = b.removeFromTop(34).reduced(10, 2);
+                comboDeviceTypes.setBounds(devicePanelArea.removeFromLeft(250));
+                comboDeviceNames.setBounds(devicePanelArea.removeFromLeft(250).translated(4, 0));
+                vuMeter->setBounds(devicePanelArea.reduced(4, 0).translated(4, 0));
+            }
+            {
+                auto deckPanelArea = b.removeFromTop(120).reduced(10, 2);
                 auto w = (deckPanelArea.getWidth() - 10) / 2;
                 deckA->setBounds(deckPanelArea.removeFromLeft(w));
                 deckB->setBounds(deckPanelArea.translated(10, 0).removeFromLeft(w));
@@ -391,10 +493,12 @@ private:
             removeChildComponent(deckA);
             removeChildComponent(deckB);
             removeChildComponent(playhead);
+            removeChildComponent(vuMeter);
 
             delete deckA;
             delete deckB;
             delete playhead;
+            delete vuMeter;
         }
 
         void buttonClicked(Button* source) override {
@@ -484,8 +588,6 @@ private:
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
             }
-
-            updatePlayButton();
         }
 
         TextButton btnAdd;
@@ -503,6 +605,11 @@ private:
 
         DeckComponent* deckA = nullptr;
         DeckComponent* deckB = nullptr;
+
+        ComboBox comboDeviceTypes;
+        ComboBox comboDeviceNames;
+
+        VUMeter* vuMeter = nullptr;
 
         Queue queue;
         QueueModel model;

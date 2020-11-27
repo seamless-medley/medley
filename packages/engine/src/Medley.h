@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "Deck.h"
+#include "LevelTracker.h"
 #include <list>
 
 using namespace juce;
@@ -25,11 +26,43 @@ public:
 
     Medley(IQueue& queue);
 
-    ~Medley();    
+    ~Medley();
 
-    Deck& getDeck1() const { return *deck1; }
+    inline const auto& getAvailableDeviceTypes() {
+        return deviceMgr.getAvailableDeviceTypes();
+    }    
 
-    Deck& getDeck2() const { return *deck2; }
+    inline void setCurrentAudioDeviceType(AudioIODeviceType& type) {
+        deviceMgr.setCurrentAudioDeviceType(type.getTypeName(), true);
+    }
+
+    inline auto getCurrentAudioDeviceType() const {
+        return deviceMgr.getCurrentDeviceTypeObject();
+    }
+
+    inline auto getDeviceNames() const {
+        return getCurrentAudioDeviceType()->getDeviceNames();
+    }
+
+    inline auto getIndexOfCurrentDevice() const {       
+        return getCurrentAudioDeviceType()->getIndexOfDevice(deviceMgr.getCurrentAudioDevice(), false);
+    }
+
+    inline auto getDefaultDeviceIndex() const {
+        return getCurrentAudioDeviceType()->getDefaultDeviceIndex(false);
+    }
+
+    inline void setAudioDeviceByIndex(int index) {
+        auto config = deviceMgr.getAudioDeviceSetup();
+        config.outputDeviceName = getDeviceNames()[index];
+        deviceMgr.setAudioDeviceSetup(config, true);
+    }
+
+    inline const AudioFormatManager& getAudioFormatManager() const { return formatMgr; }
+
+    inline Deck& getDeck1() const { return *deck1; }
+
+    inline Deck& getDeck2() const { return *deck2; }
 
     Deck* getMainDeck() const;
 
@@ -75,6 +108,18 @@ public:
 
     void fadeOutMainDeck();
 
+    inline double getLevel(int channel) {
+        return mixer.getLevel(channel);
+    }
+
+    inline double getPeakLevel(int channel) {
+        return mixer.getPeak(channel);
+    }
+
+    inline bool isClipping(int channel) {
+        return mixer.isClipping(channel);
+    }
+
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);
 
@@ -98,21 +143,37 @@ private:
 
     void updateFadingFactor();
 
-    class Mixer : public MixerAudioSource {
+    class Mixer : public MixerAudioSource, public ChangeListener {
     public:
         bool togglePause();
 
         void getNextAudioBlock(const AudioSourceChannelInfo& info) override;
 
-        bool isPaused() const { return paused; }
+        inline bool isPaused() const { return paused; }
 
-        void setPause(bool p) {
+        inline void setPause(bool p) {
             paused = p;
+        }
+
+        void changeListenerCallback(ChangeBroadcaster* source);
+
+        inline double getLevel(int channel) {
+            return levelTracker.getLevel(channel);
+        }
+
+        inline double getPeak(int channel) {
+            return levelTracker.getPeak(channel);
+        }
+
+        inline bool isClipping(int channel) {
+            return levelTracker.isClipping(channel);
         }
 
     private:
         bool paused = false;
         bool stalled = false;
+
+        LevelTracker levelTracker;
     };
 
     AudioDeviceManager deviceMgr;
@@ -145,7 +206,7 @@ private:
     double maxLeadingDuration = 2.5;
     double maxTransitionTime = 3.0;
 
-    bool forceFadingOut = false;
+    int forceFadingOut = 0;
 
     CriticalSection callbackLock;
     ListenerList<Callback> listeners;

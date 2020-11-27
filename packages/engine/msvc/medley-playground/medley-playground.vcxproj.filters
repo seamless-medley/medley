@@ -72,6 +72,9 @@
     <ClCompile Include="..\..\src\MiniMP3AudioFormatReader.cpp">
       <Filter>Engine Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\LevelTracker.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h">
@@ -90,6 +93,9 @@
       <Filter>Engine Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\MiniMP3AudioFormatReader.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\LevelTracker.h">
       <Filter>Engine Source</Filter>
     </ClInclude>
   </ItemGroup>

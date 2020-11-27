@@ -11,7 +11,8 @@ Medley::Medley(IQueue& queue)
 {
     updateFadingFactor();
 
-    deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
+    deviceMgr.addChangeListener(&mixer);
+    deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);    
 
     formatMgr.registerFormat(new MiniMP3AudioFormat(), true);
     formatMgr.registerFormat(new WavAudioFormat(), false);
@@ -93,7 +94,7 @@ void Medley::setMaxTransitionTime(double value) {
 void Medley::fadeOutMainDeck()
 {
     if (auto deck = getMainDeck()) {
-        forceFadingOut = true;
+        forceFadingOut++;
 
         if (transitionState == TransitionState::Transit) {
             deck->unloadTrack();
@@ -200,7 +201,10 @@ void Medley::deckUnloaded(Deck& sender) {
 
         transitionState = TransitionState::Idle;
         transitingDeck = nullptr;
-        forceFadingOut = false;
+
+        if (forceFadingOut > 0) {
+            forceFadingOut--;
+        }
     }
 
     {
@@ -253,7 +257,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         if (position > transitionCuePoint) {
             if (!loadNextTrack(&sender, false)) {
                 // No more track, do not transit
-                if (!forceFadingOut) {
+                if (forceFadingOut <= 0) {
                     return;
                 }
             }
@@ -274,6 +278,13 @@ void Medley::deckPosition(Deck& sender, double position) {
                 DBG(String::formatted("Transiting to [%s]", nextDeck->getName().toWideCharPointer()));
                 transitionState = TransitionState::Transit;                
                 nextDeck->setVolume(1.0f);
+
+                if (forceFadingOut > 0) {
+                    if (leadingDuration >= maxLeadingDuration) {                        
+                        nextDeck->setPosition(nextDeck->getFirstAudiblePosition() + leadingDuration - maxLeadingDuration);
+                    }
+                }
+
                 nextDeck->start();
             }
         }
@@ -293,17 +304,10 @@ void Medley::deckPosition(Deck& sender, double position) {
             auto transitionDuration = (transitionEndPos - transitionStartPos);
             auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
-            auto fadingDuration = jmax(0.0, forceFadingOut ? transitionDuration : trailingDuration - transitionDuration);
-
-            if (fadingDuration > 0.0) {
-                auto fadingStart = forceFadingOut ? transitionStartPos : transitionEndPos - fadingDuration;
-
-                if (position >= fadingStart) {
-                    auto fadingProgress = jlimit(0.0, 1.0, (position - fadingStart) / fadingDuration);
-
-                    DBG(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), fadingProgress));
-                    sender.setVolume((float)pow(1.0f - fadingProgress, fadingFactor));
-                }
+            if (transitionDuration > 0.0) {
+                auto fadingProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
+                DBG(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
+                sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
             }
 
             if (transitionState != TransitionState::Idle && position > transitionEndPos) {
@@ -401,6 +405,30 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
 
             stalled = false;
         }
+    }
+
+    levelTracker.process(*info.buffer);
+}
+
+void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
+    if (auto deviceMgr = dynamic_cast<AudioDeviceManager*>(source)) {
+        auto device = deviceMgr->getCurrentAudioDevice();
+        auto config = deviceMgr->getAudioDeviceSetup();
+
+        int latencyInSamples = device->getCurrentBufferSizeSamples();
+
+#ifdef JUCE_WINDOWS
+        if (device->getTypeName() == "DirectSound") {
+            latencyInSamples *= 15;
+        }
+#endif
+
+        levelTracker.prepare(
+            deviceMgr->getCurrentAudioDevice()->getOutputChannelNames().size(),
+            (int)config.sampleRate,
+            latencyInSamples,
+            10
+        );
     }
 }
 
