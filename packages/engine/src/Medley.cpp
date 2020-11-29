@@ -7,7 +7,8 @@ Medley::Medley(IQueue& queue)
     :
     queue(queue),
     loadingThread("Loading Thread"),
-    readAheadThread("Read-ahead-thread")
+    readAheadThread("Read-ahead-thread"),
+    visualizingThread("Visualizing Thread")
 {
     updateFadingFactor();
 
@@ -36,9 +37,12 @@ Medley::Medley(IQueue& queue)
 
     loadingThread.startThread();
     readAheadThread.startThread(8);
+    visualizingThread.startThread();
 
     mixer.addInputSource(deck1, false);
     mixer.addInputSource(deck2, false);
+
+    visualizingThread.addTimeSliceClient(&mixer);
 
     mainOut.setSource(&mixer);
     deviceMgr.addAudioCallback(&mainOut);
@@ -53,6 +57,7 @@ Medley::~Medley() {
 
     loadingThread.stopThread(100);
     readAheadThread.stopThread(100);
+    visualizingThread.stopThread(100);
 
     deviceMgr.closeAudioDevice();
 
@@ -431,6 +436,12 @@ void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
             );
         }
     }
+}
+
+int Medley::Mixer::useTimeSlice()
+{
+    levelTracker.update();
+    return 5;
 }
 
 }
