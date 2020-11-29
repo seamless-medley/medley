@@ -415,20 +415,20 @@ void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
         if (auto device = deviceMgr->getCurrentAudioDevice()) {
             auto config = deviceMgr->getAudioDeviceSetup();
 
-        int latencyInSamples = device->getCurrentBufferSizeSamples();
+            int latencyInSamples = device->getOutputLatencyInSamples();
 
 #ifdef JUCE_WINDOWS
-        if (device->getTypeName() == "DirectSound") {
-            latencyInSamples *= 15;
-        }
+            if (device->getTypeName() == "DirectSound") {
+                latencyInSamples *= 16;
+            }
 #endif
 
-        levelTracker.prepare(
-            deviceMgr->getCurrentAudioDevice()->getOutputChannelNames().size(),
-            (int)config.sampleRate,
-            latencyInSamples,
-            10
-        );
+            levelTracker.prepare(
+                device->getOutputChannelNames().size(),
+                (int)config.sampleRate,
+                latencyInSamples,
+                10
+            );
         }
     }
 }
