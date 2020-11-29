@@ -5,9 +5,7 @@ namespace {
 }
 
 void LevelTracker::process(AudioSampleBuffer& buffer)
-{
-    lastMeasurement = Time::currentTimeMillis();
-
+{   
     const auto numChannels = buffer.getNumChannels();
     const auto numSamples = buffer.getNumSamples();
 
@@ -15,18 +13,27 @@ void LevelTracker::process(AudioSampleBuffer& buffer)
 
     for (int channel = 0; channel < std::min(numChannels, int(levels.size())); channel++) {
         for (int block = 0; block < numBlocks; block++) {
+            lastMeasurement = Time((int64)((double)samplesProcessed / sampleRate * 1000));
+            
             auto start = block * numBlocks;
-            levels[channel].setLevels(lastMeasurement, buffer.getMagnitude(channel, start, jmin(numSamples - start, samplesPerBlock)), holdMilli);
+            auto numSamplesThisTime = jmin(numSamples - start, samplesPerBlock);
+
+            levels[channel].setLevels(lastMeasurement, buffer.getMagnitude(channel, start, numSamplesThisTime), holdDuration);
+
+            samplesProcessed += numSamplesThisTime;
         }        
     }
 }
 
 void LevelTracker::prepare(const int channels, const int sampleRate, const int latencyInSamples, const int backlogSize)
-{    
+{
+    this->sampleRate = sampleRate;
     samplesPerBlock = (int)(sampleRate * 0.1 / (double)backlogSize);
 
+    latency = RelativeTime((double)latencyInSamples / sampleRate);
+
     levels.clear();
-    levels.resize(channels, LevelInfo(sampleRate, latencyInSamples / samplesPerBlock + 1, backlogSize));
+    levels.resize(channels, LevelInfo(sampleRate, latencyInSamples / samplesPerBlock, backlogSize));
 }
 
 double LevelTracker::getLevel(int channel) {
@@ -41,6 +48,15 @@ double LevelTracker::getPeak(int channel)
 bool LevelTracker::isClipping(int channel)
 {
     return channel < (int)levels.size() ? levels[channel].read().clip : false;
+} 
+
+void LevelTracker::update()
+{
+    auto time = Time((int64)((double)samplesProcessed / sampleRate * 1000)) - latency;
+
+    for (auto& lv : levels) {
+        lv.update(time);
+    }
 }
 
 LevelTracker::LevelInfo::LevelInfo(int sampleRate, int resultSize, int backlogSize)
@@ -52,7 +68,7 @@ LevelTracker::LevelInfo::LevelInfo(int sampleRate, int resultSize, int backlogSi
 
 }
 
-void LevelTracker::LevelInfo::setLevels(const int64 time, const double newLevel, const int64 newHoldMSecs)
+void LevelTracker::LevelInfo::setLevels(const Time time, const double newLevel, const RelativeTime hold)
 {
     if (newLevel > 1.0) {
         clip = true;
@@ -63,9 +79,9 @@ void LevelTracker::LevelInfo::setLevels(const int64 time, const double newLevel,
     if (avgPeak >= peak)
     {
         peak = jmin(1.0, avgPeak);
-        hold = time + newHoldMSecs;
+        holdUntil = time + hold;
     }
-    else if (time > hold)
+    else if (time > holdUntil)
     {
         peak -= kPeakDecayRate;
         clip = peak > 1.0;
@@ -79,19 +95,31 @@ void LevelTracker::LevelInfo::setLevels(const int64 time, const double newLevel,
     }
 
     Level lv{};
+    lv.time = time;
     lv.clip = clip;
     lv.level = avgPeak;
     lv.peak = peak;
 
     results.push(lv);
-    if (results.size() > (size_t)resultSize) {
-        results.pop();
-    }
 }
 
-LevelTracker::LevelInfo::Level LevelTracker::LevelInfo::read()
+LevelTracker::LevelInfo::Level& LevelTracker::LevelInfo::read()
 {
-    return results.empty() ? Level() : results.front();
+    return currentResult;
+}
+
+void LevelTracker::LevelInfo::update(const Time time)
+{
+    while (!results.empty()) {
+        auto first = results.front();
+        if (time <= first.time) break;
+
+        currentResult.level = (currentResult.level + first.level) / 2.0;
+        currentResult.peak = (currentResult.peak + first.peak) / 2.0;
+        currentResult.clip |= first.clip;
+
+        results.pop();
+    }
 }
 
 double LevelTracker::LevelInfo::getAverageLevel() const
