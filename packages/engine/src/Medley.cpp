@@ -412,8 +412,8 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
 
 void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
     if (auto deviceMgr = dynamic_cast<AudioDeviceManager*>(source)) {
-        auto device = deviceMgr->getCurrentAudioDevice();
-        auto config = deviceMgr->getAudioDeviceSetup();
+        if (auto device = deviceMgr->getCurrentAudioDevice()) {
+            auto config = deviceMgr->getAudioDeviceSetup();
 
         int latencyInSamples = device->getCurrentBufferSizeSamples();
 
@@ -429,6 +429,7 @@ void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
             latencyInSamples,
             10
         );
+        }
     }
 }
 
