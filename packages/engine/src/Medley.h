@@ -143,7 +143,7 @@ private:
 
     void updateFadingFactor();
 
-    class Mixer : public MixerAudioSource, public ChangeListener {
+    class Mixer : public MixerAudioSource, public ChangeListener, public TimeSliceClient {
     public:
         bool togglePause();
 
@@ -169,6 +169,8 @@ private:
             return levelTracker.isClipping(channel);
         }
 
+        int useTimeSlice();
+
     private:
         bool paused = false;
         bool stalled = false;
@@ -185,6 +187,7 @@ private:
 
     TimeSliceThread loadingThread;
     TimeSliceThread readAheadThread;
+    TimeSliceThread visualizingThread;
 
     bool keepPlaying = false;
     IQueue& queue;

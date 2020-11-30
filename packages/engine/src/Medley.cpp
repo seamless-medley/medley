@@ -7,7 +7,8 @@ Medley::Medley(IQueue& queue)
     :
     queue(queue),
     loadingThread("Loading Thread"),
-    readAheadThread("Read-ahead-thread")
+    readAheadThread("Read-ahead-thread"),
+    visualizingThread("Visualizing Thread")
 {
     updateFadingFactor();
 
@@ -36,9 +37,12 @@ Medley::Medley(IQueue& queue)
 
     loadingThread.startThread();
     readAheadThread.startThread(8);
+    visualizingThread.startThread();
 
     mixer.addInputSource(deck1, false);
     mixer.addInputSource(deck2, false);
+
+    visualizingThread.addTimeSliceClient(&mixer);
 
     mainOut.setSource(&mixer);
     deviceMgr.addAudioCallback(&mainOut);
@@ -53,6 +57,7 @@ Medley::~Medley() {
 
     loadingThread.stopThread(100);
     readAheadThread.stopThread(100);
+    visualizingThread.stopThread(100);
 
     deviceMgr.closeAudioDevice();
 
@@ -412,24 +417,31 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
 
 void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
     if (auto deviceMgr = dynamic_cast<AudioDeviceManager*>(source)) {
-        auto device = deviceMgr->getCurrentAudioDevice();
-        auto config = deviceMgr->getAudioDeviceSetup();
+        if (auto device = deviceMgr->getCurrentAudioDevice()) {
+            auto config = deviceMgr->getAudioDeviceSetup();
 
-        int latencyInSamples = device->getCurrentBufferSizeSamples();
+            int latencyInSamples = device->getOutputLatencyInSamples();
 
 #ifdef JUCE_WINDOWS
-        if (device->getTypeName() == "DirectSound") {
-            latencyInSamples *= 15;
-        }
+            if (device->getTypeName() == "DirectSound") {
+                latencyInSamples *= 16;
+            }
 #endif
 
-        levelTracker.prepare(
-            deviceMgr->getCurrentAudioDevice()->getOutputChannelNames().size(),
-            (int)config.sampleRate,
-            latencyInSamples,
-            10
-        );
+            levelTracker.prepare(
+                device->getOutputChannelNames().size(),
+                (int)config.sampleRate,
+                latencyInSamples,
+                10
+            );
+        }
     }
+}
+
+int Medley::Mixer::useTimeSlice()
+{
+    levelTracker.update();
+    return 5;
 }
 
 }
