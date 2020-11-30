@@ -183,10 +183,13 @@
     <ClCompile Include="..\..\src\Deck.cpp" />
     <ClCompile Include="..\..\src\LevelSmoother.cpp" />
     <ClCompile Include="..\..\src\LevelTracker.cpp" />
+    <ClCompile Include="..\..\src\LookAheadLimiter.cpp" />
+    <ClCompile Include="..\..\src\LookAheadReduction.cpp" />
     <ClCompile Include="..\..\src\Medley.cpp" />
     <ClCompile Include="..\..\src\MiniMP3AudioFormat.cpp" />
     <ClCompile Include="..\..\src\MiniMP3AudioFormatReader.cpp" />
     <ClCompile Include="..\..\src\PostProcessor.cpp" />
+    <ClCompile Include="..\..\src\ReductionCalculator.cpp" />
     <ClCompile Include="medley-playground.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -195,10 +198,13 @@
     <ClInclude Include="..\..\src\ITrack.h" />
     <ClInclude Include="..\..\src\LevelSmoother.h" />
     <ClInclude Include="..\..\src\LevelTracker.h" />
+    <ClInclude Include="..\..\src\LookAheadLimiter.h" />
+    <ClInclude Include="..\..\src\LookAheadReduction.h" />
     <ClInclude Include="..\..\src\Medley.h" />
     <ClInclude Include="..\..\src\MiniMP3AudioFormat.h" />
     <ClInclude Include="..\..\src\MiniMP3AudioFormatReader.h" />
     <ClInclude Include="..\..\src\PostProcessor.h" />
+    <ClInclude Include="..\..\src\ReductionCalculator.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
