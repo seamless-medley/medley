@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "Deck.h"
+#include "PostProcessor.h"
 #include "LevelTracker.h"
 #include <list>
 
@@ -172,9 +173,12 @@ private:
         int useTimeSlice();
 
     private:
+        bool prepared = false;
+        int numChannels = 2;
         bool paused = false;
         bool stalled = false;
 
+        PostProcessor processor;
         LevelTracker levelTracker;
     };
 

@@ -412,7 +412,12 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
         }
     }
 
-    levelTracker.process(*info.buffer);
+    if (prepared) {
+        AudioBlock<float> block(*info.buffer, (size_t)info.startSample);
+        processor.process(ProcessContextReplacing<float>(block));
+
+        levelTracker.process(*info.buffer);
+    }
 }
 
 void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
@@ -428,12 +433,19 @@ void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
             }
 #endif
 
+            auto numSamples = device->getCurrentBufferSizeSamples();
+            numChannels = device->getOutputChannelNames().size();
+
+            processor.prepare({ config.sampleRate, (uint32)numSamples, (uint32)numChannels });
+
             levelTracker.prepare(
-                device->getOutputChannelNames().size(),
+                numChannels,
                 (int)config.sampleRate,
                 latencyInSamples,
                 10
             );
+
+            prepared = true;
         }
     }
 }

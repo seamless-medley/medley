@@ -78,6 +78,9 @@
     <ClCompile Include="..\..\src\LevelSmoother.cpp">
       <Filter>Engine Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\PostProcessor.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h">
@@ -102,6 +105,9 @@
       <Filter>Engine Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\LevelSmoother.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\PostProcessor.h">
       <Filter>Engine Source</Filter>
     </ClInclude>
   </ItemGroup>
