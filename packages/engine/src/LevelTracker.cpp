@@ -5,7 +5,7 @@ void LevelTracker::process(AudioSampleBuffer& buffer)
     const auto numChannels = buffer.getNumChannels();
     const auto numSamples = buffer.getNumSamples();
 
-    const auto numBlocks = (int)(numSamples / samplesPerBlock);
+    const auto numBlocks = jmax(1, (int)(numSamples / samplesPerBlock));
 
     for (int channel = 0; channel < std::min(numChannels, int(levels.size())); channel++) {
         for (int block = 0; block < numBlocks; block++) {

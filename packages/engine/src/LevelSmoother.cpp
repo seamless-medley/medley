@@ -56,24 +56,16 @@ LevelSmoother::Level& LevelSmoother::get()
 
 void LevelSmoother::update(const Time time)
 {
-    int count = 1;
     while (!results.empty()) {
         auto& first = results.front();
 
         if (time <= first.time) break;
 
-        currentResult.level += first.level;
-        currentResult.peak += first.peak;
+        currentResult.level = (first.level + currentResult.level) * 0.5;
+        currentResult.peak = (first.peak + currentResult.peak) * 0.5;
         currentResult.clip |= first.clip;
 
-        count++;
         results.pop();
-    }
-
-    if (count > 1) {
-        auto factor = 1.0 / count;
-        currentResult.level *= factor;
-        currentResult.peak *= factor;
     }
 }
 
