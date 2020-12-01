@@ -522,6 +522,8 @@ void Deck::releaseResources()
 
 void Deck::setSource(AudioFormatReaderSource* newSource)
 {
+    const ScopedLock sl(sourceLock);
+
     if (source == newSource) {
         if (newSource == nullptr) {
             return;
@@ -551,15 +553,12 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
         }
     }
 
-    {
-        const ScopedLock sl(sourceLock);
-        source = newSource;
-        bufferingSource = newBufferingSource;
-        resamplerSource = newResamplerSource;        
+    source = newSource;
+    bufferingSource = newBufferingSource;
+    resamplerSource = newResamplerSource;        
 
-        inputStreamEOF = false;
-        playing = false;
-    }
+    inputStreamEOF = false;
+    playing = false;
 
     if (oldResamplerSource != nullptr) {
         oldResamplerSource->releaseResources();
