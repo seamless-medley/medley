@@ -56,7 +56,9 @@ Object Init(Env env, Object exports)
     medley->play();
 
     Logger::writeToLog("Exported");
-    while (true);;
+    while (true) {
+        juce::Thread::sleep(10);
+    }
 
     return exports;
 }
