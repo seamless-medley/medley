@@ -31,7 +31,7 @@ public:
 
     inline const auto& getAvailableDeviceTypes() {
         return deviceMgr.getAvailableDeviceTypes();
-    }    
+    }
 
     inline void setCurrentAudioDeviceType(AudioIODeviceType& type) {
         deviceMgr.setCurrentAudioDeviceType(type.getTypeName(), true);
@@ -45,7 +45,7 @@ public:
         return getCurrentAudioDeviceType()->getDeviceNames();
     }
 
-    inline auto getIndexOfCurrentDevice() const {       
+    inline auto getIndexOfCurrentDevice() const {
         return getCurrentAudioDeviceType()->getIndexOfDevice(deviceMgr.getCurrentAudioDevice(), false);
     }
 
@@ -138,9 +138,9 @@ private:
 
     void deckPosition(Deck& sender, double position) override;
 
-    Deck* getAvailableDeck();    
+    Deck* getAvailableDeck();
 
-    String getDeckName(Deck& deck);
+    juce::String getDeckName(Deck& deck);
 
     void updateFadingFactor();
 
