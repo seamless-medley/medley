@@ -1,0 +1,15 @@
+{
+  "name": "@wittawas/medley",
+  "version": "0.1.0",
+  "description": "",
+  "author": {
+    "name": "Wittawas Nakkasem",
+    "email": "vittee@hotmail.com"
+  },
+  "license": "AGPL-3.0",
+  "main": "index.js",
+  "dependencies": {
+    "node-addon-api": "3.0.2"
+  },
+  "gypfile": true
+}
