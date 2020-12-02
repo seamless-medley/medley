@@ -13,7 +13,7 @@ Medley::Medley(IQueue& queue)
     updateFadingFactor();
 
     deviceMgr.addChangeListener(&mixer);
-    deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);    
+    deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
 
     formatMgr.registerFormat(new MiniMP3AudioFormat(), true);
     formatMgr.registerFormat(new WavAudioFormat(), false);
@@ -27,7 +27,7 @@ Medley::Medley(IQueue& queue)
 
 #if JUCE_USE_WINDOWS_MEDIA_FORMAT
     formatMgr.registerFormat(new WindowsMediaAudioFormat(), false);
-#endif    
+#endif
 
     deck1 = new Deck("Deck A", formatMgr, loadingThread, readAheadThread);
     deck2 = new Deck("Deck B", formatMgr, loadingThread, readAheadThread);
@@ -111,7 +111,7 @@ void Medley::fadeOutMainDeck()
         if (deck) {
             deck->fadeOut();
             mixer.setPause(false);
-        }        
+        }
     }
 }
 
@@ -119,22 +119,24 @@ bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
     auto deck = getAnotherDeck(currentDeck);
 
     if (deck == nullptr) {
-        DBG("Could not find another deck for " + currentDeck->getName());
+        Logger::writeToLog("Could not find another deck for " + currentDeck->getName());
         return false;
     }
 
-    if (deck->isTrackLoading) {        
-        DBG("Deck is busy loading some track!!!");
+    if (deck->isTrackLoading) {
+        Logger::writeToLog("Deck is busy loading some track!!!");
         deck->unloadTrack();
     }
 
     while (queue.count() > 0) {
         auto track = queue.fetchNextTrack();
         if (deck->loadTrack(track, play)) {
+            Logger::writeToLog("Track loaded");
             return true;
         }
     }
 
+    Logger::writeToLog("Track was NOT loaded");
     return false;
 }
 
@@ -165,7 +167,7 @@ inline String Medley::getDeckName(Deck& deck) {
 }
 
 void Medley::deckStarted(Deck& sender) {
-    DBG(String::formatted("[deckStarted] %s", sender.getName().toWideCharPointer()));
+    Logger::writeToLog(String::formatted("[deckStarted] %s", sender.getName().toWideCharPointer()));
 
     ScopedLock sl(callbackLock);
     listeners.call([&sender](Callback& cb) {
@@ -197,7 +199,7 @@ void Medley::deckLoaded(Deck& sender)
 void Medley::deckUnloaded(Deck& sender) {
     if (&sender == transitingDeck) {
         if (transitionState == TransitionState::Cue) {
-            DBG(String::formatted("[%s] stopped before transition would happen, try starting next deck", sender.getName().toWideCharPointer()));
+            Logger::writeToLog(String::formatted("[%s] stopped before transition would happen, try starting next deck", sender.getName().toWideCharPointer()));
             auto nextDeck = getAnotherDeck(transitingDeck);
             if (nextDeck->isTrackLoaded()) {
                 nextDeck->start();
@@ -267,7 +269,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                 }
             }
 
-            DBG(String::formatted("[%s] cue", nextDeck->getName().toWideCharPointer()));
+            Logger::writeToLog(String::formatted("[%s] cue", nextDeck->getName().toWideCharPointer()));
             transitionState = TransitionState::Cue;
             transitingDeck = &sender;
         }
@@ -280,12 +282,12 @@ void Medley::deckPosition(Deck& sender, double position) {
     if (position > transitionStartPos - leadingDuration) {
         if (transitionState == TransitionState::Cue) {
             if (nextDeck->isTrackLoaded()) {
-                DBG(String::formatted("Transiting to [%s]", nextDeck->getName().toWideCharPointer()));
-                transitionState = TransitionState::Transit;                
+                Logger::writeToLog(String::formatted("Transiting to [%s]", nextDeck->getName().toWideCharPointer()));
+                transitionState = TransitionState::Transit;
                 nextDeck->setVolume(1.0f);
 
                 if (forceFadingOut > 0) {
-                    if (leadingDuration >= maxLeadingDuration) {                        
+                    if (leadingDuration >= maxLeadingDuration) {
                         nextDeck->setPosition(nextDeck->getFirstAudiblePosition() + leadingDuration - maxLeadingDuration);
                     }
                 }
@@ -298,7 +300,7 @@ void Medley::deckPosition(Deck& sender, double position) {
             if (leadingDuration >= maxLeadingDuration) {
                 auto fadeInProgress = jlimit(0.25, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
 
-                DBG(String::formatted("[%s] Fading in: %.2f", nextDeck->getName().toWideCharPointer(), fadeInProgress));
+                Logger::writeToLog(String::formatted("[%s] Fading in: %.2f", nextDeck->getName().toWideCharPointer(), fadeInProgress));
                 nextDeck->setVolume((float)pow(fadeInProgress, fadingFactor));
             }
         }
@@ -311,7 +313,7 @@ void Medley::deckPosition(Deck& sender, double position) {
 
             if (transitionDuration > 0.0) {
                 auto fadingProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
-                DBG(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
+                Logger::writeToLog(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
                 sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
             }
 

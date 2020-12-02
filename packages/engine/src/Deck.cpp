@@ -30,7 +30,7 @@ Deck::Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& l
     readAheadThread.addTimeSliceClient(&playhead);
 }
 
-Deck::~Deck() {    
+Deck::~Deck() {
     releaseChainedResources();
     unloadTrackInternal();
 }
@@ -57,9 +57,10 @@ bool Deck::loadTrack(const ITrack::Ptr track, bool play)
         return false;
     }
 
-    
+
     auto format = formatMgr.findFormatForFileExtension(track->getFile().getFileExtension());
     if (!format) {
+        Logger::writeToLog("Could not find appropriate format reader for " + track->getFile().getFullPathName());
         return false;
     }
 
@@ -72,7 +73,7 @@ bool Deck::loadTrack(const ITrack::Ptr track, bool play)
 
     playAfterLoading = play;
     loader.load(track);
-    
+
     isTrackLoading = true;
     return true;
 }
@@ -87,12 +88,14 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 {
     auto file = track->getFile();
     if (!file.existsAsFile()) {
+        Logger::writeToLog("File does not exist");
         return;
     }
 
     auto newReader = formatMgr.createReaderFor(file);
 
     if (!newReader) {
+        Logger::writeToLog("Could not create format reader");
         return;
     }
 
@@ -140,7 +143,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 
     leadingDuration = (leadingSamplePosition > -1) ? (leadingSamplePosition - firstAudibleSamplePosition) / reader->sampleRate : 0;
 
-    DBG(String::formatted("[%s] Leading: duration=%.2f, position=%d", name.toWideCharPointer(), leadingDuration, leadingSamplePosition));
+    Logger::writeToLog(String::formatted("[%s] Leading: duration=%.2f, position=%d", name.toWideCharPointer(), leadingDuration, leadingSamplePosition));
 
     setSource(new AudioFormatReaderSource(reader, false));
 
@@ -173,7 +176,7 @@ void Deck::unloadTrackInternal()
 
     bool deckUnloaded = false;
     {
-        const ScopedLock sl(sourceLock);        
+        const ScopedLock sl(sourceLock);
 
         if (resamplerSource) {
             delete resamplerSource;
@@ -197,7 +200,7 @@ void Deck::unloadTrackInternal()
             delete reader;
             reader = nullptr;
             deckUnloaded = true;
-        }        
+        }
     }
 
     if (deckUnloaded) {
@@ -216,6 +219,7 @@ void Deck::scanTrackInternal(ITrack::Ptr trackToScan)
 {
     auto file = trackToScan->getFile();
     if (!file.existsAsFile()) {
+        Logger::writeToLog("Cancel track scanning, file does not exist: " + file.getFullPathName());
         return;
     }
 
@@ -280,9 +284,9 @@ void Deck::calculateTransition()
 {
     transitionStartPosition = lastAudibleSamplePosition / sourceSampleRate;
     transitionEndPosition = transitionStartPosition;
-    
+
     if (trailingDuration > 0.0 && maxTransitionTime > 0.0)
-    {        
+    {
 
         if (trailingDuration >= maxTransitionTime) {
             transitionStartPosition = trailingPosition / sourceSampleRate;
@@ -295,7 +299,7 @@ void Deck::calculateTransition()
 
     transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(kLeadingScanningDuration, maxTransitionTime));
 
-    DBG(String::formatted(
+    Logger::writeToLog(String::formatted(
         "[%s] Transition: cue=%.3fs, start=%.3fs, end=%.3fs, duration=%.2fs, trailing=%.2fs, total=%.2fs",
         name.toWideCharPointer(),
         transitionCuePosition,
@@ -332,7 +336,7 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
 
     if (resamplerSource != nullptr && !stopped)
     {
-        resamplerSource->getNextAudioBlock(info);        
+        resamplerSource->getNextAudioBlock(info);
 
         if (!playing)
         {
@@ -418,6 +422,7 @@ bool Deck::isLooping() const
 
 bool Deck::start()
 {
+    Logger::writeToLog("Try to start playing");
     if ((!playing) && resamplerSource != nullptr)
     {
         playing = true;
@@ -431,6 +436,7 @@ bool Deck::start()
     }
 
     // Something went wrong
+    Logger::writeToLog("Could not start playing");
     main = false;
     return false;
 }
@@ -450,7 +456,7 @@ void Deck::stop()
 void Deck::fireFinishedCallback()
 {
     if (!stopped) {
-        DBG(String::formatted("[%s] Stopped", name.toWideCharPointer()));
+        Logger::writeToLog(String::formatted("[%s] Stopped", name.toWideCharPointer()));
 
         listeners.call([this](Callback& cb) {
             cb.deckFinished(*this);
@@ -536,7 +542,7 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
     ResamplingAudioSource* newResamplerSource = nullptr;
 
     std::unique_ptr<BufferingAudioSource> oldBufferingSource(bufferingSource);
-    std::unique_ptr<ResamplingAudioSource> oldResamplerSource(resamplerSource);    
+    std::unique_ptr<ResamplingAudioSource> oldResamplerSource(resamplerSource);
 
     if (newSource != nullptr) {
         sourceSampleRate = newSource->getAudioFormatReader()->sampleRate;
@@ -555,7 +561,7 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
 
     source = newSource;
     bufferingSource = newBufferingSource;
-    resamplerSource = newResamplerSource;        
+    resamplerSource = newResamplerSource;
 
     inputStreamEOF = false;
     playing = false;
