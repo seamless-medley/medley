@@ -45,8 +45,8 @@ public:
     }
 
 private:
-    inline const float timeToGain(const float timeInSeconds);
-    inline const float apply(const float overShootInDecibels);
+    const float timeToGain(const float timeInSeconds);
+    const float apply(const float overShootInDecibels);
 
     std::atomic<float> maxInputLevel{ -std::numeric_limits<float>::infinity() };
     std::atomic<float> maxGainReduction{ 0 };

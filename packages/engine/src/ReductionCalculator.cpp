@@ -51,12 +51,12 @@ void ReductionCalculator::calculateLinear(const float* signal, float* result, co
     }
 }
 
-inline const float ReductionCalculator::timeToGain(const float timeInSeconds)
+const float ReductionCalculator::timeToGain(const float timeInSeconds)
 {
     return std::exp(-1.0f / (static_cast<float> (sampleRate) * timeInSeconds));
 }
 
-inline const float ReductionCalculator::apply(const float db)
+const float ReductionCalculator::apply(const float db)
 {
     if (db <= -kneeHalf) {
         return 0.0f;
