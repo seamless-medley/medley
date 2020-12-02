@@ -131,12 +131,10 @@ bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
     while (queue.count() > 0) {
         auto track = queue.fetchNextTrack();
         if (deck->loadTrack(track, play)) {
-            Logger::writeToLog("Track loaded");
             return true;
         }
     }
 
-    Logger::writeToLog("Track was NOT loaded");
     return false;
 }
 
