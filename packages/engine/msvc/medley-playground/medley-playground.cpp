@@ -644,9 +644,7 @@ juce::JUCEApplicationBase* createApplication() {
 }
 
 int main()
-{
-    static_cast<void>(::CoInitialize(nullptr));
-
+{   
     juce::JUCEApplicationBase::createInstance = &createApplication;
     return juce::JUCEApplicationBase::main();
 

@@ -1,6 +1,10 @@
 #include "Medley.h"
 #include "MiniMP3AudioFormat.h"
 
+#if JUCE_WINDOWS
+#include <Windows.h>
+#endif
+
 namespace medley {
 
 Medley::Medley(IQueue& queue)
@@ -10,6 +14,10 @@ Medley::Medley(IQueue& queue)
     readAheadThread("Read-ahead-thread"),
     visualizingThread("Visualizing Thread")
 {
+#if JUCE_WINDOWS
+    static_cast<void>(::CoInitialize(nullptr));
+#endif
+
     updateFadingFactor();
 
     deviceMgr.addChangeListener(&mixer);
