@@ -1,2 +1,3 @@
-const medley = require('bindings')('medley');
-console.log('dddddddddd', medley);
+const { Medley } = require('bindings')('medley');
+const m = new Medley();
+m.test();

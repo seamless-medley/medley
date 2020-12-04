@@ -38,28 +38,33 @@ public:
     std::list<Track::Ptr> tracks;
 };
 
-Object Init(Env env, Object exports)
-{
-    static_cast<void>(::CoInitialize(nullptr));
+class Medley : public ObjectWrap<Medley> {
+public:
+    static void Initialize(Object& exports) {
+        auto proto = {
+            InstanceMethod<&Medley::test>("test")
+        };
 
-    File f("log.txt");
-    FileLogger fl(f, "");
-    Logger::setCurrentLogger(&fl);
-
-    Queue* queue = new Queue();
-    medley::Medley* medley = new medley::Medley(*queue);
-
-    File file(LR"(D:\Google Drive\musics\new-released\Maiyarap,MILLI - แฟนใหม่หน้าคุ้น.mp3)");
-    queue->tracks.push_back(new Track(file));
-
-    Logger::writeToLog(juce::String::formatted("queue.tracks=%d", queue->tracks.size()));
-    medley->play();
-
-    Logger::writeToLog("Exported");
-    while (true) {
-        juce::Thread::sleep(10);
+        exports.Set("Medley", DefineClass(exports.Env(), "Medley", proto));
     }
 
+    Medley(const CallbackInfo& info)
+        : ObjectWrap<Medley>(info),
+        engine(queue)
+    {
+
+    }
+
+    void test(const CallbackInfo& info) {
+        std::cout << "Hello test";
+    }
+
+    Queue queue;
+    medley::Medley engine;
+};
+
+Object Init(Env env, Object exports) {
+    Medley::Initialize(exports);
     return exports;
 }
 

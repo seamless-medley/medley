@@ -36,8 +36,8 @@ void LookAheadLimiter::process(const ProcessContextReplacing<float>& context)
 {
     ScopedNoDenormals noDenormals;
 
-    auto input = context.getInputBlock();
-    auto output = context.getOutputBlock();
+    auto& input = context.getInputBlock();
+    auto& output = context.getOutputBlock();
 
     auto totalNumInputChannels = input.getNumChannels();
     auto totalNumOutputChannels = output.getNumChannels();
