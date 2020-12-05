@@ -16,7 +16,7 @@ public:
 
     }
 
-    File& getFile() override {
+    File getFile() override {
         return file;
     }
 
