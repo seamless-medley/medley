@@ -268,8 +268,9 @@ private:
                 false
             );
 
-            gradient.addColour(0.90, Colours::green);
-            gradient.addColour(0.95, Colours::yellow);
+            gradient.addColour(rangeNormalizer.convertTo0to1(-6.0), Colours::green);
+            gradient.addColour(rangeNormalizer.convertTo0to1(-3.0), Colours::yellow);
+            gradient.addColour(rangeNormalizer.convertTo0to1(0.0), Colours::red);
         }
 
         void paint(Graphics& g) override {
@@ -284,27 +285,40 @@ private:
             auto peakLeft = Decibels::gainToDecibels(medley.getPeakLevel(0));
             auto peakRight = Decibels::gainToDecibels(medley.getPeakLevel(1));
 
-            g.setGradientFill(gradient);
-            g.fillRect(0.0f, 0.0f, (float)(getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(0)) / 100)), mh);
-            g.fillRect(0.0f, mh, (float)(getWidth() * (1 + Decibels::gainToDecibels(medley.getLevel(1)) / 100)), mh);
+            auto levelLeft = Decibels::gainToDecibels(medley.getLevel(0));
+            auto levelRight = Decibels::gainToDecibels(medley.getLevel(1));
 
-            auto getPeakColour = [](double db) {
-                if (db > -3.0) return Colours::red;
-                if (db > -5.0) return Colours::yellow;
+            g.setGradientFill(gradient);
+            g.fillRect(0.0f, 0.0f, (float)(getWidth() * rangeNormalizer.convertTo0to1(jmin(levelLeft, 6.0))), mh);
+            g.fillRect(0.0f, mh, (float)(getWidth() * rangeNormalizer.convertTo0to1(jmin(levelRight, 6.0))), mh);
+
+            auto getPeakColour = [=](double db) {
+                 if (db > -3.0) return Colours::red;
+                if (db > -6.0) return Colours::yellow;
                 return Colours::white;
             };
 
+            auto peakLeftX = (int)(getWidth() * rangeNormalizer.convertTo0to1(jmin(peakLeft, 6.0)));
+            auto peakRightX = (int)(getWidth() * rangeNormalizer.convertTo0to1(jmin(peakRight, 6.0)));
+
             g.setColour(getPeakColour(peakLeft));
-            g.drawVerticalLine((int)(getWidth() * (1 + peakLeft / 100)) - 1, 0, mh);
-           
+            g.drawVerticalLine(peakLeftX - 1, 0, mh);
 
             g.setColour(getPeakColour(peakRight));
-            g.drawVerticalLine((int)(getWidth() * (1 + peakRight / 100)) - 1, mh, h);
+            g.drawVerticalLine(peakRightX - 1, mh, h);
+
+            g.setFont(mh / 1.8);
+            g.setColour(getPeakColour(peakLeft).darker(0.8f));
+            g.drawText(String::formatted("%.2f", peakLeft), peakLeftX + 4, 0, 100, mh, false);
+            g.setColour(getPeakColour(peakRight).darker(0.8f));
+            g.drawText(String::formatted("%.2f", peakRight), peakRightX + 4, mh, 100, mh, false);
         }
 
     private:
         Medley& medley;
         ColourGradient gradient;
+
+        NormalisableRange<double> rangeNormalizer{ -100, 6, 0, 1 };
     };
 
     class QueueModel : public ListBoxModel {
@@ -403,10 +417,10 @@ private:
                 comboDeviceNames.onChange = [this] { updateDevice(); };
 
                 updateDeviceType();
-
-                vuMeter = new VUMeter(medley);
-                addAndMakeVisible(vuMeter);
             }            
+
+            vuMeter = new VUMeter(medley);
+            addAndMakeVisible(vuMeter);
 
             queueListBox.setColour(ListBox::outlineColourId, Colours::grey);
             addAndMakeVisible(queueListBox);
@@ -460,8 +474,10 @@ private:
             {
                 auto devicePanelArea = b.removeFromTop(34).reduced(10, 2);
                 comboDeviceTypes.setBounds(devicePanelArea.removeFromLeft(250));
-                comboDeviceNames.setBounds(devicePanelArea.removeFromLeft(250).translated(4, 0));
-                vuMeter->setBounds(devicePanelArea.reduced(4, 0).translated(4, 0));
+                comboDeviceNames.setBounds(devicePanelArea.removeFromLeft(250).translated(4, 0));                
+            }
+            {
+                vuMeter->setBounds(b.removeFromTop(50).reduced(10, 2));
             }
             {
                 auto deckPanelArea = b.removeFromTop(120).reduced(10, 2);
