@@ -26,10 +26,10 @@ private:
 
     inline void getReadPositions(int numSamples, int& startIndex, int& blockSize1, int& blockSize2);
 
-    double sampleRate;
-    int blockSize;
+    double sampleRate = 0;
+    int blockSize = 0;
 
-    float delay;
+    float delay = 0.0f;
     int delayInSamples = 0;
     int writePosition = 0;
     int lastPushedSamples = 0;
