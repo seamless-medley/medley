@@ -6,65 +6,161 @@ using namespace Napi;
 
 class Track : public medley::ITrack {
 public:
-    Track(File& file)
-        :
-        file(file)
+    Track(juce::String& path)
+        : file(path)
     {
 
     }
 
-    File& getFile() override {
+    Track(File& file)
+        : file(file)
+    {
+
+    }
+
+    File getFile() {
         return file;
     }
 
 private:
-    JUCE_LEAK_DETECTOR(Track)
-
     File file;
 };
 
-class Queue : public medley::IQueue {
+class Queue : public ObjectWrap<Queue>, public juce::Array<juce::String>, public medley::IQueue {
 public:
-    size_t count() const override {
-        return tracks.size();
-    }
+    using Arr = Array<juce::String>;
 
-    medley::ITrack::Ptr fetchNextTrack() {
-        auto track = tracks.front();
-        tracks.erase(tracks.begin());
-        return track;
-    }
-
-    std::list<Track::Ptr> tracks;
-};
-
-class Medley : public ObjectWrap<Medley> {
-public:
     static void Initialize(Object& exports) {
         auto proto = {
-            InstanceMethod<&Medley::test>("test")
+            InstanceMethod<&Queue::add>("add")
         };
 
-        exports.Set("Medley", DefineClass(exports.Env(), "Medley", proto));
+        auto env = exports.Env();
+        auto constructor = DefineClass(env, "Queue", proto);
+
+        ctor = Persistent(constructor);
+        ctor.SuppressDestruct();
+
+        exports.Set("Queue", constructor);
     }
 
-    Medley(const CallbackInfo& info)
-        : ObjectWrap<Medley>(info),
-        engine(queue)
+    Queue(const CallbackInfo& info)
+        : ObjectWrap<Queue>(info)
     {
 
     }
 
-    void test(const CallbackInfo& info) {
-        std::cout << "Hello test";
+    size_t count() const {
+        return size();
     }
 
-    Queue queue;
-    medley::Medley engine;
+    medley::ITrack::Ptr fetchNextTrack() {
+        return !isEmpty() ? new Track(removeAndReturn(0)) : nullptr;
+    }
+
+    void add(const CallbackInfo& info) {
+        auto env = info.Env();
+
+        if (info.Length() < 1) {
+            TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+            return;
+        }
+
+        Arr::add(juce::String(info[0].ToString().Utf8Value()));
+    }
+
+    static FunctionReference ctor;
+
+private:
+
+};
+
+FunctionReference Queue::ctor;
+
+class Medley : public ObjectWrap<Medley> {
+public:
+    using Engine = medley::Medley;
+
+    static void Initialize(Object& exports) {
+        auto proto = {
+            InstanceMethod<&Medley::play>("play")
+        };
+
+        auto env = exports.Env();
+        exports.Set("Medley", DefineClass(env, "Medley", proto));
+    }
+
+    class Worker : public AsyncWorker {
+    public:
+        Worker(Function& callback)
+            : AsyncWorker(callback)
+        {
+
+        }
+
+        void Execute() override {
+            while (true /* !shutdown */) {
+                juce::Thread::sleep(10);
+            }
+        }
+    };
+
+    Medley(const CallbackInfo& info)
+        : ObjectWrap<Medley>(info)
+    {
+        auto env = info.Env();
+
+        if (info.Length() < 1) {
+            TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+            return;
+        }
+
+        auto arg1 = info[0];
+        if (!arg1.IsObject()) {
+            TypeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
+            return;
+        }
+
+        auto obj = arg1.ToObject();
+
+        if (!obj.InstanceOf(Queue::ctor.Value())) {
+            TypeError::New(env, "Is not a queue").ThrowAsJavaScriptException();
+            return;
+        }
+
+        self = Persistent(info.This());
+        queueJS = Persistent(obj);
+
+        queue = Queue::Unwrap(obj);
+        engine = new Engine(*queue);
+
+        auto worker = new Worker(Function::New<Medley::xx>(info.Env()));
+        worker->Queue();
+    }
+
+    static void xx(const CallbackInfo&) {
+        std::cout << "Worker done\n";
+    }
+
+    ~Medley() {
+        delete engine;
+        delete queue;
+    }
+
+    void play(const CallbackInfo& info) {
+        engine->play();
+    }
+
+    ObjectReference queueJS;
+    Queue* queue;
+    Engine* engine;
+
+    Reference<Napi::Value> self;
 };
 
 Object Init(Env env, Object exports) {
     Medley::Initialize(exports);
+    Queue::Initialize(exports);
     return exports;
 }
 

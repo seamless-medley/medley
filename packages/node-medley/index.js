@@ -1,3 +1,5 @@
-const { Medley } = require('bindings')('medley');
-const m = new Medley();
-m.test();
+const { Medley, Queue } = require('bindings')('medley');
+
+const q = new Queue();
+const m = new Medley(q);
+m.play();
