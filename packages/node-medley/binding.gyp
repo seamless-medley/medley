@@ -39,7 +39,6 @@
             'defines': [
                 'UNICODE',
                 '_UNICODE',
-                'NAPI_DISABLE_CPP_EXCEPTIONS',
                 'JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1',
                 'JUCE_STRICT_REFCOUNTEDPOINTER=1',
                 'JUCE_STANDALONE_APPLICATION=1',
