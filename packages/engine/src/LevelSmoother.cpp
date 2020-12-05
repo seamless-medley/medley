@@ -33,7 +33,7 @@ void LevelSmoother::addLevel(const Time time, const double newLevel, const Relat
         clip = peak > 1.0;
     }
 
-    push(jmin(1.0, newLevel));
+    push(newLevel);
 
     avgPeak = getAverageLevel();
     if (peak < avgPeak) {
@@ -79,7 +79,6 @@ double LevelSmoother::getAverageLevel() const
 }
 
 void LevelSmoother::push(double level) {
-    level = jmin(level, 1.0);
     if (backlog.size() > 0)
     {
         backlog[backlogIndex] = level;
