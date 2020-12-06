@@ -69,4 +69,6 @@ private:
     ObjectReference queueJS;
     Queue* queue;
     Engine* engine;
+
+    Reference<Napi::Value> self;
 };
