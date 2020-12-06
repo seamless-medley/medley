@@ -10,7 +10,8 @@
                 "../engine/src"
             ],
             "sources": [
-                "src/test.cpp",
+                "src/core.cpp",
+                "src/module.cpp",
                 "../engine/juce/include_juce_audio_basics.cpp",
                 "../engine/juce/include_juce_audio_devices.cpp",
                 "../engine/juce/include_juce_audio_formats.cpp",
