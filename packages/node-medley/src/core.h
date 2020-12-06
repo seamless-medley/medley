@@ -65,6 +65,8 @@ public:
 
     void play(const CallbackInfo& info);
 
+    void stop(const CallbackInfo& info);
+
 private:
     ObjectReference queueJS;
     Queue* queue;

@@ -86,7 +86,9 @@ void decWorkerRefCount() {
 void Medley::Initialize(Object& exports) {
     auto proto = {
         StaticMethod<&Medley::shutdown>("shutdown"),
-        InstanceMethod<&Medley::play>("play")
+        //
+        InstanceMethod<&Medley::play>("play"),
+        InstanceMethod<&Medley::stop>("stop")
     };
 
     auto env = exports.Env();
@@ -143,4 +145,8 @@ Medley::~Medley() {
 
 void Medley::play(const CallbackInfo& info) {
     engine->play();
+}
+
+void Medley::stop(const CallbackInfo& info) {
+    engine->stop();
 }
