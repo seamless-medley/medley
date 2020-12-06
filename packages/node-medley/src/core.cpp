@@ -28,7 +28,7 @@ void Queue::add(const CallbackInfo& info) {
         return;
     }
 
-    Arr::add(juce::String(info[0].ToString().Utf8Value()));
+    Arr::add(Track(juce::String(info[0].ToString().Utf8Value())));
 }
 
 namespace {

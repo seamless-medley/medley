@@ -7,6 +7,11 @@ using namespace Napi;
 
 class Track : public medley::ITrack {
 public:
+    Track()
+    {
+
+    }
+
     Track(juce::String& path)
         : file(path)
     {
@@ -19,6 +24,18 @@ public:
 
     }
 
+    Track(const Track& other)
+        : file(other.file)
+    {
+
+    }
+
+    Track(Track&& other)
+        : file(std::move(other.file))
+    {
+
+    }
+
     File getFile() {
         return file;
     }
@@ -27,9 +44,9 @@ private:
     File file;
 };
 
-class Queue : public ObjectWrap<Queue>, public juce::Array<juce::String>, public medley::IQueue {
+class Queue : public ObjectWrap<Queue>, public juce::Array<Track>, public medley::IQueue {
 public:
-    using Arr = Array<juce::String>;
+    using Arr = Array<Track>;
 
     static void Initialize(Object& exports);
     static FunctionReference ctor;
