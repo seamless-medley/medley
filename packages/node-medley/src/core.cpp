@@ -136,7 +136,6 @@ Medley::Medley(const CallbackInfo& info)
 }
 
 Medley::~Medley() {
-    std::cout << "~Medley\n";
     delete engine;
     delete queue;
     //

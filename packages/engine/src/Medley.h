@@ -79,6 +79,8 @@ public:
 
     bool isDeckPlaying();
 
+    inline bool isPlaying() { return isDeckPlaying(); }
+
     void addListener(Callback* cb);
 
     void removeListener(Callback* cb);
