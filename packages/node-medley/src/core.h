@@ -55,24 +55,9 @@ public:
 
     static void Initialize(Object& exports);
 
-    class Worker : public AsyncWorker {
-    public:
-        Worker(Function& callback)
-            : AsyncWorker(callback)
-        {
+    static void Medley::shutdown(const CallbackInfo& info);
 
-        }
-
-        void Execute() override {
-            while (true /* !shutdown */) {
-                juce::Thread::sleep(10);
-            }
-        }
-    };
-
-    static void xx(const CallbackInfo&) {
-        std::cout << "Worker done\n";
-    }
+    static void workerFinalizer(const CallbackInfo&);
 
     Medley(const CallbackInfo& info);
 

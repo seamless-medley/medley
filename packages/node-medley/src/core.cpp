@@ -31,13 +31,74 @@ void Queue::add(const CallbackInfo& info) {
     Arr::add(juce::String(info[0].ToString().Utf8Value()));
 }
 
+namespace {
+
+class Worker : public AsyncWorker {
+public:
+    Worker(Function& callback)
+        : AsyncWorker(callback)
+    {
+
+    }
+
+    void Execute() override {
+        while (running) {
+            juce::Thread::sleep(10);
+        }
+    }
+
+    void shutdown() {
+        running = false;
+    }
+
+    bool running = true;
+};
+
+Worker* worker = nullptr;
+std::atomic<int> workerRefCount = 0;
+
+void ensureWorker(Env& env) {
+    workerRefCount++;
+
+    if (worker) {
+        return;
+    }
+
+    worker = new Worker(Function::New<Medley::workerFinalizer>(env));
+    worker->Queue();
+}
+
+void shutdownWorker() {
+    if (worker) {
+        worker->shutdown();
+        worker = nullptr;
+    }
+}
+
+void decWorkerRefCount() {
+    if (workerRefCount-- <= 0) {
+        shutdownWorker();
+    }
+}
+
+}
+
 void Medley::Initialize(Object& exports) {
     auto proto = {
+        StaticMethod<&Medley::shutdown>("shutdown"),
         InstanceMethod<&Medley::play>("play")
     };
 
     auto env = exports.Env();
     exports.Set("Medley", DefineClass(env, "Medley", proto));
+}
+
+void Medley::shutdown(const CallbackInfo& info) {
+    shutdownWorker();
+}
+
+void Medley::workerFinalizer(const CallbackInfo&) {
+
 }
 
 Medley::Medley(const CallbackInfo& info)
@@ -68,13 +129,15 @@ Medley::Medley(const CallbackInfo& info)
     queue = Queue::Unwrap(obj);
     engine = new Engine(*queue);
 
-    auto worker = new Worker(Function::New<Medley::xx>(info.Env()));
-    worker->Queue();
+    ensureWorker(info.Env());
 }
 
 Medley::~Medley() {
+    std::cout << "~Medley\n";
     delete engine;
     delete queue;
+    //
+    decWorkerRefCount();
 }
 
 void Medley::play(const CallbackInfo& info) {
