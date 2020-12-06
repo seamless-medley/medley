@@ -63,7 +63,6 @@ Medley::Medley(const CallbackInfo& info)
         return;
     }
 
-    self = Persistent(info.This());
     queueJS = Persistent(obj);
 
     queue = Queue::Unwrap(obj);
