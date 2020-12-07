@@ -148,6 +148,12 @@ private:
 
     class Mixer : public MixerAudioSource, public ChangeListener, public TimeSliceClient {
     public:
+        Mixer(Medley& medley)
+            : medley(medley), MixerAudioSource()
+        {
+
+        }
+
         bool togglePause();
 
         void getNextAudioBlock(const AudioSourceChannelInfo& info) override;
@@ -159,6 +165,8 @@ private:
         }
 
         void changeListenerCallback(ChangeBroadcaster* source);
+
+        void updateAudioConfig();
 
         inline double getLevel(int channel) {
             return levelTracker.getLevel(channel);
@@ -174,7 +182,9 @@ private:
 
         int useTimeSlice();
 
-    private:
+    private:      
+        Medley& medley;
+
         bool prepared = false;
         int numChannels = 2;
         bool paused = false;
@@ -183,6 +193,8 @@ private:
         PostProcessor processor;
         LevelTracker levelTracker;
     };
+
+    friend class Mixer;
 
     AudioDeviceManager deviceMgr;
     AudioFormatManager formatMgr;

@@ -9,6 +9,7 @@ namespace medley {
 
 Medley::Medley(IQueue& queue)
     :
+    mixer(*this),
     queue(queue),
     loadingThread("Loading Thread"),
     readAheadThread("Read-ahead-thread"),
@@ -19,9 +20,11 @@ Medley::Medley(IQueue& queue)
 #endif
 
     updateFadingFactor();
+    
+    deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
+    mixer.updateAudioConfig();
 
     deviceMgr.addChangeListener(&mixer);
-    deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
 
     formatMgr.registerFormat(new MiniMP3AudioFormat(), true);
     formatMgr.registerFormat(new WavAudioFormat(), false);
@@ -428,40 +431,44 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
     }
 }
 
-void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
-    if (auto deviceMgr = dynamic_cast<AudioDeviceManager*>(source)) {
-        if (auto device = deviceMgr->getCurrentAudioDevice()) {
-            auto config = deviceMgr->getAudioDeviceSetup();
-
-            int latencyInSamples = device->getOutputLatencyInSamples();
-
-#ifdef JUCE_WINDOWS
-            if (device->getTypeName() == "DirectSound") {
-                latencyInSamples *= 16;
-            }
-#endif
-
-            auto numSamples = device->getCurrentBufferSizeSamples();
-            numChannels = device->getOutputChannelNames().size();
-
-            processor.prepare({ config.sampleRate, (uint32)numSamples, (uint32)numChannels });
-
-            levelTracker.prepare(
-                numChannels,
-                (int)config.sampleRate,
-                latencyInSamples,
-                10
-            );
-
-            prepared = true;
-        }
-    }
+void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {    
+    updateAudioConfig();
 }
 
 int Medley::Mixer::useTimeSlice()
 {
     levelTracker.update();
     return 5;
+}
+
+void Medley::Mixer::updateAudioConfig()
+{
+    auto& deviceMgr = medley.deviceMgr;
+    if (auto device = deviceMgr.getCurrentAudioDevice()) {
+        auto config = deviceMgr.getAudioDeviceSetup();
+
+        int latencyInSamples = device->getOutputLatencyInSamples();
+
+#ifdef JUCE_WINDOWS
+        if (device->getTypeName() == "DirectSound") {
+            latencyInSamples *= 16;
+        }
+#endif
+
+        auto numSamples = device->getCurrentBufferSizeSamples();
+        numChannels = device->getOutputChannelNames().size();
+
+        processor.prepare({ config.sampleRate, (uint32)numSamples, (uint32)numChannels });
+
+        levelTracker.prepare(
+            numChannels,
+            (int)config.sampleRate,
+            latencyInSamples,
+            10
+        );
+
+        prepared = true;
+    }
 }
 
 }
