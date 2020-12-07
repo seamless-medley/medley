@@ -10,6 +10,7 @@
                 "../engine/src"
             ],
             "sources": [
+                "src/queue.cpp",
                 "src/core.cpp",
                 "src/module.cpp",
                 "../engine/juce/include_juce_audio_basics.cpp",
