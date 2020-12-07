@@ -2,48 +2,10 @@
 
 #include <napi.h>
 #include "Medley.h"
+#include "track.h"
 #include "queue.h"
 
 using namespace Napi;
-
-class Track : public medley::ITrack {
-public:
-    Track()
-    {
-
-    }
-
-    Track(juce::String& path)
-        : file(path)
-    {
-
-    }
-
-    Track(File& file)
-        : file(file)
-    {
-
-    }
-
-    Track(const Track& other)
-        : file(other.file)
-    {
-
-    }
-
-    Track(Track&& other)
-        : file(std::move(other.file))
-    {
-
-    }
-
-    File getFile() {
-        return file;
-    }
-
-private:
-    File file;
-};
 
 class Medley : public ObjectWrap<Medley> {
 public:
