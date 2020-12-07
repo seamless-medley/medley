@@ -72,7 +72,7 @@ private:
         void updateDecks(Deck* deck, Deck* anotherDeck) {
             this->deck = deck;
             this->anotherDeck = anotherDeck;
-        }      
+        }
 
         void paint(Graphics& g) override {
             if (!deck->isTrackLoaded()) {
@@ -166,7 +166,7 @@ private:
         medley::Deck* deck;
         medley::Deck* anotherDeck;
     };
-    
+
     class DeckComponent : public Component, public Deck::Callback {
     public:
         DeckComponent(Deck& deck, Deck& anotherDeck)
@@ -204,7 +204,7 @@ private:
         }
 
         void deckLoaded(Deck& sender) override {
-            
+
         }
 
         void deckUnloaded(Deck& sender) override {
@@ -230,7 +230,7 @@ private:
             g.fillRect(0, 0, getWidth(), getHeight());
             g.setColour(Colours::black);
 
-            if (auto track = deck.getTrack()) {               
+            if (auto track = deck.getTrack()) {
                 auto lineHeight = (int)g.getCurrentFont().getHeight();
                 auto b = getLocalBounds().reduced(4);
                 auto topLine = b.removeFromTop(lineHeight);
@@ -326,7 +326,7 @@ private:
         QueueModel(Queue& queue)
             : queue(queue)
         {
-            
+
         }
 
         int getNumRows() override
@@ -339,7 +339,7 @@ private:
                 g.fillAll(Colours::lightblue);
             }
 
-            g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));            
+            g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));
 
             if (rowNumber < (int)queue.tracks.size()) {
                 auto at = std::next(queue.tracks.begin(), rowNumber);
@@ -398,7 +398,7 @@ private:
             volumeSlider.setTextValueSuffix("dB");
             volumeSlider.setRange(0.0, 1.0);
             volumeSlider.setValue(medley.getGain());
-            volumeSlider.addListener(this);            
+            volumeSlider.addListener(this);
 
             playhead = new PlayHead(&medley.getDeck1(), &medley.getDeck2());
             addAndMakeVisible(playhead);
@@ -417,7 +417,7 @@ private:
                 comboDeviceNames.onChange = [this] { updateDevice(); };
 
                 updateDeviceType();
-            }            
+            }
 
             vuMeter = new VUMeter(medley);
             addAndMakeVisible(vuMeter);
@@ -474,7 +474,7 @@ private:
             {
                 auto devicePanelArea = b.removeFromTop(34).reduced(10, 2);
                 comboDeviceTypes.setBounds(devicePanelArea.removeFromLeft(250));
-                comboDeviceNames.setBounds(devicePanelArea.removeFromLeft(250).translated(4, 0));                
+                comboDeviceNames.setBounds(devicePanelArea.removeFromLeft(250).translated(4, 0));
             }
             {
                 vuMeter->setBounds(b.removeFromTop(50).reduced(10, 2));
@@ -572,15 +572,15 @@ private:
         }
 
         void deckPosition(Deck& sender, double position) override {
-            
+
         }
 
         void deckStarted(Deck& sender) override {
-            
+
         }
 
         void deckFinished(Deck& sender) override {
-            
+
         }
 
         void updatePauseButton() {
@@ -596,7 +596,7 @@ private:
             if (auto deck = medley.getMainDeck()) {
                 auto anotherDeck = medley.getAnotherDeck(deck);
                 playhead->updateDecks(deck, anotherDeck);
-            }                      
+            }
         }
 
         void deckUnloaded(Deck& sender) override {
@@ -649,7 +649,7 @@ private:
         void closeButtonPressed() override
         {
             JUCEApplication::getInstance()->systemRequestedQuit();
-        }        
+        }
     };
 
     std::unique_ptr<MainWindow> myMainWindow;
@@ -660,7 +660,7 @@ juce::JUCEApplicationBase* createApplication() {
 }
 
 int main()
-{   
+{
     juce::JUCEApplicationBase::createInstance = &createApplication;
     return juce::JUCEApplicationBase::main();
 
