@@ -1,7 +1,7 @@
 #pragma once
 
 #include <napi.h>
-#include "Medley.h"
+#include <Medley.h>
 #include "track.h"
 #include "queue.h"
 

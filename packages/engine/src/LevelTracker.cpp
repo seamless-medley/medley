@@ -1,7 +1,7 @@
 #include "LevelTracker.h"
 
 void LevelTracker::process(AudioSampleBuffer& buffer)
-{   
+{
     const auto numChannels = buffer.getNumChannels();
     const auto numSamples = buffer.getNumSamples();
 
@@ -10,14 +10,14 @@ void LevelTracker::process(AudioSampleBuffer& buffer)
     for (int channel = 0; channel < std::min(numChannels, int(levels.size())); channel++) {
         for (int block = 0; block < numBlocks; block++) {
             Time time = Time((int64)((double)samplesProcessed / sampleRate * 1000));
-            
+
             auto start = block * numBlocks;
             auto numSamplesThisTime = jmin(numSamples - start, samplesPerBlock);
 
             levels[channel].addLevel(time, buffer.getMagnitude(channel, start, numSamplesThisTime), holdDuration);
 
             samplesProcessed += numSamplesThisTime;
-        }        
+        }
     }
 }
 
@@ -44,7 +44,7 @@ double LevelTracker::getPeak(int channel)
 bool LevelTracker::isClipping(int channel)
 {
     return channel < (int)levels.size() ? levels[channel].get().clip : false;
-} 
+}
 
 void LevelTracker::update()
 {
