@@ -11,16 +11,17 @@ public:
     }
 
     void Execute() override {
-        while (running) {
-            juce::Thread::sleep(10);
+        JUCE_TRY
+        {
+            // loop until a quit message is received..
+            MessageManager::getInstance()->runDispatchLoop();
         }
+        JUCE_CATCH_EXCEPTION
     }
 
     void shutdown() {
-        running = false;
+        MessageManager::getInstance()->stopDispatchLoop();
     }
-
-    bool running = true;
 };
 
 Worker* worker = nullptr;
@@ -41,6 +42,12 @@ void shutdownWorker() {
     if (worker) {
         worker->shutdown();
         worker = nullptr;
+
+        JUCE_AUTORELEASEPOOL
+        {
+            DeletedAtShutdown::deleteAll();
+            MessageManager::deleteInstance();
+        }
     }
 }
 
@@ -98,10 +105,10 @@ Medley::Medley(const CallbackInfo& info)
     self = Persistent(info.This());
     queueJS = Persistent(obj);
 
+    ensureWorker(info.Env());
+
     queue = Queue::Unwrap(obj);
     engine = new Engine(*queue);
-
-    ensureWorker(info.Env());
 }
 
 Medley::~Medley() {
