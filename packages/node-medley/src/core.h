@@ -25,6 +25,7 @@ public:
 
     void stop(const CallbackInfo& info);
 
+    Napi::Value level(const CallbackInfo& info);
 private:
     ObjectReference queueJS;
     Queue* queue;

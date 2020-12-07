@@ -64,7 +64,9 @@ void Medley::Initialize(Object& exports) {
         StaticMethod<&Medley::shutdown>("shutdown"),
         //
         InstanceMethod<&Medley::play>("play"),
-        InstanceMethod<&Medley::stop>("stop")
+        InstanceMethod<&Medley::stop>("stop"),
+        //
+        InstanceAccessor<&Medley::level>("level")
     };
 
     auto env = exports.Env();
@@ -124,4 +126,22 @@ void Medley::play(const CallbackInfo& info) {
 
 void Medley::stop(const CallbackInfo& info) {
     engine->stop();
+}
+
+Napi::Value Medley::level(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    auto left = Object::New(env);
+    left.Set("magnitude",  Number::New(env, engine->getLevel(0)));
+    left.Set("peak",  Number::New(env, engine->getPeakLevel(0)));
+
+    auto right = Object::New(env);
+    right.Set("magnitude",  Number::New(env, engine->getLevel(1)));
+    right.Set("peak",  Number::New(env, engine->getPeakLevel(1)));
+
+    auto result = Object::New(env);
+    result.Set("left", left);
+    result.Set("right", right);
+
+    return result;
 }
