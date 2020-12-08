@@ -44,6 +44,8 @@ export declare class Medley extends EventEmitter {
   get level(): AudioLevels;
   get playing(): boolean;
   get paused(): boolean;
+  get duration(): number;
+  get position(): number;
 
   play(): void;
   stop(): void;

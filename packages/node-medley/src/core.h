@@ -49,6 +49,10 @@ public:
     Napi::Value playing(const CallbackInfo& info);
 
     Napi::Value paused(const CallbackInfo& info);
+
+    Napi::Value duration(const CallbackInfo& info);
+
+    Napi::Value position(const CallbackInfo& info);
 private:
     void emitDeckEvent(const std::string& name,  medley::Deck& deck);
 

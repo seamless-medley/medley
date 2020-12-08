@@ -70,7 +70,9 @@ void Medley::Initialize(Object& exports) {
         //
         InstanceAccessor<&Medley::level>("level"),
         InstanceAccessor<&Medley::playing>("playing"),
-        InstanceAccessor<&Medley::paused>("paused")
+        InstanceAccessor<&Medley::paused>("paused"),
+        InstanceAccessor<&Medley::duration>("duration"),
+        InstanceAccessor<&Medley::position>("position")
     };
 
     auto env = exports.Env();
@@ -210,4 +212,12 @@ Napi::Value Medley::playing(const CallbackInfo& info) {
 
 Napi::Value Medley::paused(const CallbackInfo& info) {
     return Napi::Boolean::New(info.Env(), engine->isPaused());
+}
+
+Napi::Value Medley::duration(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getDuration());
+}
+
+Napi::Value Medley::position(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getPositionInSeconds());
 }
