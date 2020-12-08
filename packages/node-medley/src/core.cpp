@@ -111,6 +111,13 @@ Medley::Medley(const CallbackInfo& info)
 
     queue = Queue::Unwrap(obj);
     engine = new Engine(*queue);
+    engine->addListener(this);
+
+    threadSafeEmitter = ThreadSafeFunction::New(
+        env, info.This().ToObject().Get("emit").As<Function>(),
+        "Medley Emitter",
+        0, 1
+    );
 }
 
 Medley::~Medley() {
@@ -118,6 +125,45 @@ Medley::~Medley() {
     delete queue;
     //
     decWorkerRefCount();
+}
+
+void Medley::deckTrackScanning(medley::Deck& sender) {
+
+}
+
+void Medley::deckTrackScanned(medley::Deck& sender) {
+
+}
+
+void Medley::deckPosition(medley::Deck& sender, double position) {
+
+}
+
+void Medley::deckStarted(medley::Deck& sender) {
+    emitDeckEvent("started", sender);
+}
+
+void Medley::deckFinished(medley::Deck& sender) {
+    emitDeckEvent("finished", sender);
+}
+
+void Medley::deckLoaded(medley::Deck& sender) {
+    emitDeckEvent("loaded", sender);
+}
+
+void Medley::deckUnloaded(medley::Deck& sender) {
+    emitDeckEvent("unloaded", sender);
+}
+
+void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck) {
+    auto index = &deck == &engine->getDeck1() ? 0 : 1;
+
+    threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
+        fn.Call(self.Value(), {
+            Napi::String::New(env, name),
+            Number::New(env, index)
+        });
+    });
 }
 
 void Medley::play(const CallbackInfo& info) {

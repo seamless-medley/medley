@@ -7,9 +7,10 @@
 
 using namespace Napi;
 
-class Medley : public ObjectWrap<Medley> {
+using Engine = medley::Medley;
+
+class Medley : public ObjectWrap<Medley>, public Engine::Callback {
 public:
-    using Engine = medley::Medley;
 
     static void Initialize(Object& exports);
 
@@ -21,15 +22,32 @@ public:
 
     ~Medley();
 
+    void deckTrackScanning(medley::Deck& sender) override;
+
+    void deckTrackScanned(medley::Deck& sender) override;
+
+    void deckPosition(medley::Deck& sender, double position) override;
+
+    void deckStarted(medley::Deck& sender) override;
+
+    void deckFinished(medley::Deck& sender) override;
+
+    void deckLoaded(medley::Deck& sender) override;
+
+    void deckUnloaded(medley::Deck& sender) override;
+
     void play(const CallbackInfo& info);
 
     void stop(const CallbackInfo& info);
 
     Napi::Value level(const CallbackInfo& info);
 private:
+    void emitDeckEvent(const std::string& name,  medley::Deck& deck);
+
     ObjectReference queueJS;
     Queue* queue;
     Engine* engine;
 
     Reference<Napi::Value> self;
+    ThreadSafeFunction threadSafeEmitter;
 };
