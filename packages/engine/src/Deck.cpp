@@ -152,11 +152,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
     }
     else {
         calculateTransition();
-    }
-
-    if (playAfterLoading) {
-        start();
-    }
+    }    
 
     this->track = track;
     isTrackLoading = false;
@@ -164,6 +160,10 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
     listeners.call([this](Callback& cb) {
         cb.deckLoaded(*this);
     });
+
+    if (playAfterLoading) {
+        start();
+    }
 }
 
 
@@ -455,13 +455,11 @@ void Deck::stop()
 
 void Deck::fireFinishedCallback()
 {
-    if (!stopped) {
-        Logger::writeToLog(String::formatted("[%s] Stopped", name.toWideCharPointer()));
+    Logger::writeToLog(String::formatted("[%s] Stopped", name.toWideCharPointer()));
 
-        listeners.call([this](Callback& cb) {
-            cb.deckFinished(*this);
-        });
-    }
+    listeners.call([this](Callback& cb) {
+        cb.deckFinished(*this);
+    }); 
 
     unloadTrackInternal();
 }
