@@ -15,9 +15,11 @@ export interface TrackInfo {
 export type TrackDescriptor = string | TrackInfo;
 
 export declare class Queue {
+  constructor(tracks?: TrackDescriptor[]);
+
   get length(): number;
 
-  add(track: TrackDescriptor): void;
+  add(track: TrackDescriptor | TrackDescriptor[]): void;
 }
 
 export interface AudioLevel {

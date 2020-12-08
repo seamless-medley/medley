@@ -12,11 +12,7 @@ public:
     static void Initialize(Object& exports);
     static FunctionReference ctor;
 
-    Queue(const CallbackInfo& info)
-        : ObjectWrap<Queue>(info)
-    {
-
-    }
+    Queue(const CallbackInfo& info);
 
     size_t count() const {
         return size();

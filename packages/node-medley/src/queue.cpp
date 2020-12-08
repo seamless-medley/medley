@@ -1,13 +1,39 @@
 #include "queue.h"
 
 namespace {
-static Track createInternalTrackFromJS(const CallbackInfo& info) {
-    // TODO: Accept String or Object
-    return Track(juce::String(info[0].ToString().Utf8Value()));
+static Track createTrackFromJS(const Napi::Value p) {
+    juce::String path;
+    float preGain = 1.0f;
+
+    if (p.IsObject()) {
+        auto obj = p.ToObject();
+
+        path = obj.Get("path").ToString().Utf8Value();
+        preGain = obj.Get("preGain").ToNumber();
+    } else {
+        path = p.ToString().Utf8Value();
+    }
+
+    return Track(juce::String(path), preGain);
 }
 }
 
 FunctionReference Queue::ctor;
+
+Queue::Queue(const CallbackInfo& info)
+    : ObjectWrap<Queue>(info)
+{
+    auto p = info[0];
+
+    if (p.IsArray()) {
+        auto arr = p.As<Napi::Array>();
+        for (uint32_t index = 0; index < arr.Length(); index++) {
+            Arr::add(createTrackFromJS(arr.Get(index)));
+        }
+    } else if (!p.IsUndefined() && !p.IsNull()) {
+        Arr::add(createTrackFromJS(p));
+    }
+}
 
 void Queue::Initialize(Object& exports) {
     auto proto = {
@@ -37,5 +63,14 @@ void Queue::add(const CallbackInfo& info) {
         return;
     }
 
-    Arr::add(createInternalTrackFromJS(info));
+    auto p = info[0];
+
+    if (p.IsArray()) {
+        auto arr = p.As<Napi::Array>();
+        for (uint32_t index = 0; index < arr.Length(); index++) {
+            Arr::add(createTrackFromJS(arr.Get(index)));
+        }
+    } else if (!p.IsUndefined() && !p.IsNull()) {
+        Arr::add(createTrackFromJS(p));
+    }
 }
