@@ -449,10 +449,6 @@ void Deck::stop()
     if (playing)
     {
         playing = false;
-
-        //int n = 500;
-        //while (--n >= 0 && !stopped)
-        //    Thread::sleep(2);
     }
 
     fading = false;
