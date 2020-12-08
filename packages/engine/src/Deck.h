@@ -115,6 +115,8 @@ public:
 
     inline bool isMain() const { return main; }
 
+    inline bool isFading() const { return fading; }
+
 private:
     friend class Medley;
 
@@ -247,6 +249,8 @@ private:
     double maxTransitionTime = 3.0;
 
     bool main = false;
+
+    bool fading = false;
 };
 
 }
