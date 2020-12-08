@@ -40,7 +40,15 @@ public:
 
     void stop(const CallbackInfo& info);
 
+    Napi::Value togglePause(const CallbackInfo& info);
+
+    void fadeOut(const CallbackInfo& info);
+
     Napi::Value level(const CallbackInfo& info);
+
+    Napi::Value playing(const CallbackInfo& info);
+
+    Napi::Value paused(const CallbackInfo& info);
 private:
     void emitDeckEvent(const std::string& name,  medley::Deck& deck);
 

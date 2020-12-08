@@ -42,7 +42,11 @@ export declare class Medley extends EventEmitter {
   off(event: DeckEvent, listener: (deckIndex: number) => void): this;
 
   get level(): AudioLevels;
+  get playing(): boolean;
+  get paused(): boolean;
 
   play(): void;
   stop(): void;
+  togglePause(): void;
+  fadeOut(): void;
 }

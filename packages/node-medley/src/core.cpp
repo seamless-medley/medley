@@ -65,8 +65,12 @@ void Medley::Initialize(Object& exports) {
         //
         InstanceMethod<&Medley::play>("play"),
         InstanceMethod<&Medley::stop>("stop"),
+        InstanceMethod<&Medley::togglePause>("togglePause"),
+        InstanceMethod<&Medley::fadeOut>("fadeOut"),
         //
-        InstanceAccessor<&Medley::level>("level")
+        InstanceAccessor<&Medley::level>("level"),
+        InstanceAccessor<&Medley::playing>("playing"),
+        InstanceAccessor<&Medley::paused>("paused")
     };
 
     auto env = exports.Env();
@@ -174,6 +178,14 @@ void Medley::stop(const CallbackInfo& info) {
     engine->stop();
 }
 
+Napi::Value Medley::togglePause(const CallbackInfo& info) {
+    return Napi::Boolean::New(info.Env(), engine->togglePause());
+}
+
+void Medley::fadeOut(const CallbackInfo& info) {
+    engine->fadeOutMainDeck();
+}
+
 Napi::Value Medley::level(const CallbackInfo& info) {
     auto env = info.Env();
 
@@ -190,4 +202,12 @@ Napi::Value Medley::level(const CallbackInfo& info) {
     result.Set("right", right);
 
     return result;
+}
+
+Napi::Value Medley::playing(const CallbackInfo& info) {
+    return Napi::Boolean::New(info.Env(), engine->isPlaying());
+}
+
+Napi::Value Medley::paused(const CallbackInfo& info) {
+    return Napi::Boolean::New(info.Env(), engine->isPaused());
 }
