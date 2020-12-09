@@ -184,7 +184,7 @@ private:
 
         int useTimeSlice();
 
-    private:      
+    private:
         Medley& medley;
 
         bool prepared = false;

@@ -20,8 +20,13 @@ Medley::Medley(IQueue& queue)
 #endif
 
     updateFadingFactor();
-    
-    deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
+
+    auto error = deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
+    if (!error.isEmpty()) {
+        std::cout << error << std::endl;
+        throw std::exception(error.toStdString().c_str());
+    }
+
     mixer.updateAudioConfig();
 
     deviceMgr.addChangeListener(&mixer);
@@ -437,7 +442,7 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
     }
 }
 
-void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {    
+void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
     updateAudioConfig();
 }
 
