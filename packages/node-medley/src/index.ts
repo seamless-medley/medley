@@ -20,6 +20,17 @@ export declare class Queue {
   get length(): number;
 
   add(track: TrackDescriptor | TrackDescriptor[]): void;
+  insert(index: number, track: TrackDescriptor | TrackDescriptor[]): void;
+  delete(index: number): void;
+  delete(from: number, count: number): void;
+  delete(track: TrackDescriptor): void;
+  swap(index1: number, index2: number): void;
+  move(currentIndex: number, newIndex: number): void;
+
+  get(index: number): TrackInfo;
+  set(index: number, track: TrackDescriptor): void;
+
+  toArray(): TrackInfo[];
 }
 
 export interface AudioLevel {

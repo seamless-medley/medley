@@ -22,6 +22,24 @@ public:
 
     void add(const CallbackInfo& info);
 
+    void clear(const CallbackInfo& info);
+
+    Napi::Value isEmpty(const CallbackInfo& info);
+
+    void insert(const CallbackInfo& info);
+
+    void del(const CallbackInfo& info);
+
+    void swap(const CallbackInfo& info);
+
+    void move(const CallbackInfo& info);
+
+    Napi::Value get(const CallbackInfo& info);
+
+    void set(const CallbackInfo& info);
+
+    Napi::Value toArray(const CallbackInfo& info);
+
     Napi::Value length(const CallbackInfo& info) {
         return Number::New(info.Env(), count());
     }

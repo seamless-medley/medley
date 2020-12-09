@@ -34,11 +34,32 @@ public:
 
     }
 
+    Track operator=(const Track& other) {
+        file = other.file;
+        preGain = other.preGain;
+        return *this;
+    }
+
+    bool operator== (const Track& other) const {
+        return file == other.file;
+    }
+
+    bool operator!= (const Track& other) const {
+        return file != other.file;
+    }
+
     File getFile() {
         return file;
     }
 
     float getPreGain() const { return preGain; }
+
+    Napi::Object toObject(Napi::Env env) {
+        auto obj = Napi::Object::New(env);
+        obj.Set("path", Napi::String::New(env, file.getFullPathName().toStdString()));
+        obj.Set("preGain", Napi::Number::New(env, preGain));
+        return obj;
+    }
 
 private:
     File file;
