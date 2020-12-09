@@ -95,6 +95,8 @@ public:
 
     void setPositionFractional(double fraction);
 
+    void setPositionInSeconds(double time);
+
     double getDuration() const;
 
     double getPositionInSeconds() const;

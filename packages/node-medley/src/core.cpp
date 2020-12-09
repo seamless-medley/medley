@@ -67,6 +67,8 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::stop>("stop"),
         InstanceMethod<&Medley::togglePause>("togglePause"),
         InstanceMethod<&Medley::fadeOut>("fadeOut"),
+        InstanceMethod<&Medley::seek>("seek"),
+        InstanceMethod<&Medley::seekFractional>("seekFractional"),
         //
         InstanceAccessor<&Medley::level>("level"),
         InstanceAccessor<&Medley::playing>("playing"),
@@ -186,6 +188,14 @@ Napi::Value Medley::togglePause(const CallbackInfo& info) {
 
 void Medley::fadeOut(const CallbackInfo& info) {
     engine->fadeOutMainDeck();
+}
+
+void Medley::seek(const CallbackInfo& info) {
+    engine->setPositionInSeconds(info[0].ToNumber().DoubleValue());
+}
+
+void Medley::seekFractional(const CallbackInfo& info) {
+    engine->setPositionFractional(info[0].ToNumber().DoubleValue());
 }
 
 Napi::Value Medley::level(const CallbackInfo& info) {

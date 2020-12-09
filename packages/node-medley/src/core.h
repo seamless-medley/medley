@@ -44,6 +44,10 @@ public:
 
     void fadeOut(const CallbackInfo& info);
 
+    void seek(const CallbackInfo& info);
+
+    void seekFractional(const CallbackInfo& info);
+
     Napi::Value level(const CallbackInfo& info);
 
     Napi::Value playing(const CallbackInfo& info);

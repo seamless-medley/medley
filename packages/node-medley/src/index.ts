@@ -51,4 +51,6 @@ export declare class Medley extends EventEmitter {
   stop(): void;
   togglePause(): void;
   fadeOut(): void;
+  seek(time: number): void;
+  seekFractional(fraction: number): void;
 }

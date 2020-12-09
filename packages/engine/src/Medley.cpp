@@ -76,6 +76,12 @@ Medley::~Medley() {
     delete deck2;
 }
 
+void Medley::setPositionInSeconds(double time) {
+    if (auto deck = getMainDeck()) {
+        deck->setPosition(time);
+    }
+}
+
 void Medley::setPositionFractional(double fraction)
 {
     if (auto deck = getMainDeck()) {
