@@ -115,17 +115,25 @@ Medley::Medley(const CallbackInfo& info)
     self = Persistent(info.This());
     queueJS = Persistent(obj);
 
-    ensureWorker(info.Env());
+    try {
+        ensureWorker(info.Env());
 
-    queue = Queue::Unwrap(obj);
-    engine = new Engine(*queue);
-    engine->addListener(this);
+        queue = Queue::Unwrap(obj);
+        engine = new Engine(*queue);
+        engine->addListener(this);
 
-    threadSafeEmitter = ThreadSafeFunction::New(
-        env, info.This().ToObject().Get("emit").As<Function>(),
-        "Medley Emitter",
-        0, 1
-    );
+        threadSafeEmitter = ThreadSafeFunction::New(
+            env, info.This().ToObject().Get("emit").As<Function>(),
+            "Medley Emitter",
+            0, 1
+        );
+    }
+    catch (std::exception& e) {
+        throw Napi::Error::New(info.Env(), e.what());
+    }
+    catch (...) {
+        throw Napi::Error::New(info.Env(), "Unknown Error while initializing engine.");
+    }
 }
 
 Medley::~Medley() {

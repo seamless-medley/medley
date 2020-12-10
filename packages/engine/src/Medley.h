@@ -53,11 +53,7 @@ public:
         return getCurrentAudioDeviceType()->getDefaultDeviceIndex(false);
     }
 
-    inline void setAudioDeviceByIndex(int index) {
-        auto config = deviceMgr.getAudioDeviceSetup();
-        config.outputDeviceName = getDeviceNames()[index];
-        deviceMgr.setAudioDeviceSetup(config, true);
-    }
+    void setAudioDeviceByIndex(int index);
 
     inline const AudioFormatManager& getAudioFormatManager() const { return formatMgr; }
 

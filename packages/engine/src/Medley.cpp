@@ -21,9 +21,8 @@ Medley::Medley(IQueue& queue)
 
     updateFadingFactor();
 
-    auto error = deviceMgr.initialise(0, 2, nullptr, true, {}, nullptr);
-    if (!error.isEmpty()) {
-        std::cout << error << std::endl;
+    auto error = deviceMgr.initialiseWithDefaultDevices(0, 2);
+    if (error.isNotEmpty()) {
         throw std::exception(error.toStdString().c_str());
     }
 
@@ -349,6 +348,15 @@ void Medley::deckPosition(Deck& sender, double position) {
         if (deckQueue.front() == &sender) {
             sender.markAsMain(true);
         }
+    }
+}
+
+void Medley::setAudioDeviceByIndex(int index) {
+    auto config = deviceMgr.getAudioDeviceSetup();
+    config.outputDeviceName = getDeviceNames()[index];
+    auto error = deviceMgr.setAudioDeviceSetup(config, true);
+    if (error.isNotEmpty()) {
+        throw std::exception(error.toStdString().c_str());
     }
 }
 
