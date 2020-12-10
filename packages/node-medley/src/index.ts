@@ -59,6 +59,9 @@ export declare class Medley extends EventEmitter {
   get position(): number;
   set position(time: number);
 
+  get gain(): number;
+  set gain(value: number);
+
   play(): void;
   stop(): void;
   togglePause(): void;

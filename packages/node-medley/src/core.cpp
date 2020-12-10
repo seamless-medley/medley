@@ -74,7 +74,8 @@ void Medley::Initialize(Object& exports) {
         InstanceAccessor<&Medley::playing>("playing"),
         InstanceAccessor<&Medley::paused>("paused"),
         InstanceAccessor<&Medley::duration>("duration"),
-        InstanceAccessor<&Medley::getPosition, &Medley::setPosition>("position")
+        InstanceAccessor<&Medley::getPosition, &Medley::setPosition>("position"),
+        InstanceAccessor<&Medley::getGain, &Medley::setGain>("gain"),
     };
 
     auto env = exports.Env();
@@ -242,4 +243,12 @@ Napi::Value Medley::getPosition(const CallbackInfo& info) {
 
 void Medley::setPosition(const CallbackInfo& info, const Napi::Value& value) {
     engine->setPositionInSeconds(value.ToNumber().DoubleValue());
+}
+
+Napi::Value Medley::getGain(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getGain());
+}
+
+void Medley::setGain(const CallbackInfo& info, const Napi::Value& value) {
+    engine->setGain(value.ToNumber().DoubleValue());
 }
