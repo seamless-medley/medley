@@ -76,6 +76,9 @@ void Medley::Initialize(Object& exports) {
         InstanceAccessor<&Medley::duration>("duration"),
         InstanceAccessor<&Medley::getPosition, &Medley::setPosition>("position"),
         InstanceAccessor<&Medley::getGain, &Medley::setGain>("gain"),
+        InstanceAccessor<&Medley::getFadingCurve, &Medley::setFadingCurve>("fadingCurve"),
+        InstanceAccessor<&Medley::getMaxTransitionTime, &Medley::setMaxTransitionTime>("maxTransitionTime"),
+        InstanceAccessor<&Medley::getMaxLeadingDuration, &Medley::setMaxLeadingDuration>("maxLeadingDuration"),
     };
 
     auto env = exports.Env();
@@ -251,4 +254,28 @@ Napi::Value Medley::getGain(const CallbackInfo& info) {
 
 void Medley::setGain(const CallbackInfo& info, const Napi::Value& value) {
     engine->setGain(value.ToNumber().DoubleValue());
+}
+
+Napi::Value Medley::getFadingCurve(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getFadingCurve());
+}
+
+void Medley::setFadingCurve(const CallbackInfo& info, const Napi::Value& value) {
+    engine->setFadingCurve(value.ToNumber().DoubleValue());
+}
+
+Napi::Value Medley::getMaxTransitionTime(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getMaxTransitionTime());
+}
+
+void Medley::setMaxTransitionTime(const CallbackInfo& info, const Napi::Value& value) {
+    engine->setMaxTransitionTime(value.ToNumber().DoubleValue());
+}
+
+Napi::Value Medley::getMaxLeadingDuration(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getMaxLeadingDuration());
+}
+
+void Medley::setMaxLeadingDuration(const CallbackInfo& info, const Napi::Value& value) {
+    engine->setMaxLeadingDuration(value.ToNumber().DoubleValue());
 }

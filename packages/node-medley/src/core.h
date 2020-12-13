@@ -63,6 +63,18 @@ public:
     Napi::Value getGain(const CallbackInfo& info);
 
     void setGain(const CallbackInfo& info, const Napi::Value& value);
+
+    Napi::Value getFadingCurve(const CallbackInfo& info);
+
+    void setFadingCurve(const CallbackInfo& info, const Napi::Value& value);
+
+    Napi::Value getMaxTransitionTime(const CallbackInfo& info);
+
+    void setMaxTransitionTime(const CallbackInfo& info, const Napi::Value& value);
+
+    Napi::Value getMaxLeadingDuration(const CallbackInfo& info);
+
+    void setMaxLeadingDuration(const CallbackInfo& info, const Napi::Value& value);
 private:
     void emitDeckEvent(const std::string& name,  medley::Deck& deck);
 

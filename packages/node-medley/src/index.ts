@@ -62,6 +62,12 @@ export declare class Medley extends EventEmitter {
   get gain(): number;
   set gain(value: number);
 
+  get fadingCurve(): number;
+  set fadingCurve(value: number);
+  get maxTransitionTime(): number;
+  set maxTransitionTime(value: number);
+  get maxLeadingDuration(): number;
+  set maxLeadingDuration(value: number);
   play(): void;
   stop(): void;
   togglePause(): void;
