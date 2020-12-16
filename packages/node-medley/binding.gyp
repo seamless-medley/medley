@@ -68,6 +68,10 @@
                         ],
                         'configurations': {
                             'Debug': {
+                                'defines': [
+                                    'DEBUG',
+                                    '_DEBUG'
+                                ],
                                 'msvs_settings': {
                                     'VCCLCompilerTool': {
                                         'RuntimeTypeInfo': 'true',
@@ -77,6 +81,9 @@
                                 }
                             },
                             'Release': {
+                                'defines': [
+                                    'NDEBUG'
+                                ],
                                 'msvs_settings': {
                                     'VCCLCompilerTool': {
                                         'RuntimeTypeInfo': 'true',
@@ -120,6 +127,24 @@
                             'GCC_ENABLE_CPP_RTTI': 'YES',
                             'CLANG_CXX_LANGUAGE_STANDARD': 'c++17',
                             'MACOSX_DEPLOYMENT_TARGET': '10.9'
+                        },
+                        'configurations': {
+                            'Debug': {
+                                'defines': [
+                                    'DEBUG',
+                                    '_DEBUG',
+                                ]
+                            },
+                            'Release': {
+                                'defines': [
+                                    'NDEBUG'
+                                ],
+                                'xcode_settings': {
+                                    'LLVM_LTO': 'YES',
+                                    'DEAD_CODE_STRIPPINT': 'YES',
+                                    'GCC_OPTIMIZATION_LEVEL': '3'
+                                }
+                            }
                         }
                     }
                 ]
