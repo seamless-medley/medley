@@ -14,7 +14,7 @@ public:
 
     static void Initialize(Object& exports);
 
-    static void Medley::shutdown(const CallbackInfo& info);
+    static void shutdown(const CallbackInfo& info);
 
     static void workerFinalizer(const CallbackInfo&);
 

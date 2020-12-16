@@ -4,7 +4,7 @@ namespace {
 
 class Worker : public AsyncWorker {
 public:
-    Worker(Function& callback)
+    Worker(const Function& callback)
         : AsyncWorker(callback)
     {
 
@@ -27,7 +27,7 @@ public:
 Worker* worker = nullptr;
 std::atomic<int> workerRefCount = 0;
 
-void ensureWorker(Env& env) {
+void ensureWorker(const Env& env) {
     workerRefCount++;
 
     if (worker) {

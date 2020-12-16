@@ -10,13 +10,13 @@ public:
 
     }
 
-    Track(File& file, float preGain = 1.0f)
+    Track(const File& file, float preGain = 1.0f)
         : file(file), preGain(preGain)
     {
 
     }
 
-    Track(juce::String& path, float preGain = 1.0f)
+    Track(const juce::String& path, float preGain = 1.0f)
         : Track(File(path), preGain)
     {
 

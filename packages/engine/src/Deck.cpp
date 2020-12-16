@@ -103,7 +103,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
     reader = newReader;
 
     auto mid = reader->lengthInSamples / 2;
-    firstAudibleSamplePosition = jmax(0i64, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
+    firstAudibleSamplePosition = jmax(0LL, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
     totalSamplesToPlay = reader->lengthInSamples;
     lastAudibleSamplePosition = totalSamplesToPlay;
     leadingSamplePosition = -1;
@@ -129,7 +129,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 
         if (leadingSamplePosition > -1) {
             auto lead2 = reader->searchForLevel(
-                jmax(0i64, leadingSamplePosition - (int)(reader->sampleRate * 2.0)),
+                jmax(0LL, leadingSamplePosition - (int)(reader->sampleRate * 2.0)),
                 (int)(reader->sampleRate * 2.0),
                 leadingLevel * 0.33, 1.0,
                 0
@@ -152,7 +152,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
     }
     else {
         calculateTransition();
-    }    
+    }
 
     this->track = track;
     isTrackLoading = false;
@@ -460,7 +460,7 @@ void Deck::fireFinishedCallback()
 
     listeners.call([this](Callback& cb) {
         cb.deckFinished(*this);
-    }); 
+    });
 
     unloadTrackInternal();
 }

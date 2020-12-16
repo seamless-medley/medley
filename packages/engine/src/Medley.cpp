@@ -23,7 +23,7 @@ Medley::Medley(IQueue& queue)
 
     auto error = deviceMgr.initialiseWithDefaultDevices(0, 2);
     if (error.isNotEmpty()) {
-        throw std::exception(error.toStdString().c_str());
+        throw std::runtime_error(error.toStdString());
     }
 
     mixer.updateAudioConfig();
@@ -356,7 +356,7 @@ void Medley::setAudioDeviceByIndex(int index) {
     config.outputDeviceName = getDeviceNames()[index];
     auto error = deviceMgr.setAudioDeviceSetup(config, true);
     if (error.isNotEmpty()) {
-        throw std::exception(error.toStdString().c_str());
+        throw std::runtime_error(error.toStdString());
     }
 }
 
