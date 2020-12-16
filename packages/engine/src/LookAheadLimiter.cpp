@@ -53,7 +53,7 @@ void LookAheadLimiter::process(const ProcessContextReplacing<float>& context)
     FloatVectorOperations::abs(sideChainBuffer.getWritePointer(0), input.getChannelPointer(0), numSamples);
 
     // copy all other channels to the second channel of the sideChainBuffer and write the maximum of both channels to the first one
-    for (int ch = 1; ch < totalNumInputChannels; ++ch)
+    for (unsigned long ch = 1; ch < totalNumInputChannels; ++ch)
     {
         FloatVectorOperations::abs(sideChainBuffer.getWritePointer(1), input.getChannelPointer(ch), numSamples);
         FloatVectorOperations::max(sideChainBuffer.getWritePointer(0), sideChainBuffer.getReadPointer(0), sideChainBuffer.getReadPointer(1), numSamples);
@@ -61,7 +61,7 @@ void LookAheadLimiter::process(const ProcessContextReplacing<float>& context)
 
     /** STEP 2: calculate gain reduction, which one depends on lookAhead */
     gainReductionCalculator.calculateDecibels(sideChainBuffer.getReadPointer(0), sideChainBuffer.getWritePointer(1), numSamples);
-    
+
     /** STEP 3: fade-in gain reduction if look-ahead is enabled */
 
     // delay audio signal
@@ -81,13 +81,13 @@ void LookAheadLimiter::process(const ProcessContextReplacing<float>& context)
 
 
     /** STEP 4: apply gain-reduction to all channels */
-    for (int ch = 0; ch < totalNumInputChannels; ++ch)
+    for (unsigned long ch = 0; ch < totalNumInputChannels; ++ch)
         FloatVectorOperations::multiply(output.getChannelPointer(ch), sideChainBuffer.getReadPointer(1), numSamples);
 }
 
 void LookAheadLimiter::reset()
 {
-    
+
 }
 
 void LookAheadLimiter::Delay::prepare(const ProcessSpec& spec)

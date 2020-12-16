@@ -16,12 +16,12 @@ namespace medley {
 
 Deck::Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
-    name(name),
-    loader(*this),
     formatMgr(formatMgr),
-    scanningScheduler(*this),
     loadingThread(loadingThread),
     readAheadThread(readAheadThread),
+    name(name),
+    loader(*this),
+    scanningScheduler(*this),
     playhead(*this)
 {
     loadingThread.addTimeSliceClient(&loader);
