@@ -85,6 +85,41 @@
                             }
                         }
                     }
+                ],
+                [
+                    'OS=="mac"',
+                    {
+                        'sources': [
+                            "../engine/juce/include_juce_audio_basics.mm",
+                            "../engine/juce/include_juce_audio_devices.mm",
+                            "../engine/juce/include_juce_audio_formats.mm",
+                            "../engine/juce/include_juce_audio_processors.mm",
+                            "../engine/juce/include_juce_audio_utils.mm",
+                            "../engine/juce/include_juce_core.mm",
+                            "../engine/juce/include_juce_data_structures.mm",
+                            "../engine/juce/include_juce_dsp.mm",
+                            "../engine/juce/include_juce_events.mm",
+                            "../engine/juce/include_juce_graphics.mm",
+                            "../engine/juce/include_juce_gui_basics.mm",
+                            "../engine/juce/include_juce_gui_extra.mm",
+                        ],
+                        "link_settings": {
+                            "libraries": [
+                                '-framework Accelerate',
+                                '-framework AppKit',
+                                '-framework CoreGraphics',
+                                '-framework CoreAudio',
+                                '-framework CoreMidi',
+                                '-framework WebKit'
+                            ]
+                        },
+                        'xcode_settings': {
+                            'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
+                            'GCC_ENABLE_CPP_RTTI': 'YES',
+                            'CLANG_CXX_LANGUAGE_STANDARD': 'c++17',
+                            'MACOSX_DEPLOYMENT_TARGET': '10.9'
+                        }
+                    }
                 ]
             ]
         }
