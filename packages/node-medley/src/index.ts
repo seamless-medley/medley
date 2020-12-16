@@ -178,4 +178,14 @@ export declare class Medley extends EventEmitter {
    * seek(0.5) - Seek to the middle of a track.
    */
   seekFractional(fraction: number): void;
+
+  getAvailableDevices(): AudioDeviceTypeInfo[];
+}
+
+export type AudioDeviceTypeInfo = {
+  type: string;
+  isCurrent: boolean;
+  devices: string[];
+  defaultDevice: string;
+  currentDevice?: string;
 }

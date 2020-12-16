@@ -75,6 +75,8 @@ public:
     Napi::Value getMaxLeadingDuration(const CallbackInfo& info);
 
     void setMaxLeadingDuration(const CallbackInfo& info, const Napi::Value& value);
+
+    Napi::Value getAvailableDevices(const CallbackInfo& info);
 private:
     void emitDeckEvent(const std::string& name,  medley::Deck& deck);
 

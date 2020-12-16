@@ -57,6 +57,8 @@ public:
 
     inline const AudioFormatManager& getAudioFormatManager() const { return formatMgr; }
 
+    inline const AudioIODevice* getCurrentAudioDevice() const { return deviceMgr.getCurrentAudioDevice(); }
+
     inline Deck& getDeck1() const { return *deck1; }
 
     inline Deck& getDeck2() const { return *deck2; }
