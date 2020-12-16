@@ -19,20 +19,20 @@ public:
         makeUpGain = makeUpGainInDecibels;
     }
 
-    const float getMakeUpGain() const { return makeUpGain; }
+    float getMakeUpGain() const { return makeUpGain; }
 
     void setThreshold(const float thresholdInDecibels) {
         threshold = thresholdInDecibels;
     }
 
-    const float getThreshold() const { return threshold; }
+    float getThreshold() const { return threshold; }
 
     void setKnee(const float kneeInDecibels) {
         knee = kneeInDecibels;
         kneeHalf = knee / 2.0f;
     }
 
-    const float getKnee() const { return knee; }
+    float getKnee() const { return knee; }
 
     void setAttackTime(const float attackTimeInSeconds) {
         attackTime = attackTimeInSeconds;
@@ -45,8 +45,8 @@ public:
     }
 
 private:
-    const float timeToGain(const float timeInSeconds);
-    const float apply(const float overShootInDecibels);
+    float timeToGain(const float timeInSeconds);
+    float apply(const float overShootInDecibels);
 
     std::atomic<float> maxInputLevel{ -std::numeric_limits<float>::infinity() };
     std::atomic<float> maxGainReduction{ 0 };

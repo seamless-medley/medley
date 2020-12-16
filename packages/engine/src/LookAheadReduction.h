@@ -9,8 +9,8 @@ class LookAheadReduction
 public:
     void setDelayTime(float delayTimeInSeconds);
 
-    const int getDelayInSamples() const { return delayInSamples; }
-    
+    int getDelayInSamples() const { return delayInSamples; }
+
     void prepare(const double newSampleRate, const int newBlockSize);
 
     void pushSamples(const float* src, const int numSamples);

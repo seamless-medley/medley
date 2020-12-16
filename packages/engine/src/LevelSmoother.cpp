@@ -5,10 +5,8 @@ namespace {
 }
 
 
-LevelSmoother::LevelSmoother(int sampleRate, int resultSize, int backlogSize)
+LevelSmoother::LevelSmoother(int sampleRate, int backlogSize)
     :
-    resultSize(resultSize),
-    backlogSize(backlogSize),
     backlog(backlogSize, 0.0)
 {
 

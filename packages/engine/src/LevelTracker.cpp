@@ -29,7 +29,7 @@ void LevelTracker::prepare(const int channels, const int sampleRate, const int l
     latency = RelativeTime((double)latencyInSamples / sampleRate);
 
     levels.clear();
-    levels.resize(channels, LevelSmoother(sampleRate, latencyInSamples / samplesPerBlock, backlogSize));
+    levels.resize(channels, LevelSmoother(sampleRate, backlogSize));
 }
 
 double LevelTracker::getLevel(int channel) {

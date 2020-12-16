@@ -2,7 +2,6 @@
 #include <inttypes.h>
 
 namespace {
-    static const auto kHeadRoomDecibel = 3.0f;
     static const auto kSilenceThreshold = Decibels::decibelsToGain(-60.0f);
     static const auto kEndingSilenceThreshold = Decibels::decibelsToGain(-45.0f);
     static const auto kFadingSilenceThreshold = Decibels::decibelsToGain(-23.0f);
@@ -19,11 +18,11 @@ Deck::Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& l
     :
     name(name),
     loader(*this),
-    scanningScheduler(*this),
-    playhead(*this),
     formatMgr(formatMgr),
+    scanningScheduler(*this),
     loadingThread(loadingThread),
-    readAheadThread(readAheadThread)
+    readAheadThread(readAheadThread),
+    playhead(*this)
 {
     loadingThread.addTimeSliceClient(&loader);
     loadingThread.addTimeSliceClient(&scanningScheduler);

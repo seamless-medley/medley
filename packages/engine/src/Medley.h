@@ -27,7 +27,7 @@ public:
 
     Medley(IQueue& queue);
 
-    ~Medley();
+    virtual ~Medley();
 
     inline const auto& getAvailableDeviceTypes() {
         return deviceMgr.getAvailableDeviceTypes();
@@ -147,7 +147,7 @@ private:
     class Mixer : public MixerAudioSource, public ChangeListener, public TimeSliceClient {
     public:
         Mixer(Medley& medley)
-            : medley(medley), MixerAudioSource()
+            : MixerAudioSource(), medley(medley)
         {
 
         }
@@ -162,7 +162,7 @@ private:
             paused = p;
         }
 
-        void changeListenerCallback(ChangeBroadcaster* source);
+        void changeListenerCallback(ChangeBroadcaster* source) override;
 
         void updateAudioConfig();
 
@@ -178,7 +178,7 @@ private:
             return levelTracker.isClipping(channel);
         }
 
-        int useTimeSlice();
+        int useTimeSlice() override;
 
     private:
         Medley& medley;
@@ -196,17 +196,19 @@ private:
 
     AudioDeviceManager deviceMgr;
     AudioFormatManager formatMgr;
+
     Deck* deck1 = nullptr;
     Deck* deck2 = nullptr;
     Mixer mixer;
     AudioSourcePlayer mainOut;
+
+    IQueue& queue;
 
     TimeSliceThread loadingThread;
     TimeSliceThread readAheadThread;
     TimeSliceThread visualizingThread;
 
     bool keepPlaying = false;
-    IQueue& queue;
 
     enum class TransitionState {
         Idle,

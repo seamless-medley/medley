@@ -168,8 +168,6 @@ Napi::Value Queue::get(const CallbackInfo& info) {
 }
 
 void Queue::set(const CallbackInfo& info) {
-    auto env = info.Env();
-
     if (info.Length() >= 2) {
         int32_t index = info[0].ToNumber();
         if (index >= 0 && index < size()) {

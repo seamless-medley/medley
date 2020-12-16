@@ -275,7 +275,6 @@ void Medley::deckPosition(Deck& sender, double position) {
     auto transitionCuePoint = sender.getTransitionCuePosition();
     auto transitionStartPos = sender.getTransitionStartPosition();
     auto transitionEndPos = sender.getTransitionEndPosition();
-    auto trailingDuration = sender.getTrailingDuration();
 
     auto leadingDuration = nextDeck->getLeadingDuration();
 
@@ -331,7 +330,6 @@ void Medley::deckPosition(Deck& sender, double position) {
             auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
             if (transitionDuration > 0.0) {
-                auto fadingProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
                 Logger::writeToLog(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
                 sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
             }
