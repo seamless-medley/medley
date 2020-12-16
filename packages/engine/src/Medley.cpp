@@ -61,6 +61,16 @@ Medley::Medley(IQueue& queue)
 
     mainOut.setSource(&mixer);
     deviceMgr.addAudioCallback(&mainOut);
+
+    if (auto device = deviceMgr.getCurrentAudioDevice()) {
+        if (!device->isOpen()) {
+            throw std::runtime_error("Audio device is not open");
+        }
+
+        if (!device->isPlaying()) {
+            throw std::runtime_error("Audio device is not playing");
+        }
+    }
 }
 
 Medley::~Medley() {
