@@ -63,6 +63,7 @@ void Medley::Initialize(Object& exports) {
     auto proto = {
         StaticMethod<&Medley::shutdown>("shutdown"),
         //
+        InstanceMethod<&Medley::getAvailableDevices>("getAvailableDevices"),
         InstanceMethod<&Medley::play>("play"),
         InstanceMethod<&Medley::stop>("stop"),
         InstanceMethod<&Medley::togglePause>("togglePause"),
@@ -91,6 +92,43 @@ void Medley::shutdown(const CallbackInfo& info) {
 
 void Medley::workerFinalizer(const CallbackInfo&) {
 
+}
+
+Napi::Value Medley::getAvailableDevices(const CallbackInfo& info) {
+    auto env = info.Env();
+    auto result = Napi::Array::New(env);
+
+    auto currentType = engine->getCurrentAudioDeviceType();
+    auto currentDevice = engine->getCurrentAudioDevice();
+
+    auto& deviceTypes = engine->getAvailableDeviceTypes();
+
+    for (auto typeIndex = 0; typeIndex < deviceTypes.size(); typeIndex++) {
+        auto type = deviceTypes[typeIndex];
+        auto desc = Object::New(env);
+
+        {
+            auto names = type->getDeviceNames(false);
+            auto devices = Napi::Array::New(env);
+
+            for (auto i = 0; i < names.size(); i++) {
+                devices.Set(i, names[i].toStdString());
+            }
+
+            desc.Set("type", type->getTypeName().toStdString());
+            desc.Set("isCurrent", currentType == type);
+            desc.Set("devices", devices);
+            desc.Set("defaultDevice", devices.Get(type->getDefaultDeviceIndex(false)));
+
+            if (currentDevice && currentDevice->getTypeName() == type->getTypeName()) {
+                desc.Set("currentDevice", currentDevice->getName().toStdString());
+            }
+        }
+
+        result.Set(typeIndex, desc);
+    }
+
+    return result;
 }
 
 Medley::Medley(const CallbackInfo& info)
