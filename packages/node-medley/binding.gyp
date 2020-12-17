@@ -72,7 +72,7 @@
                                     'VCCLCompilerTool': {
                                         'RuntimeTypeInfo': 'true',
                                         'ExceptionHandling': 'true',
-                                        'AdditionalOptions': ['/GR', '/EHsc', '/MTd', '/source-charset:utf-8'],
+                                        'AdditionalOptions': ['/GR', '/EHsc', '/MTd', '/source-charset:utf-8', '-std:c++17'],
                                     }
                                 }
                             },
@@ -81,7 +81,7 @@
                                     'VCCLCompilerTool': {
                                         'RuntimeTypeInfo': 'true',
                                         'ExceptionHandling': 'true',
-                                        'AdditionalOptions': ['/GR', '/EHsc', '/MT', '/source-charset:utf-8'],
+                                        'AdditionalOptions': ['/GR', '/EHsc', '/MT', '/source-charset:utf-8', '-std:c++17'],
                                     }
                                 }
                             }
