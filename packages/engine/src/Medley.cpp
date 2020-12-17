@@ -417,6 +417,11 @@ bool Medley::Mixer::togglePause() {
 }
 
 void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
+    if (!outputStarted) {
+        outputStarted = true;
+        Logger::writeToLog("Output started");
+    }
+
     if (!stalled) {
         MixerAudioSource::getNextAudioBlock(info);
 

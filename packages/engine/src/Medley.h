@@ -187,6 +187,7 @@ private:
         int numChannels = 2;
         bool paused = false;
         bool stalled = false;
+        bool outputStarted = false;
 
         PostProcessor processor;
         LevelTracker levelTracker;
