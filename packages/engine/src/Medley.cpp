@@ -61,6 +61,7 @@ Medley::Medley(IQueue& queue)
 
     mainOut.setSource(&mixer);
     deviceMgr.addAudioCallback(&mainOut);
+    deviceMgr.addChangeListener(this);
 
     if (auto device = deviceMgr.getCurrentAudioDevice()) {
         if (!device->isOpen()) {
@@ -143,6 +144,17 @@ void Medley::fadeOutMainDeck()
             deck->fadeOut();
             mixer.setPause(false);
         }
+    }
+}
+
+void Medley::changeListenerCallback(ChangeBroadcaster* source)
+{
+    if (auto deviceMgr = dynamic_cast<AudioDeviceManager*>(source)) {
+        ScopedLock sl(callbackLock);
+
+        listeners.call([](Callback& cb) {
+            cb.audioChanged();
+        });
     }
 }
 

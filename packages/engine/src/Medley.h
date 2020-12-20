@@ -18,11 +18,12 @@ public:
     virtual ITrack::Ptr fetchNextTrack() = 0;
 };
 
-class Medley : public Deck::Callback {
+class Medley : public Deck::Callback, juce::ChangeListener {
 public:
 
     class Callback : public Deck::Callback {
-
+    public:
+        virtual void audioChanged() = 0;
     };
 
     Medley(IQueue& queue);
@@ -122,6 +123,8 @@ public:
     inline bool isClipping(int channel) {
         return mixer.isClipping(channel);
     }
+
+    void changeListenerCallback(ChangeBroadcaster* source) override;
 
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);

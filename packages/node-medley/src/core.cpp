@@ -213,6 +213,12 @@ void Medley::deckUnloaded(medley::Deck& sender) {
     emitDeckEvent("unloaded", sender);
 }
 
+void Medley::audioChanged() {
+    threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
+        fn.Call(self.Value(), { Napi::String::New(env, "audioChanged") });
+    });
+}
+
 void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck) {
     auto index = &deck == &engine->getDeck1() ? 0 : 1;
 

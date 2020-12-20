@@ -89,6 +89,7 @@ export interface AudioLevels {
   right: AudioLevel;
 }
 
+type NormalEvent = 'audioChanged';
 type DeckEvent = 'loaded' | 'unloaded' | 'started' | 'finished';
 
 export declare class Medley extends EventEmitter {
@@ -97,6 +98,12 @@ export declare class Medley extends EventEmitter {
   on(event: DeckEvent, listener: (deckIndex: number) => void): this;
   once(event: DeckEvent, listener: (deckIndex: number) => void): this;
   off(event: DeckEvent, listener: (deckIndex: number) => void): this;
+
+  on(event: NormalEvent, listener: () => void): this;
+  once(event: NormalEvent, listener: () => void): this;
+  off(event: NormalEvent, listener: () => void): this;
+
+
 
   /**
    * @returns `AudioLevels`

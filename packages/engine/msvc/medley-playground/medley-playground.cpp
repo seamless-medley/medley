@@ -583,6 +583,11 @@ private:
 
         }
 
+        void audioChanged() override {
+            updateDeviceType();
+            updateDevice();
+        }
+
         void updatePauseButton() {
             btnPause.setButtonText(medley.isPaused() ? "Paused" : "Pause");
         }
