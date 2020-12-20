@@ -64,6 +64,7 @@ void Medley::Initialize(Object& exports) {
         StaticMethod<&Medley::shutdown>("shutdown"),
         //
         InstanceMethod<&Medley::getAvailableDevices>("getAvailableDevices"),
+        InstanceMethod<&Medley::setAudioDevice>("setAudioDevice"),
         InstanceMethod<&Medley::play>("play"),
         InstanceMethod<&Medley::stop>("stop"),
         InstanceMethod<&Medley::togglePause>("togglePause"),
@@ -129,6 +130,30 @@ Napi::Value Medley::getAvailableDevices(const CallbackInfo& info) {
     }
 
     return result;
+}
+
+Napi::Value Medley::setAudioDevice(const CallbackInfo& info) {
+    auto env = info.Env();
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return Boolean::From(env, false);
+    }
+
+    auto desc = info[0].ToObject();
+    if (desc.Has("type")) {
+        engine->setCurrentAudioDeviceType(juce::String(desc.Get("type").ToString().Utf8Value()));
+    }
+
+    if (desc.Has("device")) {
+        auto name = juce::String(desc.Get("device").ToString().Utf8Value());
+        auto index = engine->getDeviceNames().indexOf(name);
+
+        if (index == -1) {
+            return Boolean::From(env, false);
+        }
+    }
+
+    return Boolean::From(env, engine->getCurrentAudioDevice() != nullptr);
 }
 
 Medley::Medley(const CallbackInfo& info)

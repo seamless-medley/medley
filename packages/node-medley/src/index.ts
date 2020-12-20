@@ -187,6 +187,8 @@ export declare class Medley extends EventEmitter {
   seekFractional(fraction: number): void;
 
   getAvailableDevices(): AudioDeviceTypeInfo[];
+
+  setAudioDevice(descriptor: { type?: string, device: string }): boolean;
 }
 
 export type AudioDeviceTypeInfo = {

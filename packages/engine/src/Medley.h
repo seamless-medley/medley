@@ -38,6 +38,10 @@ public:
         deviceMgr.setCurrentAudioDeviceType(type.getTypeName(), true);
     }
 
+    inline void setCurrentAudioDeviceType(juce::String& type) {
+        deviceMgr.setCurrentAudioDeviceType(type, true);
+    }
+
     inline auto getCurrentAudioDeviceType() const {
         return deviceMgr.getCurrentDeviceTypeObject();
     }
