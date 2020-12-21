@@ -89,7 +89,7 @@ export interface AudioLevels {
   right: AudioLevel;
 }
 
-type NormalEvent = 'audioDeviceChanged';
+type NormalEvent = 'audioDeviceChanged' | 'preCueNext';
 type DeckEvent = 'loaded' | 'unloaded' | 'started' | 'finished';
 
 export declare class Medley extends EventEmitter {
