@@ -239,7 +239,7 @@ void Medley::deckLoaded(Deck& sender)
 
 void Medley::deckUnloaded(Deck& sender) {
     if (&sender == transitingDeck) {
-        if (transitionState == TransitionState::Cue) {
+        if (transitionState == TransitionState::Cued) {
             Logger::writeToLog(String::formatted("[%s] stopped before transition would happen, try starting next deck", sender.getName().toWideCharPointer()));
             auto nextDeck = getAnotherDeck(transitingDeck);
             if (nextDeck->isTrackLoaded()) {
@@ -294,59 +294,72 @@ void Medley::deckPosition(Deck& sender, double position) {
         return;
     }
 
-    auto transitionCuePoint = sender.getTransitionCuePosition();
-    auto transitionStartPos = sender.getTransitionStartPosition();
-    auto transitionEndPos = sender.getTransitionEndPosition();
+    if (sender.isMain()) {
+        auto transitionPreCuePoint = sender.getTransitionPreCuePosition();
+        auto transitionCuePoint = sender.getTransitionCuePosition();
+        auto transitionStartPos = sender.getTransitionStartPosition();
+        auto transitionEndPos = sender.getTransitionEndPosition();
 
-    auto leadingDuration = nextDeck->getLeadingDuration();
+        auto leadingDuration = nextDeck->getLeadingDuration();
 
-    if (transitionState == TransitionState::Idle) {
-        if (position > transitionCuePoint) {
-            if (!loadNextTrack(&sender, false)) {
-                // No more track, do not transit
-                if (forceFadingOut <= 0) {
-                    return;
+        if (transitionState < TransitionState::Cued) {
+            if (transitionState == TransitionState::Idle && position > transitionPreCuePoint) {
+                transitionState = TransitionState::Cueing;
+
+                {
+                    ScopedLock sl(callbackLock);
+
+                    listeners.call([](Callback& cb) {
+                        cb.preCueNext();
+                    });
                 }
             }
 
-            Logger::writeToLog(String::formatted("[%s] cue", nextDeck->getName().toWideCharPointer()));
-            transitionState = TransitionState::Cue;
-            transitingDeck = &sender;
-        }
-
-        if (!sender.isMain() && nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
-            nextDeck->fireFinishedCallback();
-        }
-    }
-
-    if (position > transitionStartPos - leadingDuration) {
-        if (transitionState == TransitionState::Cue) {
-            if (nextDeck->isTrackLoaded()) {
-                Logger::writeToLog(String::formatted("Transiting to [%s]", nextDeck->getName().toWideCharPointer()));
-                transitionState = TransitionState::Transit;
-                nextDeck->setVolume(1.0f);
-
-                if (forceFadingOut > 0) {
-                    if (leadingDuration >= maxLeadingDuration) {
-                        nextDeck->setPosition(nextDeck->getFirstAudiblePosition() + leadingDuration - maxLeadingDuration);
+            if (position > transitionCuePoint) {
+                if (!loadNextTrack(&sender, false)) {
+                    // No more track, do not transit
+                    if (forceFadingOut <= 0) {
+                        return;
                     }
                 }
 
-                nextDeck->start();
+                Logger::writeToLog(String::formatted("[%s] cue", nextDeck->getName().toWideCharPointer()));
+                transitionState = TransitionState::Cued;
+                transitingDeck = &sender;
+            }
+
+            if (!sender.isMain() && nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
+                nextDeck->fireFinishedCallback();
             }
         }
 
-        if (transitionState == TransitionState::Transit) {
-            if (leadingDuration >= maxLeadingDuration) {
-                auto fadeInProgress = jlimit(0.25, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
+        if (position > transitionStartPos - leadingDuration) {
+            if (transitionState == TransitionState::Cued) {
+                if (nextDeck->isTrackLoaded()) {
+                    Logger::writeToLog(String::formatted("Transiting to [%s]", nextDeck->getName().toWideCharPointer()));
+                    transitionState = TransitionState::Transit;
+                    nextDeck->setVolume(1.0f);
 
-                Logger::writeToLog(String::formatted("[%s] Fading in: %.2f", nextDeck->getName().toWideCharPointer(), fadeInProgress));
-                nextDeck->setVolume((float)pow(fadeInProgress, fadingFactor));
+                    if (forceFadingOut > 0) {
+                        if (leadingDuration >= maxLeadingDuration) {
+                            nextDeck->setPosition(nextDeck->getFirstAudiblePosition() + leadingDuration - maxLeadingDuration);
+                        }
+                    }
+
+                    nextDeck->start();
+                }
+            }
+
+            if (transitionState == TransitionState::Transit) {
+                if (leadingDuration >= maxLeadingDuration) {
+                    auto fadeInProgress = jlimit(0.25, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
+
+                    Logger::writeToLog(String::formatted("[%s] Fading in: %.2f", nextDeck->getName().toWideCharPointer(), fadeInProgress));
+                    nextDeck->setVolume((float)pow(fadeInProgress, fadingFactor));
+                }
             }
         }
-    }
-
-    if (sender.isMain()) {
+    
         if (position >= transitionStartPos) {
             auto transitionDuration = (transitionEndPos - transitionStartPos);
             auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);

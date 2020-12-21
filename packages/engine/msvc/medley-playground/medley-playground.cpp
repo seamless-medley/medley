@@ -588,6 +588,10 @@ private:
             updateDevice();
         }
 
+        void preCueNext() override {
+            std::cout << "Pre cue next" << std::endl;
+        }
+
         void updatePauseButton() {
             btnPause.setButtonText(medley.isPaused() ? "Paused" : "Pause");
         }

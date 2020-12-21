@@ -298,17 +298,15 @@ void Deck::calculateTransition()
     }
 
     transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(kLeadingScanningDuration, maxTransitionTime));
+    if (transitionCuePosition == 0.0) {
+        transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(kLeadingScanningDuration, maxTransitionTime) / 2.0);
+    }
 
-    Logger::writeToLog(String::formatted(
-        "[%s] Transition: cue=%.3fs, start=%.3fs, end=%.3fs, duration=%.2fs, trailing=%.2fs, total=%.2fs",
-        name.toWideCharPointer(),
-        transitionCuePosition,
-        transitionStartPosition,
-        transitionEndPosition,
-        transitionEndPosition - transitionStartPosition,
-        trailingDuration,
-        totalSamplesToPlay / sourceSampleRate
-    ));
+    transitionPreCuePosition = transitionCuePosition * 0.99;
+
+    if (transitionCuePosition - transitionPreCuePosition < 2.0) {
+        transitionPreCuePosition = 0.0;
+    }
 }
 
 void Deck::firePositionChangeCalback(double position)

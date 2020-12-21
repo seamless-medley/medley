@@ -24,6 +24,8 @@ public:
     class Callback : public Deck::Callback {
     public:
         virtual void audioChanged() = 0;
+
+        virtual void preCueNext() = 0;
     };
 
     Medley(IQueue& queue);
@@ -222,7 +224,8 @@ private:
 
     enum class TransitionState {
         Idle,
-        Cue,
+        Cueing,
+        Cued,
         Transit
     };
 
