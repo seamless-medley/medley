@@ -238,9 +238,9 @@ void Medley::deckUnloaded(medley::Deck& sender) {
     emitDeckEvent("unloaded", sender);
 }
 
-void Medley::audioChanged() {
+void Medley::audioDeviceChanged() {
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
-        fn.Call(self.Value(), { Napi::String::New(env, "audioChanged") });
+        fn.Call(self.Value(), { Napi::String::New(env, "audioDeviceChanged") });
     });
 }
 

@@ -23,7 +23,7 @@ public:
 
     class Callback : public Deck::Callback {
     public:
-        virtual void audioChanged() = 0;
+        virtual void audioDeviceChanged() = 0;
 
         virtual void preCueNext() = 0;
     };

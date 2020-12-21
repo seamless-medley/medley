@@ -153,7 +153,7 @@ void Medley::changeListenerCallback(ChangeBroadcaster* source)
         ScopedLock sl(callbackLock);
 
         listeners.call([](Callback& cb) {
-            cb.audioChanged();
+            cb.audioDeviceChanged();
         });
     }
 }

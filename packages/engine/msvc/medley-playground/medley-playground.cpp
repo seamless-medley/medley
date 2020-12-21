@@ -583,7 +583,7 @@ private:
 
         }
 
-        void audioChanged() override {
+        void audioDeviceChanged() override {
             updateDeviceType();
             updateDevice();
         }

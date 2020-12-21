@@ -36,7 +36,7 @@ public:
 
     void deckUnloaded(medley::Deck& sender) override;
 
-    void audioChanged() override;
+    void audioDeviceChanged() override;
 
     void play(const CallbackInfo& info);
 
