@@ -302,10 +302,10 @@ void Deck::calculateTransition()
         transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(kLeadingScanningDuration, maxTransitionTime) / 2.0);
     }
 
-    transitionPreCuePosition = transitionCuePosition * 0.99;
+    transitionPreCuePosition = jmax(0.0, transitionCuePosition - 1.0);
 
-    if (transitionCuePosition - transitionPreCuePosition < 2.0) {
-        transitionPreCuePosition = 0.0;
+    if (transitionPreCuePosition == transitionCuePosition) {
+        transitionCuePosition = jmin(transitionPreCuePosition + 1, transitionEndPosition);
     }
 }
 
