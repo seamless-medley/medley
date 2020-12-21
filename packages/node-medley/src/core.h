@@ -38,6 +38,8 @@ public:
 
     void audioDeviceChanged() override;
 
+    void preCueNext() override;
+
     void play(const CallbackInfo& info);
 
     void stop(const CallbackInfo& info);

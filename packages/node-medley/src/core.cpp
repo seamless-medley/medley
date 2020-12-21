@@ -244,6 +244,13 @@ void Medley::audioDeviceChanged() {
     });
 }
 
+void Medley::preCueNext() {
+    threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
+        fn.Call(self.Value(), { Napi::String::New(env, "preCueNext") });
+    });
+
+}
+
 void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck) {
     auto index = &deck == &engine->getDeck1() ? 0 : 1;
 
