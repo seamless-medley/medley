@@ -87,8 +87,8 @@ private:
     void emitDeckEvent(const std::string& name,  medley::Deck& deck);
 
     ObjectReference queueJS;
-    Queue* queue;
-    Engine* engine;
+    Queue* queue = nullptr;
+    Engine* engine = nullptr;
 
     Reference<Napi::Value> self;
     ThreadSafeFunction threadSafeEmitter;
