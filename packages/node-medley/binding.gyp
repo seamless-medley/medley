@@ -32,6 +32,7 @@
                 'JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1',
                 'JUCE_STRICT_REFCOUNTEDPOINTER=1',
                 'JUCE_STANDALONE_APPLICATION=1',
+                'JUCE_CATCH_UNHANDLED_EXCEPTIONS=1',
                 'JUCE_MODULE_AVAILABLE_juce_audio_basics=1',
                 'JUCE_MODULE_AVAILABLE_juce_audio_devices=1',
                 'JUCE_MODULE_AVAILABLE_juce_audio_formats=1',
