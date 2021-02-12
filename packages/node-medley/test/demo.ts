@@ -1,4 +1,4 @@
-import { Medley, Queue } from '../src';
+import { Queue, Medley } from '../';
 
 const q = new Queue();
 let m = new Medley(q);
