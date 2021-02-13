@@ -183,7 +183,7 @@ Medley::Medley(const CallbackInfo& info)
     queueJS = Persistent(obj);
 
     try {
-        ensureWorker(info.Env());
+        // ensureWorker(info.Env());
 
         queue = Queue::Unwrap(obj);
         engine = new Engine(*queue);
