@@ -10,25 +10,7 @@
   },
   "license": "AGPL-3.0",
   "devDependencies": {
-    "@babel/core": "^7.12.13",
-    "@babel/plugin-proposal-decorators": "^7.12.13",
-    "@babel/plugin-proposal-nullish-coalescing-operator": "^7.12.13",
     "@types/node": "^14.14.25",
-    "babel-loader": "^8.2.2",
-    "babel-preset-react-app": "^10.0.0",
-    "copyfiles": "^2.4.1",
-    "cross-env": "^7.0.3",
-    "electron": "^11.2.3",
-    "electron-builder": "^22.9.1",
-    "eslint": "^7.19.0",
-    "eslint-loader": "^4.0.2",
-    "lerna": "^3.22.1",
-    "nodemon": "^2.0.7",
-    "npm-run-all": "^4.1.5",
-    "rimraf": "^3.0.2",
-    "ts-node": "^9.1.1",
-    "typescript": "^4.1.5",
-    "webpack": "^5.21.2",
-    "webpack-cli": "^4.5.0"
+    "lerna": "^3.22.1"
   }
 }
