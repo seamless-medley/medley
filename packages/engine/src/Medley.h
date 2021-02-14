@@ -177,15 +177,18 @@ private:
 
         void updateAudioConfig();
 
-        inline double getLevel(int channel) {
+        double getLevel(int channel) {
+            ScopedLock sl(levelTrackerLock);
             return levelTracker.getLevel(channel);
         }
 
-        inline double getPeak(int channel) {
+        double getPeak(int channel) {
+            ScopedLock sl(levelTrackerLock);
             return levelTracker.getPeak(channel);
         }
 
-        inline bool isClipping(int channel) {
+        bool isClipping(int channel) {
+            ScopedLock sl(levelTrackerLock);
             return levelTracker.isClipping(channel);
         }
 
@@ -202,6 +205,7 @@ private:
 
         PostProcessor processor;
         LevelTracker levelTracker;
+        CriticalSection levelTrackerLock;
     };
 
     friend class Mixer;

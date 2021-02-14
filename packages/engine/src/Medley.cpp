@@ -483,8 +483,10 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
     if (prepared) {
         AudioBlock<float> block(*info.buffer, (size_t)info.startSample);
         processor.process(ProcessContextReplacing<float>(block));
-
-        levelTracker.process(*info.buffer);
+        {
+            ScopedLock sl(levelTrackerLock);
+            levelTracker.process(*info.buffer);
+        }
     }
 }
 
@@ -494,6 +496,7 @@ void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
 
 int Medley::Mixer::useTimeSlice()
 {
+    ScopedLock sl(levelTrackerLock);
     levelTracker.update();
     return 5;
 }
