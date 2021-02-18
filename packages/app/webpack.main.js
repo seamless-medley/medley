@@ -20,6 +20,9 @@ const factory = (env, args) => {
           use: 'babel-loader'
         }
       ]
+    },
+    externals: {
+      'fsevents': "commonjs2 fsevents"
     }
   }
 }
