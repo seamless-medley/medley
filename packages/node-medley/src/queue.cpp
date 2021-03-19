@@ -1,23 +1,5 @@
 #include "queue.h"
 
-namespace {
-static Track createTrackFromJS(const Napi::Value p) {
-    juce::String path;
-    float preGain = 1.0f;
-
-    if (p.IsObject()) {
-        auto obj = p.ToObject();
-
-        path = obj.Get("path").ToString().Utf8Value();
-        preGain = obj.Get("preGain").ToNumber();
-    } else {
-        path = p.ToString().Utf8Value();
-    }
-
-    return Track(juce::String(path), preGain);
-}
-}
-
 FunctionReference Queue::ctor;
 
 Queue::Queue(const CallbackInfo& info)
@@ -28,10 +10,10 @@ Queue::Queue(const CallbackInfo& info)
     if (p.IsArray()) {
         auto arr = p.As<Napi::Array>();
         for (uint32_t index = 0; index < arr.Length(); index++) {
-            Arr::add(createTrackFromJS(arr.Get(index)));
+            Arr::add(Track::fromJS(arr.Get(index)));
         }
     } else if (!p.IsUndefined() && !p.IsNull()) {
-        Arr::add(createTrackFromJS(p));
+        Arr::add(Track::fromJS(p));
     }
 }
 
@@ -80,12 +62,12 @@ void Queue::add(const CallbackInfo& info) {
         auto tracks = std::make_unique<Track[]>(arr.Length());
 
         for (uint32_t index = 0; index < arr.Length(); index++) {
-            tracks[index] = createTrackFromJS(arr.Get(index));
+            tracks[index] = Track::fromJS(arr.Get(index));
         }
 
         Arr::addArray(tracks.get(), arr.Length());
     } else if (!p.IsUndefined() && !p.IsNull()) {
-        Arr::add(createTrackFromJS(p));
+        Arr::add(Track::fromJS(p));
     }
 }
 
@@ -114,12 +96,12 @@ void Queue::insert(const CallbackInfo& info) {
         auto tracks = std::make_unique<Track[]>(arr.Length());
 
         for (uint32_t index = 0; index < arr.Length(); index++) {
-            tracks[index] = createTrackFromJS(arr.Get(index));
+            tracks[index] = Track::fromJS(arr.Get(index));
         }
 
         Arr::insertArray(at, tracks.get(), arr.Length());
     } else if (!p.IsUndefined() && !p.IsNull()) {
-        Arr::insert(at, createTrackFromJS(p));
+        Arr::insert(at, Track::fromJS(p));
     }
 }
 
@@ -178,7 +160,7 @@ void Queue::set(const CallbackInfo& info) {
 
                 Arr::setUnchecked(index, Track(File(p.ToString().Utf8Value()), preGain));
             } else {
-                Arr::setUnchecked(index, createTrackFromJS(p));
+                Arr::setUnchecked(index, Track::fromJS(p));
             }
         }
     }

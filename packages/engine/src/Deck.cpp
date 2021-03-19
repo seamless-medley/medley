@@ -215,7 +215,7 @@ void Deck::unloadTrackInternal()
     updateGain();
 }
 
-void Deck::scanTrackInternal(ITrack::Ptr trackToScan)
+void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
 {
     auto file = trackToScan->getFile();
     if (!file.existsAsFile()) {

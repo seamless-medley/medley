@@ -168,7 +168,7 @@ private:
 
     void unloadTrackInternal();
 
-    void scanTrackInternal(ITrack::Ptr trackToScan);
+    void scanTrackInternal(const ITrack::Ptr trackToScan);
 
     void calculateTransition();
 

@@ -61,6 +61,22 @@ public:
         return obj;
     }
 
+    static Track fromJS(const Napi::Value p) {
+        juce::String path;
+        float preGain = 1.0f;
+
+        if (p.IsObject()) {
+            auto obj = p.ToObject();
+
+            path = obj.Get("path").ToString().Utf8Value();
+            preGain = obj.Get("preGain").ToNumber();
+        } else {
+            path = p.ToString().Utf8Value();
+        }
+
+        return Track(juce::String(path), preGain);
+    }
+
 private:
     File file;
     float preGain = 1.0f;
