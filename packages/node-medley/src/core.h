@@ -38,7 +38,7 @@ public:
 
     void audioDeviceChanged() override;
 
-    void preCueNext() override;
+    void preCueNext(Engine::Callback::PreCueNextDone done) override;
 
     void play(const CallbackInfo& info);
 

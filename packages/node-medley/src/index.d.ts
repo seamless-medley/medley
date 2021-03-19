@@ -82,19 +82,26 @@ export interface AudioLevels {
   right: AudioLevel;
 }
 
-type NormalEvent = 'audioDeviceChanged' | 'preCueNext';
+type NormalEvent = 'audioDeviceChanged';
 type DeckEvent = 'loaded' | 'unloaded' | 'started' | 'finished';
+
+type Listener = () => void;
+type DeckListener = (deckIndex: number) => void;
 
 export declare class Medley extends EventEmitter {
   constructor(queue: Queue);
 
-  on(event: DeckEvent, listener: (deckIndex: number) => void): this;
-  once(event: DeckEvent, listener: (deckIndex: number) => void): this;
-  off(event: DeckEvent, listener: (deckIndex: number) => void): this;
+  on(event: DeckEvent, listener: DeckListener): this;
+  once(event: DeckEvent, listener: DeckListener): this;
+  off(event: DeckEvent, listener: DeckListener): this;
 
-  on(event: NormalEvent, listener: () => void): this;
-  once(event: NormalEvent, listener: () => void): this;
-  off(event: NormalEvent, listener: () => void): this;
+  on(event: 'preCueNext', listener: () => boolean): this;
+  once(event: 'preCueNext', listener: () => boolean): this;
+  off(event: 'preCueNext', listener: () => boolean): this;
+
+  on(event: NormalEvent, listener: Listener): this;
+  once(event: NormalEvent, listener: Listener): this;
+  off(event: NormalEvent, listener: Listener): this;
 
 
 

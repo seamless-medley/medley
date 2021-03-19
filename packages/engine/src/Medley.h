@@ -20,12 +20,13 @@ public:
 
 class Medley : public Deck::Callback, juce::ChangeListener {
 public:
-
     class Callback : public Deck::Callback {
     public:
+        typedef std::function<void(bool)> PreCueNextDone;
+
         virtual void audioDeviceChanged() = 0;
 
-        virtual void preCueNext() = 0;
+        virtual void preCueNext(PreCueNextDone done = [](bool) { }) = 0;
     };
 
     Medley(IQueue& queue);

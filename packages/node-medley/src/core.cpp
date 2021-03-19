@@ -71,6 +71,7 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::fadeOut>("fadeOut"),
         InstanceMethod<&Medley::seek>("seek"),
         InstanceMethod<&Medley::seekFractional>("seekFractional"),
+        InstanceMethod<&Medley::isTrackLoadable>("isTrackLoadable"),
         //
         InstanceAccessor<&Medley::level>("level"),
         InstanceAccessor<&Medley::playing>("playing"),
@@ -244,9 +245,10 @@ void Medley::audioDeviceChanged() {
     });
 }
 
-void Medley::preCueNext() {
+void Medley::preCueNext(PreCueNextDone done) {
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
-        fn.Call(self.Value(), { Napi::String::New(env, "preCueNext") });
+        Napi::Value ret = fn.Call(self.Value(), { Napi::String::New(env, "preCueNext") });
+        done(ret.ToBoolean());
     });
 
 }

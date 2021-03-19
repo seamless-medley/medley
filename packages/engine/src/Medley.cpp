@@ -178,6 +178,21 @@ bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
         }
     }
 
+    // Track loading has failed
+    Logger::writeToLog("Track loading has failed");
+
+    {
+        ScopedLock sl(callbackLock);
+        listeners.call([&](Callback& cb) {
+            cb.preCueNext([&, p = play, d = currentDeck](bool done) {
+                if (done) {
+                    loadNextTrack(d, p);
+                }
+            });
+        });
+    }
+
+
     return false;
 }
 
@@ -359,7 +374,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                 }
             }
         }
-    
+
         if (position >= transitionStartPos) {
             auto transitionDuration = (transitionEndPos - transitionStartPos);
             auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
