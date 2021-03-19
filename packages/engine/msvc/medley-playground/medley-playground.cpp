@@ -307,11 +307,11 @@ private:
             g.setColour(getPeakColour(peakRight));
             g.drawVerticalLine(peakRightX - 1, mh, h);
 
-            g.setFont(mh / 1.8);
+            g.setFont(mh / 1.8f);
             g.setColour(getPeakColour(peakLeft).darker(0.8f));
-            g.drawText(String::formatted("%.2f", peakLeft), peakLeftX + 4, 0, 100, mh, false);
+            g.drawText(String::formatted("%.2f", peakLeft), peakLeftX + 4, 0, 100, (int)mh, false);
             g.setColour(getPeakColour(peakRight).darker(0.8f));
-            g.drawText(String::formatted("%.2f", peakRight), peakRightX + 4, mh, 100, mh, false);
+            g.drawText(String::formatted("%.2f", peakRight), peakRightX + 4, (int)mh, 100, (int)mh, false);
         }
 
     private:
@@ -588,7 +588,7 @@ private:
             updateDevice();
         }
 
-        void preCueNext() override {
+        void preCueNext(PreCueNextDone done) override {
             std::cout << "Pre cue next" << std::endl;
         }
 

@@ -90,6 +90,9 @@
     <ClCompile Include="..\..\src\LookAheadReduction.cpp">
       <Filter>Engine Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\utils.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h">
@@ -126,6 +129,9 @@
       <Filter>Engine Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\LookAheadReduction.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\utils.h">
       <Filter>Engine Source</Filter>
     </ClInclude>
   </ItemGroup>
