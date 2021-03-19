@@ -13,6 +13,7 @@
                 "src/queue.cpp",
                 "src/core.cpp",
                 "src/module.cpp",
+                "../engine/src/utils.cpp",
                 "../engine/src/MiniMP3AudioFormat.cpp",
                 "../engine/src/MiniMP3AudioFormatReader.cpp",
                 "../engine/src/LevelSmoother.cpp",

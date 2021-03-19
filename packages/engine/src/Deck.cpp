@@ -1,4 +1,5 @@
 #include "Deck.h"
+#include "utils.h"
 #include <inttypes.h>
 
 namespace {
@@ -56,9 +57,7 @@ bool Deck::loadTrack(const ITrack::Ptr track, bool play)
         return false;
     }
 
-
-    auto format = formatMgr.findFormatForFileExtension(track->getFile().getFileExtension());
-    if (!format) {
+    if (!utils::isTrackLoadable(formatMgr, track)) {
         Logger::writeToLog("Could not find appropriate format reader for " + track->getFile().getFullPathName());
         return false;
     }
@@ -85,13 +84,7 @@ void Deck::unloadTrack()
 
 void Deck::loadTrackInternal(const ITrack::Ptr track)
 {
-    auto file = track->getFile();
-    if (!file.existsAsFile()) {
-        Logger::writeToLog("File does not exist");
-        return;
-    }
-
-    auto newReader = formatMgr.createReaderFor(file);
+    auto newReader = utils::createAudioReaderFor(formatMgr, track);
 
     if (!newReader) {
         Logger::writeToLog("Could not create format reader");
@@ -217,17 +210,16 @@ void Deck::unloadTrackInternal()
 
 void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
 {
-    auto file = trackToScan->getFile();
-    if (!file.existsAsFile()) {
-        Logger::writeToLog("Cancel track scanning, file does not exist: " + file.getFullPathName());
+    auto scanningReader = utils::createAudioReaderFor(formatMgr, trackToScan);
+
+    if (!scanningReader) {
+        Logger::writeToLog("Cancel track scanning: " + trackToScan->getFile().getFullPathName());
         return;
     }
 
     listeners.call([this](Callback& cb) {
         cb.deckTrackScanning(*this);
     });
-
-    auto scanningReader = formatMgr.createReaderFor(file);
 
     auto middlePosition = scanningReader->lengthInSamples / 2;
     auto tailPosition = jmax(
