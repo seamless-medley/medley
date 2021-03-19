@@ -321,11 +321,11 @@ void Medley::deckPosition(Deck& sender, double position) {
                     if (forceFadingOut <= 0) {
                         return;
                     }
+                } else {
+                    Logger::writeToLog(String::formatted("[%s] cue", nextDeck->getName().toWideCharPointer()));
+                    transitionState = TransitionState::Cued;
+                    transitingDeck = &sender;
                 }
-
-                Logger::writeToLog(String::formatted("[%s] cue", nextDeck->getName().toWideCharPointer()));
-                transitionState = TransitionState::Cued;
-                transitingDeck = &sender;
             }
 
             if (!sender.isMain() && nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
