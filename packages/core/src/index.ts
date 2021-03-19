@@ -1,13 +1,7 @@
-import { TrackDescriptor } from "@medley/medley";
+import { TrackDescriptor, TrackInfo } from "@medley/medley";
 import chokidar from "chokidar";
 
-export class Track {
-  constructor(path: number) {
-
-  }
-}
-
-export class TrackCollection extends Array<Track> {
+export class TrackCollection extends Array<TrackDescriptor> {
 
 }
 
@@ -24,6 +18,14 @@ export class WatchTrackCollection extends TrackCollection {
 
   watch(dir: string): this {
     this.watcher.add(dir);
+    setTimeout(() => {
+      for (let i = this.length - 1; i > 0; i--) {
+        const temp = this[i];
+        const j = Math.floor(Math.random() * i)
+        this[i] = this[j];
+        this[j] = temp;
+      }
+    }, 500);
     return this;
   }
 
@@ -45,7 +47,7 @@ export class Crate {
 
   }
 
-  next(): Track | undefined {
+  next(): TrackDescriptor | undefined {
     const item = this.source.shift();
 
     if (item) {
@@ -63,7 +65,7 @@ export class CrateSequence {
 
   }
 
-  nextTrack(): Track {
+  nextTrack(): TrackDescriptor {
     if (this.crates.length < 1) {
       throw new Error('No crate');
     }
