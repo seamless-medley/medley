@@ -103,8 +103,6 @@ export declare class Medley extends EventEmitter {
   once(event: NormalEvent, listener: Listener): this;
   off(event: NormalEvent, listener: Listener): this;
 
-
-
   /**
    * @returns `AudioLevels`
    */
@@ -189,6 +187,8 @@ export declare class Medley extends EventEmitter {
   getAvailableDevices(): AudioDeviceTypeInfo[];
 
   setAudioDevice(descriptor: { type?: string, device: string }): boolean;
+
+  isTrackLoadable(TrackDescriptor: track): boolean;
 }
 
 export type AudioDeviceTypeInfo = {

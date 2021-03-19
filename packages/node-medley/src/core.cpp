@@ -288,6 +288,18 @@ void Medley::seekFractional(const CallbackInfo& info) {
     engine->setPositionFractional(info[0].ToNumber().DoubleValue());
 }
 
+Napi::Value Medley::isTrackLoadable(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return Boolean::New(env, false);
+    }
+
+    auto trackPtr = new Track(Track::fromJS(info[0]));
+    return Boolean::New(env, engine->isTrackLoadable(trackPtr));
+}
+
 Napi::Value Medley::level(const CallbackInfo& info) {
     auto env = info.Env();
 

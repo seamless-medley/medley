@@ -52,6 +52,8 @@ public:
 
     void seekFractional(const CallbackInfo& info);
 
+    Napi::Value isTrackLoadable(const CallbackInfo& info);
+
     Napi::Value level(const CallbackInfo& info);
 
     Napi::Value playing(const CallbackInfo& info);

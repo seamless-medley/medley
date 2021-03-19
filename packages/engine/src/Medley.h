@@ -133,6 +133,8 @@ public:
 
     void changeListenerCallback(ChangeBroadcaster* source) override;
 
+    bool isTrackLoadable(const ITrack::Ptr track);
+
 private:
     bool loadNextTrack(Deck* currentDeck, bool play);
 

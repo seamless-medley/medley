@@ -1,5 +1,6 @@
 #include "Medley.h"
 #include "MiniMP3AudioFormat.h"
+#include "utils.h"
 
 #if JUCE_WINDOWS
 #include <Windows.h>
@@ -460,6 +461,10 @@ void Medley::updateFadingFactor() {
     double outRange = 1000.0 - 1.0;
     double inRange = 100.0;
     fadingFactor = (float)(1000.0 / (((100.0 - fadingCurve) / inRange * outRange) + 1.0));
+}
+
+bool Medley::isTrackLoadable(const ITrack::Ptr track) {
+    return utils::isTrackLoadable(formatMgr, track);
 }
 
 bool Medley::Mixer::togglePause() {
