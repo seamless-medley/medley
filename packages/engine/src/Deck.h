@@ -26,6 +26,8 @@ public:
         virtual void deckUnloaded(Deck& sender) = 0;
     };
 
+    typedef std::function<void(bool)> LoadDone;
+
     Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
 
     ~Deck() override;
@@ -36,7 +38,7 @@ public:
 
     double getPositionInSeconds() const;
 
-    bool loadTrack(const ITrack::Ptr track, bool play);
+    void loadTrack(const ITrack::Ptr track/*, bool play*/, LoadDone done = [](bool) {});
 
     void unloadTrack();
 
@@ -113,7 +115,7 @@ public:
 
     double getTrailingDuration() const { return trailingDuration; }
 
-    bool shouldPlayAfterLoading() const { return playAfterLoading; }
+    // bool shouldPlayAfterLoading() const { return playAfterLoading; }
 
     inline bool isMain() const { return main; }
 
@@ -128,10 +130,11 @@ private:
         ~Loader() override;
         int useTimeSlice() override;
 
-        void load(const ITrack::Ptr track);
+        void load(const ITrack::Ptr track, LoadDone done);
     private:
         Deck& deck;
         ITrack::Ptr track = nullptr;
+        LoadDone done;
         CriticalSection lock;
     };
 
@@ -164,7 +167,7 @@ private:
 
     void releaseChainedResources();
 
-    void loadTrackInternal(const ITrack::Ptr track);
+    bool loadTrackInternal(const ITrack::Ptr track);
 
     void unloadTrackInternal();
 
@@ -229,7 +232,7 @@ private:
     //
     String name;
     Loader loader;
-    bool playAfterLoading = false;
+    // bool playAfterLoading = false;
 
     Scanner scanningScheduler;
     PlayHead playhead;

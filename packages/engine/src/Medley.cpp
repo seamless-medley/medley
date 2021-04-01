@@ -159,42 +159,65 @@ void Medley::changeListenerCallback(ChangeBroadcaster* source)
     }
 }
 
-bool Medley::loadNextTrack(Deck* currentDeck, bool play) {
-    auto deck = getAnotherDeck(currentDeck);
+void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::LoadDone done) {
+    auto nextDeck = getAnotherDeck(currentDeck);
 
-    if (deck == nullptr) {
+    if (nextDeck == nullptr) {
         Logger::writeToLog("Could not find another deck for " + currentDeck->getName());
-        return false;
+        return;
     }
 
-    if (deck->isTrackLoading) {
-        Logger::writeToLog("Deck is busy loading some track!!!");
-        deck->unloadTrack();
+    if (nextDeck->isTrackLoading) {
+        Logger::writeToLog(nextDeck->getName() + " is busy loading some track!!! ");
+        nextDeck->unloadTrack();
     }
 
-    while (queue.count() > 0) {
-        auto track = queue.fetchNextTrack();
-        if (deck->loadTrack(track, play)) {
-            return true;
+    Logger::writeToLog("Loading next track into " + nextDeck->getName());
+
+    auto pQueue = &queue;
+    Deck::LoadDone loadingHandler = [&, _done = done, p = play, _pQueue = pQueue, _nextDeck = nextDeck](bool loadingResult) {
+        if (loadingResult) {
+            _done(true);
+
+            if (p) {
+                _nextDeck->start();
+            }
+
+            return;
         }
-    }
 
-    // Track loading has failed
-    Logger::writeToLog("Track loading has failed");
+        if (_pQueue->count() > 0) {
+            auto track = _pQueue->fetchNextTrack();
+            _nextDeck->loadTrack(track, loadingHandler);
+        } else {
+            Logger::writeToLog("Track loading has failed and there is no next track left in queue, try PRE CUE");
 
-    {
+            ScopedLock sl(callbackLock);
+            listeners.call([&](Callback& cb) {
+                cb.preCueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _done = done](bool preCueDone) {
+                    if (preCueDone && _pQueue->count() > 0) {
+                        loadNextTrack(cd, p, _done);
+                    }
+                });
+            });
+        }
+    };
+
+    if (queue.count() > 0) {
+        auto track = queue.fetchNextTrack();
+        nextDeck->loadTrack(track, loadingHandler);
+    } else {
+        Logger::writeToLog("No next track, try PRE CUE");
+
         ScopedLock sl(callbackLock);
         listeners.call([&](Callback& cb) {
-            cb.preCueNext([&, p = play, d = currentDeck](bool done) {
-                if (done) {
-                    loadNextTrack(d, p);
+            cb.preCueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _done = done](bool preCueDone) {
+                if (preCueDone && _pQueue->count() > 0) {
+                    loadNextTrack(cd, p, _done);
                 }
             });
         });
     }
-
-
-    return false;
 }
 
 void Medley::deckTrackScanning(Deck& sender)
@@ -224,7 +247,7 @@ inline String Medley::getDeckName(Deck& deck) {
 }
 
 void Medley::deckStarted(Deck& sender) {
-    Logger::writeToLog(String::formatted("[deckStarted] %s", sender.getName().toWideCharPointer()));
+    Logger::writeToLog("[deckStarted] " + sender.getName());
 
     ScopedLock sl(callbackLock);
     listeners.call([&sender](Callback& cb) {
@@ -254,9 +277,11 @@ void Medley::deckLoaded(Deck& sender)
 }
 
 void Medley::deckUnloaded(Deck& sender) {
+    Logger::writeToLog(sender.getName() + " unloaded");
+
     if (&sender == transitingDeck) {
         if (transitionState == TransitionState::Cued) {
-            Logger::writeToLog(String::formatted("[%s] stopped before transition would happen, try starting next deck", sender.getName().toWideCharPointer()));
+            Logger::writeToLog(sender.getName() + " stopped before transition would happen, try starting next deck");
             auto nextDeck = getAnotherDeck(transitingDeck);
             if (nextDeck->isTrackLoaded()) {
                 nextDeck->start();
@@ -331,17 +356,23 @@ void Medley::deckPosition(Deck& sender, double position) {
                 }
             }
 
-            if (position > transitionCuePoint) {
-                if (!loadNextTrack(&sender, false)) {
-                    // No more track, do not transit
-                    if (forceFadingOut <= 0) {
-                        return;
+            if (transitionState < TransitionState::CueLoading && position > transitionCuePoint) {
+                transitionState = TransitionState::CueLoading;
+
+                auto currentDeck = &sender;
+                loadNextTrack(currentDeck, false, [&, cd = currentDeck, nd = nextDeck](bool loaded) {
+                    Logger::writeToLog(String::formatted("loadNextTrack done, loaded?: %d", loaded));
+                    if (!loaded) {
+                        // No more track, do not transit
+                        if (forceFadingOut <= 0) {
+                            return;
+                        }
+                    } else {
+                        Logger::writeToLog(nd->getName() + " cue");
+                        transitionState = TransitionState::Cued;
+                        transitingDeck = cd;
                     }
-                } else {
-                    Logger::writeToLog(String::formatted("[%s] cue", nextDeck->getName().toWideCharPointer()));
-                    transitionState = TransitionState::Cued;
-                    transitingDeck = &sender;
-                }
+                });
             }
 
             if (!sender.isMain() && nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
@@ -352,7 +383,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         if (position > transitionStartPos - leadingDuration) {
             if (transitionState == TransitionState::Cued) {
                 if (nextDeck->isTrackLoaded()) {
-                    Logger::writeToLog(String::formatted("Transiting to [%s]", nextDeck->getName().toWideCharPointer()));
+                    Logger::writeToLog("Transiting to " + nextDeck->getName());
                     transitionState = TransitionState::Transit;
                     nextDeck->setVolume(1.0f);
 
@@ -370,7 +401,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                 if (leadingDuration >= maxLeadingDuration) {
                     auto fadeInProgress = jlimit(0.25, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
 
-                    Logger::writeToLog(String::formatted("[%s] Fading in: %.2f", nextDeck->getName().toWideCharPointer(), fadeInProgress));
+                    Logger::writeToLog(nextDeck->getName() + String::formatted(" Fading in: %.2f", fadeInProgress));
                     nextDeck->setVolume((float)pow(fadeInProgress, fadingFactor));
                 }
             }
@@ -381,7 +412,7 @@ void Medley::deckPosition(Deck& sender, double position) {
             auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
             if (transitionDuration > 0.0) {
-                Logger::writeToLog(String::formatted("[%s] Fading out: %.2f", sender.getName().toWideCharPointer(), transitionProgress));
+                Logger::writeToLog(sender.getName() + String::formatted(" Fading out: %.2f", transitionProgress));
                 sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
             }
 

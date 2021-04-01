@@ -51,15 +51,17 @@ double Deck::getPositionInSeconds() const
     return 0.0;
 }
 
-bool Deck::loadTrack(const ITrack::Ptr track, bool play)
+void Deck::loadTrack(const ITrack::Ptr track/*, bool play*/, LoadDone done)
 {
     if (isTrackLoading) {
-        return false;
+        done(false);
+        return;
     }
 
     if (!utils::isTrackLoadable(formatMgr, track)) {
         Logger::writeToLog("Could not find appropriate format reader for " + track->getFile().getFullPathName());
-        return false;
+        done(false);
+        return;
     }
 
     pregain = track->getPreGain();
@@ -69,11 +71,8 @@ bool Deck::loadTrack(const ITrack::Ptr track, bool play)
         pregain = 1.0f;
     }
 
-    playAfterLoading = play;
-    loader.load(track);
-
     isTrackLoading = true;
-    return true;
+    loader.load(track, done);
 }
 
 void Deck::unloadTrack()
@@ -82,13 +81,13 @@ void Deck::unloadTrack()
     unloadTrackInternal();
 }
 
-void Deck::loadTrackInternal(const ITrack::Ptr track)
+bool Deck::loadTrackInternal(const ITrack::Ptr track)
 {
     auto newReader = utils::createAudioReaderFor(formatMgr, track);
 
     if (!newReader) {
         Logger::writeToLog("Could not create format reader");
-        return;
+        return false;
     }
 
     unloadTrackInternal();
@@ -135,7 +134,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
 
     leadingDuration = (leadingSamplePosition > -1) ? (leadingSamplePosition - firstAudibleSamplePosition) / reader->sampleRate : 0;
 
-    Logger::writeToLog(String::formatted("[%s] Leading: duration=%.2f, position=%d", name.toWideCharPointer(), leadingDuration, leadingSamplePosition));
+    Logger::writeToLog(name + String::formatted(" Leading: duration=%.2f, position=%d", leadingDuration, leadingSamplePosition));
 
     setSource(new AudioFormatReaderSource(reader, false));
 
@@ -153,9 +152,7 @@ void Deck::loadTrackInternal(const ITrack::Ptr track)
         cb.deckLoaded(*this);
     });
 
-    if (playAfterLoading) {
-        start();
-    }
+    return true;
 }
 
 
@@ -310,6 +307,7 @@ void Deck::firePositionChangeCalback(double position)
 
 void Deck::setPosition(double newPosition)
 {
+    Logger::writeToLog(name + String::formatted(" setPosition(%.2f)", newPosition));
     if (sampleRate > 0.0)
         setNextReadPosition((int64)(newPosition * sampleRate));
 }
@@ -445,7 +443,7 @@ void Deck::stop()
 
 void Deck::fireFinishedCallback()
 {
-    Logger::writeToLog(String::formatted("[%s] Stopped", name.toWideCharPointer()));
+    Logger::writeToLog(name + " stopped");
 
     listeners.call([this](Callback& cb) {
         cb.deckFinished(*this);
@@ -587,17 +585,19 @@ int Deck::Loader::useTimeSlice()
     ScopedLock sl(lock);
 
     if (track != nullptr) {
-        deck.loadTrackInternal(track);
+        auto ret = deck.loadTrackInternal(track);
         track = nullptr;
+        done(ret);
     }
 
     return 100;
 }
 
-void Deck::Loader::load(const ITrack::Ptr track)
+void Deck::Loader::load(const ITrack::Ptr track, LoadDone done)
 {
     ScopedLock sl(lock);
     this->track = track;
+    this->done = done;
 }
 
 int Deck::Scanner::useTimeSlice()

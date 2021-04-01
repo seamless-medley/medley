@@ -136,7 +136,7 @@ public:
     bool isTrackLoadable(const ITrack::Ptr track);
 
 private:
-    bool loadNextTrack(Deck* currentDeck, bool play);
+    void loadNextTrack(Deck* currentDeck, bool play, Deck::LoadDone done = [](bool) {});
 
     void deckTrackScanning(Deck& sender) override;
 
@@ -232,6 +232,7 @@ private:
     enum class TransitionState {
         Idle,
         Cueing,
+        CueLoading,
         Cued,
         Transit
     };
