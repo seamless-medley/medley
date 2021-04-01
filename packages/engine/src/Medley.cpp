@@ -159,7 +159,7 @@ void Medley::changeListenerCallback(ChangeBroadcaster* source)
     }
 }
 
-void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::LoadDone done) {
+void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone callback) {
     auto nextDeck = getAnotherDeck(currentDeck);
 
     if (nextDeck == nullptr) {
@@ -175,9 +175,9 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::LoadDone done) {
     nextDeck->log("Loading next");
 
     auto pQueue = &queue;
-    Deck::LoadDone loadingHandler = [&, _done = done, p = play, _pQueue = pQueue, _nextDeck = nextDeck](bool loadingResult) {
+    Deck::OnLoadingDone loadingHandler = [&, _callback = callback, p = play, _pQueue = pQueue, _nextDeck = nextDeck](bool loadingResult) {
         if (loadingResult) {
-            _done(true);
+            _callback(true);
 
             if (p) {
                 _nextDeck->start();
@@ -194,9 +194,9 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::LoadDone done) {
 
             ScopedLock sl(callbackLock);
             listeners.call([&](Callback& cb) {
-                cb.preCueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _done = done](bool preCueDone) {
+                cb.preCueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _callback = callback](bool preCueDone) {
                     if (preCueDone && _pQueue->count() > 0) {
-                        loadNextTrack(cd, p, _done);
+                        loadNextTrack(cd, p, _callback);
                     }
                 });
             });
@@ -211,9 +211,9 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::LoadDone done) {
 
         ScopedLock sl(callbackLock);
         listeners.call([&](Callback& cb) {
-            cb.preCueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _done = done](bool preCueDone) {
+            cb.preCueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _callback = callback](bool preCueDone) {
                 if (preCueDone && _pQueue->count() > 0) {
-                    loadNextTrack(cd, p, _done);
+                    loadNextTrack(cd, p, _callback);
                 }
             });
         });

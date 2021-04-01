@@ -60,16 +60,16 @@ double Deck::getPositionInSeconds() const
     return 0.0;
 }
 
-void Deck::loadTrack(const ITrack::Ptr track, LoadDone done)
+void Deck::loadTrack(const ITrack::Ptr track, OnLoadingDone doneCallback)
 {
     if (isTrackLoading) {
-        done(false);
+        doneCallback(false);
         return;
     }
 
     if (!utils::isTrackLoadable(formatMgr, track)) {
         log("Could not find appropriate format reader for " + track->getFile().getFullPathName());
-        done(false);
+        doneCallback(false);
         return;
     }
 
@@ -81,7 +81,7 @@ void Deck::loadTrack(const ITrack::Ptr track, LoadDone done)
     }
 
     isTrackLoading = true;
-    loader.load(track, done);
+    loader.load(track, doneCallback);
 }
 
 void Deck::unloadTrack()
@@ -608,17 +608,17 @@ int Deck::Loader::useTimeSlice()
     if (track != nullptr) {
         auto ret = deck.loadTrackInternal(track);
         track = nullptr;
-        done(ret);
+        callback(ret);
     }
 
     return 100;
 }
 
-void Deck::Loader::load(const ITrack::Ptr track, LoadDone done)
+void Deck::Loader::load(const ITrack::Ptr track, OnLoadingDone callback)
 {
     ScopedLock sl(lock);
     this->track = track;
-    this->done = done;
+    this->callback = callback;
 }
 
 int Deck::Scanner::useTimeSlice()

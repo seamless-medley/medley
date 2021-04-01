@@ -136,7 +136,7 @@ public:
     bool isTrackLoadable(const ITrack::Ptr track);
 
 private:
-    void loadNextTrack(Deck* currentDeck, bool play, Deck::LoadDone done = [](bool) {});
+    void loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone done = [](bool) {});
 
     void deckTrackScanning(Deck& sender) override;
 

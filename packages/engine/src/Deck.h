@@ -26,7 +26,7 @@ public:
         virtual void deckUnloaded(Deck& sender) = 0;
     };
 
-    typedef std::function<void(bool)> LoadDone;
+    typedef std::function<void(bool)> OnLoadingDone;
 
     Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
 
@@ -38,7 +38,7 @@ public:
 
     double getPositionInSeconds() const;
 
-    void loadTrack(const ITrack::Ptr track, LoadDone done = [](bool) {});
+    void loadTrack(const ITrack::Ptr track, OnLoadingDone callback = [](bool) {});
 
     void unloadTrack();
 
@@ -128,11 +128,11 @@ private:
         ~Loader() override;
         int useTimeSlice() override;
 
-        void load(const ITrack::Ptr track, LoadDone done);
+        void load(const ITrack::Ptr track, OnLoadingDone callback);
     private:
         Deck& deck;
         ITrack::Ptr track = nullptr;
-        LoadDone done;
+        OnLoadingDone callback;
         CriticalSection lock;
     };
 
