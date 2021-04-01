@@ -35,6 +35,15 @@ Deck::~Deck() {
     unloadTrackInternal();
 }
 
+String Deck::tagName() const
+{
+    return "[" + name + "]";
+}
+
+void Deck::log(const String& s) {
+    Logger::writeToLog(tagName() + " " + s);
+}
+
 double Deck::getDuration() const
 {
     if (sampleRate > 0.0)
@@ -59,7 +68,7 @@ void Deck::loadTrack(const ITrack::Ptr track/*, bool play*/, LoadDone done)
     }
 
     if (!utils::isTrackLoadable(formatMgr, track)) {
-        Logger::writeToLog("Could not find appropriate format reader for " + track->getFile().getFullPathName());
+        log("Could not find appropriate format reader for " + track->getFile().getFullPathName());
         done(false);
         return;
     }
@@ -83,10 +92,11 @@ void Deck::unloadTrack()
 
 bool Deck::loadTrackInternal(const ITrack::Ptr track)
 {
+    log("Loading: " + track->getFile().getFullPathName());
     auto newReader = utils::createAudioReaderFor(formatMgr, track);
 
     if (!newReader) {
-        Logger::writeToLog("Could not create format reader");
+        log("Could not create format reader");
         return false;
     }
 
@@ -134,8 +144,6 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     leadingDuration = (leadingSamplePosition > -1) ? (leadingSamplePosition - firstAudibleSamplePosition) / reader->sampleRate : 0;
 
-    Logger::writeToLog(name + String::formatted(" Leading: duration=%.2f, position=%d", leadingDuration, leadingSamplePosition));
-
     setSource(new AudioFormatReaderSource(reader, false));
 
     if (playDuration >= 3) {
@@ -144,6 +152,8 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     else {
         calculateTransition();
     }
+
+    log(String::formatted("Loaded - leading@%.2f duration=%.2f", leadingSamplePosition / reader->sampleRate, leadingDuration));
 
     this->track = track;
     isTrackLoading = false;
@@ -210,9 +220,10 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
     auto scanningReader = utils::createAudioReaderFor(formatMgr, trackToScan);
 
     if (!scanningReader) {
-        Logger::writeToLog("Cancel track scanning: " + trackToScan->getFile().getFullPathName());
         return;
     }
+
+    log("Scanning");
 
     listeners.call([this](Callback& cb) {
         cb.deckTrackScanning(*this);
@@ -260,13 +271,24 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
 
     trailingDuration = (trailingPosition > -1) ? (lastAudibleSamplePosition - trailingPosition) / scanningReader->sampleRate : 0;
 
-    delete scanningReader;
-
     calculateTransition();
+
+    if (trailingDuration > 0) {
+        log(String::formatted(
+            "Scanned - trailing@%.2f/%.2f duration=%.2f",
+            trailingPosition / scanningReader->sampleRate,
+            totalSamplesToPlay / scanningReader->sampleRate,
+            trailingDuration
+        ));
+    } else {
+        log("Scanned - no trailing found");
+    }
 
     listeners.call([this](Callback& cb) {
         cb.deckTrackScanned(*this);
     });
+
+    delete scanningReader;
 }
 
 void Deck::calculateTransition()
@@ -307,7 +329,6 @@ void Deck::firePositionChangeCalback(double position)
 
 void Deck::setPosition(double newPosition)
 {
-    Logger::writeToLog(name + String::formatted(" setPosition(%.2f)", newPosition));
     if (sampleRate > 0.0)
         setNextReadPosition((int64)(newPosition * sampleRate));
 }
@@ -411,7 +432,7 @@ bool Deck::isLooping() const
 
 bool Deck::start()
 {
-    Logger::writeToLog("Try to start playing");
+    log("Try to start playing");
     if ((!playing) && resamplerSource != nullptr)
     {
         playing = true;
@@ -426,7 +447,7 @@ bool Deck::start()
     }
 
     // Something went wrong
-    Logger::writeToLog("Could not start playing");
+    log("Could not start playing");
     main = false;
     return false;
 }
@@ -443,7 +464,7 @@ void Deck::stop()
 
 void Deck::fireFinishedCallback()
 {
-    Logger::writeToLog(name + " stopped");
+    log("Finished");
 
     listeners.call([this](Callback& cb) {
         cb.deckFinished(*this);

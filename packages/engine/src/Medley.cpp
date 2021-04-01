@@ -163,16 +163,16 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::LoadDone done) {
     auto nextDeck = getAnotherDeck(currentDeck);
 
     if (nextDeck == nullptr) {
-        Logger::writeToLog("Could not find another deck for " + currentDeck->getName());
+        currentDeck->log("Could not find another deck");
         return;
     }
 
     if (nextDeck->isTrackLoading) {
-        Logger::writeToLog(nextDeck->getName() + " is busy loading some track!!! ");
+        nextDeck->log("is busy loading some track");
         nextDeck->unloadTrack();
     }
 
-    Logger::writeToLog("Loading next track into " + nextDeck->getName());
+    nextDeck->log("Loading next");
 
     auto pQueue = &queue;
     Deck::LoadDone loadingHandler = [&, _done = done, p = play, _pQueue = pQueue, _nextDeck = nextDeck](bool loadingResult) {
@@ -247,7 +247,7 @@ inline String Medley::getDeckName(Deck& deck) {
 }
 
 void Medley::deckStarted(Deck& sender) {
-    Logger::writeToLog("[deckStarted] " + sender.getName());
+    sender.log("Started");
 
     ScopedLock sl(callbackLock);
     listeners.call([&sender](Callback& cb) {
@@ -277,11 +277,11 @@ void Medley::deckLoaded(Deck& sender)
 }
 
 void Medley::deckUnloaded(Deck& sender) {
-    Logger::writeToLog(sender.getName() + " unloaded");
+    sender.log("Unloaded");
 
     if (&sender == transitingDeck) {
         if (transitionState == TransitionState::Cued) {
-            Logger::writeToLog(sender.getName() + " stopped before transition would happen, try starting next deck");
+            sender.log("stopped before transition would happen, try starting next deck");
             auto nextDeck = getAnotherDeck(transitingDeck);
             if (nextDeck->isTrackLoaded()) {
                 nextDeck->start();
@@ -360,15 +360,13 @@ void Medley::deckPosition(Deck& sender, double position) {
                 transitionState = TransitionState::CueLoading;
 
                 auto currentDeck = &sender;
-                loadNextTrack(currentDeck, false, [&, cd = currentDeck, nd = nextDeck](bool loaded) {
-                    Logger::writeToLog(String::formatted("loadNextTrack done, loaded?: %d", loaded));
+                loadNextTrack(currentDeck, false, [&, cd = currentDeck](bool loaded) {
                     if (!loaded) {
                         // No more track, do not transit
                         if (forceFadingOut <= 0) {
                             return;
                         }
                     } else {
-                        Logger::writeToLog(nd->getName() + " cue");
                         transitionState = TransitionState::Cued;
                         transitingDeck = cd;
                     }
@@ -383,7 +381,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         if (position > transitionStartPos - leadingDuration) {
             if (transitionState == TransitionState::Cued) {
                 if (nextDeck->isTrackLoaded()) {
-                    Logger::writeToLog("Transiting to " + nextDeck->getName());
+                    nextDeck->log("Transiting to this deck");
                     transitionState = TransitionState::Transit;
                     nextDeck->setVolume(1.0f);
 
@@ -400,9 +398,12 @@ void Medley::deckPosition(Deck& sender, double position) {
             if (transitionState == TransitionState::Transit) {
                 if (leadingDuration >= maxLeadingDuration) {
                     auto fadeInProgress = jlimit(0.25, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
+                    auto newVolume = (float)pow(fadeInProgress, fadingFactor);
 
-                    Logger::writeToLog(nextDeck->getName() + String::formatted(" Fading in: %.2f", fadeInProgress));
-                    nextDeck->setVolume((float)pow(fadeInProgress, fadingFactor));
+                    if (newVolume != nextDeck->getVolume()) {
+                        nextDeck->log(String::formatted("Fading in: %.2f", fadeInProgress));
+                        nextDeck->setVolume(newVolume);
+                    }
                 }
             }
         }
@@ -412,7 +413,7 @@ void Medley::deckPosition(Deck& sender, double position) {
             auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
             if (transitionDuration > 0.0) {
-                Logger::writeToLog(sender.getName() + String::formatted(" Fading out: %.2f", transitionProgress));
+                sender.log(String::formatted("Fading out: %.2f", transitionProgress));
                 sender.setVolume((float)pow(1.0f - transitionProgress, fadingFactor));
             }
 

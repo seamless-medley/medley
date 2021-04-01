@@ -196,6 +196,10 @@ private:
         main = mark;
     }
 
+    String tagName() const;
+
+    void log(const String& s);
+
     void fadeOut();
 
     bool isTrackLoading = false;
