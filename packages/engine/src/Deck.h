@@ -38,7 +38,7 @@ public:
 
     double getPositionInSeconds() const;
 
-    void loadTrack(const ITrack::Ptr track/*, bool play*/, LoadDone done = [](bool) {});
+    void loadTrack(const ITrack::Ptr track, LoadDone done = [](bool) {});
 
     void unloadTrack();
 
@@ -114,8 +114,6 @@ public:
     int64 getTrailingSamplePosition() const { return trailingPosition; }
 
     double getTrailingDuration() const { return trailingDuration; }
-
-    // bool shouldPlayAfterLoading() const { return playAfterLoading; }
 
     inline bool isMain() const { return main; }
 
@@ -236,7 +234,6 @@ private:
     //
     String name;
     Loader loader;
-    // bool playAfterLoading = false;
 
     Scanner scanningScheduler;
     PlayHead playhead;

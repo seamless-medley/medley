@@ -60,7 +60,7 @@ double Deck::getPositionInSeconds() const
     return 0.0;
 }
 
-void Deck::loadTrack(const ITrack::Ptr track/*, bool play*/, LoadDone done)
+void Deck::loadTrack(const ITrack::Ptr track, LoadDone done)
 {
     if (isTrackLoading) {
         done(false);
