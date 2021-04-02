@@ -134,7 +134,7 @@ void Medley::fadeOutMainDeck()
     if (auto deck = getMainDeck()) {
         forceFadingOut++;
 
-        if (transitionState == TransitionState::Transit) {
+        if (transitionState >= TransitionState::Cued) {
             deck->unloadTrack();
             transitionState = TransitionState::Idle;
 
@@ -142,7 +142,7 @@ void Medley::fadeOutMainDeck()
         }
 
         if (deck) {
-            deck->fadeOut();
+            deck->fadeOut(forceFadingOut >= 2);
             mixer.setPause(false);
         }
     }
@@ -419,6 +419,7 @@ void Medley::deckPosition(Deck& sender, double position) {
 
             if (transitionState != TransitionState::Idle && position > transitionEndPos) {
                 if (transitionProgress >= 1.0) {
+                    forceFadingOut = false;
                     sender.stop();
                 }
             }

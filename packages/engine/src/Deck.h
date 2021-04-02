@@ -198,7 +198,7 @@ private:
 
     void log(const String& s);
 
-    void fadeOut();
+    void fadeOut(bool force = false);
 
     bool isTrackLoading = false;
     ITrack::Ptr track = nullptr;

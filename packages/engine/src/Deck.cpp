@@ -493,9 +493,9 @@ double Deck::getEndPosition() const
     return totalSamplesToPlay / sourceSampleRate;
 }
 
-void Deck::fadeOut()
+void Deck::fadeOut(bool force)
 {
-    if (!fading) {
+    if (!fading || force) {
         transitionCuePosition = transitionStartPosition = getPositionInSeconds();
         transitionEndPosition = jmin(transitionStartPosition + maxTransitionTime, totalSamplesToPlay * sourceSampleRate);
         fading = true;
