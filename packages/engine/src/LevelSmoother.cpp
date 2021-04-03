@@ -1,7 +1,7 @@
 #include "LevelSmoother.h"
 
 namespace {
-    constexpr auto kPeakDecayRate = 0.0086525;
+    constexpr auto kPeakDecayRate = 0.125;
 }
 
 
@@ -27,7 +27,8 @@ void LevelSmoother::addLevel(const Time time, const double newLevel, const Relat
     }
     else if (time > holdUntil)
     {
-        peak -= kPeakDecayRate;
+        auto diff = time - holdUntil;
+        peak = Decibels::decibelsToGain(Decibels::gainToDecibels(peak) - jlimit(0.0, 1.0, kPeakDecayRate * diff.inSeconds()));
         clip = peak > 1.0;
     }
 
