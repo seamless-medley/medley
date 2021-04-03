@@ -4,6 +4,8 @@
 
 #include "Medley.h"
 
+#include <juce_opengl/juce_opengl.h>
+
 using namespace juce;
 using namespace medley;
 
@@ -367,6 +369,8 @@ private:
             btnFadeOut("Fade Out"),
             volumeText({}, "Volume:")
         {
+            openGLContext.attachTo(*getTopLevelComponent());
+
             medley.addListener(this);
 
             deckA = new DeckComponent(medley.getDeck1(), medley.getDeck2());
@@ -503,6 +507,10 @@ private:
             }
         }
 
+        void paint(Graphics& g) override {
+            g.fillAll(findColour(ResizableWindow::backgroundColourId));
+        }
+
         ~MainContentComponent() {
             medley.removeListener(this);
 
@@ -614,6 +622,8 @@ private:
                 playhead->updateDecks(deck, anotherDeck);
             }
         }
+
+        OpenGLContext openGLContext;
 
         TextButton btnAdd;
         TextButton btnPlay;

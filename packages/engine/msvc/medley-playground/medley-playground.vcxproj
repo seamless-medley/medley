@@ -180,6 +180,7 @@
     <ClCompile Include="..\..\juce\include_juce_graphics.cpp" />
     <ClCompile Include="..\..\juce\include_juce_gui_basics.cpp" />
     <ClCompile Include="..\..\juce\include_juce_gui_extra.cpp" />
+    <ClCompile Include="..\..\juce\include_juce_opengl.cpp" />
     <ClCompile Include="..\..\src\Deck.cpp" />
     <ClCompile Include="..\..\src\LevelSmoother.cpp" />
     <ClCompile Include="..\..\src\LevelTracker.cpp" />
