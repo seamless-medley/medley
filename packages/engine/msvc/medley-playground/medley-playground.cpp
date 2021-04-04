@@ -598,6 +598,7 @@ private:
 
         void preCueNext(PreCueNextDone done) override {
             std::cout << "Pre cue next" << std::endl;
+            done(true);
         }
 
         void updatePauseButton() {

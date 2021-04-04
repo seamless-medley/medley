@@ -198,6 +198,9 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone cal
                     if (preCueDone && _pQueue->count() > 0) {
                         loadNextTrack(cd, p, _callback);
                     }
+                    else {
+                        _callback(false);
+                    }
                 });
             });
         }
@@ -214,6 +217,9 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone cal
             cb.preCueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _callback = callback](bool preCueDone) {
                 if (preCueDone && _pQueue->count() > 0) {
                     loadNextTrack(cd, p, _callback);
+                }
+                else {
+                    _callback(false);
                 }
             });
         });
@@ -287,13 +293,13 @@ void Medley::deckUnloaded(Deck& sender) {
                 nextDeck->start();
             }
         }
+    }
 
-        transitionState = TransitionState::Idle;
-        transitingDeck = nullptr;
+    transitionState = TransitionState::Idle;
+    transitingDeck = nullptr;
 
-        if (forceFadingOut > 0) {
-            forceFadingOut--;
-        }
+    if (forceFadingOut > 0) {
+        forceFadingOut--;
     }
 
     {
@@ -362,6 +368,9 @@ void Medley::deckPosition(Deck& sender, double position) {
                 auto currentDeck = &sender;
                 loadNextTrack(currentDeck, false, [&, cd = currentDeck](bool loaded) {
                     if (!loaded) {
+                        transitionState = TransitionState::Cueing;
+                        transitingDeck = nullptr;
+
                         // No more track, do not transit
                         if (forceFadingOut <= 0) {
                             return;
