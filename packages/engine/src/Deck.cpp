@@ -5,7 +5,7 @@
 namespace {
     static const auto kSilenceThreshold = Decibels::decibelsToGain(-60.0f);
     static const auto kEndingSilenceThreshold = Decibels::decibelsToGain(-45.0f);
-    static const auto kFadingSilenceThreshold = Decibels::decibelsToGain(-23.0f);
+    static const auto kFadingSilenceThreshold = Decibels::decibelsToGain(-30.0f);
 
     constexpr float kFirstSoundDuration = 0.001f;
     constexpr float kLastSoundDuration = 1.25f;
@@ -266,7 +266,7 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
         tailPosition,
         totalSamplesToPlay - tailPosition,
         0, kFadingSilenceThreshold,
-        (int)(scanningReader->sampleRate * 0.8)
+        (int)(scanningReader->sampleRate * 0.3)
     );
 
     trailingDuration = (trailingPosition > -1) ? (lastAudibleSamplePosition - trailingPosition) / scanningReader->sampleRate : 0;

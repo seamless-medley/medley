@@ -285,10 +285,11 @@ void Medley::deckLoaded(Deck& sender)
 void Medley::deckUnloaded(Deck& sender) {
     sender.log("Unloaded");
 
+    auto nextDeck = getAnotherDeck(transitingDeck);
+
     if (&sender == transitingDeck) {
         if (transitionState == TransitionState::Cued) {
-            sender.log("stopped before transition would happen, try starting next deck");
-            auto nextDeck = getAnotherDeck(transitingDeck);
+            sender.log("stopped before transition would happen, try starting next deck");            
             if (nextDeck->isTrackLoaded()) {
                 nextDeck->start();
             }
@@ -297,6 +298,7 @@ void Medley::deckUnloaded(Deck& sender) {
 
     transitionState = TransitionState::Idle;
     transitingDeck = nullptr;
+    nextDeck->setVolume(1.0f);
 
     if (forceFadingOut > 0) {
         forceFadingOut--;
@@ -366,7 +368,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                 transitionState = TransitionState::CueLoading;
 
                 auto currentDeck = &sender;
-                loadNextTrack(currentDeck, false, [&, cd = currentDeck](bool loaded) {
+                loadNextTrack(currentDeck, false, [&, cd = currentDeck, nd = nextDeck](bool loaded) {
                     if (!loaded) {
                         transitionState = TransitionState::Cueing;
                         transitingDeck = nullptr;
@@ -378,6 +380,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                     } else {
                         transitionState = TransitionState::Cued;
                         transitingDeck = cd;
+                        nd->setVolume(0.0f);
                     }
                 });
             }
@@ -405,7 +408,7 @@ void Medley::deckPosition(Deck& sender, double position) {
             }
 
             if (transitionState == TransitionState::Transit) {
-                if (leadingDuration >= maxLeadingDuration) {
+                if (leadingDuration > 0) {
                     auto fadeInProgress = jlimit(0.25, 1.0, (position - (transitionStartPos - leadingDuration)) / leadingDuration);
                     auto newVolume = (float)pow(fadeInProgress, fadingFactor);
 
@@ -413,6 +416,9 @@ void Medley::deckPosition(Deck& sender, double position) {
                         nextDeck->log(String::formatted("Fading in: %.2f", fadeInProgress));
                         nextDeck->setVolume(newVolume);
                     }
+                }
+                else {
+                    nextDeck->setVolume(1.0f);
                 }
             }
         }
@@ -427,7 +433,7 @@ void Medley::deckPosition(Deck& sender, double position) {
             }
 
             if (transitionState != TransitionState::Idle && position > transitionEndPos) {
-                if (transitionProgress >= 1.0) {
+                if (transitionProgress >= 1.0) {                    
                     forceFadingOut = false;
                     sender.stop();
                 }
