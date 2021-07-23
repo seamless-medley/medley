@@ -194,7 +194,7 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone cal
 
             ScopedLock sl(callbackLock);
             listeners.call([&](Callback& cb) {
-                cb.preCueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _callback = callback](bool preCueDone) {
+                cb.preQueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _callback = callback](bool preCueDone) {
                     if (preCueDone && _pQueue->count() > 0) {
                         loadNextTrack(cd, p, _callback);
                     }
@@ -214,7 +214,7 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone cal
 
         ScopedLock sl(callbackLock);
         listeners.call([&](Callback& cb) {
-            cb.preCueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _callback = callback](bool preCueDone) {
+            cb.preQueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _callback = callback](bool preCueDone) {
                 if (preCueDone && _pQueue->count() > 0) {
                     loadNextTrack(cd, p, _callback);
                 }

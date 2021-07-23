@@ -26,7 +26,7 @@ public:
 
         virtual void audioDeviceChanged() = 0;
 
-        virtual void preCueNext(PreCueNextDone done = [](bool) { }) = 0;
+        virtual void preQueueNext(PreCueNextDone done = [](bool) { }) = 0;
     };
 
     Medley(IQueue& queue);
