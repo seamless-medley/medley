@@ -7,7 +7,14 @@ namespace {
 
 LevelSmoother::LevelSmoother(int sampleRate, int backlogSize)
     :
-    backlog(backlogSize, 0.0)
+    sampleRate(sampleRate), backlogSize(backlogSize), backlog(backlogSize, 0.0)
+{
+
+}
+
+LevelSmoother::LevelSmoother(const LevelSmoother& other)
+    : sampleRate(other.sampleRate), backlogSize(other.backlogSize), backlog(backlogSize, 0.0),
+    results_head(0), results_tail(0)
 {
 
 }
@@ -38,14 +45,13 @@ void LevelSmoother::addLevel(const Time time, const double newLevel, const Relat
     if (peak < avgPeak) {
         peak = avgPeak;
     }
-
-    Level lv{};
-    lv.time = time;
-    lv.clip = clip;
-    lv.level = avgPeak;
-    lv.peak = peak;
-
-    results.push(lv);
+    
+    auto h = results_head.load(std::memory_order_relaxed);
+    if ((h - results_tail.load(std::memory_order_acquire)) != 32) {
+        results[h++ & 31] = { time, clip, avgPeak, peak };
+        std::atomic_signal_fence(std::memory_order_release);
+        results_head.store(h, std::memory_order_release);
+    }
 }
 
 LevelSmoother::Level& LevelSmoother::get()
@@ -55,17 +61,23 @@ LevelSmoother::Level& LevelSmoother::get()
 
 void LevelSmoother::update(const Time time)
 {
-    while (!results.empty()) {
-        auto& first = results.front();
+    auto t = results_tail.load(std::memory_order_relaxed);
+    while (t != results_head.load(std::memory_order_acquire)) {
+        auto first = results[t & 31];
 
-        if (time <= first.time) break;
+        if (time <= first.time) {
+            break;
+        }        
 
         currentResult.level = (first.level + currentResult.level) * 0.5;
         currentResult.peak = (first.peak + currentResult.peak) * 0.5;
         currentResult.clip |= first.clip;
 
-        results.pop();
+        t++;
+        std::atomic_signal_fence(std::memory_order_release);
+        results_tail.store(t, std::memory_order_release);
     }
+
 }
 
 double LevelSmoother::getAverageLevel() const
