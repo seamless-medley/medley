@@ -322,7 +322,7 @@ void Deck::calculateTransition()
     }
 }
 
-void Deck::firePositionChangeCalback(double position)
+void Deck::doPositionChange(double position)
 {
     listeners.call([=](Callback& cb) {
         cb.deckPosition(*this, position);
@@ -331,8 +331,10 @@ void Deck::firePositionChangeCalback(double position)
 
 void Deck::setPosition(double time)
 {
-    if (sampleRate > 0.0)
-        setNextReadPosition((int64)(newPosition * sampleRate));
+    if (sampleRate > 0.0) {
+        setNextReadPosition((int64)(time * sampleRate));
+        doPositionChange(time);
+    }
 }
 
 void Deck::setPositionFractional(double fraction) {
@@ -342,6 +344,11 @@ void Deck::setPositionFractional(double fraction) {
 void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
 {
     const ScopedLock sl(sourceLock);
+
+    if (internallyPaused) {
+        info.clearActiveBufferRegion();
+        return;
+    }
 
     bool wasPlaying = !stopped;
 
@@ -435,16 +442,20 @@ bool Deck::isLooping() const
 bool Deck::start()
 {
     log("Try to start playing");
-    if ((!playing) && resamplerSource != nullptr)
+    if ((!playing || internallyPaused) && resamplerSource != nullptr)
     {
+        if (!internallyPaused) {
+            listeners.call([this](Callback& cb) {
+                cb.deckStarted(*this);
+                });
+        }
+
         playing = true;
+        internallyPaused = false;
         stopped = false;
         fading = false;
         inputStreamEOF = false;
 
-        listeners.call([this](Callback& cb) {
-            cb.deckStarted(*this);
-        });
         return true;
     }
 
@@ -642,7 +653,7 @@ int Deck::PlayHead::useTimeSlice()
 {
     auto pos = deck.getPosition();
     if (lastPosition != pos) {
-        deck.firePositionChangeCalback(pos);
+        deck.doPositionChange(pos);
         lastPosition = pos;
     }
     else {

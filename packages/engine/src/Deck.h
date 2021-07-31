@@ -200,10 +200,15 @@ private:
 
     void fadeOut(bool force = false);
 
+    void internalPause() {
+        internallyPaused = true;
+    }
+
     bool isTrackLoading = false;
     ITrack::Ptr track = nullptr;
 
     std::atomic<bool> playing{ false };
+    std::atomic<bool> internallyPaused{ false };
     std::atomic<bool> stopped{ true };
 
     double sampleRate = 44100.0;

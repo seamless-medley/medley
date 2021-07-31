@@ -96,7 +96,7 @@ public:
 
     inline float getGain() const { return mainOut.getGain(); }
 
-    inline bool togglePause() { return mixer.togglePause(); }
+    bool togglePause();
 
     inline bool isPaused() const { return mixer.isPaused(); }
 
@@ -153,11 +153,15 @@ private:
 
     void deckPosition(Deck& sender, double position) override;
 
+    void doTransition(Deck* deck, double position);
+
     Deck* getAvailableDeck();
 
     juce::String getDeckName(Deck& deck);
 
     void updateFadingFactor();
+
+    void updateTransition(Deck* deck);
 
     class Mixer : public MixerAudioSource, public ChangeListener, public TimeSliceClient {
     public:
@@ -225,6 +229,10 @@ private:
 
     Deck* deck1 = nullptr;
     Deck* deck2 = nullptr;
+
+    Fader faderIn;
+    Fader faderOut;
+
     Mixer mixer;
     AudioSourcePlayer mainOut;
 
