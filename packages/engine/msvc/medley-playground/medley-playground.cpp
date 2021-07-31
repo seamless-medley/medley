@@ -1,6 +1,8 @@
 #include <iostream>
 #include <JuceHeader.h>
 #include <Windows.h>
+#include <random>
+#include <algorithm>
 
 #include "Medley.h"
 
@@ -63,21 +65,26 @@ private:
 
     class PlayHead : public Component {
     public:
-        PlayHead(Deck* deck, Deck* anotherDeck)
+        class Callback {
+        public:
+            virtual void getDecks(Deck** pAeck, Deck** pAnotherDeck) = 0;
+            virtual void playHeadSeek(double progress) = 0;
+        };
+
+        PlayHead(Callback& callback)
             :
-            deck(deck),
-            anotherDeck(anotherDeck)
+            callback(callback)
         {
 
         }
 
-        void updateDecks(Deck* deck, Deck* anotherDeck) {
-            this->deck = deck;
-            this->anotherDeck = anotherDeck;
-        }
-
         void paint(Graphics& g) override {
-            if (!deck->isTrackLoaded()) {
+            Deck* deck = nullptr;
+            Deck* anotherDeck = nullptr;
+
+            callback.getDecks(&deck, &anotherDeck);
+
+            if (deck == nullptr || !deck->isTrackLoaded()) {
                 return;
             }
 
@@ -89,7 +96,7 @@ private:
             g.fillRect(0.0f, 0.0f, w, h);
 
             // progress
-            auto pos = (float)deck->getPositionInSeconds();
+            auto pos = (float)deck->getPosition();
             auto duration = (float)deck->getDuration();
 
             if (duration <= 0) {
@@ -106,7 +113,7 @@ private:
             auto leading = deck->getLeadingSamplePosition() / sr;
             auto trailing = deck->getTrailingSamplePosition() / sr;
 
-            auto nextLeading = (float)((anotherDeck->isTrackLoaded() && !anotherDeck->isMain()) ? anotherDeck->getLeadingDuration() : 0);
+            auto nextLeading = (float)((anotherDeck != nullptr && anotherDeck->isTrackLoaded() && !anotherDeck->isMain()) ? anotherDeck->getLeadingDuration() : 0);
             //
             auto cuePoint = deck->getTransitionCuePosition();
             auto transitionStart = (float)deck->getTransitionStartPosition() - nextLeading;
@@ -161,20 +168,26 @@ private:
             g.drawVerticalLine((int)(trailing / duration * w), 0, w);
         }
 
-        void mouseDown(const MouseEvent& event) override {
-            deck->setPositionFractional((double)event.getMouseDownX() / getWidth());
+        void mouseDown(const MouseEvent& event) override {         
+            callback.playHeadSeek((double)event.getMouseDownX() / getWidth());
         }
 
-        medley::Deck* deck;
-        medley::Deck* anotherDeck;
+        void mouseDrag(const MouseEvent& event) override {            
+            callback.playHeadSeek((double)event.getPosition().getX() / getWidth());
+        }
+
+
+        Callback& callback;
     };
 
-    class DeckComponent : public Component, public Deck::Callback {
+    class DeckComponent : public Component, public Deck::Callback, PlayHead::Callback {
     public:
-        DeckComponent(Deck& deck, Deck& anotherDeck)
+        DeckComponent(Medley& medley, Deck& deck, Deck& anotherDeck)
             :
+            medley(medley),
             deck(deck),
-            playhead(&deck, &anotherDeck)
+            anotherDeck(anotherDeck),
+            playhead(*this)
         {
             deck.addListener(this);
 
@@ -183,6 +196,20 @@ private:
 
         ~DeckComponent() override {
             deck.removeListener(this);
+        }
+
+        void getDecks(Deck** pDeck, Deck** pAnotherDeck) override {
+            *pDeck = &deck;
+            *pAnotherDeck = &anotherDeck;
+        }
+
+        void playHeadSeek(double progress) override {
+            if (deck.isMain()) {
+                medley.setPositionFractional(progress);
+            }
+            else {
+                deck.setPositionFractional(progress);
+            }
         }
 
         void deckTrackScanning(Deck& sender) override {
@@ -237,7 +264,7 @@ private:
                 auto b = getLocalBounds().reduced(4);
                 auto topLine = b.removeFromTop(lineHeight);
 
-                auto pos = deck.getPositionInSeconds();
+                auto pos = deck.getPosition();
                 auto posStr = String::formatted("%.2d:%.2d.%.3d", (int)pos / 60, (int)pos % 60, (int)(pos * 1000) % 1000);
 
                 g.drawText(posStr, topLine.removeFromRight(120), Justification::topRight);
@@ -250,7 +277,9 @@ private:
             }
         }
 
+        Medley& medley;
         medley::Deck& deck;
+        medley::Deck& anotherDeck;
         PlayHead playhead;
     };
 
@@ -323,6 +352,120 @@ private:
         NormalisableRange<double> rangeNormalizer{ -100, 6, 0, 1 };
     };
 
+    class QueueModel;
+    class QueueListBox;
+
+    class QueueItem : public Component, public DragAndDropTarget {
+    public:
+        QueueItem(QueueModel& model, QueueListBox& listbox)
+            : model(model), listbox(listbox)
+        {
+            
+        }
+
+        void paint(Graphics& g) override {
+            if (selected) {
+                g.fillAll(Colours::lightblue);
+                g.setColour(Colours::darkblue);
+            }
+            else {
+                g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));
+            }
+
+           
+            if (track != nullptr) {
+                g.drawText(track->getFile().getFullPathName(), 0, 0, getWidth(), getHeight(), Justification::centredLeft, true);
+            }
+
+            if (dragging) {
+                g.setColour(Colours::lightyellow);
+                g.fillRect(0, 0, getWidth(), 2);
+            }
+        }
+
+        void update(Track::Ptr track, int rowNumber, bool rowSelected) {
+            this->track = track;
+            this->rowNumber = rowNumber;
+            this->selected = rowSelected;
+            repaint();
+        }
+
+        bool isInterestedInDragSource(const SourceDetails& dragSourceDetails) override {
+            return dragSourceDetails.description.equals("QueueItem");
+        }
+
+        void itemDragEnter(const SourceDetails& dragSourceDetails) {
+            itemDragMove(dragSourceDetails);
+        }
+
+        void itemDragMove(const SourceDetails& dragSourceDetails)
+        {
+            dragging = true;
+            repaint();
+        }
+
+        void itemDragExit(const SourceDetails&) {
+            setMouseCursor(MouseCursor::NormalCursor);
+            dragging = false;
+            repaint();
+        }
+
+        void itemDropped(const SourceDetails& dragSourceDetails) override {
+            if (auto src = dynamic_cast<QueueItem*>(dragSourceDetails.sourceComponent.get())) {
+                model.move(src->track, track);
+            }
+
+            itemDragExit(dragSourceDetails);
+        }
+
+        void mouseDown(const MouseEvent&) override {
+            listbox.selectRow(rowNumber);
+        }
+
+        void mouseUp(const MouseEvent& e) {
+            if (e.mods.isPopupMenu() && listbox.getNumSelectedRows() > 0) {
+                juce::Rectangle<int> r(e.getMouseDownScreenX(), e.getMouseDownScreenY(), 0, 0);
+
+                switch (listbox.showMenu(r)) {
+                case QueueListBox::kMenu_PlayNext:
+                    model.moveToTop(track);
+                    break;
+
+                case QueueListBox::kMenu_Delete:
+                    model.remove(track);
+                    break;
+
+                case QueueListBox::kMenu_Clear:
+                    model.clear();
+                }
+            }
+        }
+
+        void mouseDrag(const MouseEvent&) override {
+            if (DragAndDropContainer* container = DragAndDropContainer::findParentDragContainerFor(this))
+            {
+                container->startDragging("QueueItem", this);
+
+                setMouseCursor(MouseCursor::DraggingHandCursor);
+            }
+        }
+
+        void mouseExit(const MouseEvent&) {
+            setMouseCursor(MouseCursor::NormalCursor);
+        }
+
+
+    private:
+        QueueModel& model;
+        QueueListBox& listbox;
+
+        Track::Ptr track = nullptr;
+        int rowNumber = 0;
+        bool selected = false;
+
+        bool dragging = false;
+    };
+
     class QueueModel : public ListBoxModel {
     public:
         QueueModel(Queue& queue)
@@ -337,31 +480,122 @@ private:
         }
 
         void paintListBoxItem(int rowNumber, Graphics& g, int width, int height, bool rowIsSelected) override {
-            if (rowIsSelected) {
-                g.fillAll(Colours::lightblue);
-            }
 
-            g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));
+        }
+
+        Component* refreshComponentForRow(int rowNumber, bool rowSelected, Component* existingComponentToUpdate) {
+            if (existingComponentToUpdate == nullptr)
+                existingComponentToUpdate = new QueueItem(*this, *listbox);
+
+            Track::Ptr track = nullptr;
 
             if (rowNumber < (int)queue.tracks.size()) {
                 auto at = std::next(queue.tracks.begin(), rowNumber);
                 if (at != queue.tracks.end()) {
-                    g.drawText(at->get()->getFile().getFullPathName(), 0, 0, width, height, Justification::centredLeft, false);
+                    track = at->get();
                 }
             }
+
+            static_cast<QueueItem*>(existingComponentToUpdate)->update(track, rowNumber, rowSelected);
+
+            return existingComponentToUpdate;
         }
+
+        void move(Track::Ptr from, Track::Ptr to) {
+            auto b = queue.tracks.begin();
+            auto e = queue.tracks.end();
+
+            auto src_it = std::find(b, e, from);
+            auto dst_it = std::find(b, e, to);
+
+            if (dst_it != e && src_it != e) {
+                auto src_index = std::distance(b, src_it);
+                auto dst_index = std::distance(b, dst_it);
+
+                queue.tracks.splice(dst_it, queue.tracks, src_it);                
+                listbox->selectRow(src_index <= dst_index ? dst_index - 1 : dst_index);
+                listbox->updateContent();
+            }
+        }
+
+        void moveToTop(Track::Ptr track) {
+            auto b = queue.tracks.begin();
+            auto e = queue.tracks.end();
+
+            auto src_it = std::find(b, e, track);
+
+            if (src_it != e) {
+                queue.tracks.splice(b, queue.tracks, src_it);
+
+                listbox->selectRow(0);
+                listbox->updateContent();
+            }
+        }
+
+        void remove(Track::Ptr track) {
+            auto b = queue.tracks.begin();
+            auto e = queue.tracks.end();
+
+            auto src_it = std::find(b, e, track);
+            if (src_it != e) {
+                queue.tracks.erase(src_it);
+                listbox->deselectAllRows();
+                listbox->updateContent();
+            }
+        }
+
+        void clear() {
+            queue.tracks.clear();
+            listbox->deselectAllRows();
+            listbox->updateContent();
+        }
+
+        Queue& getQueue() { return queue; }
+
+        QueueListBox* listbox = nullptr;
 
     private:
         Queue& queue;
     };
 
-    class MainContentComponent : public Component, public Timer, public Button::Listener, public Slider::Listener, public medley::Medley::Callback {
+    class QueueListBox : public ListBox {
+    public:
+        QueueListBox(QueueModel& model)
+            : ListBox({}, &model)
+        {
+            menu.addItem(kMenu_PlayNext, "Play Next");
+            menu.addSeparator();
+            menu.addColouredItem(kMenu_Delete, "Delete", Colours::indianred);
+            menu.addColouredItem(kMenu_Clear, "Clear", Colours::indianred);
+        }
+
+        int showMenu(const juce::Rectangle<int> r) {
+            return menu.showAt(r);
+        }
+
+        static const int kMenu_PlayNext = 1;
+        static const int kMenu_Delete = 2;
+        static const int kMenu_Clear = 3;
+    private:
+
+        PopupMenu menu;
+    };
+
+    class MainContentComponent
+        : public Component,
+        public DragAndDropContainer,
+        public Timer,
+        public Button::Listener,
+        public Slider::Listener,
+        public medley::Medley::Callback,
+        public PlayHead::Callback {
     public:
         MainContentComponent() :
             Component(),
             model(queue),
             medley(queue),
-            queueListBox({}, &model),
+            queueListBox(model),
+            btnShuffle("Shuffle"),
             btnAdd("Add"),
             btnPlay("Play"),
             btnStop("Stop"),
@@ -371,13 +605,18 @@ private:
         {
             openGLContext.attachTo(*getTopLevelComponent());
 
+            model.listbox = &queueListBox;
+
             medley.addListener(this);
 
-            deckA = new DeckComponent(medley.getDeck1(), medley.getDeck2());
+            deckA = new DeckComponent(medley, medley.getDeck1(), medley.getDeck2());
             addAndMakeVisible(deckA);
 
-            deckB = new DeckComponent(medley.getDeck2(), medley.getDeck1());
+            deckB = new DeckComponent(medley, medley.getDeck2(), medley.getDeck1());
             addAndMakeVisible(deckB);
+
+            btnShuffle.addListener(this);
+            addAndMakeVisible(btnShuffle);
 
             btnAdd.addListener(this);
             addAndMakeVisible(btnAdd);
@@ -404,7 +643,7 @@ private:
             volumeSlider.setValue(medley.getGain());
             volumeSlider.addListener(this);
 
-            playhead = new PlayHead(&medley.getDeck1(), &medley.getDeck2());
+            playhead = new PlayHead(*this);
             addAndMakeVisible(playhead);
 
             {
@@ -494,6 +733,7 @@ private:
             }
             {
                 auto controlArea = b.removeFromTop(32).translated(0, 4).reduced(10, 4);
+                btnShuffle.setBounds(controlArea.removeFromLeft(55));
                 btnAdd.setBounds(controlArea.removeFromLeft(55));
                 btnPlay.setBounds(controlArea.removeFromLeft(55));
                 btnStop.setBounds(controlArea.removeFromLeft(55));
@@ -525,9 +765,34 @@ private:
             delete vuMeter;
         }
 
+        void getDecks(Deck** pDeck, Deck** pAnotherDeck) {
+            *pDeck = medley.getMainDeck();
+            *pAnotherDeck = medley.getAnotherDeck(nullptr);
+        }
+
+        void playHeadSeek(double progress) override {
+            medley.setPositionFractional(progress);
+        }
+
         void buttonClicked(Button* source) override {
+            if (source == &btnShuffle) {
+                std::random_device rd;
+                std::mt19937 g(rd());
+
+                std::vector<std::reference_wrapper<const Track::Ptr>> v(queue.tracks.cbegin(), queue.tracks.cend());
+                std::shuffle(v.begin(), v.end(), g);
+
+                std::list<Track::Ptr> shuffled;
+                for (auto& ref : v) shuffled.push_back(ref.get());
+                queue.tracks.swap(shuffled);
+
+                queueListBox.updateContent();
+                queueListBox.repaint();
+                return;
+            }
+
             if (source == &btnAdd) {
-                FileChooser fc("test");
+                FileChooser fc("Add");
 
                 if (fc.browseForMultipleFilesToOpen()) {
                     auto files = fc.getResults();
@@ -536,8 +801,8 @@ private:
                         queue.tracks.push_back(new Track(f));
                     }
 
-                    // medley.play();
                     queueListBox.updateContent();
+                    queueListBox.repaint();
                 }
 
                 return;
@@ -596,8 +861,8 @@ private:
             updateDevice();
         }
 
-        void preCueNext(PreCueNextDone done) override {
-            std::cout << "Pre cue next" << std::endl;
+        void preQueueNext(PreCueNextDone done) override {
+            std::cout << "Pre queue next" << std::endl;
             done(true);
         }
 
@@ -611,21 +876,16 @@ private:
         }
 
         void deckLoaded(Deck& sender) override {
-            if (auto deck = medley.getMainDeck()) {
-                auto anotherDeck = medley.getAnotherDeck(deck);
-                playhead->updateDecks(deck, anotherDeck);
-            }
+
         }
 
         void deckUnloaded(Deck& sender) override {
-            if (auto deck = medley.getMainDeck()) {
-                auto anotherDeck = medley.getAnotherDeck(deck);
-                playhead->updateDecks(deck, anotherDeck);
-            }
+
         }
 
         OpenGLContext openGLContext;
 
+        TextButton btnShuffle;
         TextButton btnAdd;
         TextButton btnPlay;
         TextButton btnStop;
@@ -635,7 +895,7 @@ private:
         Label volumeText;
         Slider volumeSlider;
 
-        ListBox queueListBox;
+        QueueListBox queueListBox;
 
         PlayHead* playhead = nullptr;
 
@@ -643,7 +903,7 @@ private:
         DeckComponent* deckB = nullptr;
 
         ComboBox comboDeviceTypes;
-        ComboBox comboDeviceNames;
+        ComboBox comboDeviceNames;        
 
         VUMeter* vuMeter = nullptr;
 
