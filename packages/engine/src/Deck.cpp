@@ -15,6 +15,8 @@ namespace {
 
 namespace medley {
 
+using namespace medley::utils;
+
 Deck::Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
     formatMgr(formatMgr),
@@ -52,7 +54,7 @@ double Deck::getDuration() const
     return 0.0;
 }
 
-double Deck::getPositionInSeconds() const
+double Deck::getPosition() const
 {
     if (sampleRate > 0.0)
         return (double)getNextReadPosition() / sampleRate;
@@ -67,7 +69,7 @@ void Deck::loadTrack(const ITrack::Ptr track, OnLoadingDone doneCallback)
         return;
     }
 
-    if (!utils::isTrackLoadable(formatMgr, track)) {
+    if (!isTrackLoadable(formatMgr, track)) {
         log("Could not find appropriate format reader for " + track->getFile().getFullPathName());
         doneCallback(false);
         return;
@@ -108,7 +110,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     totalSamplesToPlay = reader->lengthInSamples;
     lastAudibleSamplePosition = totalSamplesToPlay;
     leadingSamplePosition = -1;
-    trailingPosition = -1;
+    trailingSamplePosition = -1;
     trailingDuration = 0;
 
     auto playDuration = getEndPosition();
@@ -262,21 +264,21 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
         totalSamplesToPlay = endPosition;
     }
 
-    trailingPosition = scanningReader->searchForLevel(
+    trailingSamplePosition = scanningReader->searchForLevel(
         tailPosition,
         totalSamplesToPlay - tailPosition,
         0, kFadingSilenceThreshold,
         (int)(scanningReader->sampleRate * 0.3)
     );
 
-    trailingDuration = (trailingPosition > -1) ? (lastAudibleSamplePosition - trailingPosition) / scanningReader->sampleRate : 0;
+    trailingDuration = (trailingSamplePosition > -1) ? (lastAudibleSamplePosition - trailingSamplePosition) / scanningReader->sampleRate : 0;
 
     calculateTransition();
 
     if (trailingDuration > 0) {
         log(String::formatted(
             "Scanned - trailing@%.2f/%.2f duration=%.2f",
-            trailingPosition / scanningReader->sampleRate,
+            trailingSamplePosition / scanningReader->sampleRate,
             totalSamplesToPlay / scanningReader->sampleRate,
             trailingDuration
         ));
@@ -300,7 +302,7 @@ void Deck::calculateTransition()
     {
 
         if (trailingDuration >= maxTransitionTime) {
-            transitionStartPosition = trailingPosition / sourceSampleRate;
+            transitionStartPosition = trailingSamplePosition / sourceSampleRate;
             transitionEndPosition = transitionStartPosition + maxTransitionTime;
         }
         else {
@@ -327,7 +329,7 @@ void Deck::firePositionChangeCalback(double position)
     });
 }
 
-void Deck::setPosition(double newPosition)
+void Deck::setPosition(double time)
 {
     if (sampleRate > 0.0)
         setNextReadPosition((int64)(newPosition * sampleRate));
@@ -496,7 +498,7 @@ double Deck::getEndPosition() const
 void Deck::fadeOut(bool force)
 {
     if (!fading || force) {
-        transitionCuePosition = transitionStartPosition = getPositionInSeconds();
+        transitionCuePosition = transitionStartPosition = getPosition();
         transitionEndPosition = jmin(transitionStartPosition + maxTransitionTime, totalSamplesToPlay * sourceSampleRate);
         fading = true;
     }
@@ -638,7 +640,7 @@ void Deck::Scanner::scan(const ITrack::Ptr track)
 
 int Deck::PlayHead::useTimeSlice()
 {
-    auto pos = deck.getPositionInSeconds();
+    auto pos = deck.getPosition();
     if (lastPosition != pos) {
         deck.firePositionChangeCalback(pos);
         lastPosition = pos;

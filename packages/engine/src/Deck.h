@@ -36,7 +36,7 @@ public:
 
     double getDuration() const;
 
-    double getPositionInSeconds() const;
+    double getPosition() const;
 
     void loadTrack(const ITrack::Ptr track, OnLoadingDone callback = [](bool) {});
 
@@ -44,7 +44,7 @@ public:
 
     bool isTrackLoaded() const { return source != nullptr; }
 
-    void setPosition(double newPosition);
+    void setPosition(double time);
 
     void setPositionFractional(double fraction);
 
@@ -111,7 +111,7 @@ public:
 
     double getLeadingDuration() const { return leadingDuration; }
 
-    int64 getTrailingSamplePosition() const { return trailingPosition; }
+    int64 getTrailingSamplePosition() const { return trailingSamplePosition; }
 
     double getTrailingDuration() const { return trailingDuration; }
 
@@ -173,7 +173,7 @@ private:
 
     void calculateTransition();
 
-    void firePositionChangeCalback(double position);
+    void doPositionChange(double position);
 
     void fireFinishedCallback();
 
@@ -245,7 +245,7 @@ private:
     int64 leadingSamplePosition = 0;
     double leadingDuration = 0.0;
 
-    int64 trailingPosition = 0;
+    int64 trailingSamplePosition = 0;
     double trailingDuration = 0.0;
 
     double transitionPreCuePosition = 0.0;

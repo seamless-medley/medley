@@ -92,7 +92,7 @@ Medley::~Medley() {
     delete deck2;
 }
 
-void Medley::setPositionInSeconds(double time) {
+void Medley::setPosition(double time) {
     if (auto deck = getMainDeck()) {
         deck->setPosition(time);
     }
@@ -117,7 +117,7 @@ double Medley::getDuration() const
 double Medley::getPositionInSeconds() const
 {
     if (auto deck = getMainDeck()) {
-        return deck->getPositionInSeconds();
+        return deck->getPosition();
     }
 
     return 0.0;
@@ -359,7 +359,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                     ScopedLock sl(callbackLock);
 
                     listeners.call([](Callback& cb) {
-                        cb.preCueNext();
+                        cb.preQueueNext();
                     });
                 }
             }

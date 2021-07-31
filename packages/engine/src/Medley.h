@@ -101,7 +101,7 @@ public:
 
     void setPositionFractional(double fraction);
 
-    void setPositionInSeconds(double time);
+    void setPosition(double time);
 
     double getDuration() const;
 
