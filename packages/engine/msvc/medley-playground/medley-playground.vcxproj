@@ -182,6 +182,7 @@
     <ClCompile Include="..\..\juce\include_juce_gui_extra.cpp" />
     <ClCompile Include="..\..\juce\include_juce_opengl.cpp" />
     <ClCompile Include="..\..\src\Deck.cpp" />
+    <ClCompile Include="..\..\src\Fader.cpp" />
     <ClCompile Include="..\..\src\LevelSmoother.cpp" />
     <ClCompile Include="..\..\src\LevelTracker.cpp" />
     <ClCompile Include="..\..\src\LookAheadLimiter.cpp" />
@@ -197,6 +198,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h" />
     <ClInclude Include="..\..\src\Deck.h" />
+    <ClInclude Include="..\..\src\Fader.h" />
     <ClInclude Include="..\..\src\ITrack.h" />
     <ClInclude Include="..\..\src\LevelSmoother.h" />
     <ClInclude Include="..\..\src\LevelTracker.h" />

@@ -96,6 +96,9 @@
     <ClCompile Include="..\..\juce\include_juce_opengl.cpp">
       <Filter>JUCE Library Code</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\Fader.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h">
@@ -135,6 +138,9 @@
       <Filter>Engine Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\utils.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Fader.h">
       <Filter>Engine Source</Filter>
     </ClInclude>
   </ItemGroup>
