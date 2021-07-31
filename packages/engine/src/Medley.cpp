@@ -515,11 +515,40 @@ bool Medley::isTrackLoadable(const ITrack::Ptr track) {
     return utils::isTrackLoadable(formatMgr, track);
 }
 
+void Medley::Mixer::setPause(bool p, bool fade) {
+    if (!fade) {
+        paused = p;
+        fader.reset(1.0f);
+        return;
+    }
+
+    auto start = currentTime + 100;
+    auto end = start + 400;
+
+    if (p) {
+        // do pause
+        fader.start(start, end, gain, 0.0f, 2.0f, -1.0f, [=]() {
+            paused = true;
+        });
+    }
+    else {
+        // unpause
+        paused = false;
+        fader.start(start, end, gain, 1.0f, 2.0f, -1.0f, [=]() {
+            
+        });
+    }
+}
+
+
 bool Medley::Mixer::togglePause() {
-    return paused = !paused;
+    setPause(!paused);
+    return !paused;
 }
 
 void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
+    currentTime = Time::getMillisecondCounterHiRes();
+
     if (!outputStarted) {
         outputStarted = true;
         Logger::writeToLog("Output started");
@@ -548,6 +577,14 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
         }
     }
 
+    gain = fader.update(currentTime);
+
+    for (int i = info.buffer->getNumChannels(); --i >= 0;) {
+        info.buffer->applyGainRamp(i, info.startSample, info.numSamples, lastGain, gain);
+    }
+
+    lastGain = gain;
+
     if (prepared) {
         AudioBlock<float> block(*info.buffer, (size_t)info.startSample);
         processor.process(ProcessContextReplacing<float>(block));
@@ -567,6 +604,11 @@ int Medley::Mixer::useTimeSlice()
     ScopedLock sl(levelTrackerLock);
     levelTracker.update();
     return 5;
+}
+
+void medley::Medley::Mixer::fadeOut(double durationMs, Fader::OnDone callback)
+{
+    fader.start(currentTime, currentTime + durationMs, gain, 0.0f, 2.0f, -1.0f, callback);
 }
 
 void Medley::Mixer::updateAudioConfig()

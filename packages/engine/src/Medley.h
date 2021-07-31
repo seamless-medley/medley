@@ -5,6 +5,7 @@
 #include "Deck.h"
 #include "PostProcessor.h"
 #include "LevelTracker.h"
+#include "Fader.h"
 #include <list>
 
 using namespace juce;
@@ -163,7 +164,7 @@ private:
         Mixer(Medley& medley)
             : MixerAudioSource(), medley(medley)
         {
-
+            currentTime = Time::getMillisecondCounterHiRes();
         }
 
         bool togglePause();
@@ -172,9 +173,7 @@ private:
 
         inline bool isPaused() const { return paused; }
 
-        inline void setPause(bool p) {
-            paused = p;
-        }
+        void setPause(bool p, bool fade = true);
 
         void changeListenerCallback(ChangeBroadcaster* source) override;
 
@@ -197,6 +196,8 @@ private:
 
         int useTimeSlice() override;
 
+        void fadeOut(double durationMs, Fader::OnDone callback);
+
     private:
         Medley& medley;
 
@@ -205,6 +206,12 @@ private:
         bool paused = false;
         bool stalled = false;
         bool outputStarted = false;
+
+        double currentTime = 0;
+        float gain = 1.0f;
+        float lastGain = 1.0f;
+
+        Fader fader;
 
         PostProcessor processor;
         LevelTracker levelTracker;
