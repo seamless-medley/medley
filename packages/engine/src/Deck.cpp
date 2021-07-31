@@ -643,8 +643,16 @@ int Deck::PlayHead::useTimeSlice()
         deck.firePositionChangeCalback(pos);
         lastPosition = pos;
     }
+    else {
+        if (deck.stopped && deck.playing) {
+            // This is rare, something went wrong and playback was stalled somehow.
+            // try to restart playback
+            deck.playing = false;
+            deck.start();
+        }
+    }
 
-    return deck.isPlaying() ? 33 : 250;
+    return deck.isPlaying() ? 10 : 250;
 }
 
 }
