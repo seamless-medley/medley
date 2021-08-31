@@ -7,6 +7,9 @@
 #include "Medley.h"
 
 #include <juce_opengl/juce_opengl.h>
+#include <taglib/attachedpictureframe.h>
+#include <taglib/xiphcomment.h>
+#include <taglib/flacpicture.h>
 
 using namespace juce;
 using namespace medley;
@@ -237,7 +240,8 @@ private:
         }
 
         void deckUnloaded(Deck& sender) override {
-
+            ScopedLock sl(coverImageLock);
+            coverImage = Image();            
         }
 
         void resized() {
@@ -260,27 +264,176 @@ private:
             g.setColour(Colours::black);
 
             if (auto track = deck.getTrack()) {
-                auto lineHeight = (int)g.getCurrentFont().getHeight();
-                auto b = getLocalBounds().reduced(4);
-                auto topLine = b.removeFromTop(lineHeight);
+                ScopedLock sl(coverImageLock);
 
-                auto pos = deck.getPosition();
-                auto posStr = String::formatted("%.2d:%.2d.%.3d", (int)pos / 60, (int)pos % 60, (int)(pos * 1000) % 1000);
+                auto b = getLocalBounds();
+                b.removeFromBottom(35); // playhead
 
-                g.drawText(posStr, topLine.removeFromRight(120), Justification::topRight);
-                g.drawText(track->getFile().getFileName(), topLine, Justification::topLeft);
+                juce::Rectangle coverContainer(b.toFloat());
 
-                {
-                    auto thisLine = b.removeFromTop(lineHeight);
-                    g.drawText(String::formatted("Volume: %d%%", (int)(deck.getVolume() * 100)), thisLine, Justification::topLeft);
+                if (coverImage.isValid()) {
+                    auto w = jmin((float)b.getWidth(), (float)b.getHeight());
+
+                    auto x = (b.getWidth() - w) / 2.0f;
+                    auto y = (b.getHeight() - w) / 2.0f;
+
+                    coverContainer = juce::Rectangle(
+                        x, y,
+                        w, w
+                    );
+                }
+
+                if (!coverContainer.isEmpty()) {
+                    juce::Rectangle coverArea(coverContainer);
+
+                    if (coverImage.isValid()) {
+                        g.drawImageWithin(coverImage, coverContainer.getX(), coverContainer.getY(), coverContainer.getWidth(), coverContainer.getHeight(), RectanglePlacement::centred);
+
+                        auto ratio = coverImage.getBounds().toFloat().getAspectRatio();
+                        auto coverAreaWidth = ratio * coverContainer.getHeight();
+
+                        coverArea = juce::Rectangle(((float)b.getWidth() - coverAreaWidth) / 2.0f, coverContainer.getY(), coverAreaWidth, coverContainer.getHeight());
+                    }
+
+                    auto lines = 14;
+                    auto fontHeight = coverArea.getHeight() / (float)lines - 2.0;
+                    auto topArea = coverArea.withHeight(fontHeight * (float)lines / 2.0);
+                    auto topInnerArea = topArea.reduced(2);
+
+                    g.setGradientFill(ColourGradient(
+                        Colours::black.withAlpha(0.85f), topArea.getX(), topArea.getY(),
+                        Colours::transparentBlack, topArea.getX(), topArea.getY() + topArea.getHeight(),
+                        false
+                    ));
+                    g.fillRect(topArea);
+
+                    auto meta = deck.metadata();
+
+                    auto lineX = [topInnerArea, fontHeight](int lineIndex) {
+                        return topInnerArea.withY(topInnerArea.getY() + fontHeight * lineIndex);
+                    };
+
+                    g.setColour(Colours::white);
+                    g.setFont(Font("Sarabun", fontHeight, Font::bold));
+                    g.drawText(meta.getTitle(), lineX(0), Justification::topRight);
+                    g.setFont(Font("Sarabun", fontHeight, Font::plain));
+                    g.drawText(meta.getArtist(), lineX(1), Justification::topRight);
+
+                    auto pos = deck.getPosition();
+                    auto posStr = String::formatted("%.2d:%.2d.%.3d", (int)pos / 60, (int)pos % 60, (int)(pos * 1000) % 1000);
+                    g.drawText(posStr, lineX(2), Justification::topRight);
+
+                    auto volStr = String::formatted("Vol: %d%%", (int)(deck.getVolume() * 100));
+                    g.drawText(volStr, lineX(3), Justification::topRight);
+
+                    g.drawText(deck.isPlaying() ? "Playing" : "Cued", lineX(4), Justification::topRight);
                 }
             }
+            else {
+                g.setColour(Colours::dimgrey);
+                g.setFont(Font("Sarabun", 20, Font::bold));
+                g.drawText("<Empty>", getLocalBounds(), Justification::centred);
+            }
+        }
+
+        void setCover(TagLib::ByteVector& vector) {
+            ScopedLock sl(coverImageLock);
+            coverImage = ImageFileFormat::loadFrom(vector.data(), vector.size());
+
+            // TODO: Resize if too large
+            auto size = coverImage.getBounds().toFloat();
+            if (size.getWidth() > 800.0f || size.getHeight() > 800.0f) {
+                auto h = 800.0f;
+                auto w = size.getAspectRatio() * h;
+
+                auto newImage = Image(Image::PixelFormat::ARGB, w, h, true);
+                Graphics g(newImage);
+
+                g.drawImageWithin(coverImage, 0, 0, w, h, RectanglePlacement::centred);
+
+                coverImage = newImage;
+            }
+        }
+
+        void readID3V2(juce::File trackFile) {
+            TagLib::MPEG::File file((const wchar_t*)trackFile.getFullPathName().toWideCharPointer());
+
+            if (file.hasID3v2Tag()) {
+
+                auto& tag = *file.ID3v2Tag();
+                auto frameMap = tag.frameListMap();
+                const auto it = frameMap.find("APIC");
+                if ((it == frameMap.end()) || it->second.isEmpty()) {
+                    return;
+                }
+
+                const auto frames = it->second;
+                for (const auto frame : frames) {
+                    const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
+                    if (apic && apic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
+                        setCover(apic->picture());
+                        return;
+                    }
+                }
+            }
+
+            {
+                ScopedLock sl(coverImageLock);
+                coverImage = Image();
+            }
+        }
+
+        void readXiph(juce::File trackFile) {
+            TagLib::FLAC::File file((const wchar_t*)trackFile.getFullPathName().getCharPointer());
+
+            auto pictures = file.pictureList();
+
+            if (pictures.isEmpty() && file.hasXiphComment()) {
+                pictures = file.xiphComment()->pictureList();
+            }
+
+            if (!pictures.isEmpty()) {
+                for (const auto picture : pictures) {
+                    if (picture->type() == TagLib::FLAC::Picture::FrontCover) {
+                        setCover(picture->data());
+                        return;
+                    }
+                }
+            }
+
+            {
+                ScopedLock sl(coverImageLock);
+                coverImage = Image();
+            }
+        }
+
+        int useTimeSlice() {
+            if (auto track = deck.getTrack()) {
+                auto trackFile = track->getFile();
+                auto filetype = utils::getFileTypeFromFileName(trackFile);
+
+                switch (filetype) {
+                case utils::FileType::MP3: {
+                    readID3V2(trackFile);
+                    break;
+                }
+
+                case utils::FileType::FLAC: {
+                    readXiph(trackFile);
+                    break;
+                }
+                }
+            }
+
+            return -1;
         }
 
         Medley& medley;
         medley::Deck& deck;
         medley::Deck& anotherDeck;
         PlayHead playhead;
+        CriticalSection coverImageLock;
+        Image coverImage;
     };
 
     class VUMeter : public Component {
@@ -606,7 +759,8 @@ private:
             btnStop("Stop"),
             btnPause("Pause"),
             btnFadeOut("Fade Out"),
-            volumeText({}, "Volume:")
+            volumeText({}, "Volume:"),
+            backgroundThread("Cover art thread")
         {
             openGLContext.attachTo(*getTopLevelComponent());
 
@@ -676,6 +830,8 @@ private:
             setSize(800, 600);
 
             startTimerHz(40);
+
+            backgroundThread.startThread();
         }
 
         int lastQueueCount = 0;
@@ -758,6 +914,8 @@ private:
 
         ~MainContentComponent() {
             medley.removeListener(this);
+
+            backgroundThread.removeAllClients();
 
             removeChildComponent(deckA);
             removeChildComponent(deckB);
@@ -912,6 +1070,7 @@ private:
 
         VUMeter* vuMeter = nullptr;
 
+        TimeSliceThread backgroundThread;
         Queue queue;
         QueueModel model;
         medley::Medley medley;
