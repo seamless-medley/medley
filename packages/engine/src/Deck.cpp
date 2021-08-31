@@ -10,7 +10,7 @@ namespace {
 
     constexpr float kFirstSoundDuration = 0.001f;
     constexpr float kLastSoundDuration = 1.25f;
-    constexpr auto kLeadingScanningDuration = 10.0;
+    constexpr auto kLeadingScanningDuration = 20.0;
     constexpr float kLastSoundScanningDurartion = 20.0f;
 }
 
@@ -109,36 +109,39 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     auto playDuration = getEndPosition();
 
-    if (playDuration >= 3) {
-        Range<float> maxLevels[2]{};
-        reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * jmax(maxTransitionTime, kLeadingScanningDuration)), maxLevels, 2);
+    {   // Seamless mode
+        if (playDuration >= 3) {
+            Range<float> maxLevels[2]{};
+            reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * jmax(maxTransitionTime, kLeadingScanningDuration)), maxLevels, 2);
 
-        auto leadingDecibel = Decibels::gainToDecibels((maxLevels[0].getEnd() + maxLevels[1].getEnd()) / 2.0f);
-        auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 6.0f));
+            auto detectedLevel = (abs(maxLevels[0].getEnd()) + abs(maxLevels[1].getEnd())) / 2.0f;
+            auto leadingDecibel = Decibels::gainToDecibels(detectedLevel);
+            auto leadingLevel = jlimit(0.0f, 0.9f, Decibels::decibelsToGain(leadingDecibel - 6.0f));
 
-        leadingSamplePosition = reader->searchForLevel(
-            firstAudibleSamplePosition,
-            (int)(reader->sampleRate * kLeadingScanningDuration),
-            leadingLevel, 1.0,
-            (int)(reader->sampleRate * kFirstSoundDuration / 10)
-        );
-
-
-        if (leadingSamplePosition > -1) {
-            auto lead2 = reader->searchForLevel(
-                jmax(0LL, leadingSamplePosition - (int)(reader->sampleRate * 2.0)),
-                (int)(reader->sampleRate * 2.0),
-                leadingLevel * 0.33, 1.0,
-                0
+            leadingSamplePosition = reader->searchForLevel(
+                firstAudibleSamplePosition,
+                (int)(reader->sampleRate * kLeadingScanningDuration),
+                leadingLevel, 1.0,
+                (int)(reader->sampleRate * kFirstSoundDuration / 10)
             );
 
-            if ((lead2 > firstAudibleSamplePosition) && (lead2 < leadingSamplePosition)) {
-                leadingSamplePosition = lead2;
+
+            if (leadingSamplePosition > -1) {
+                auto lead2 = reader->searchForLevel(
+                    jmax(0LL, leadingSamplePosition - (int)(reader->sampleRate * 2.0)),
+                    (int)(reader->sampleRate * 2.0),
+                    leadingLevel * 0.33, 1.0,
+                    0
+                );
+
+                if (lead2 > leadingSamplePosition) {
+                    leadingSamplePosition = lead2;
+                }
             }
         }
     }
 
-    leadingDuration = (leadingSamplePosition > -1) ? (leadingSamplePosition - firstAudibleSamplePosition) / reader->sampleRate : 0;
+    leadingDuration = ((leadingSamplePosition > -1) ? leadingSamplePosition - firstAudibleSamplePosition : firstAudibleSamplePosition) / reader->sampleRate;
 
     setSource(new AudioFormatReaderSource(reader, false));
 
