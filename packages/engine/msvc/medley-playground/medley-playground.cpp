@@ -333,10 +333,15 @@ private:
             auto peakRightX = (int)(getWidth() * rangeNormalizer.convertTo0to1(jmin(peakRight, 6.0)));
 
             g.setColour(getPeakColour(peakLeft));
-            g.drawVerticalLine(peakLeftX - 1, 0, mh);
+            g.fillRect((float)peakLeftX - 2.0, 0.0, 2.0, mh);
 
             g.setColour(getPeakColour(peakRight));
-            g.drawVerticalLine(peakRightX - 1, mh, h);
+            g.fillRect((float)peakRightX - 2.0, mh, 2.0, h);
+
+            auto reduction = 1.0f - (float)rangeNormalizer.convertTo0to1(medley.getReduction() + 6.0f);
+            auto reductionWidth = (float)getWidth() * reduction;
+            g.setColour(Colours::darkslateblue);
+            g.fillRect((float)getWidth() - reductionWidth, 0.0f, reductionWidth, h);
 
             g.setFont(mh / 1.8f);
             g.setColour(getPeakColour(peakLeft).darker(0.8f));
