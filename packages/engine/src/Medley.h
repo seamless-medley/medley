@@ -64,7 +64,7 @@ public:
 
     void setAudioDeviceByIndex(int index);
 
-    inline const AudioFormatManager& getAudioFormatManager() const { return formatMgr; }
+    inline AudioFormatManager& getAudioFormatManager() { return formatMgr; }
 
     inline const AudioIODevice* getCurrentAudioDevice() const { return deviceMgr.getCurrentAudioDevice(); }
 

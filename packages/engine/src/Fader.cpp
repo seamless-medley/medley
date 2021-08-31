@@ -61,7 +61,7 @@ float Fader::update(double time)
 
 void Fader::stop()
 {
-    reset(resetTo);
+    reset(to);
     callback();    
 }
 

@@ -53,8 +53,8 @@ Medley::Medley(IQueue& queue)
     deck1->addListener(this);
     deck2->addListener(this);
 
-    loadingThread.startThread();
-    readAheadThread.startThread(8);
+    loadingThread.startThread(6);
+    readAheadThread.startThread(9);
     visualizingThread.startThread();
 
     mixer.addInputSource(deck1, false);
@@ -323,6 +323,10 @@ void Medley::deckLoaded(Deck& sender)
 
 void Medley::deckUnloaded(Deck& sender) {
     sender.log("Unloaded");
+
+    if (&sender == transitingDeck) {
+        faderOut.reset();
+    }
 
     auto nextDeck = getAnotherDeck(transitingDeck);
 
