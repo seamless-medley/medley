@@ -244,7 +244,7 @@ private:
 
     int64 firstAudibleSamplePosition = 0;
     int64 lastAudibleSamplePosition = 0;
-    int64 totalSamplesToPlay = 0;
+    int64 totalSourceSamplesToPlay = 0;
 
     int64 leadingSamplePosition = 0;
     double leadingDuration = 0.0;

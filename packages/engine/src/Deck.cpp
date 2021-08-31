@@ -100,8 +100,8 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     auto mid = reader->lengthInSamples / 2;
     firstAudibleSamplePosition = jmax(0LL, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
-    totalSamplesToPlay = reader->lengthInSamples;
-    lastAudibleSamplePosition = totalSamplesToPlay;
+    totalSourceSamplesToPlay = reader->lengthInSamples;
+    lastAudibleSamplePosition = totalSourceSamplesToPlay;
     leadingSamplePosition = -1;
     trailingSamplePosition = -1;
     trailingDuration = 0;
@@ -259,7 +259,7 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
     );
 
     if (endPosition > lastAudibleSamplePosition) {
-        totalSamplesToPlay = endPosition;
+        totalSourceSamplesToPlay = endPosition;
     }
 
     trailingSamplePosition = scanningReader->searchForLevel(
@@ -277,7 +277,7 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
         log(String::formatted(
             "Scanned - trailing@%.2f/%.2f duration=%.2f",
             trailingSamplePosition / scanningReader->sampleRate,
-            totalSamplesToPlay / scanningReader->sampleRate,
+            totalSourceSamplesToPlay / scanningReader->sampleRate,
             trailingDuration
         ));
     } else {
@@ -372,7 +372,9 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
             }
         }
 
-        if (bufferingSource->getNextReadPosition() > totalSamplesToPlay + 1 && !bufferingSource->isLooping())
+        auto samplesToPlay = totalSourceSamplesToPlay / resamplerSource->getResamplingRatio();
+
+        if (bufferingSource->getNextReadPosition() > samplesToPlay + 1 && !bufferingSource->isLooping())
         {
             playing = false;
             inputStreamEOF = true;
@@ -515,14 +517,14 @@ double Deck::getFirstAudiblePosition() const {
 
 double Deck::getEndPosition() const
 {
-    return totalSamplesToPlay / sourceSampleRate;
+    return totalSourceSamplesToPlay / sourceSampleRate;
 }
 
 void Deck::fadeOut(bool force)
 {
     if (!fading || force) {
         transitionCuePosition = transitionStartPosition = getPosition();
-        transitionEndPosition = jmin(transitionStartPosition + maxTransitionTime, totalSamplesToPlay * sourceSampleRate);
+        transitionEndPosition = jmin(transitionStartPosition + jmin(3.0, maxTransitionTime), getEndPosition());
         fading = true;
     }
 }
