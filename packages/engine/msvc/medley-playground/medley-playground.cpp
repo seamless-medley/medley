@@ -829,7 +829,7 @@ private:
 
             setSize(800, 600);
 
-            startTimerHz(40);
+            startTimerHz(60);
 
             backgroundThread.startThread();
         }
