@@ -269,7 +269,7 @@ private:
     float fadingFactor;
 
     double maxLeadingDuration = 2.5;
-    double maxTransitionTime = 3.0;
+    double maxTransitionTime;
 
     int forceFadingOut = 0;
 

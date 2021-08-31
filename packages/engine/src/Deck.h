@@ -257,7 +257,7 @@ private:
     double transitionStartPosition = 0.0;
     double transitionEndPosition = 0.0;
 
-    double maxTransitionTime = 15.0;
+    double maxTransitionTime;
 
     bool main = false;
 

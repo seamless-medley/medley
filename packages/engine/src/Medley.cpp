@@ -21,6 +21,7 @@ Medley::Medley(IQueue& queue)
 #if JUCE_WINDOWS
     static_cast<void>(::CoInitialize(nullptr));
 #endif
+    setMaxTransitionTime(15.0);
 
     updateFadingFactor();
 
