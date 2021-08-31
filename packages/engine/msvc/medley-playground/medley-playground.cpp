@@ -66,19 +66,110 @@ public:
 
 private:
 
-    class PlayHead : public Component {
+    class PlayHead : public Component, public ChangeListener {
     public:
         class Callback {
         public:
-            virtual void getDecks(Deck** pAeck, Deck** pAnotherDeck) = 0;
+            virtual void getDecks(Deck** pDeck, Deck** pAnotherDeck) = 0;
+            virtual AudioThumbnail* getThumbnail(Deck* deck) = 0;
             virtual void playHeadSeek(double progress) = 0;
         };
 
-        PlayHead(Callback& callback)
+        class ResizeHandler : public AsyncUpdater {
+        public:
+            ResizeHandler(PlayHead& owner)
+                : owner(owner)
+            {
+
+            }
+
+            void handleAsyncUpdate() override {
+                owner.createThumbImage();
+                owner.updateThumbImage();
+                owner.repaint();
+            }
+
+            PlayHead& owner;
+        };
+
+        PlayHead(Callback& callback, TimeSliceThread& thread)
             :
-            callback(callback)
+            callback(callback),
+            thread(thread),
+            resizeHandler(*this)
         {
 
+        }
+
+        void createThumbImage() {
+            ScopedLock sl(thumbImageLock);
+            auto w = getWidth();
+            auto h = getHeight();
+            thumbImage = (w > 0 && h > 0) ? Image(Image::PixelFormat::ARGB, w, h, true) : Image();
+        }
+
+        void clearThumbImage() {
+            juce::Rectangle r(0, 0, getWidth(), getHeight());
+            thumbImage.clear(r, Colours::transparentBlack);
+        }
+
+        void resized() override {
+            resizeHandler.triggerAsyncUpdate();
+        }
+
+        void updateThumbImage() {
+            ScopedLock sl(thumbImageLock);
+            if (lastThumbnailFromCallback && thumbImage.isValid()) {
+                clearThumbImage();
+
+                Graphics g(thumbImage);
+                g.setColour(Colours::green.withAlpha(0.6f));
+                juce::Rectangle r(0, 2, getWidth(), getHeight() - 4);
+
+                Deck* deck = nullptr;
+                Deck* anotherDeck = nullptr;
+
+                callback.getDecks(&deck, &anotherDeck);
+
+                lastThumbnailFromCallback->drawChannels(g, r, 0.0, deck ? deck->getDuration() : lastThumbnailFromCallback->getTotalLength(), 1.0f);
+            }
+        }
+
+        void changeListenerCallback(ChangeBroadcaster* source) {
+            ScopedLock sl(thumbImageLock);
+            if (source == lastThumbnailFromCallback) {                
+                updateThumbImage();
+                return;
+            }
+        }
+
+        void detectThumbnail() {
+            ScopedLock sl(thumbImageLock);
+
+            Deck* deck = nullptr;
+            Deck* anotherDeck = nullptr;
+
+            callback.getDecks(&deck, &anotherDeck);
+
+            if (deck == nullptr) {
+                return;
+            }
+
+            auto thumbnail = callback.getThumbnail(deck);
+            if (thumbnail != lastThumbnailFromCallback) {
+                if (lastThumbnailFromCallback != nullptr) {
+                    lastThumbnailFromCallback->removeChangeListener(this);
+                }
+
+                lastThumbnailFromCallback = thumbnail;
+
+                clearThumbImage();
+                updateThumbImage();
+
+                if (thumbnail != nullptr) {
+                    thumbnail->addChangeListener(this);
+                }
+            }
         }
 
         void paint(Graphics& g) override {
@@ -87,7 +178,13 @@ private:
 
             callback.getDecks(&deck, &anotherDeck);
 
-            if (deck == nullptr || !deck->isTrackLoaded()) {
+            if (deck == nullptr) {
+                return;
+            }
+
+            detectThumbnail();
+
+            if (!deck->isTrackLoaded()) {
                 return;
             }
 
@@ -106,9 +203,6 @@ private:
                 return;
             }
 
-            g.setColour(Colours::green);
-            g.fillRect(0.0f, 0.0f, (pos / duration) * w, h);
-
             auto sr = deck->getSourceSampleRate();
             auto first = deck->getFirstAudiblePosition();
             auto last = deck->getEndPosition();
@@ -122,28 +216,31 @@ private:
             auto transitionStart = (float)deck->getTransitionStartPosition() - nextLeading;
             auto transitionEnd = (float)deck->getTransitionEndPosition();
 
-            g.fillCheckerBoard(
-                juce::Rectangle(
-                    0.0f, 0.0f,
-                    (float)(first / duration * w), h
-                ), 4, 4, Colours::darkgrey, Colours::darkgrey.darker()
-            );
+            juce::Rectangle firstArea(0.0f, 0.0f, (float)(first / duration * w), h);
+            juce::Rectangle inaudibleArea((float)(transitionEnd / duration * w), 0.0f, (float)(last / duration * w), h);
+            juce::Rectangle lastArea((float)(last / duration * w), 0.0f, w, h);
 
-            g.fillCheckerBoard(
-                juce::Rectangle(
-                    (float)(transitionEnd / duration * w), 0.0f,
-                    (float)(last / duration * w), h
-                ),
-                4, 4, Colours::darkorchid, Colours::darkorchid.darker()
-            );
+            g.fillCheckerBoard(firstArea,4, 4, Colours::darkgrey.brighter(), Colours::darkgrey);
+            g.fillCheckerBoard(inaudibleArea, 4, 4, Colours::darkorchid.brighter(), Colours::darkorchid);
+            g.fillCheckerBoard(lastArea, 4, 4, Colours::darkgrey.brighter(), Colours::darkgrey);
 
-            g.fillCheckerBoard(
-                juce::Rectangle(
-                    (float)(last / duration * w), 0.0f,
-                    w, h
-                ),
-                4, 4, Colours::darkgrey, Colours::darkgrey.darker()
-            );
+            // Thumb
+            {
+                ScopedLock sl(thumbImageLock);
+                g.drawImage(thumbImage, 0, 0, (int)w, (int)h, 0, 0, (int)w, (int)h);
+            }
+
+            // Masking            
+            g.setColour(Colours::black.withAlpha(0.5f));
+            g.fillRect(firstArea);
+            g.fillRect(inaudibleArea);
+            g.fillRect(lastArea);
+
+            // Progress
+            g.setColour(Colours::black.withAlpha(0.25f));
+            if (pos >= 0) {
+                g.fillRect(0.0f, 0.0f, (pos / duration) * w, h);
+            }
 
             // cue
             g.setColour(Colours::yellow);
@@ -179,18 +276,115 @@ private:
             callback.playHeadSeek((double)event.getPosition().getX() / getWidth());
         }
 
-
         Callback& callback;
+        ResizeHandler resizeHandler;
+        TimeSliceThread& thread;
+        AudioThumbnail* lastThumbnailFromCallback = nullptr;
+        Image thumbImage;
+        CriticalSection thumbImageLock;
     };
 
-    class DeckComponent : public Component, public Deck::Callback, PlayHead::Callback {
+    class DeckComponent : public Component, public Deck::Callback, PlayHead::Callback, TimeSliceClient {
     public:
-        DeckComponent(Medley& medley, Deck& deck, Deck& anotherDeck)
+        class ThumbnailLoader : public TimeSliceClient {
+        public:
+            ThumbnailLoader(Medley& medley, Deck& deck, AudioThumbnail* thumbnail)
+                :
+                medley(medley),
+                deck(deck),
+                thumbnail(thumbnail)
+            {
+
+            }
+
+            void load() {
+                ScopedLock sl(readerPtrLock);
+
+                if (thumbnail) {                   
+                    if (auto track = deck.getTrack()) {
+                        auto file = track->getFile();
+                        auto reader = medley.getAudioFormatManager().createReaderFor(file);
+
+                        numSamplesFinished = 0;
+                        lengthInSamples = reader->lengthInSamples;
+
+                        readerPtr.reset(reader);
+                        thumbnail->reset(1, reader->sampleRate, lengthInSamples);
+                    }
+                }
+            }
+
+            int useTimeSlice() override {
+                ScopedLock sl(readerPtrLock);
+
+                if (readerPtr.get() == nullptr) {
+                    return -1;
+                }
+
+                if (isFullyLoaded()) {                    
+                    readerPtr.reset();
+                    return -1;
+                }
+
+                AudioBuffer<float> buffer(readerPtr->numChannels, 512 * 256);
+                readerPtr->read(&buffer, 0, 512 * 256, numSamplesFinished, true, true);
+
+                buffer.addFrom(0, 0, buffer, 1, 0, 512 * 256);
+                buffer.applyGain(0.5f);
+                thumbnail->addBlock(numSamplesFinished, buffer, 0, 512 * 256);
+
+                numSamplesFinished += 512 * 256;
+
+                return isFullyLoaded() ? -1 : 40;
+            }
+
+            bool isFullyLoaded() const noexcept
+            {
+                return numSamplesFinished >= lengthInSamples;
+            }
+
+        private:
+            Medley& medley;
+            medley::Deck& deck;
+            AudioThumbnail* thumbnail;
+            CriticalSection readerPtrLock;
+            std::unique_ptr<AudioFormatReader> readerPtr;
+            int64 numSamplesFinished = 0;
+            int64 lengthInSamples = 0;
+        };
+
+        class ThumbnailCleaner : public TimeSliceClient {
+        public:
+            ThumbnailCleaner(AudioThumbnail* thumbnail, PlayHead& playhead)
+                :
+                thumbnail(thumbnail),
+                playhead(playhead)
+            {
+
+            }
+
+            int useTimeSlice() override {
+                if (thumbnail) {
+                    thumbnail->clear();
+                }
+                playhead.clearThumbImage();
+                return -1;
+            }
+
+            AudioThumbnail* thumbnail;
+            PlayHead& playhead;
+        };
+
+        DeckComponent(Medley& medley, Deck& deck, Deck& anotherDeck, TimeSliceThread& thread, AudioThumbnail* thumbnail)
             :
             medley(medley),
             deck(deck),
             anotherDeck(anotherDeck),
-            playhead(*this)
+            playhead(*this, thread),
+            thread(thread),
+            thumbnail(thumbnail),
+            thumbnailLoader(medley, deck, thumbnail),
+            thumbnailCleaner(thumbnail, playhead)
         {
             deck.addListener(this);
 
@@ -204,6 +398,10 @@ private:
         void getDecks(Deck** pDeck, Deck** pAnotherDeck) override {
             *pDeck = &deck;
             *pAnotherDeck = &anotherDeck;
+        }
+
+        AudioThumbnail* getThumbnail(Deck* deck) {
+            return deck->isTrackLoaded() ? thumbnail : nullptr;
         }
 
         void playHeadSeek(double progress) override {
@@ -236,17 +434,20 @@ private:
         }
 
         void deckLoaded(Deck& sender) override {
-
+            thread.addTimeSliceClient(this);
+            thumbnailLoader.load();
+            thread.addTimeSliceClient(&thumbnailLoader);
         }
 
         void deckUnloaded(Deck& sender) override {
             ScopedLock sl(coverImageLock);
             coverImage = Image();            
+            thread.addTimeSliceClient(&thumbnailCleaner);
         }
 
         void resized() {
             auto b = getLocalBounds();
-            playhead.setBounds(b.removeFromBottom(24));
+            playhead.setBounds(b.removeFromBottom(35));
         }
 
         void paint(Graphics& g) override {
@@ -432,8 +633,12 @@ private:
         medley::Deck& deck;
         medley::Deck& anotherDeck;
         PlayHead playhead;
+        TimeSliceThread& thread;
         CriticalSection coverImageLock;
         Image coverImage;
+        AudioThumbnail* thumbnail;
+        ThumbnailLoader thumbnailLoader;
+        ThumbnailCleaner thumbnailCleaner;
     };
 
     class VUMeter : public Component {
@@ -768,10 +973,13 @@ private:
 
             medley.addListener(this);
 
-            deckA = new DeckComponent(medley, medley.getDeck1(), medley.getDeck2());
+            thumbnails[&medley.getDeck1()] = std::make_unique<AudioThumbnail>(1024, medley.getAudioFormatManager(), thumbnailCache);
+            thumbnails[&medley.getDeck2()] = std::make_unique<AudioThumbnail>(1024, medley.getAudioFormatManager(), thumbnailCache);
+
+            deckA = new DeckComponent(medley, medley.getDeck1(), medley.getDeck2(), backgroundThread, thumbnails[&medley.getDeck1()].get());
             addAndMakeVisible(deckA);
 
-            deckB = new DeckComponent(medley, medley.getDeck2(), medley.getDeck1());
+            deckB = new DeckComponent(medley, medley.getDeck2(), medley.getDeck1(), backgroundThread, thumbnails[&medley.getDeck2()].get());
             addAndMakeVisible(deckB);
 
             btnShuffle.addListener(this);
@@ -802,7 +1010,7 @@ private:
             volumeSlider.setValue(medley.getGain());
             volumeSlider.addListener(this);
 
-            playhead = new PlayHead(*this);
+            playhead = new PlayHead(*this, backgroundThread);
             addAndMakeVisible(playhead);
 
             {
@@ -875,25 +1083,23 @@ private:
 
         void resized() override {
             auto b = getLocalBounds();
+            auto queueHeight = jmax(b.getHeight() * 0.45, 300.0);
             {
                 auto devicePanelArea = b.removeFromTop(34).reduced(10, 2);
                 comboDeviceTypes.setBounds(devicePanelArea.removeFromLeft(250));
                 comboDeviceNames.setBounds(devicePanelArea.removeFromLeft(250).translated(4, 0));
             }
+
             {
                 vuMeter->setBounds(b.removeFromTop(50).reduced(10, 2));
             }
+
             {
-                auto deckPanelArea = b.removeFromTop(120).reduced(10, 2);
-                auto w = (deckPanelArea.getWidth() - 10) / 2;
-                deckA->setBounds(deckPanelArea.removeFromLeft(w));
-                deckB->setBounds(deckPanelArea.translated(10, 0).removeFromLeft(w));
+                queueListBox.setBounds(b.removeFromBottom(queueHeight).reduced(10));
             }
+
             {
-                playhead->setBounds(b.removeFromTop(32).translated(0, 4).reduced(10, 4));
-            }
-            {
-                auto controlArea = b.removeFromTop(32).translated(0, 4).reduced(10, 4);
+                auto controlArea = b.removeFromBottom(32).translated(0, 4).reduced(10, 4);
                 btnShuffle.setBounds(controlArea.removeFromLeft(55));
                 btnAdd.setBounds(controlArea.removeFromLeft(55));
                 btnPlay.setBounds(controlArea.removeFromLeft(55));
@@ -903,8 +1109,16 @@ private:
                 volumeText.setBounds(controlArea.removeFromLeft(60));
                 volumeSlider.setBounds(controlArea.reduced(4, 0));
             }
+
             {
-                queueListBox.setBounds(b.reduced(10));
+                playhead->setBounds(b.removeFromBottom(50).translated(0, 4).reduced(10, 4));
+            }
+
+            {
+                auto deckPanelArea = b.reduced(10, 2);
+                auto w = (deckPanelArea.getWidth() - 10) / 2;
+                deckA->setBounds(deckPanelArea.removeFromLeft(w));
+                deckB->setBounds(deckPanelArea.translated(10, 0).removeFromLeft(w));
             }
         }
 
@@ -931,6 +1145,10 @@ private:
         void getDecks(Deck** pDeck, Deck** pAnotherDeck) {
             *pDeck = medley.getMainDeck();
             *pAnotherDeck = medley.getAnotherDeck(nullptr);
+        }
+
+        AudioThumbnail* getThumbnail(Deck* deck) {            
+            return deck->isTrackLoaded() ? thumbnails[deck].get() : nullptr;
         }
 
         void playHeadSeek(double progress) override {
@@ -1071,6 +1289,10 @@ private:
         VUMeter* vuMeter = nullptr;
 
         TimeSliceThread backgroundThread;
+
+        AudioThumbnailCache thumbnailCache{ 3 };
+        std::map<Deck*, std::unique_ptr<AudioThumbnail>> thumbnails;
+
         Queue queue;
         QueueModel model;
         medley::Medley medley;
