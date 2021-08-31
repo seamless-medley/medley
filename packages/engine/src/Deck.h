@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include "ITrack.h"
+#include "Metadata.h"
 
 using namespace juce;
 
@@ -78,14 +79,10 @@ public:
 
     float getVolume() const { return volume; }
 
-    float getPregain() const { return pregain; }
-
-    void setPregain(float newPre) {
-        pregain = newPre;
-        updateGain();
+    void setReplayGainBoost(float decibels) {
+        replayGainBoost = decibels;
+        setReplayGain(replayGain);
     }
-
-    void updateGain();
 
     double getSampleRate() const { return sampleRate; }
 
@@ -118,6 +115,10 @@ public:
     inline bool isMain() const { return main; }
 
     inline bool isFading() const { return fading; }
+
+    const Metadata& metadata() const {
+        return m_metadata;
+    }
 
 private:
     friend class Medley;
@@ -158,8 +159,10 @@ private:
 
     void setVolume(float newVolume) {
         volume = newVolume;
-        updateGain();
+        gain = gainCorrection * volume;
     }
+
+    void setReplayGain(float rg);
 
     void setSource(AudioFormatReaderSource* newSource);
 
@@ -176,12 +179,6 @@ private:
     void doPositionChange(double position);
 
     void fireFinishedCallback();
-
-    void setGain(float newGain) noexcept {
-        gain = newGain;
-    }
-
-    float getGain() const noexcept { return gain; }
 
     inline double getSampleInSeconds(int64 sample) {
         if (sampleRate > 0.0)
@@ -214,8 +211,10 @@ private:
     double sampleRate = 44100.0;
     double sourceSampleRate = 0;
 
-    float pregain = 1.0f;
+    float replayGain = 0.0f;
+    float gainCorrection = 1.0f;
     float volume = 1.0f;
+    float replayGainBoost = 9.0;
     //
     float gain = 1.0f;
     float lastGain = 1.0f;
@@ -263,6 +262,8 @@ private:
     bool main = false;
 
     bool fading = false;
+
+    Metadata m_metadata;
 };
 
 }

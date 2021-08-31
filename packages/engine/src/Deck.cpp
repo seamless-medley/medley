@@ -75,13 +75,6 @@ void Deck::loadTrack(const ITrack::Ptr track, OnLoadingDone doneCallback)
         return;
     }
 
-    pregain = track->getPreGain();
-
-    // negative or zero pregain just doesn't make any sense!
-    if (pregain <= 0.0f) {
-        pregain = 1.0f;
-    }
-
     isTrackLoading = true;
     loader.load(track, doneCallback);
 }
@@ -157,6 +150,12 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     log(String::formatted("Loaded - leading@%.2f duration=%.2f", leadingSamplePosition / reader->sampleRate, leadingDuration));
 
+    m_metadata.readFromTrack(track);
+
+    setReplayGain(m_metadata.getTrackGain());
+
+    log(String::formatted("Gain correction: %.2fdB", Decibels::gainToDecibels(gainCorrection)));
+
     this->track = track;
     isTrackLoading = false;
 
@@ -212,9 +211,8 @@ void Deck::unloadTrackInternal()
     }
 
     track = nullptr;
-    pregain = 1.0f;
-    volume = 1.0f;
-    updateGain();
+    setReplayGain(0.0f);
+    setVolume(1.0f);
 }
 
 void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
@@ -486,9 +484,17 @@ void Deck::fireFinishedCallback()
     unloadTrackInternal();
 }
 
-void Deck::updateGain()
+void Deck::setReplayGain(float rg)
 {
-    gain = pregain * volume;
+    replayGain = rg;
+
+    if (replayGain <= 0.0f) {
+        replayGain = 0.0f;
+    }
+
+    gainCorrection = (replayGain > 0.0) ? replayGain * Decibels::decibelsToGain(replayGainBoost) : 1.0f;
+
+    gain = gainCorrection * volume;
 }
 
 void Deck::setMaxTransitionTime(double duration)
@@ -548,6 +554,8 @@ void Deck::releaseResources()
 {
     releaseChainedResources();
 }
+
+
 
 void Deck::setSource(AudioFormatReaderSource* newSource)
 {
