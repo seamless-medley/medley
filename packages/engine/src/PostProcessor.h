@@ -24,6 +24,8 @@ public:
          chain.reset();
     }
 
+    inline float getReduction() const { return chain.get<0>().getReduction(); }
+
 private:
      ProcessorChain<LookAheadLimiter> chain;
 };

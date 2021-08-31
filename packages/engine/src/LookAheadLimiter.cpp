@@ -8,8 +8,8 @@ LookAheadLimiter::LookAheadLimiter()
 {
     gainReductionCalculator.setThreshold(-3.0f);
     gainReductionCalculator.setKnee(0.0f);
-    gainReductionCalculator.setAttackTime(30.0f / 1000);
-    gainReductionCalculator.setReleaseTime(150.0f / 1000);
+    gainReductionCalculator.setAttackTime(10.0f / 1000);
+    gainReductionCalculator.setReleaseTime(60.0f / 1000);
     gainReductionCalculator.setMakeUpGain(0.0f);
 
     const float ratio = 16.0f;
@@ -81,6 +81,13 @@ void LookAheadLimiter::process(const ProcessContextReplacing<float>& context)
 
 
     /** STEP 4: apply gain-reduction to all channels */
+    auto reduction = 0.0f;
+
+    for (int i = 0; i < numSamples; ++i)
+        reduction += sideChainBuffer.getSample(1, i);
+
+    this->reduction = Decibels::gainToDecibels(reduction / numSamples);
+
     for (unsigned long ch = 0; ch < totalNumInputChannels; ++ch)
         FloatVectorOperations::multiply(output.getChannelPointer(ch), sideChainBuffer.getReadPointer(1), numSamples);
 }

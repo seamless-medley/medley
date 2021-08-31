@@ -19,6 +19,8 @@ public:
 
     void reset();
 
+    float getReduction() const { return reduction; }
+
 private:
     class Delay {
     private:
@@ -40,6 +42,7 @@ private:
         juce::AudioBuffer<float> buffer;
     };
 
+    float reduction = 0.0f;
 
     Delay delay;
     ReductionCalculator gainReductionCalculator;

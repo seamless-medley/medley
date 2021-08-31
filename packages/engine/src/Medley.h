@@ -132,6 +132,10 @@ public:
         return mixer.isClipping(channel);
     }
 
+    inline float getReduction() {
+        return mixer.getReduction();
+    }
+
     void changeListenerCallback(ChangeBroadcaster* source) override;
 
     bool isTrackLoadable(const ITrack::Ptr track);
@@ -196,6 +200,10 @@ private:
         bool isClipping(int channel) {
             ScopedLock sl(levelTrackerLock);
             return levelTracker.isClipping(channel);
+        }
+
+        float getReduction() const {
+            return processor.getReduction();
         }
 
         int useTimeSlice() override;
