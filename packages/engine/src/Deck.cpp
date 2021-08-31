@@ -6,6 +6,7 @@ namespace {
     static const auto kSilenceThreshold = Decibels::decibelsToGain(-60.0f);
     static const auto kEndingSilenceThreshold = Decibels::decibelsToGain(-45.0f);
     static const auto kFadingSilenceThreshold = Decibels::decibelsToGain(-30.0f);
+    static const auto kRisingFadeSilenceThreshold = Decibels::decibelsToGain(-27.0f);
 
     constexpr float kFirstSoundDuration = 0.001f;
     constexpr float kLastSoundDuration = 1.25f;
@@ -215,6 +216,45 @@ void Deck::unloadTrackInternal()
     setVolume(1.0f);
 }
 
+int64 findFadingPosition(AudioFormatReader* reader, int64 startSample, int64 numSamples) {   
+    auto endPosition = startSample + numSamples;
+    int64 result = -1;
+
+    auto consecutiveSamples = (int)(reader->sampleRate * 0.3);
+
+    while (startSample < endPosition) {
+        Logger::writeToLog(String::formatted("startSample: %d", startSample));
+
+        auto position = reader->searchForLevel(
+            startSample,
+            endPosition - startSample,
+            0, kFadingSilenceThreshold,
+            consecutiveSamples
+        );
+
+        if (position < 0) {
+            break;
+        }
+
+        result = position;
+
+        auto risingPosition = reader->searchForLevel(
+            position,
+            endPosition - position,
+            kRisingFadeSilenceThreshold, 1.0,
+            (int)(reader->sampleRate * 0.005)
+        );
+
+        if (risingPosition < 0) {
+            break;
+        }
+        
+        startSample = risingPosition;
+    }
+
+    return result;
+ }
+
 void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
 {
     auto scanningReader = utils::createAudioReaderFor(formatMgr, trackToScan);
@@ -236,24 +276,24 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
         (int64)(scanningReader->lengthInSamples - scanningReader->sampleRate * kLastSoundScanningDurartion)
     );
 
-    auto silencePosition = scanningReader->searchForLevel(
+    auto guessedSilencePosition = scanningReader->searchForLevel(
         tailPosition,
         scanningReader->lengthInSamples - tailPosition,
         0, kSilenceThreshold,
         (int)(scanningReader->sampleRate * kLastSoundDuration)
     );
 
-    if (silencePosition < 0) {
-        silencePosition = 0;
+    if (guessedSilencePosition < 0) {
+        guessedSilencePosition = scanningReader->lengthInSamples - scanningReader->sampleRate * kLastSoundDuration;
     }
 
-    if (silencePosition > firstAudibleSamplePosition) {
-        lastAudibleSamplePosition = silencePosition;
+    if (guessedSilencePosition > firstAudibleSamplePosition) {
+        lastAudibleSamplePosition = guessedSilencePosition;
     }
 
     auto endPosition = scanningReader->searchForLevel(
-        silencePosition,
-        scanningReader->lengthInSamples - silencePosition,
+        guessedSilencePosition,
+        scanningReader->lengthInSamples - guessedSilencePosition,
         0, kSilenceThreshold,
         (int)(scanningReader->sampleRate * 0.004)
     );
@@ -262,13 +302,7 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
         totalSourceSamplesToPlay = endPosition;
     }
 
-    trailingSamplePosition = scanningReader->searchForLevel(
-        tailPosition,
-        totalSamplesToPlay - tailPosition,
-        0, kFadingSilenceThreshold,
-        (int)(scanningReader->sampleRate * 0.3)
-    );
-
+    trailingSamplePosition = findFadingPosition(scanningReader, tailPosition, totalSourceSamplesToPlay - tailPosition);
     trailingDuration = (trailingSamplePosition > -1) ? (lastAudibleSamplePosition - trailingSamplePosition) / scanningReader->sampleRate : 0;
 
     calculateTransition();
