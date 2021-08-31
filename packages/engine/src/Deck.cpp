@@ -330,6 +330,12 @@ void Deck::doPositionChange(double position)
 void Deck::setPosition(double time)
 {
     if (sampleRate > 0.0) {
+        auto firstAudibleTime = getFirstAudiblePosition();
+
+        if (time < firstAudibleTime) {
+            time = firstAudibleTime;
+        }
+
         setNextReadPosition((int64)(time * sampleRate));
         doPositionChange(time);
     }
