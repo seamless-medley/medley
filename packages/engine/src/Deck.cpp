@@ -522,11 +522,12 @@ void Deck::fireFinishedCallback()
 {
     log("Finished");
 
+    unloadTrackInternal();
+
     listeners.call([this](Callback& cb) {
         cb.deckFinished(*this);
     });
 
-    unloadTrackInternal();
 }
 
 void Deck::setReplayGain(float rg)
