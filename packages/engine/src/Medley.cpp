@@ -173,15 +173,9 @@ void Medley::fadeOutMainDeck()
     if (auto deck = getMainDeck()) {
         forceFadingOut++;
 
-        // FIXME: Unexpected track unloading
-        if (transitionState >= TransitionState::Cued) {
-            if (transitingDeck) {
-                transitingDeck->unloadTrack();
-            }
-            //deck->unloadTrack(); // TODO: Unload transitingDeck?
-            transitionState = TransitionState::Idle;
-
-            //deck = getMainDeck();
+        if (deck != nullptr && deck == transitingDeck) {
+            transitingDeck->unloadTrack();
+            deck = getAnotherDeck(deck);
         }
 
         if (deck) {
@@ -506,7 +500,7 @@ void Medley::doTransition(Deck* deck, double position)
 
         if (transitionState != TransitionState::Idle && position > transitionEndPos) {
             if (transitionProgress >= 1.0) {
-                forceFadingOut = false;
+                forceFadingOut = 0;
                 deck->stop();
             }
         }
