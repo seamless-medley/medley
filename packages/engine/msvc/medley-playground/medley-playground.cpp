@@ -515,7 +515,7 @@ private:
                     juce::Rectangle coverArea(coverContainer);
 
                     if (coverImage.isValid()) {
-                        g.drawImageWithin(coverImage, coverContainer.getX(), coverContainer.getY(), coverContainer.getWidth(), coverContainer.getHeight(), RectanglePlacement::centred);
+                        g.drawImageWithin(coverImage, (int)coverContainer.getX(), (int)coverContainer.getY(), (int)coverContainer.getWidth(), (int)coverContainer.getHeight(), RectanglePlacement::centred);
 
                         auto ratio = coverImage.getBounds().toFloat().getAspectRatio();
                         auto coverAreaWidth = ratio * coverContainer.getHeight();
@@ -523,9 +523,17 @@ private:
                         coverArea = juce::Rectangle(((float)b.getWidth() - coverAreaWidth) / 2.0f, coverContainer.getY(), coverAreaWidth, coverContainer.getHeight());
                     }
 
+                    if (coverArea.getWidth() > coverContainer.getWidth()) {
+                        coverArea.setWidth(coverContainer.getWidth());
+                    }
+
+                    if (coverArea.getX() < coverContainer.getX()) {
+                        coverArea.setX(coverContainer.getX());
+                    }
+
                     auto lines = 14;
-                    auto fontHeight = coverArea.getHeight() / (float)lines - 2.0;
-                    auto topArea = coverArea.withHeight(fontHeight * (float)lines / 2.0);
+                    auto fontHeight = coverArea.getHeight() / (float)lines - 2.0f;
+                    auto topArea = coverArea.withHeight(fontHeight * (float)lines / 2.0f);
                     auto topInnerArea = topArea.reduced(2);
 
                     g.setGradientFill(ColourGradient(
@@ -538,7 +546,7 @@ private:
                     auto meta = deck.metadata();
 
                     auto lineX = [topInnerArea, fontHeight](int lineIndex) {
-                        return topInnerArea.withY(topInnerArea.getY() + fontHeight * lineIndex);
+                        return topInnerArea.withY(topInnerArea.getY() + fontHeight * (float)lineIndex);
                     };
 
                     g.setColour(Colours::white);
@@ -571,8 +579,8 @@ private:
             // TODO: Resize if too large
             auto size = coverImage.getBounds().toFloat();
             if (size.getWidth() > 800.0f || size.getHeight() > 800.0f) {
-                auto h = 800.0f;
-                auto w = size.getAspectRatio() * h;
+                auto h = 800;
+                auto w = (int)(size.getAspectRatio() * h);
 
                 auto newImage = Image(Image::PixelFormat::ARGB, w, h, true);
                 Graphics g(newImage);
@@ -718,12 +726,12 @@ private:
             auto peakRightX = (int)(getWidth() * rangeNormalizer.convertTo0to1(jmin(peakRight, 6.0)));
 
             g.setColour(getPeakColour(peakLeft));
-            g.fillRect((float)peakLeftX - 2.0, 0.0, 2.0, mh);
+            g.fillRect((float)peakLeftX - 2.0f, 0.0f, 2.0f, mh);
 
             g.setColour(getPeakColour(peakRight));
-            g.fillRect((float)peakRightX - 2.0, mh, 2.0, h);
+            g.fillRect((float)peakRightX - 2.0f, mh, 2.0f, h);
 
-            auto reduction = 1.0f - (float)rangeNormalizer.convertTo0to1(medley.getReduction() + 6.0f);
+            auto reduction = 1.0f - (float)rangeNormalizer.convertTo0to1((double)medley.getReduction() + 6.0);
             auto reductionWidth = (float)getWidth() * reduction;
             g.setColour(Colours::darkslateblue);
             g.fillRect((float)getWidth() - reductionWidth, 0.0f, reductionWidth, h);
@@ -1122,7 +1130,7 @@ private:
             }
 
             {
-                queueListBox.setBounds(b.removeFromBottom(queueHeight).reduced(10));
+                queueListBox.setBounds(b.removeFromBottom((int)queueHeight).reduced(10));
             }
 
             {
@@ -1270,7 +1278,6 @@ private:
         }
 
         void preQueueNext(PreCueNextDone done) override {
-            std::cout << "Pre queue next" << std::endl;
             done(true);
         }
 
