@@ -14,6 +14,27 @@
 using namespace juce;
 using namespace medley;
 
+class ConsoleLogger : public Logger {
+public:
+    ConsoleLogger()
+    {
+        out = GetStdHandle(STD_OUTPUT_HANDLE);
+    }
+protected:
+    void logMessage(const String& message) override {
+        String line(message + "\n");
+        if (out != NULL && out != INVALID_HANDLE_VALUE) {
+            DWORD written = 0;
+            WriteConsole(out, line.toWideCharPointer(), line.length(), &written, nullptr);
+        }
+        else {
+            OutputDebugString(line.toWideCharPointer());
+        }
+    }
+
+    HANDLE out = INVALID_HANDLE_VALUE;
+};
+
 class Track : public medley::ITrack {
 public:
     Track(File& file)
@@ -52,12 +73,16 @@ class MedleyApp : public JUCEApplication {
 public:
     void initialise(const String& commandLine) override
     {
+        logger = std::make_unique<ConsoleLogger>();
+
+        ConsoleLogger::setCurrentLogger(logger.get());
         myMainWindow.reset(new MainWindow());
         myMainWindow->setVisible(true);
     }
 
     void shutdown() override {
         myMainWindow = nullptr;
+        logger.release();
     }
 
     const juce::String getApplicationName() override { return "Medley Playground"; }
@@ -65,6 +90,8 @@ public:
     const juce::String getApplicationVersion() override { return "0.1.0"; }
 
 private:
+
+    std::unique_ptr<ConsoleLogger> logger;
 
     class PlayHead : public Component, public ChangeListener {
     public:
