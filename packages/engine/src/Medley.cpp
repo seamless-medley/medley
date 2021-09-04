@@ -20,9 +20,7 @@ Medley::Medley(IQueue& queue)
 {
 #if JUCE_WINDOWS
     static_cast<void>(::CoInitialize(nullptr));
-#endif
-    setMaxTransitionTime(15.0);
-
+#endif    
     updateFadingFactor();
 
     auto error = deviceMgr.initialiseWithDefaultDevices(0, 2);
@@ -76,6 +74,8 @@ Medley::Medley(IQueue& queue)
             throw std::runtime_error("Audio device is not playing");
         }
     }
+
+    setMaximumFadeOutDuration(3.0);
 }
 
 Medley::~Medley() {
@@ -162,10 +162,10 @@ double Medley::getPositionInSeconds() const
     return 0.0;
 }
 
-void Medley::setMaxTransitionTime(double value) {
-    maxTransitionTime = value;
-    deck1->setMaxTransitionTime(value);
-    deck2->setMaxTransitionTime(value);
+void Medley::setMaximumFadeOutDuration(double value) {
+    maximumFadeOutDuration = value;
+    deck1->setMaximumFadeOutDuration(value);
+    deck2->setMaximumFadeOutDuration(value);
 }
 
 void Medley::fadeOutMainDeck()
@@ -173,11 +173,15 @@ void Medley::fadeOutMainDeck()
     if (auto deck = getMainDeck()) {
         forceFadingOut++;
 
+        // FIXME: Unexpected track unloading
         if (transitionState >= TransitionState::Cued) {
-            deck->unloadTrack();
+            if (transitingDeck) {
+                transitingDeck->unloadTrack();
+            }
+            //deck->unloadTrack(); // TODO: Unload transitingDeck?
             transitionState = TransitionState::Idle;
 
-            deck = getMainDeck();
+            //deck = getMainDeck();
         }
 
         if (deck) {
@@ -211,8 +215,6 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone cal
         nextDeck->log("is busy loading some track");
         nextDeck->unloadTrack();
     }
-
-    nextDeck->log("Loading next");
 
     auto pQueue = &queue;
     Deck::OnLoadingDone loadingHandler = [&, _callback = callback, p = play, _pQueue = pQueue, _nextDeck = nextDeck](bool loadingResult) {
@@ -250,8 +252,6 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone cal
         auto track = queue.fetchNextTrack();
         nextDeck->loadTrack(track, loadingHandler);
     } else {
-        Logger::writeToLog("No next track, try PRE CUE");
-
         ScopedLock sl(callbackLock);
         listeners.call([&](Callback& cb) {
             cb.preQueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _callback = callback](bool preCueDone) {
@@ -475,8 +475,8 @@ void Medley::doTransition(Deck* deck, double position)
                 nextDeck->setVolume(1.0f);
 
                 if (forceFadingOut > 0) {
-                    if (leadingDuration >= maxLeadingDuration) {
-                        nextDeck->setPosition(nextDeck->getFirstAudiblePosition() + leadingDuration - maxLeadingDuration);
+                    if (leadingDuration >= minimumLeadingToFade) {
+                        nextDeck->setPosition(nextDeck->getFirstAudiblePosition() + leadingDuration - minimumLeadingToFade);
                     }
                 }
 
@@ -486,9 +486,9 @@ void Medley::doTransition(Deck* deck, double position)
             }
         }
 
-        auto newVolume = faderIn.update(position);
+        auto newVolume = (leadingDuration > minimumLeadingToFade) ? faderIn.update(position) : 1.0f;
         if (newVolume != nextDeck->getVolume()) {
-            nextDeck->log(String::formatted("Fading in: %.2f", newVolume));
+            //nextDeck->log(String::formatted("Fading in: %.2f", newVolume));
             nextDeck->setVolume(newVolume);
         }
     }
@@ -496,7 +496,7 @@ void Medley::doTransition(Deck* deck, double position)
     auto currentVolume = deck->getVolume();
     auto newVolume = faderOut.update(position);
     if (newVolume != currentVolume) {
-        deck->log(String::formatted("Fading out: %.2f", newVolume));
+        //deck->log(String::formatted("Fading out: %.2f", newVolume));
         deck->setVolume(newVolume);
     }
 

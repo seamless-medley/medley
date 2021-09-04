@@ -108,15 +108,15 @@ public:
 
     double getPositionInSeconds() const;
 
-    double getMaxLeadingDuration() const { return maxLeadingDuration; }
+    double getMinimumLeadingToFade() const { return minimumLeadingToFade; }
 
-    void setMaxLeadingDuration(double value) {
-        maxLeadingDuration = value;
+    void setMinimumLeadingToFade(double value) {
+        minimumLeadingToFade = value;
     }
 
-    double getMaxTransitionTime() const { return maxTransitionTime; }
+    double getMaximumFadeOutDuration() const { return maximumFadeOutDuration; }
 
-    void setMaxTransitionTime(double value);
+    void setMaximumFadeOutDuration(double value);
 
     void fadeOutMainDeck();
 
@@ -268,8 +268,8 @@ private:
     double fadingCurve = 60;
     float fadingFactor;
 
-    double maxLeadingDuration = 2.5;
-    double maxTransitionTime;
+    double minimumLeadingToFade = 2.5;
+    double maximumFadeOutDuration;
 
     int forceFadingOut = 0;
 

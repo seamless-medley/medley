@@ -49,7 +49,7 @@ public:
 
     void setPositionFractional(double fraction);
 
-    bool isPlaying() const noexcept { return playing; }
+    bool isPlaying() const noexcept { return playing && !internallyPaused; }
 
     void addListener(Callback* cb);
 
@@ -96,9 +96,9 @@ public:
 
     double getTransitionEndPosition() const { return transitionEndPosition; }
 
-    double getMaxTransitionTime() const { return maxTransitionTime; }
+    double getMaximumFadeOutDuration() const { return maximumFadeOutDuration; }
 
-    void setMaxTransitionTime(double duration);
+    void setMaximumFadeOutDuration(double duration);
 
     double getFirstAudiblePosition() const;
 
@@ -201,6 +201,10 @@ private:
         internallyPaused = true;
     }
 
+    int64 findBoring(AudioFormatReader* reader, int64 startSample, int64 endSample);
+
+    int64 findFadingPosition(AudioFormatReader* reader, int64 startSample, int64 numSamples);
+
     bool isTrackLoading = false;
     ITrack::Ptr track = nullptr;
 
@@ -257,7 +261,7 @@ private:
     double transitionStartPosition = 0.0;
     double transitionEndPosition = 0.0;
 
-    double maxTransitionTime;
+    double maximumFadeOutDuration = 3.0;
 
     bool main = false;
 

@@ -110,9 +110,9 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     auto playDuration = getEndPosition();
 
     {   // Seamless mode
-        if (playDuration >= 3) {
+        if (playDuration >= 3.0) {
             Range<float> maxLevels[2]{};
-            reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * jmax(maxTransitionTime, kLeadingScanningDuration)), maxLevels, 2);
+            reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * jmax(kLeadingScanningDuration, maximumFadeOutDuration)), maxLevels, 2);
 
             auto detectedLevel = (abs(maxLevels[0].getEnd()) + abs(maxLevels[1].getEnd())) / 2.0f;
             auto leadingDecibel = Decibels::gainToDecibels(detectedLevel);
@@ -219,15 +219,68 @@ void Deck::unloadTrackInternal()
     setVolume(1.0f);
 }
 
-int64 findFadingPosition(AudioFormatReader* reader, int64 startSample, int64 numSamples) {   
+int64 Deck::findBoring(AudioFormatReader* reader, int64 startSample, int64 endSample) {
+    auto currentSample = startSample;
+    auto duration = (endSample - startSample) / (float)reader->sampleRate;
+
+    auto blockSize = (int)(reader->sampleRate * 0.3);
+
+    int64 startBoringSample = -1;
+    double boringScore = 0.0;
+
+    auto hardLimit = Decibels::decibelsToGain(-22.0f);
+    auto threshold = hardLimit;
+
+    while (endSample > currentSample) {
+        AudioBuffer<float> tempSampleBuffer(reader->numChannels, blockSize);
+        reader->read(&tempSampleBuffer, 0, blockSize, currentSample, true, true);
+
+        float rms[2]{};
+        for (auto i = 0; i < jmin(2, (int)reader->numChannels); i++) {
+            rms[i] = tempSampleBuffer.getRMSLevel(i, 0, blockSize);
+        }
+
+        auto level = (float)(2.8 * ((double)rms[0] + (double)rms[1]) / 2.0);
+
+        if (level < threshold) {
+            if (startBoringSample == -1) {
+                startBoringSample = currentSample;
+            }
+
+            boringScore += 1.0;
+            threshold = level;
+        }
+        else if (level >= jmin(hardLimit, Decibels::decibelsToGain(Decibels::gainToDecibels(threshold) + 3.0f))) {
+            boringScore = boringScore * 0.6;
+            if (boringScore <= 0.15) {
+                boringScore = 0;
+                startBoringSample = -1;
+                threshold = hardLimit;
+            }
+        }
+
+        if (startBoringSample > -1 && boringScore >= 1.0) {
+            auto boringDuration = (currentSample - startBoringSample) / (double)reader->sampleRate;
+            if (boringDuration >= 1.0) {
+                return startBoringSample;
+            }
+        }
+        
+        currentSample += blockSize;
+    }
+
+    return -1;
+}
+
+int64 Deck::findFadingPosition(AudioFormatReader* reader, int64 startSample, int64 numSamples) {
+    auto startPosition = startSample;
     auto endPosition = startSample + numSamples;
     int64 result = -1;
+    int64 lastFadingPosition = startPosition;
 
     auto consecutiveSamples = (int)(reader->sampleRate * 0.3);
 
     while (startSample < endPosition) {
-        Logger::writeToLog(String::formatted("startSample: %d", startSample));
-
         auto position = reader->searchForLevel(
             startSample,
             endPosition - startSample,
@@ -237,6 +290,10 @@ int64 findFadingPosition(AudioFormatReader* reader, int64 startSample, int64 num
 
         if (position < 0) {
             break;
+        }        
+
+        if (result > lastFadingPosition) {
+            lastFadingPosition = result;
         }
 
         result = position;
@@ -251,8 +308,18 @@ int64 findFadingPosition(AudioFormatReader* reader, int64 startSample, int64 num
         if (risingPosition < 0) {
             break;
         }
-        
+
         startSample = risingPosition;
+    }
+
+    if (result > startPosition) {
+        log(String::formatted("Fading out at %.2f", result / reader->sampleRate));
+    }
+
+    auto boring = findBoring(reader, lastFadingPosition, endPosition);
+    if (boring > lastFadingPosition && boring < result) {
+        result = boring;
+        log(String::formatted("Boring at %.2f", boring / reader->sampleRate));
     }
 
     return result;
@@ -287,10 +354,9 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
     );
 
     if (guessedSilencePosition < 0) {
-        guessedSilencePosition = scanningReader->lengthInSamples - scanningReader->sampleRate * kLastSoundDuration;
+        guessedSilencePosition = (int64)((double)scanningReader->lengthInSamples - scanningReader->sampleRate * kLastSoundDuration);
     }
-
-    if (guessedSilencePosition > firstAudibleSamplePosition) {
+    else if (guessedSilencePosition > firstAudibleSamplePosition) {
         lastAudibleSamplePosition = guessedSilencePosition;
     }
 
@@ -305,7 +371,7 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
         totalSourceSamplesToPlay = endPosition;
     }
 
-    trailingSamplePosition = findFadingPosition(scanningReader, tailPosition, totalSourceSamplesToPlay - tailPosition);
+    trailingSamplePosition = findFadingPosition(scanningReader, tailPosition, scanningReader->lengthInSamples - tailPosition);
     trailingDuration = (trailingSamplePosition > -1) ? (lastAudibleSamplePosition - trailingSamplePosition) / scanningReader->sampleRate : 0;
 
     calculateTransition();
@@ -333,21 +399,22 @@ void Deck::calculateTransition()
     transitionStartPosition = lastAudibleSamplePosition / sourceSampleRate;
     transitionEndPosition = transitionStartPosition;
 
-    if (trailingDuration > 0.0 && maxTransitionTime > 0.0)
+    if (trailingDuration > 0.0 && maximumFadeOutDuration > 0.0)
     {
 
-        if (trailingDuration >= maxTransitionTime) {
+        if (trailingDuration >= maximumFadeOutDuration) {
             transitionStartPosition = trailingSamplePosition / sourceSampleRate;
-            transitionEndPosition = transitionStartPosition + maxTransitionTime;
+            transitionEndPosition = transitionStartPosition + maximumFadeOutDuration;
+            trailingDuration = maximumFadeOutDuration;
         }
         else {
             transitionStartPosition = jmax(2.0, transitionEndPosition - trailingDuration);
         }
     }
 
-    transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(kLeadingScanningDuration, maxTransitionTime));
+    transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(kLeadingScanningDuration, maximumFadeOutDuration));
     if (transitionCuePosition == 0.0) {
-        transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(kLeadingScanningDuration, maxTransitionTime) / 2.0);
+        transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(kLeadingScanningDuration, maximumFadeOutDuration) / 2.0);
     }
 
     transitionPreCuePosition = jmax(0.0, transitionCuePosition - 1.0);
@@ -543,9 +610,9 @@ void Deck::setReplayGain(float rg)
     gain = gainCorrection * volume;
 }
 
-void Deck::setMaxTransitionTime(double duration)
+void Deck::setMaximumFadeOutDuration(double duration)
 {
-    maxTransitionTime = duration;
+    maximumFadeOutDuration = duration;
     calculateTransition();
 }
 
@@ -562,7 +629,7 @@ void Deck::fadeOut(bool force)
 {
     if (!fading || force) {
         transitionCuePosition = transitionStartPosition = getPosition();
-        transitionEndPosition = jmin(transitionStartPosition + jmin(3.0, maxTransitionTime), getEndPosition());
+        transitionEndPosition = jmin(transitionStartPosition + jmin(3.0, maximumFadeOutDuration), getEndPosition());
         fading = true;
     }
 }
