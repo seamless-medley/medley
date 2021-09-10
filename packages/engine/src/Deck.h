@@ -29,11 +29,11 @@ public:
 
     typedef std::function<void(bool)> OnLoadingDone;
 
-    Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
+    Deck(const juce::String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
 
     ~Deck() override;
 
-    const String& getName() const { return name; }
+    const juce::String& getName() const { return name; }
 
     double getDuration() const;
 
@@ -191,9 +191,9 @@ private:
         main = mark;
     }
 
-    String tagName() const;
+    juce::String tagName() const;
 
-    void log(const String& s);
+    void log(const juce::String& s);
 
     void fadeOut(bool force = false);
 
@@ -214,6 +214,7 @@ private:
 
     double sampleRate = 44100.0;
     double sourceSampleRate = 0;
+    int64 nextReadPosition = 0;
 
     float replayGain = 0.0f;
     float gainCorrection = 1.0f;
@@ -240,7 +241,7 @@ private:
     //
     ListenerList<Callback> listeners;
     //
-    String name;
+    juce::String name;
     Loader loader;
 
     Scanner scanningScheduler;

@@ -47,8 +47,8 @@ void LevelSmoother::addLevel(const Time time, const double newLevel, const Relat
     }
     
     auto h = results_head.load(std::memory_order_relaxed);
-    if ((h - results_tail.load(std::memory_order_acquire)) != 32) {
-        results[h++ & 31] = { time, clip, avgPeak, peak };
+    if ((h - results_tail.load(std::memory_order_acquire)) != 128) {
+        results[h++ & 127] = { time, clip, avgPeak, peak };
         std::atomic_signal_fence(std::memory_order_release);
         results_head.store(h, std::memory_order_release);
     }
@@ -63,7 +63,7 @@ void LevelSmoother::update(const Time time)
 {
     auto t = results_tail.load(std::memory_order_relaxed);
     while (t != results_head.load(std::memory_order_acquire)) {
-        auto first = results[t & 31];
+        auto first = results[t & 127];
 
         if (time <= first.time) {
             break;

@@ -214,6 +214,7 @@ void Deck::unloadTrackInternal()
         });
     }
 
+    nextReadPosition = 0;
     track = nullptr;
     setReplayGain(0.0f);
     setVolume(1.0f);
@@ -265,7 +266,7 @@ int64 Deck::findBoring(AudioFormatReader* reader, int64 startSample, int64 endSa
                 return startBoringSample;
             }
         }
-        
+
         currentSample += blockSize;
     }
 
@@ -290,7 +291,7 @@ int64 Deck::findFadingPosition(AudioFormatReader* reader, int64 startSample, int
 
         if (position < 0) {
             break;
-        }        
+        }
 
         if (result > lastFadingPosition) {
             lastFadingPosition = result;
@@ -477,8 +478,9 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
         }
 
         auto samplesToPlay = totalSourceSamplesToPlay / resamplerSource->getResamplingRatio();
+        nextReadPosition = bufferingSource->getNextReadPosition();
 
-        if (bufferingSource->getNextReadPosition() > samplesToPlay + 1 && !bufferingSource->isLooping())
+        if (nextReadPosition > samplesToPlay + 1 && !bufferingSource->isLooping())
         {
             playing = false;
             inputStreamEOF = true;
@@ -506,11 +508,14 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
 
 void Deck::setNextReadPosition(int64 newPosition)
 {
+    const ScopedLock sl(sourceLock);
+
     if (bufferingSource != nullptr)
     {
         if (sampleRate > 0 && sourceSampleRate > 0)
             newPosition = (int64)((double)newPosition * sourceSampleRate / sampleRate);
 
+        nextReadPosition = newPosition;
         bufferingSource->setNextReadPosition(newPosition);
 
         if (resamplerSource != nullptr)
@@ -525,7 +530,7 @@ int64 Deck::getNextReadPosition() const
     if (bufferingSource != nullptr)
     {
         const double ratio = (sampleRate > 0 && sourceSampleRate > 0) ? sampleRate / sourceSampleRate : 1.0;
-        return (int64)((double)bufferingSource->getNextReadPosition() * ratio);
+        return (int64)((double)nextReadPosition * ratio);
     }
 
     return 0;
@@ -707,6 +712,7 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
     bufferingSource = newBufferingSource;
     resamplerSource = newResamplerSource;
 
+    nextReadPosition = 0;
     inputStreamEOF = false;
     playing = false;
 

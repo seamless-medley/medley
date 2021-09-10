@@ -38,7 +38,7 @@ private:
     std::vector<double> backlog;
     int backlogIndex = 0;
 
-    Level results[32];
+    Level results[128];
     std::atomic<uint8_t> results_head;
     std::atomic<uint8_t> results_tail = 0;
 

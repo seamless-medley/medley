@@ -20,7 +20,7 @@ Medley::Medley(IQueue& queue)
 {
 #if JUCE_WINDOWS
     static_cast<void>(::CoInitialize(nullptr));
-#endif    
+#endif
     updateFadingFactor();
 
     auto error = deviceMgr.initialiseWithDefaultDevices(0, 2);
@@ -327,7 +327,7 @@ void Medley::deckUnloaded(Deck& sender) {
 
     if (&sender == transitingDeck) {
         if (transitionState == TransitionState::Cued) {
-            sender.log("stopped before transition would happen, try starting next deck");            
+            sender.log("stopped before transition would happen, try starting next deck");
             if (nextDeck->isTrackLoaded()) {
                 nextDeck->start();
             }
@@ -387,7 +387,7 @@ void Medley::deckPosition(Deck& sender, double position) {
         auto transitionStartPos = sender.getTransitionStartPosition();
         auto transitionEndPos = sender.getTransitionEndPosition();
 
-       
+
         if (transitionState < TransitionState::Cued) {
             if (transitionState == TransitionState::Idle && position > transitionPreCuePoint) {
                 transitionState = TransitionState::Cueing;
@@ -598,7 +598,7 @@ void Medley::Mixer::setPause(bool p, bool fade) {
         // unpause
         paused = false;
         fader.start(start, end, gain, 1.0f, 2.0f, -1.0f, [=]() {
-            
+
         });
     }
 }

@@ -87,6 +87,11 @@ medley::Metadata::Metadata()
 
 void medley::Metadata::readFromTrack(const ITrack::Ptr track)
 {
+    trackGain = 0.0f;
+    title = "";
+    artist = "";
+    album = "";
+
     auto trackFile = track->getFile();
     auto filetype = utils::getFileTypeFromFileName(trackFile);
 
