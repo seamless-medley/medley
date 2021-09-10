@@ -115,7 +115,11 @@ void medley::Metadata::readFromTrack(const ITrack::Ptr track)
 
 bool medley::Metadata::readID3V2(const ITrack::Ptr track)
 {
+    #ifdef _WIN32
     TagLib::MPEG::File file((const wchar_t*)track->getFile().getFullPathName().toWideCharPointer());
+    #else
+    TagLib::MPEG::File file(track->getFile().getFullPathName().toRawUTF8());
+    #endif
 
     if (!file.hasID3v2Tag()) {
         return false;
@@ -134,7 +138,11 @@ bool medley::Metadata::readID3V2(const ITrack::Ptr track)
 
 bool medley::Metadata::readXiph(const ITrack::Ptr track)
 {
+    #ifdef _WIN32
     TagLib::FLAC::File file((const wchar_t*)track->getFile().getFullPathName().getCharPointer());
+    #else
+    TagLib::FLAC::File file(track->getFile().getFullPathName().toRawUTF8());
+    #endif
 
     if (!file.hasXiphComment()) {
         return false;

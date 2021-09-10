@@ -19,7 +19,7 @@ enum class FileType {
 AudioFormatReader* createAudioReaderFor(juce::AudioFormatManager& formatMgr, const ITrack::Ptr track);
 bool isTrackLoadable(juce::AudioFormatManager& formatMgr, const ITrack::Ptr track);
 FileType getFileTypeFromFileName(juce::String& filename);
-FileType getFileTypeFromFileName(juce::File& file);
+FileType getFileTypeFromFileName(juce::File file);
 
 }
 }

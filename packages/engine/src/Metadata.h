@@ -25,7 +25,7 @@ public:
     Metadata();
     void readFromTrack(const ITrack::Ptr track);
 
-    const FileType getFileType() const { return type; }
+    FileType getFileType() const { return type; }
     const String& getTitle() const { return title; }
     const String& getArtist() const { return artist; }
     const String& getAlbum() const { return album; }

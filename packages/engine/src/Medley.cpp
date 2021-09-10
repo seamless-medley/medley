@@ -11,9 +11,9 @@ namespace medley {
 Medley::Medley(IQueue& queue)
     :
     mixer(*this),
-    queue(queue),
     faderIn(1.0f),
     faderOut(1.0f),
+    queue(queue),
     loadingThread("Loading Thread"),
     readAheadThread("Read-ahead-thread"),
     visualizingThread("Visualizing Thread")

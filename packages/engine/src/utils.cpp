@@ -24,10 +24,10 @@ bool isTrackLoadable(juce::AudioFormatManager& formatMgr, const ITrack::Ptr trac
 }
 
 FileType getFileTypeFromFileName(juce::String& filename) {
-    return getFileTypeFromFileName(File(filename));
+    return getFileTypeFromFileName(juce::File(filename));
 }
 
-FileType getFileTypeFromFileName(juce::File& file) {
+FileType getFileTypeFromFileName(juce::File file) {
     auto ext = file.getFileExtension();
 
     if (ext.equalsIgnoreCase(".mp3")) {

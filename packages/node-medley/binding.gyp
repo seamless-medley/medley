@@ -36,7 +36,6 @@
                 'JUCE_STRICT_REFCOUNTEDPOINTER=1',
                 'JUCE_STANDALONE_APPLICATION=1',
                 'JUCE_CATCH_UNHANDLED_EXCEPTIONS=1',
-                'JUCE_STRING_UTF_TYPE=16',
                 'JUCE_MODULE_AVAILABLE_juce_audio_basics=1',
                 'JUCE_MODULE_AVAILABLE_juce_audio_devices=1',
                 'JUCE_MODULE_AVAILABLE_juce_audio_formats=1',
@@ -55,9 +54,6 @@
                 [
                     'OS=="win"',
                     {
-                        'variables': {
-
-                        },
                         'sources': [
                             "../engine/juce/include_juce_audio_basics.cpp",
                             "../engine/juce/include_juce_audio_devices.cpp",
@@ -71,6 +67,9 @@
                             "../engine/juce/include_juce_graphics.cpp",
                             "../engine/juce/include_juce_gui_basics.cpp",
                             "../engine/juce/include_juce_gui_extra.cpp",
+                        ],
+                        'defines': [
+                            'JUCE_STRING_UTF_TYPE=16',
                         ],
                         'cflags': [
                             '/GR',
@@ -117,6 +116,12 @@
                 [
                     'OS=="mac"',
                     {
+                        'include_dirs': [
+                            "<!@(pkg-config taglib --cflags-only-I | sed s/-I//g)"
+                        ],
+                        'libraries': [
+                            "<!@(pkg-config taglib --libs)"
+                        ],
                         'sources': [
                             "../engine/juce/include_juce_audio_basics.mm",
                             "../engine/juce/include_juce_audio_devices.mm",
