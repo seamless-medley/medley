@@ -24,6 +24,8 @@
                 "../engine/src/PostProcessor.cpp",
                 "../engine/src/Deck.cpp",
                 "../engine/src/Medley.cpp",
+                "../engine/src/Metadata.cpp",
+                "../engine/src/Fader.cpp"
             ],
             "cflags!": ["-fno-exceptions", '-fno-rtti'],
             "cflags_cc!": ["-fno-exceptions", '-fno-rtti'],
@@ -34,6 +36,7 @@
                 'JUCE_STRICT_REFCOUNTEDPOINTER=1',
                 'JUCE_STANDALONE_APPLICATION=1',
                 'JUCE_CATCH_UNHANDLED_EXCEPTIONS=1',
+                'JUCE_STRING_UTF_TYPE=16',
                 'JUCE_MODULE_AVAILABLE_juce_audio_basics=1',
                 'JUCE_MODULE_AVAILABLE_juce_audio_devices=1',
                 'JUCE_MODULE_AVAILABLE_juce_audio_formats=1',
@@ -46,11 +49,15 @@
                 'JUCE_MODULE_AVAILABLE_juce_graphics=1',
                 'JUCE_MODULE_AVAILABLE_juce_gui_basics=1',
                 'JUCE_MODULE_AVAILABLE_juce_gui_extra=1',
+                'TAGLIB_STATIC'
             ],
             'conditions': [
                 [
                     'OS=="win"',
                     {
+                        'variables': {
+
+                        },
                         'sources': [
                             "../engine/juce/include_juce_audio_basics.cpp",
                             "../engine/juce/include_juce_audio_devices.cpp",
@@ -78,7 +85,12 @@
                                     'VCCLCompilerTool': {
                                         'RuntimeTypeInfo': 'true',
                                         'ExceptionHandling': 'true',
+                                        'AdditionalIncludeDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\include'],
                                         'AdditionalOptions': ['/GR', '/EHsc', '/MTd', '/source-charset:utf-8', '-std:c++17'],
+                                    },
+                                    'VCLinkerTool': {
+                                        'AdditionalLibraryDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\debug\lib'],
+                                        'AdditionalDependencies': ['tag.lib']
                                     }
                                 }
                             },
@@ -90,7 +102,12 @@
                                     'VCCLCompilerTool': {
                                         'RuntimeTypeInfo': 'true',
                                         'ExceptionHandling': 'true',
+                                        'AdditionalIncludeDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\include'],
                                         'AdditionalOptions': ['/GR', '/EHsc', '/MT', '/source-charset:utf-8', '-std:c++17'],
+                                    },
+                                    'VCLinkerTool': {
+                                        'AdditionalLibraryDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\lib'],
+                                        'AdditionalDependencies': ['tag.lib']
                                     }
                                 }
                             }

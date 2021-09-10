@@ -1,4 +1,6 @@
-import { EventEmitter } from 'events';
+/// <reference types="node" />
+
+import type { EventEmitter } from 'events';
 
 export interface TrackInfo {
   /**
@@ -85,8 +87,13 @@ export interface AudioLevels {
 type NormalEvent = 'audioDeviceChanged';
 type DeckEvent = 'loaded' | 'unloaded' | 'started' | 'finished';
 
-type Listener = () => void;
-type DeckListener = (deckIndex: number) => void;
+export declare enum DeckIndex {
+  A = 0,
+  B = 1
+}
+
+type Listener<T = void> = () => T;
+type DeckListener = (deckIndex: DeckIndex) => void;
 
 export declare class Medley extends EventEmitter {
   constructor(queue: Queue);
@@ -95,9 +102,9 @@ export declare class Medley extends EventEmitter {
   once(event: DeckEvent, listener: DeckListener): this;
   off(event: DeckEvent, listener: DeckListener): this;
 
-  on(event: 'preCueNext', listener: () => boolean): this;
-  once(event: 'preCueNext', listener: () => boolean): this;
-  off(event: 'preCueNext', listener: () => boolean): this;
+  on(event: 'preQueueNext', listener: Listener<boolean>): this;
+  once(event: 'preQueueNext', listener: Listener<boolean>): this;
+  off(event: 'preQueueNext', listener: Listener<boolean>): this;
 
   on(event: NormalEvent, listener: Listener): this;
   once(event: NormalEvent, listener: Listener): this;
@@ -107,6 +114,8 @@ export declare class Medley extends EventEmitter {
    * @returns `AudioLevels`
    */
   get level(): AudioLevels;
+
+  get reduction(): number;
 
   /**
    * @returns `true` if the engine is running, `false` otherwise.
@@ -137,19 +146,19 @@ export declare class Medley extends EventEmitter {
   get fadingCurve(): number;
   set fadingCurve(value: number);
 
-  /**
-   * The maximum duration in seconds for the transition between tracks should occur.
-   */
-  get maxTransitionTime(): number;
-  set maxTransitionTime(value: number);
+  // /**
+  //  * The maximum duration in seconds for the transition between tracks should occur.
+  //  */
+  // get maxTransitionTime(): number;
+  // set maxTransitionTime(value: number);
 
-  /**
-   * The maximum duration in seconds at the beginning of a track to be considered as having a long intro.
-   *
-   * A track with a long intro will cause a fading-in to occur during transition.
-   */
-  get maxLeadingDuration(): number;
-  set maxLeadingDuration(value: number);
+  // /**
+  //  * The maximum duration in seconds at the beginning of a track to be considered as having a long intro.
+  //  *
+  //  * A track with a long intro will cause a fading-in to occur during transition.
+  //  */
+  // get maxLeadingDuration(): number;
+  // set maxLeadingDuration(value: number);
 
   /**
    * Start the engine, also clear the `paused` state.
@@ -188,7 +197,9 @@ export declare class Medley extends EventEmitter {
 
   setAudioDevice(descriptor: { type?: string, device: string }): boolean;
 
-  isTrackLoadable(TrackDescriptor: track): boolean;
+  isTrackLoadable(track: TrackDescriptor): boolean;
+
+  getMetadata(index: DeckIndex): Metadata;
 }
 
 export type AudioDeviceTypeInfo = {
@@ -197,4 +208,11 @@ export type AudioDeviceTypeInfo = {
   devices: string[];
   defaultDevice: string;
   currentDevice?: string;
+}
+
+export type Metadata = {
+  title: string;
+  artist: string;
+  album: string;
+  trackGain: number;
 }

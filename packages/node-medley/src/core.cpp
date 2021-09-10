@@ -72,16 +72,18 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::seek>("seek"),
         InstanceMethod<&Medley::seekFractional>("seekFractional"),
         InstanceMethod<&Medley::isTrackLoadable>("isTrackLoadable"),
+        InstanceMethod<&Medley::getMetadata>("getMetadata"),
         //
         InstanceAccessor<&Medley::level>("level"),
+        InstanceAccessor<&Medley::reduction>("reduction"),
         InstanceAccessor<&Medley::playing>("playing"),
         InstanceAccessor<&Medley::paused>("paused"),
         InstanceAccessor<&Medley::duration>("duration"),
         InstanceAccessor<&Medley::getPosition, &Medley::setPosition>("position"),
         InstanceAccessor<&Medley::getGain, &Medley::setGain>("gain"),
         InstanceAccessor<&Medley::getFadingCurve, &Medley::setFadingCurve>("fadingCurve"),
-        InstanceAccessor<&Medley::getMaxTransitionTime, &Medley::setMaxTransitionTime>("maxTransitionTime"),
-        InstanceAccessor<&Medley::getMaxLeadingDuration, &Medley::setMaxLeadingDuration>("maxLeadingDuration"),
+        InstanceAccessor<&Medley::getMinimumLeadingToFade, &Medley::setMinimumLeadingToFade>("minimumLeadingToFade"),
+        InstanceAccessor<&Medley::getMaximumFadeOutDuration, &Medley::setMaximumFadeOutDuration>("maximumFadeOutDuration"),
     };
 
     auto env = exports.Env();
@@ -245,9 +247,9 @@ void Medley::audioDeviceChanged() {
     });
 }
 
-void Medley::preCueNext(PreCueNextDone done) {
+void Medley::preQueueNext(PreCueNextDone done) {
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
-        Napi::Value ret = fn.Call(self.Value(), { Napi::String::New(env, "preCueNext") });
+        Napi::Value ret = fn.Call(self.Value(), { Napi::String::New(env, "preQueueNext") });
         done(ret.ToBoolean());
     });
 
@@ -281,7 +283,7 @@ void Medley::fadeOut(const CallbackInfo& info) {
 }
 
 void Medley::seek(const CallbackInfo& info) {
-    engine->setPositionInSeconds(info[0].ToNumber().DoubleValue());
+    engine->setPosition(info[0].ToNumber().DoubleValue());
 }
 
 void Medley::seekFractional(const CallbackInfo& info) {
@@ -304,18 +306,24 @@ Napi::Value Medley::level(const CallbackInfo& info) {
     auto env = info.Env();
 
     auto left = Object::New(env);
-    left.Set("magnitude",  Number::New(env, engine->getLevel(0)));
-    left.Set("peak",  Number::New(env, engine->getPeakLevel(0)));
+    left.Set("magnitude", Number::New(env, engine->getLevel(0)));
+    left.Set("peak", Number::New(env, engine->getPeakLevel(0)));
 
     auto right = Object::New(env);
-    right.Set("magnitude",  Number::New(env, engine->getLevel(1)));
-    right.Set("peak",  Number::New(env, engine->getPeakLevel(1)));
+    right.Set("magnitude", Number::New(env, engine->getLevel(1)));
+    right.Set("peak", Number::New(env, engine->getPeakLevel(1)));
 
     auto result = Object::New(env);
     result.Set("left", left);
     result.Set("right", right);
 
     return result;
+}
+
+Napi::Value Medley::reduction(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    return Number::New(env, (double)engine->getReduction());
 }
 
 Napi::Value Medley::playing(const CallbackInfo& info) {
@@ -335,7 +343,7 @@ Napi::Value Medley::getPosition(const CallbackInfo& info) {
 }
 
 void Medley::setPosition(const CallbackInfo& info, const Napi::Value& value) {
-    engine->setPositionInSeconds(value.ToNumber().DoubleValue());
+    engine->setPosition(value.ToNumber().DoubleValue());
 }
 
 Napi::Value Medley::getGain(const CallbackInfo& info) {
@@ -354,18 +362,51 @@ void Medley::setFadingCurve(const CallbackInfo& info, const Napi::Value& value) 
     engine->setFadingCurve(value.ToNumber().DoubleValue());
 }
 
-Napi::Value Medley::getMaxTransitionTime(const CallbackInfo& info) {
-    return Napi::Number::New(info.Env(), engine->getMaxTransitionTime());
+Napi::Value Medley::getMinimumLeadingToFade(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getMinimumLeadingToFade());
 }
 
-void Medley::setMaxTransitionTime(const CallbackInfo& info, const Napi::Value& value) {
-    engine->setMaxTransitionTime(value.ToNumber().DoubleValue());
+void Medley::setMinimumLeadingToFade(const CallbackInfo& info, const Napi::Value& value) {
+    engine->setMinimumLeadingToFade(value.ToNumber().DoubleValue());
 }
 
-Napi::Value Medley::getMaxLeadingDuration(const CallbackInfo& info) {
-    return Napi::Number::New(info.Env(), engine->getMaxLeadingDuration());
+Napi::Value Medley::getMaximumFadeOutDuration(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getMaximumFadeOutDuration());
 }
 
-void Medley::setMaxLeadingDuration(const CallbackInfo& info, const Napi::Value& value) {
-    engine->setMaxLeadingDuration(value.ToNumber().DoubleValue());
+void Medley::setMaximumFadeOutDuration(const CallbackInfo& info, const Napi::Value& value) {
+    engine->setMaximumFadeOutDuration(value.ToNumber().DoubleValue());
+}
+
+Napi::Value Medley::getMetadata(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto arg1 = info[0];
+    if (!arg1.IsNumber()) {
+        TypeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto index = arg1.ToNumber().Int32Value();
+    if (index != 0 && index != 1) {
+        TypeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto& deck = (index == 0) ? engine->getDeck1() : engine->getDeck2();
+
+    auto metadata = deck.metadata();
+    auto result = Object::New(env);
+
+    result.Set("title", metadata.getTitle().toRawUTF8());
+    result.Set("artist", metadata.getArtist().toRawUTF8());
+    result.Set("album", metadata.getAlbum().toRawUTF8());
+    result.Set("trackGain", metadata.getTrackGain());
+
+    return result;
 }

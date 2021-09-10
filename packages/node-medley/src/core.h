@@ -38,7 +38,7 @@ public:
 
     void audioDeviceChanged() override;
 
-    void preCueNext(Engine::Callback::PreCueNextDone done) override;
+    void preQueueNext(Engine::Callback::PreCueNextDone done) override;
 
     void play(const CallbackInfo& info);
 
@@ -55,6 +55,8 @@ public:
     Napi::Value isTrackLoadable(const CallbackInfo& info);
 
     Napi::Value level(const CallbackInfo& info);
+
+    Napi::Value reduction(const CallbackInfo& info);
 
     Napi::Value playing(const CallbackInfo& info);
 
@@ -74,17 +76,19 @@ public:
 
     void setFadingCurve(const CallbackInfo& info, const Napi::Value& value);
 
-    Napi::Value getMaxTransitionTime(const CallbackInfo& info);
+    Napi::Value getMinimumLeadingToFade(const CallbackInfo& info);
 
-    void setMaxTransitionTime(const CallbackInfo& info, const Napi::Value& value);
+    void setMinimumLeadingToFade(const CallbackInfo& info, const Napi::Value& value);
 
-    Napi::Value getMaxLeadingDuration(const CallbackInfo& info);
+    Napi::Value getMaximumFadeOutDuration(const CallbackInfo& info);
 
-    void setMaxLeadingDuration(const CallbackInfo& info, const Napi::Value& value);
+    void setMaximumFadeOutDuration(const CallbackInfo& info, const Napi::Value& value);
 
     Napi::Value getAvailableDevices(const CallbackInfo& info);
 
     Napi::Value setAudioDevice(const CallbackInfo& info);
+
+    Napi::Value getMetadata(const CallbackInfo& info);
 private:
     void emitDeckEvent(const std::string& name,  medley::Deck& deck);
 

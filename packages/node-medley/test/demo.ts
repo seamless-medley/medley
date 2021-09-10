@@ -3,8 +3,9 @@ import { Queue, Medley } from '../';
 const q = new Queue();
 let m = new Medley(q);
 
+songs.sort(() => 0.5 - Math.random()).forEach(s => q.add(s));
 m.on('loaded', (deck) => {
-  console.log('Loaded', deck);
+  console.log('Loaded', deck, m.getMetadata(deck));
 });
 
 m.on('unloaded', (deck) => {
