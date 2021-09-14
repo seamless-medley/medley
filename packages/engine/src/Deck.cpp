@@ -25,11 +25,9 @@ Deck::Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& l
     readAheadThread(readAheadThread),
     name(name),
     loader(*this),
-    scanningScheduler(*this),
+    scanner(*this),
     playhead(*this)
-{
-    loadingThread.addTimeSliceClient(&loader);
-    loadingThread.addTimeSliceClient(&scanningScheduler);
+{    
     readAheadThread.addTimeSliceClient(&playhead);
 }
 
@@ -72,12 +70,17 @@ void Deck::loadTrack(const ITrack::Ptr track, OnLoadingDone doneCallback)
 
     if (!isTrackLoadable(formatMgr, track)) {
         log("Could not find appropriate format reader for " + track->getFile().getFullPathName());
+        isTrackLoading = false;
         doneCallback(false);
         return;
     }
 
     isTrackLoading = true;
     loader.load(track, doneCallback);
+    loadingThread.addTimeSliceClient(&loader);
+    if (!loadingThread.isThreadRunning()) {
+        loadingThread.startThread();
+    }
 }
 
 void Deck::unloadTrack()
@@ -93,6 +96,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     if (!newReader) {
         log("Could not create format reader");
+        isTrackLoading = false;
         return false;
     }
 
@@ -146,7 +150,8 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     setSource(new AudioFormatReaderSource(reader, false));
 
     if (playDuration >= 3) {
-        scanningScheduler.scan(track);
+        scanner.scan(track);
+        loadingThread.addTimeSliceClient(&scanner);
     }
     else {
         calculateTransition();
@@ -751,7 +756,7 @@ int Deck::Loader::useTimeSlice()
         callback(ret);
     }
 
-    return 100;
+    return -1;
 }
 
 void Deck::Loader::load(const ITrack::Ptr track, OnLoadingDone callback)
@@ -768,7 +773,7 @@ int Deck::Scanner::useTimeSlice()
         track = nullptr;
     }
 
-    return 100;
+    return -1;
 }
 
 void Deck::Scanner::scan(const ITrack::Ptr track)

@@ -244,7 +244,7 @@ private:
     juce::String name;
     Loader loader;
 
-    Scanner scanningScheduler;
+    Scanner scanner;
     PlayHead playhead;
 
     int64 firstAudibleSamplePosition = 0;
