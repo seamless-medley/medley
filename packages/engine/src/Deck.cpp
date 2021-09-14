@@ -116,7 +116,12 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     {   // Seamless mode
         if (playDuration >= 3.0) {
             Range<float> maxLevels[2]{};
-            reader->readMaxLevels(firstAudibleSamplePosition, (int)(reader->sampleRate * jmax(kLeadingScanningDuration, maximumFadeOutDuration)), maxLevels, 2);
+            reader->readMaxLevels(
+                firstAudibleSamplePosition,
+                (int)(reader->sampleRate * jmax(kLeadingScanningDuration, maximumFadeOutDuration)),
+                maxLevels,
+                jmin((int)reader->numChannels, 2)
+            );
 
             auto detectedLevel = (abs(maxLevels[0].getEnd()) + abs(maxLevels[1].getEnd())) / 2.0f;
             auto leadingDecibel = Decibels::gainToDecibels(detectedLevel);

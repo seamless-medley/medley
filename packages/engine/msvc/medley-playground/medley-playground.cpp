@@ -356,8 +356,14 @@ private:
                 AudioBuffer<float> buffer(readerPtr->numChannels, 512 * 256);
                 readerPtr->read(&buffer, 0, 512 * 256, numSamplesFinished, true, true);
 
-                buffer.addFrom(0, 0, buffer, 1, 0, 512 * 256);
-                buffer.applyGain(0.5f);
+                if (readerPtr->numChannels > 1) {
+                    for (auto i = 1; i < readerPtr->numChannels; i++) {
+                        buffer.addFrom(0, 0, buffer, i, 0, 512 * 256);
+                    }
+
+                    buffer.applyGain(1.0f / readerPtr->numChannels);
+                }
+
                 thumbnail->addBlock(numSamplesFinished, buffer, 0, 512 * 256);
 
                 numSamplesFinished += 512 * 256;
