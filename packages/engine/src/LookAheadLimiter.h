@@ -19,6 +19,9 @@ public:
 
     void reset();
 
+    /**
+     * Reduction in dB
+     */
     float getReduction() const { return reduction; }
 
 private:
