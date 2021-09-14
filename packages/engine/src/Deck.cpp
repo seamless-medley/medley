@@ -315,7 +315,7 @@ int64 Deck::findFadingPosition(AudioFormatReader* reader, int64 startSample, int
             break;
         }
 
-        startSample = risingPosition;
+        startSample = risingPosition + 1;
     }
 
     if (result > startPosition) {
@@ -377,7 +377,7 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
         totalSourceSamplesToPlay = endPosition;
     }
 
-    trailingSamplePosition = findFadingPosition(scanningReader, tailPosition, scanningReader->lengthInSamples - tailPosition);
+    trailingSamplePosition = findFadingPosition(scanningReader, tailPosition, lastAudibleSamplePosition - tailPosition);
     trailingDuration = (trailingSamplePosition > -1) ? (lastAudibleSamplePosition - trailingSamplePosition) / scanningReader->sampleRate : 0;
 
     calculateTransition();
