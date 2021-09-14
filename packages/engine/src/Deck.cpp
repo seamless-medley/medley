@@ -10,7 +10,7 @@ namespace {
 
     constexpr float kFirstSoundDuration = 0.001f;
     constexpr float kLastSoundDuration = 1.25f;
-    constexpr auto kLeadingScanningDuration = 20.0;
+    constexpr auto kLeadingScanningDuration = 25.0;
     constexpr float kLastSoundScanningDurartion = 20.0f;
 }
 
@@ -132,15 +132,13 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
             if (leadingSamplePosition > -1) {
                 auto lead2 = reader->searchForLevel(
-                    jmax(0LL, leadingSamplePosition - (int)(reader->sampleRate * 2.0)),
-                    (int)(reader->sampleRate * 2.0),
-                    leadingLevel * 0.33, 1.0,
-                    0
+                    jmax(0LL, leadingSamplePosition - (int)(reader->sampleRate * 3.0)),
+                    (int)(reader->sampleRate * 4.0),
+                    leadingLevel * 0.66, 1.0,
+                    (int)(reader->sampleRate * kFirstSoundDuration / 10)
                 );
 
-                if (lead2 > leadingSamplePosition) {
-                    leadingSamplePosition = lead2;
-                }
+                leadingSamplePosition = lead2;
             }
         }
     }
@@ -237,7 +235,7 @@ int64 Deck::findBoring(AudioFormatReader* reader, int64 startSample, int64 endSa
     auto hardLimit = Decibels::decibelsToGain(-22.0f);
     auto threshold = hardLimit;
 
-    while (endSample > currentSample) {
+    while (currentSample < endSample) {
         AudioBuffer<float> tempSampleBuffer(reader->numChannels, blockSize);
         reader->read(&tempSampleBuffer, 0, blockSize, currentSample, true, true);
 
