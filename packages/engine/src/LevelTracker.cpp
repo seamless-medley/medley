@@ -21,15 +21,15 @@ void LevelTracker::process(AudioSampleBuffer& buffer)
     }
 }
 
-void LevelTracker::prepare(const int channels, const int sampleRate, const int latencyInSamples, const int backlogSize)
+void LevelTracker::prepare(const int channels, const int sampleRate, const int latencyInSamples)
 {
     this->sampleRate = sampleRate;
-    samplesPerBlock = (int)(sampleRate * 0.1 / (double)backlogSize);
+    samplesPerBlock = (int)(sampleRate * 0.1 / 10.0);
 
     latency = RelativeTime((double)latencyInSamples / sampleRate);
 
     levels.clear();
-    levels.resize(channels, LevelSmoother(sampleRate, backlogSize));
+    levels.resize(channels, LevelSmoother(sampleRate));
 }
 
 double LevelTracker::getLevel(int channel) {

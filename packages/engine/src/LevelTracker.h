@@ -10,7 +10,7 @@ class LevelTracker
 public:
     void process(AudioSampleBuffer& buffer);
 
-    void prepare(const int channels, const int sampleRate, const int latencyInSamples, const int backlogSize);
+    void prepare(const int channels, const int sampleRate, const int latencyInSamples);
 
     double getLevel(int channel);
 
@@ -25,7 +25,7 @@ private:
     int samplesPerBlock = 441;
     int64 samplesProcessed = 0;
 
-    std::vector<LevelSmoother> levels;    
+    std::vector<LevelSmoother> levels;
 
     RelativeTime holdDuration{ 0.5 };
     RelativeTime latency{ 0 };

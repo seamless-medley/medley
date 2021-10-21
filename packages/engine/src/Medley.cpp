@@ -696,8 +696,7 @@ void Medley::Mixer::updateAudioConfig()
         levelTracker.prepare(
             numChannels,
             (int)config.sampleRate,
-            latencyInSamples,
-            10
+            latencyInSamples
         );
 
         prepared = true;
