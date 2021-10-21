@@ -9,11 +9,11 @@ using namespace juce::dsp;
 class PostProcessor {
 public:
     PostProcessor() {
-        
+
     }
 
     inline void prepare(const ProcessSpec& spec) {
-         chain.prepare(spec);        
+         chain.prepare(spec);
     }
 
     inline void process(const ProcessContextReplacing<float>& context) {
@@ -24,6 +24,9 @@ public:
          chain.reset();
     }
 
+    /**
+     * Reduction in dB
+     */
     inline float getReduction() const { return chain.get<0>().getReduction(); }
 
 private:

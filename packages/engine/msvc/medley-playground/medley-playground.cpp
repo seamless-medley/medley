@@ -164,7 +164,7 @@ private:
 
         void changeListenerCallback(ChangeBroadcaster* source) {
             ScopedLock sl(thumbImageLock);
-            if (source == lastThumbnailFromCallback) {                
+            if (source == lastThumbnailFromCallback) {
                 updateThumbImage();
                 return;
             }
@@ -257,7 +257,7 @@ private:
                 g.drawImage(thumbImage, 0, 0, (int)w, (int)h, 0, 0, (int)w, (int)h);
             }
 
-            // Masking            
+            // Masking
             g.setColour(Colours::black.withAlpha(0.5f));
             g.fillRect(firstArea);
             g.fillRect(inaudibleArea);
@@ -295,11 +295,11 @@ private:
             g.drawVerticalLine((int)(trailing / duration * w), 0, w);
         }
 
-        void mouseDown(const MouseEvent& event) override {         
+        void mouseDown(const MouseEvent& event) override {
             callback.playHeadSeek((double)event.getMouseDownX() / getWidth());
         }
 
-        void mouseDrag(const MouseEvent& event) override {            
+        void mouseDrag(const MouseEvent& event) override {
             callback.playHeadSeek((double)event.getPosition().getX() / getWidth());
         }
 
@@ -327,7 +327,7 @@ private:
             void load() {
                 ScopedLock sl(readerPtrLock);
 
-                if (thumbnail) {                   
+                if (thumbnail) {
                     if (auto track = deck.getTrack()) {
                         auto file = track->getFile();
                         auto reader = medley.getAudioFormatManager().createReaderFor(file);
@@ -348,7 +348,7 @@ private:
                     return -1;
                 }
 
-                if (isFullyLoaded()) {                    
+                if (isFullyLoaded()) {
                     readerPtr.reset();
                     return -1;
                 }
@@ -368,7 +368,7 @@ private:
 
                 numSamplesFinished += 512 * 256;
 
-                return isFullyLoaded() ? -1 : 40;
+                return isFullyLoaded() ? -1 : 60;
             }
 
             bool isFullyLoaded() const noexcept
@@ -474,7 +474,7 @@ private:
 
         void deckUnloaded(Deck& sender) override {
             ScopedLock sl(coverImageLock);
-            coverImage = Image();            
+            coverImage = Image();
             thread.addTimeSliceClient(&thumbnailCleaner);
         }
 
@@ -764,7 +764,7 @@ private:
         QueueItem(QueueModel& model, QueueListBox& listbox)
             : model(model), listbox(listbox)
         {
-            
+
         }
 
         void paint(Graphics& g) override {
@@ -776,7 +776,7 @@ private:
                 g.setColour(LookAndFeel::getDefaultLookAndFeel().findColour(Label::textColourId));
             }
 
-           
+
             if (track != nullptr) {
                 g.drawText(track->getFile().getFullPathName(), 0, 0, getWidth(), getHeight(), Justification::centredLeft, true);
             }
@@ -916,7 +916,7 @@ private:
                 auto src_index = std::distance(b, src_it);
                 auto dst_index = std::distance(b, dst_it);
 
-                queue.tracks.splice(dst_it, queue.tracks, src_it);                
+                queue.tracks.splice(dst_it, queue.tracks, src_it);
                 listbox->selectRow(src_index <= dst_index ? dst_index - 1 : dst_index);
                 listbox->updateContent();
             }
@@ -1188,7 +1188,7 @@ private:
             *pAnotherDeck = medley.getAnotherDeck(nullptr);
         }
 
-        AudioThumbnail* getThumbnail(Deck* deck) {            
+        AudioThumbnail* getThumbnail(Deck* deck) {
             return deck->isTrackLoaded() ? thumbnails[deck].get() : nullptr;
         }
 
@@ -1324,7 +1324,7 @@ private:
         DeckComponent* deckB = nullptr;
 
         ComboBox comboDeviceTypes;
-        ComboBox comboDeviceNames;        
+        ComboBox comboDeviceNames;
 
         VUMeter* vuMeter = nullptr;
 

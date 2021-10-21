@@ -173,7 +173,7 @@ void Medley::fadeOutMainDeck()
     if (auto deck = getMainDeck()) {
         forceFadingOut++;
 
-        if (deck != nullptr && deck == transitingDeck) {
+        if (deck != nullptr && deck == transitingDeck && deck->isFading()) {
             transitingDeck->unloadTrack();
             deck = getAnotherDeck(deck);
         }
@@ -405,7 +405,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                 transitionState = TransitionState::CueLoading;
 
                 auto currentDeck = &sender;
-                loadNextTrack(currentDeck, false, [&, p = position, tsp = transitionStartPos, cd = currentDeck, nd = nextDeck](bool loaded) {
+                loadNextTrack(currentDeck, false, [&, p = position, tsp = transitionStartPos, tep = transitionEndPos, cd = currentDeck, nd = nextDeck](bool loaded) {
                     if (!loaded) {
                         transitionState = TransitionState::Cueing;
                         transitingDeck = nullptr;
@@ -418,9 +418,14 @@ void Medley::deckPosition(Deck& sender, double position) {
                         transitionState = TransitionState::Cued;
                         transitingDeck = cd;
 
-                        auto leadIn = nd->getLeadingDuration();
-                        auto fadeInStart = tsp - leadIn;
-                        faderIn.start(fadeInStart, fadeInStart + leadIn, 0.25f, 1.0f, fadingFactor);
+                        if (forceFadingOut > 0) {
+                            faderIn.start(p, tep, 0.0f, 1.0f, fadingFactor * 0.5f);
+                        }
+                        else {
+                            auto leadIn = nd->getLeadingDuration();
+                            auto fadeInStart = tsp - leadIn;
+                            faderIn.start(fadeInStart, fadeInStart + leadIn, 0.25f, 1.0f, fadingFactor);
+                        }
                     }
 
                     doTransition(cd, p);
@@ -467,6 +472,7 @@ void Medley::doTransition(Deck* deck, double position)
                 nextDeck->log("Transiting to this deck");
                 transitionState = TransitionState::Transit;
                 nextDeck->setVolume(1.0f);
+                nextDeck->setPosition(nextDeck->getFirstAudiblePosition());
 
                 if (forceFadingOut > 0) {
                     if (leadingDuration >= minimumLeadingToFade) {
@@ -475,7 +481,6 @@ void Medley::doTransition(Deck* deck, double position)
                 }
 
                 faderOut.start(transitionStartPos, transitionEndPos, 1.0f, 0.0f, fadingFactor);
-                nextDeck->setPosition(nextDeck->getFirstAudiblePosition());
                 nextDeck->start();
             }
         }

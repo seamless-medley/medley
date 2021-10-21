@@ -35,12 +35,12 @@ float Fader::update(double time)
         return ng;
     }
 
-    if (time >= timeStart) {        
+    if (time >= timeStart) {
         auto duration = timeEnd - timeStart;
         auto progress = juce::jlimit(0.0, 1.0, (time - timeStart) / duration);
 
         if (duration > 0.0) {
-            if (fadeOut) {                    
+            if (fadeOut) {
                 gain = (float)(pow(1 - progress, factor)) * (from - to) + to;
             }
             else {
@@ -62,7 +62,7 @@ float Fader::update(double time)
 void Fader::stop()
 {
     reset(to);
-    callback();    
+    callback();
 }
 
 void Fader::reset(float toGain)

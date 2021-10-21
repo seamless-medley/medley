@@ -132,6 +132,9 @@ public:
         return mixer.isClipping(channel);
     }
 
+    /**
+     * Reduction in dB
+     */
     inline float getReduction() {
         return mixer.getReduction();
     }
@@ -202,6 +205,9 @@ private:
             return levelTracker.isClipping(channel);
         }
 
+        /**
+         * Reduction in dB
+         */
         float getReduction() const {
             return processor.getReduction();
         }

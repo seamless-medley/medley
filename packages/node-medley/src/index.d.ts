@@ -115,6 +115,9 @@ export declare class Medley extends EventEmitter {
    */
   get level(): AudioLevels;
 
+  /**
+   * Reduction level in dB
+   */
   get reduction(): number;
 
   /**
@@ -146,19 +149,19 @@ export declare class Medley extends EventEmitter {
   get fadingCurve(): number;
   set fadingCurve(value: number);
 
-  // /**
-  //  * The maximum duration in seconds for the transition between tracks should occur.
-  //  */
-  // get maxTransitionTime(): number;
-  // set maxTransitionTime(value: number);
+  /**
+   * The maximum duration in seconds for the fade-out transition between tracks.
+   */
+  get maximumFadeOutDuration(): number;
+  set maximumFadeOutDuration(value: number);
 
-  // /**
-  //  * The maximum duration in seconds at the beginning of a track to be considered as having a long intro.
-  //  *
-  //  * A track with a long intro will cause a fading-in to occur during transition.
-  //  */
-  // get maxLeadingDuration(): number;
-  // set maxLeadingDuration(value: number);
+  /**
+   * The duration in seconds at the beginning of a track to be considered as having a long intro.
+   *
+   * A track with a long intro will cause a fading-in to occur during transition.
+   */
+  get minimumLeadingToFade(): number;
+  set minimumLeadingToFade(value: number);
 
   /**
    * Start the engine, also clear the `paused` state.
