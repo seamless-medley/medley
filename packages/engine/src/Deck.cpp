@@ -27,7 +27,7 @@ Deck::Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& l
     loader(*this),
     scanner(*this),
     playhead(*this)
-{    
+{
     readAheadThread.addTimeSliceClient(&playhead);
 }
 
@@ -100,8 +100,10 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
         return false;
     }
 
-    unloadTrackInternal();
-    reader = newReader;
+    if (track != nullptr) {
+        unloadTrackInternal();
+        reader = newReader;
+    }
 
     auto mid = reader->lengthInSamples / 2;
     firstAudibleSamplePosition = jmax(0LL, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
@@ -485,7 +487,7 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
             }
         }
 
-        auto samplesToPlay = totalSourceSamplesToPlay / resamplerSource->getResamplingRatio();
+        auto samplesToPlay = totalSourceSamplesToPlay;
         nextReadPosition = bufferingSource->getNextReadPosition();
 
         if (nextReadPosition > samplesToPlay + 1 && !bufferingSource->isLooping())
