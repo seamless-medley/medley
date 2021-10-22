@@ -8,6 +8,10 @@ using namespace juce;
 class LevelTracker
 {
 public:
+    LevelTracker();
+
+    LevelTracker(const LevelTracker& other);
+
     void process(AudioSampleBuffer& buffer);
 
     void prepare(const int channels, const int sampleRate, const int latencyInSamples);
@@ -25,7 +29,7 @@ private:
     int samplesPerBlock = 441;
     int64 samplesProcessed = 0;
 
-    std::vector<LevelSmoother> levels;
+    std::vector<std::shared_ptr<LevelSmoother>> levels;
 
     RelativeTime holdDuration{ 0.5 };
     RelativeTime latency{ 0 };

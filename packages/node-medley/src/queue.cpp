@@ -170,7 +170,7 @@ Napi::Value Queue::toArray(const CallbackInfo& info) {
     auto env = info.Env();
 
     auto result = Napi::Array::New(env, size());
-    for (int32_t index = 0; index < size(); index++) {
+    for (auto index = 0; index < size(); index++) {
         result[index] = Arr::getUnchecked(index).toObject(env);
     }
 

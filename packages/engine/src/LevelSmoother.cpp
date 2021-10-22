@@ -12,13 +12,13 @@ LevelSmoother::LevelSmoother(int sampleRate)
 
 }
 
-LevelSmoother::LevelSmoother(const LevelSmoother& other)
-    : sampleRate(other.sampleRate),
-    backlog_write(0),
-    results_write(0), results_read(0)
-{
-
-}
+//LevelSmoother::LevelSmoother(const LevelSmoother& other)
+//    : sampleRate(other.sampleRate),
+//    backlog_write(0),
+//    results_write(0), results_read(0)
+//{
+//
+//}
 
 void LevelSmoother::addLevel(const Time time, const double newLevel, const RelativeTime hold)
 {
