@@ -181,7 +181,9 @@
                         ],
                         'libraries': [
                             "<!@(pkg-config taglib --libs)",
-                            "<!@(pkg-config freetype2 --libs)"
+                            "<!@(pkg-config freetype2 --libs)",
+                            "<!@(pkg-config libcurl --libs)",
+                            "-lasound"
                         ],
                         "cflags_cc": [
                             "-std=c++17"
