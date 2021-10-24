@@ -1,62 +1,6 @@
 #include "core.h"
 
 namespace {
-
-// class Worker : public AsyncWorker {
-// public:
-//     Worker(const Function& callback)
-//         : AsyncWorker(callback)
-//     {
-
-//     }
-
-//     void Execute() override {
-//         JUCE_TRY
-//         {
-//             // loop until a quit message is received..
-//             MessageManager::getInstance()->runDispatchLoop();
-//         }
-//         JUCE_CATCH_EXCEPTION
-//     }
-
-//     void shutdown() {
-//         MessageManager::getInstance()->stopDispatchLoop();
-//     }
-// };
-
-// Worker* worker = nullptr;
-// std::atomic<int> workerRefCount = 0;
-
-// void ensureWorker(const Env& env) {
-//     workerRefCount++;
-
-//     if (worker) {
-//         return;
-//     }
-
-//     worker = new Worker(Function::New<Medley::workerFinalizer>(env));
-//     worker->Queue();
-// }
-
-// void shutdownWorker() {
-//     if (worker) {
-//         worker->shutdown();
-//         worker = nullptr;
-
-//         JUCE_AUTORELEASEPOOL
-//         {
-//             DeletedAtShutdown::deleteAll();
-//             MessageManager::deleteInstance();
-//         }
-//     }
-// }
-
-// void decWorkerRefCount() {
-//     if (workerRefCount-- <= 0) {
-//         shutdownWorker();
-//     }
-// }
-
     class AudioConsumer : public AsyncWorker {
     public:
         AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)
@@ -533,42 +477,6 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
     return Napi::Number::New(env, audioRequestId++);
 }
 
-// void Medley::audioData(const AudioSourceChannelInfo& info) {
-//     for (auto& req : audioRequests) {
-//         TODO: Do the conversion on NodeJS stream read method
-//         auto audioConveter = audioConverters.find(req.format);
-
-//         if (audioConveter == audioConverters.end()) {
-//             continue;
-//         }
-
-//         uint8_t bytesPerSample = 0;
-
-//         switch (req.format) {
-//             case AudioRequestFormat::FloatLE:
-//             case AudioRequestFormat::FloatBE:
-//                 bytesPerSample = 4;
-//                 break;
-//             case AudioRequestFormat::Int16LE:
-//             case AudioRequestFormat::Int16BE:
-//                 bytesPerSample = 2;
-//                 break;
-//         }
-
-//         if (bytesPerSample == 0) {
-//             continue;
-//         }
-
-//         req.scratch.ensureSize(bytesPerSample * info.numSamples * info.buffer->getNumChannels());
-//         audioConveter->second->convertSamples(req.scratch.getData(), info.buffer->getWritePointer(info.startSample), info.numSamples);
-//         req.audioData.write(req.scratch.getData(), req.scratch.getSize());
-
-//         Just push info.buffer into a ring buffer
-//         AudioBuffer<float> buffer(info.buffer->getNumChannels(), info.numSamples);
-//         req.audioData.write(buffer.getArrayOfWritePointers(), info.numSamples * info.buffer->getNumChannels() * sizeof(float));
-//     }
-// }
-
 void Medley::audioData(const AudioSourceChannelInfo& info) {
     for (auto& [id, req] : audioRequests) {
         auto& fifo = req->fifo;
@@ -580,8 +488,6 @@ void Medley::audioData(const AudioSourceChannelInfo& info) {
             fifo.reset();
             fifo.prepareToWrite(info.numSamples, start1, size1, start2, size2);
         }
-
-        // std::cout << "start1: " << start1 << ", size1: " << size1 << ", start2: " << start2 << ", size2: " << size2 << std::endl;
 
         auto numChannels = jmin((int)req->numChannels, info.buffer->getNumChannels());
 
@@ -597,15 +503,6 @@ void Medley::audioData(const AudioSourceChannelInfo& info) {
                 FloatVectorOperations::copy(dest + start2, src + size1, size2);
             }
         }
-
-        // FileOutputStream out1(File("cb-l.audio"));
-        // FileOutputStream out2(File("cb-r.audio"));
-
-        // out1.write(req->audioData.getReadPointer(0) + start1, sizeof(float) * size1);
-        // out1.write(req->audioData.getReadPointer(0) + start2, sizeof(float) * size2);
-
-        // out2.write(req->audioData.getReadPointer(1) + start1, sizeof(float) * size1);
-        // out2.write(req->audioData.getReadPointer(1) + start2, sizeof(float) * size2);
 
         fifo.finishedWrite(size1 + size2);
     }
