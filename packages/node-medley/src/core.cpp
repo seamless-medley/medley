@@ -2,61 +2,116 @@
 
 namespace {
 
-class Worker : public AsyncWorker {
-public:
-    Worker(const Function& callback)
-        : AsyncWorker(callback)
-    {
+// class Worker : public AsyncWorker {
+// public:
+//     Worker(const Function& callback)
+//         : AsyncWorker(callback)
+//     {
 
-    }
+//     }
 
-    void Execute() override {
-        JUCE_TRY
+//     void Execute() override {
+//         JUCE_TRY
+//         {
+//             // loop until a quit message is received..
+//             MessageManager::getInstance()->runDispatchLoop();
+//         }
+//         JUCE_CATCH_EXCEPTION
+//     }
+
+//     void shutdown() {
+//         MessageManager::getInstance()->stopDispatchLoop();
+//     }
+// };
+
+// Worker* worker = nullptr;
+// std::atomic<int> workerRefCount = 0;
+
+// void ensureWorker(const Env& env) {
+//     workerRefCount++;
+
+//     if (worker) {
+//         return;
+//     }
+
+//     worker = new Worker(Function::New<Medley::workerFinalizer>(env));
+//     worker->Queue();
+// }
+
+// void shutdownWorker() {
+//     if (worker) {
+//         worker->shutdown();
+//         worker = nullptr;
+
+//         JUCE_AUTORELEASEPOOL
+//         {
+//             DeletedAtShutdown::deleteAll();
+//             MessageManager::deleteInstance();
+//         }
+//     }
+// }
+
+// void decWorkerRefCount() {
+//     if (workerRefCount-- <= 0) {
+//         shutdownWorker();
+//     }
+// }
+
+    class AudioConsumer : public AsyncWorker {
+    public:
+        AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)
+            :
+            AsyncWorker(Napi::Function::New(deferred.Env(), [deferred](const CallbackInfo &cbInfo) {
+                deferred.Resolve(cbInfo[0]);
+                return cbInfo.Env().Undefined();
+            })),
+            request(request),
+            requestedSize(requestedSize)
         {
-            // loop until a quit message is received..
-            MessageManager::getInstance()->runDispatchLoop();
+
         }
-        JUCE_CATCH_EXCEPTION
-    }
 
-    void shutdown() {
-        MessageManager::getInstance()->stopDispatchLoop();
-    }
-};
-
-Worker* worker = nullptr;
-std::atomic<int> workerRefCount = 0;
-
-void ensureWorker(const Env& env) {
-    workerRefCount++;
-
-    if (worker) {
-        return;
-    }
-
-    worker = new Worker(Function::New<Medley::workerFinalizer>(env));
-    worker->Queue();
-}
-
-void shutdownWorker() {
-    if (worker) {
-        worker->shutdown();
-        worker = nullptr;
-
-        JUCE_AUTORELEASEPOOL
+        void Execute() override
         {
-            DeletedAtShutdown::deleteAll();
-            MessageManager::deleteInstance();
+            auto& fifo = request->fifo;
+            auto& scratch = request->scratch;
+            auto& audioData = request->audioData;
+            auto bytesPerSample = request->bytesPerSample;
+            auto numChannels = request->numChannels;
+            auto numSamples = jmin((uint64_t)fifo.getNumReady(), requestedSize / bytesPerSample / numChannels);
+
+            int start1, size1, start2, size2;
+            fifo.prepareToRead(numSamples, start1, size1, start2, size2);
+
+            bytesReady = numSamples * numChannels * bytesPerSample;
+            scratch.ensureSize(bytesReady);
+
+            juce::AudioBuffer<float> sourceBuffer(1, numSamples);
+
+            for (int i = 0; i < numChannels; i++) {
+                if (size1 > 0) {
+                    sourceBuffer.copyFrom(0, 0, audioData, i, start1, size1);
+                }
+
+                if (size2 > 0) {
+                    sourceBuffer.copyFrom(0, size1, audioData, i, start2, size2);
+                }
+
+                request->converter->convertSamples(scratch.getData(), i, sourceBuffer.getReadPointer(0), 0, numSamples);
+            }
+
+            fifo.finishedRead(numSamples);
         }
-    }
-}
 
-void decWorkerRefCount() {
-    if (workerRefCount-- <= 0) {
-        shutdownWorker();
-    }
-}
-
+        std::vector<napi_value> GetResult(Napi::Env env) override {
+            auto result = Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)request->scratch.getData(), bytesReady);
+            return { result };
+        }
+    private:
+        std::shared_ptr<Medley::AudioRequest> request;
+        uint64_t requestedSize;
+        uint64_t bytesReady = 0;
+    };
 }
 
 void Medley::Initialize(Object& exports) {
@@ -73,6 +128,8 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::seekFractional>("seekFractional"),
         InstanceMethod<&Medley::isTrackLoadable>("isTrackLoadable"),
         InstanceMethod<&Medley::getMetadata>("getMetadata"),
+        InstanceMethod<&Medley::requestAudioCallback>("*$rac"),
+        InstanceMethod<&Medley::racConsume>("*$rac$consume"),
         //
         InstanceAccessor<&Medley::level>("level"),
         InstanceAccessor<&Medley::reduction>("reduction"),
@@ -91,7 +148,7 @@ void Medley::Initialize(Object& exports) {
 }
 
 void Medley::shutdown(const CallbackInfo& info) {
-    shutdownWorker();
+    // shutdownWorker();
 }
 
 void Medley::workerFinalizer(const CallbackInfo&) {
@@ -191,6 +248,7 @@ Medley::Medley(const CallbackInfo& info)
         queue = Queue::Unwrap(obj);
         engine = new Engine(*queue);
         engine->addListener(this);
+        engine->setAudioCallback(this);
 
         threadSafeEmitter = ThreadSafeFunction::New(
             env, info.This().ToObject().Get("emit").As<Function>(),
@@ -210,7 +268,7 @@ Medley::~Medley() {
     delete engine;
     delete queue;
     //
-    decWorkerRefCount();
+    // decWorkerRefCount();
 }
 
 void Medley::deckTrackScanning(medley::Deck& sender) {
@@ -410,3 +468,166 @@ Napi::Value Medley::getMetadata(const CallbackInfo& info) {
 
     return result;
 }
+
+Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto format = info[0];
+    auto formatStr = juce::String(format.ToString().Utf8Value());
+    auto validFormats = juce::StringArray("Int16LE", "Int16BE", "FloatLE", "FloatBE");
+    auto formatIndex = validFormats.indexOf(formatStr);
+
+    if (!format.IsString() || formatIndex == -1) {
+        TypeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto audioFormat = static_cast<AudioRequestFormat>(formatIndex);
+    auto audioConveter = audioConverters.find(audioFormat);
+    if (audioConveter == audioConverters.end()) {
+        switch (audioFormat) {
+            case AudioRequestFormat::FloatLE:
+                audioConverters[audioFormat] = std::make_shared<AudioData::ConverterInstance<NativeAudioFormat, Float32LittleEndianFormat>>(1, 2);
+                break;
+            case AudioRequestFormat::FloatBE:
+                audioConverters[audioFormat] = std::make_shared<AudioData::ConverterInstance<NativeAudioFormat, Float32BigEndianFormat>>(1, 2);
+                break;
+            case AudioRequestFormat::Int16LE:
+                audioConverters[audioFormat] = std::make_shared<AudioData::ConverterInstance<NativeAudioFormat, Int16LittleEndianFormat>>(1, 2);
+                break;
+            case AudioRequestFormat::Int16BE:
+                audioConverters[audioFormat] = std::make_shared<AudioData::ConverterInstance<NativeAudioFormat, Int16BigEndianFormat>>(1, 2);
+                break;
+
+            default:
+                return env.Undefined();
+        }
+    }
+
+    uint8_t bytesPerSample = 0;
+
+    switch (audioFormat) {
+        case AudioRequestFormat::FloatLE:
+        case AudioRequestFormat::FloatBE:
+            bytesPerSample = 4;
+            break;
+        case AudioRequestFormat::Int16LE:
+        case AudioRequestFormat::Int16BE:
+            bytesPerSample = 2;
+            break;
+    }
+
+    auto device = engine->getCurrentAudioDevice();
+    auto numChannels = device->getOutputChannelNames().size();
+    auto sampleRate = device->getCurrentSampleRate();
+
+    auto request = std::make_shared<AudioRequest>(audioRequestId, numChannels, sampleRate, bytesPerSample, audioConverters[audioFormat]);
+    audioRequests.emplace(audioRequestId, request);
+
+    // TODO: Return numChannels, sampleRate, bytesPerSample along with audioRequestId
+    return Napi::Number::New(env, audioRequestId++);
+}
+
+// void Medley::audioData(const AudioSourceChannelInfo& info) {
+//     for (auto& req : audioRequests) {
+//         TODO: Do the conversion on NodeJS stream read method
+//         auto audioConveter = audioConverters.find(req.format);
+
+//         if (audioConveter == audioConverters.end()) {
+//             continue;
+//         }
+
+//         uint8_t bytesPerSample = 0;
+
+//         switch (req.format) {
+//             case AudioRequestFormat::FloatLE:
+//             case AudioRequestFormat::FloatBE:
+//                 bytesPerSample = 4;
+//                 break;
+//             case AudioRequestFormat::Int16LE:
+//             case AudioRequestFormat::Int16BE:
+//                 bytesPerSample = 2;
+//                 break;
+//         }
+
+//         if (bytesPerSample == 0) {
+//             continue;
+//         }
+
+//         req.scratch.ensureSize(bytesPerSample * info.numSamples * info.buffer->getNumChannels());
+//         audioConveter->second->convertSamples(req.scratch.getData(), info.buffer->getWritePointer(info.startSample), info.numSamples);
+//         req.audioData.write(req.scratch.getData(), req.scratch.getSize());
+
+//         Just push info.buffer into a ring buffer
+//         AudioBuffer<float> buffer(info.buffer->getNumChannels(), info.numSamples);
+//         req.audioData.write(buffer.getArrayOfWritePointers(), info.numSamples * info.buffer->getNumChannels() * sizeof(float));
+//     }
+// }
+
+void Medley::audioData(const AudioSourceChannelInfo& info) {
+    for (auto& [id, req] : audioRequests) {
+        auto& fifo = req->fifo;
+
+        int start1, size1, start2, size2;
+        fifo.prepareToWrite(info.numSamples, start1, size1, start2, size2);
+
+        if (size1 + size2 <= 0) {
+            fifo.reset();
+            fifo.prepareToWrite(info.numSamples, start1, size1, start2, size2);
+        }
+
+        // std::cout << "start1: " << start1 << ", size1: " << size1 << ", start2: " << start2 << ", size2: " << size2 << std::endl;
+
+        auto numChannels = jmin((int)req->numChannels, info.buffer->getNumChannels());
+
+        for (int i = 0; i < numChannels; i++) {
+            auto dest = req->audioData.getWritePointer(i);
+            auto src = info.buffer->getReadPointer(i, info.startSample);
+
+            if (size1 > 0) {
+                FloatVectorOperations::copy(dest + start1, src, size1);
+            }
+
+            if (size2 > 0) {
+                FloatVectorOperations::copy(dest + start2, src + size1, size2);
+            }
+        }
+
+        // FileOutputStream out1(File("cb-l.audio"));
+        // FileOutputStream out2(File("cb-r.audio"));
+
+        // out1.write(req->audioData.getReadPointer(0) + start1, sizeof(float) * size1);
+        // out1.write(req->audioData.getReadPointer(0) + start2, sizeof(float) * size2);
+
+        // out2.write(req->audioData.getReadPointer(1) + start1, sizeof(float) * size1);
+        // out2.write(req->audioData.getReadPointer(1) + start2, sizeof(float) * size2);
+
+        fifo.finishedWrite(size1 + size2);
+    }
+}
+
+Napi::Value Medley::racConsume(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    auto streamId = static_cast<uint32_t>(info[0].As<Number>().Int32Value());
+    auto size = info[1].As<Number>().Int64Value();
+
+    auto it = audioRequests.find(streamId);
+    if (it == audioRequests.end()) {
+        return env.Null();
+    }
+
+    auto deferred = Napi::Promise::Deferred::New(env);
+    auto consumer = new AudioConsumer(it->second, size, deferred);
+    consumer->Queue();
+
+    return deferred.Promise();
+}
+
+
+uint32_t Medley::audioRequestId = 0;

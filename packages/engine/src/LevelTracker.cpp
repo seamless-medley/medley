@@ -16,10 +16,11 @@ LevelTracker::LevelTracker(const LevelTracker& other)
 
 }
 
-void LevelTracker::process(AudioSampleBuffer& buffer)
+void LevelTracker::process(const AudioSourceChannelInfo& info)
 {
+    const auto buffer = *info.buffer;
     const auto numChannels = buffer.getNumChannels();
-    const auto numSamples = buffer.getNumSamples();
+    const auto numSamples = info.numSamples;
 
     const auto numBlocks = jmax(1, (int)(numSamples / samplesPerBlock));
 
@@ -27,7 +28,7 @@ void LevelTracker::process(AudioSampleBuffer& buffer)
         for (int block = 0; block < numBlocks; block++) {
             Time time = Time((int64)((double)samplesProcessed / sampleRate * 1000));
 
-            auto start = block * numBlocks;
+            auto start = info.startSample + block * numBlocks;
             auto numSamplesThisTime = jmin(numSamples - start, samplesPerBlock);
 
             levels[channel]->addLevel(time, buffer.getMagnitude(channel, start, numSamplesThisTime), holdDuration);
@@ -45,7 +46,10 @@ void LevelTracker::prepare(const int channels, const int sampleRate, const int l
     latency = RelativeTime((double)latencyInSamples / sampleRate);
 
     levels.clear();
-    levels.resize(channels, std::shared_ptr<LevelSmoother>(new LevelSmoother(sampleRate)));
+    levels.resize(channels);
+    for (auto i = 0; i < channels; i++) {
+        levels[i] = std::shared_ptr<LevelSmoother>(new LevelSmoother(sampleRate));
+    }
 }
 
 double LevelTracker::getLevel(int channel) {

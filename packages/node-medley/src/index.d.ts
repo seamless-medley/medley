@@ -1,6 +1,7 @@
 /// <reference types="node" />
 
 import type { EventEmitter } from 'events';
+import { Readable } from 'stream';
 
 export interface TrackInfo {
   /**
@@ -203,7 +204,11 @@ export declare class Medley extends EventEmitter {
   isTrackLoadable(track: TrackDescriptor): boolean;
 
   getMetadata(index: DeckIndex): Metadata;
+
+  requestAudioStream(format: AudioFormat): Readable;
 }
+
+export type AudioFormat = 'Int16LE' | 'Int16BE' | 'FloatLE' | 'FloatBE';
 
 export type AudioDeviceTypeInfo = {
   type: string;

@@ -12,7 +12,7 @@ public:
 
     LevelTracker(const LevelTracker& other);
 
-    void process(AudioSampleBuffer& buffer);
+    void process(const AudioSourceChannelInfo& info);
 
     void prepare(const int channels, const int sampleRate, const int latencyInSamples);
 

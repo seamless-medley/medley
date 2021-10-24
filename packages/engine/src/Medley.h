@@ -30,6 +30,11 @@ public:
         virtual void preQueueNext(PreCueNextDone done = [](bool) { }) = 0;
     };
 
+    class AudioCallback {
+    public:
+        virtual void audioData(const AudioSourceChannelInfo& info) = 0;
+    };
+
     Medley(IQueue& queue);
 
     virtual ~Medley();
@@ -66,7 +71,7 @@ public:
 
     inline AudioFormatManager& getAudioFormatManager() { return formatMgr; }
 
-    inline const AudioIODevice* getCurrentAudioDevice() const { return deviceMgr.getCurrentAudioDevice(); }
+    inline AudioIODevice* getCurrentAudioDevice() const { return deviceMgr.getCurrentAudioDevice(); }
 
     inline Deck& getDeck1() const { return *deck1; }
 
@@ -91,6 +96,8 @@ public:
     void addListener(Callback* cb);
 
     void removeListener(Callback* cb);
+
+    void setAudioCallback(AudioCallback* callback);
 
     inline void setGain(float newGain) { mainOut.setGain(newGain); }
 
@@ -170,6 +177,8 @@ private:
 
     void updateTransition(Deck* deck);
 
+    void interceptAudio(const AudioSourceChannelInfo& info);
+
     class Mixer : public MixerAudioSource, public ChangeListener, public TimeSliceClient {
     public:
         Mixer(Medley& medley)
@@ -221,6 +230,7 @@ private:
 
         bool prepared = false;
         int numChannels = 2;
+        int sampleRate = 44100;
         bool paused = false;
         bool stalled = false;
         bool outputStarted = false;
@@ -281,6 +291,9 @@ private:
 
     CriticalSection callbackLock;
     ListenerList<Callback> listeners;
+
+    CriticalSection audioCallbackLock;
+    AudioCallback* audioCallback = nullptr;
 };
 
 }
