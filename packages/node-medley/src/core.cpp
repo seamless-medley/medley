@@ -1,49 +1,5 @@
 #include "core.h"
 
-namespace {
-    class AudioConsumer : public AsyncWorker {
-    public:
-        AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)
-            :
-            AsyncWorker(Napi::Function::New(deferred.Env(), [deferred](const CallbackInfo &cbInfo) {
-                deferred.Resolve(cbInfo[0]);
-                return cbInfo.Env().Undefined();
-            })),
-            request(request),
-            requestedSize(requestedSize)
-        {
-
-        }
-
-        void Execute() override
-        {
-            auto bytesPerSample = request->bytesPerSample;
-            auto numChannels = request->numChannels;
-            auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedSize / bytesPerSample / numChannels);
-
-            juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
-            request->buffer.read(tempBuffer, numSamples);
-
-            auto& scratch = request->scratch;
-            bytesReady = numSamples * numChannels * bytesPerSample;
-            scratch.ensureSize(bytesReady);
-
-            for (int i = 0; i < numChannels; i++) {
-                request->converter->convertSamples(scratch.getData(), i, tempBuffer.getReadPointer(i), 0, numSamples);
-            }
-        }
-
-        std::vector<napi_value> GetResult(Napi::Env env) override {
-            auto result = Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)request->scratch.getData(), bytesReady);
-            return { result };
-        }
-    private:
-        std::shared_ptr<Medley::AudioRequest> request;
-        uint64_t requestedSize;
-        uint64_t bytesReady = 0;
-    };
-}
-
 void Medley::Initialize(Object& exports) {
     auto proto = {
         StaticMethod<&Medley::shutdown>("shutdown"),
@@ -467,6 +423,53 @@ void Medley::audioData(const AudioSourceChannelInfo& info) {
     for (auto& [id, req] : audioRequests) {
         req->buffer.write(*info.buffer, info.startSample, info.numSamples);
     }
+}
+
+namespace {
+    class AudioConsumer : public AsyncWorker {
+    public:
+        AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)
+            :
+            AsyncWorker(Napi::Function::New(deferred.Env(), [deferred](const CallbackInfo &cbInfo) {
+                deferred.Resolve(cbInfo[0]);
+                return cbInfo.Env().Undefined();
+            })),
+            request(request),
+            requestedSize(requestedSize)
+        {
+
+        }
+
+        void Execute() override
+        {
+            auto bytesPerSample = request->bytesPerSample;
+            auto numChannels = request->numChannels;
+            auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedSize / bytesPerSample / numChannels);
+
+            juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
+            // request->buffer.read(tempBuffer, numSamples);
+
+            AudioSourceChannelInfo readInfo(&tempBuffer, 0, numSamples);
+            request->audioSource.getNextAudioBlock(readInfo);
+
+            auto& scratch = request->scratch;
+            bytesReady = numSamples * numChannels * bytesPerSample;
+            scratch.ensureSize(bytesReady);
+
+            for (int i = 0; i < numChannels; i++) {
+                request->converter->convertSamples(scratch.getData(), i, tempBuffer.getReadPointer(i), 0, numSamples);
+            }
+        }
+
+        std::vector<napi_value> GetResult(Napi::Env env) override {
+            auto result = Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)request->scratch.getData(), bytesReady);
+            return { result };
+        }
+    private:
+        std::shared_ptr<Medley::AudioRequest> request;
+        uint64_t requestedSize;
+        uint64_t bytesReady = 0;
+    };
 }
 
 Napi::Value Medley::racConsume(const CallbackInfo& info) {
