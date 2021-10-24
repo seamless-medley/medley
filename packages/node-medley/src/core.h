@@ -2,6 +2,7 @@
 
 #include <napi.h>
 #include <Medley.h>
+#include <RingBuffer.h>
 #include "track.h"
 #include "queue.h"
 
@@ -104,8 +105,7 @@ public:
             sampleRate(sampleRate),
             bytesPerSample(bytesPerSample),
             converter(converter),
-            audioData(numChannels, 512 * 16),
-            fifo(512 * 16)
+            buffer(numChannels, 512 * 16)
         {
 
         }
@@ -116,8 +116,7 @@ public:
             numChannels(other.numChannels),
             sampleRate(other.sampleRate),
             converter(other.converter),
-            audioData(other.numChannels, other.audioData.getNumSamples()),
-            fifo(other.audioData.getNumSamples())
+            buffer(other.buffer)
         {
 
         }
@@ -126,9 +125,10 @@ public:
         uint8_t numChannels;
         int sampleRate;
         uint8_t bytesPerSample;
+        //
         std::shared_ptr<juce::AudioData::Converter> converter;
-        juce::AudioBuffer<float> audioData;
-        juce::AbstractFifo fifo;
+        RingBuffer<float> buffer;
+        //
         juce::MemoryBlock scratch;
     };
 private:

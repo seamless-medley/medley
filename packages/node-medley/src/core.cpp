@@ -17,34 +17,20 @@ namespace {
 
         void Execute() override
         {
-            auto& fifo = request->fifo;
-            auto& scratch = request->scratch;
-            auto& audioData = request->audioData;
             auto bytesPerSample = request->bytesPerSample;
             auto numChannels = request->numChannels;
-            auto numSamples = jmin((uint64_t)fifo.getNumReady(), requestedSize / bytesPerSample / numChannels);
+            auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedSize / bytesPerSample / numChannels);
 
-            int start1, size1, start2, size2;
-            fifo.prepareToRead(numSamples, start1, size1, start2, size2);
+            juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
+            request->buffer.read(tempBuffer, numSamples);
 
+            auto& scratch = request->scratch;
             bytesReady = numSamples * numChannels * bytesPerSample;
             scratch.ensureSize(bytesReady);
 
-            juce::AudioBuffer<float> sourceBuffer(1, numSamples);
-
             for (int i = 0; i < numChannels; i++) {
-                if (size1 > 0) {
-                    sourceBuffer.copyFrom(0, 0, audioData, i, start1, size1);
-                }
-
-                if (size2 > 0) {
-                    sourceBuffer.copyFrom(0, size1, audioData, i, start2, size2);
-                }
-
-                request->converter->convertSamples(scratch.getData(), i, sourceBuffer.getReadPointer(0), 0, numSamples);
+                request->converter->convertSamples(scratch.getData(), i, tempBuffer.getReadPointer(i), 0, numSamples);
             }
-
-            fifo.finishedRead(numSamples);
         }
 
         std::vector<napi_value> GetResult(Napi::Env env) override {
@@ -479,32 +465,7 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
 
 void Medley::audioData(const AudioSourceChannelInfo& info) {
     for (auto& [id, req] : audioRequests) {
-        auto& fifo = req->fifo;
-
-        int start1, size1, start2, size2;
-        fifo.prepareToWrite(info.numSamples, start1, size1, start2, size2);
-
-        if (size1 + size2 <= 0) {
-            fifo.reset();
-            fifo.prepareToWrite(info.numSamples, start1, size1, start2, size2);
-        }
-
-        auto numChannels = jmin((int)req->numChannels, info.buffer->getNumChannels());
-
-        for (int i = 0; i < numChannels; i++) {
-            auto dest = req->audioData.getWritePointer(i);
-            auto src = info.buffer->getReadPointer(i, info.startSample);
-
-            if (size1 > 0) {
-                FloatVectorOperations::copy(dest + start1, src, size1);
-            }
-
-            if (size2 > 0) {
-                FloatVectorOperations::copy(dest + start2, src + size1, size2);
-            }
-        }
-
-        fifo.finishedWrite(size1 + size2);
+        req->buffer.write(*info.buffer, info.startSample, info.numSamples);
     }
 }
 
