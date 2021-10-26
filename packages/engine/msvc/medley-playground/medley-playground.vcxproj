@@ -219,6 +219,7 @@
     <ClInclude Include="..\..\src\MiniMP3AudioFormatReader.h" />
     <ClInclude Include="..\..\src\PostProcessor.h" />
     <ClInclude Include="..\..\src\ReductionCalculator.h" />
+    <ClInclude Include="..\..\src\RingBuffer.h" />
     <ClInclude Include="..\..\src\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
