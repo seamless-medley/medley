@@ -10,6 +10,7 @@
                 "../engine/src"
             ],
             "sources": [
+                "src/audio/SecretRabbitCode.cpp",
                 "src/queue.cpp",
                 "src/core.cpp",
                 "src/module.cpp",
@@ -89,7 +90,7 @@
                                     },
                                     'VCLinkerTool': {
                                         'AdditionalLibraryDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\debug\lib'],
-                                        'AdditionalDependencies': ['tag.lib']
+                                        'AdditionalDependencies': ['tag.lib', 'samplerate.lib']
                                     }
                                 }
                             },
@@ -106,7 +107,7 @@
                                     },
                                     'VCLinkerTool': {
                                         'AdditionalLibraryDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\lib'],
-                                        'AdditionalDependencies': ['tag.lib']
+                                        'AdditionalDependencies': ['tag.lib', 'samplerate.lib']
                                     }
                                 }
                             }
