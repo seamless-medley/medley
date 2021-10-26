@@ -129,8 +129,6 @@ Medley::Medley(const CallbackInfo& info)
     queueJS = Persistent(obj);
 
     try {
-        // ensureWorker(info.Env());
-
         queue = Queue::Unwrap(obj);
         engine = new Engine(*queue);
         engine->addListener(this);
@@ -153,8 +151,6 @@ Medley::Medley(const CallbackInfo& info)
 Medley::~Medley() {
     delete engine;
     delete queue;
-    //
-    // decWorkerRefCount();
 }
 
 void Medley::deckTrackScanning(medley::Deck& sender) {

@@ -3,7 +3,7 @@
 #include <napi.h>
 #include <Medley.h>
 #include <RingBuffer.h>
-#include "audio/RingBufferAudioSource.h";
+#include "audio/SecretRabbitCode.h"
 #include "track.h"
 #include "queue.h"
 
