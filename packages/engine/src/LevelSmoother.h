@@ -15,7 +15,7 @@ public:
 
     LevelSmoother(int sampleRate);
 
-    LevelSmoother(const LevelSmoother& other);
+    //LevelSmoother(const LevelSmoother& other);
 
     void addLevel(const Time time, const double newLevel, const RelativeTime hold);
 

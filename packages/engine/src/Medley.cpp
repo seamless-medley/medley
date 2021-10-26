@@ -144,6 +144,15 @@ void Medley::updateTransition(Deck* deck) {
     }
 }
 
+void Medley::interceptAudio(const AudioSourceChannelInfo& info)
+{
+    ScopedLock sl(audioCallbackLock);
+
+    if (!audioCallback) return;
+
+    audioCallback->audioData(info);
+}
+
 double Medley::getDuration() const
 {
     if (auto deck = getMainDeck()) {
@@ -571,6 +580,12 @@ void Medley::removeListener(Callback* cb)
     listeners.remove(cb);
 }
 
+void medley::Medley::setAudioCallback(AudioCallback* callback)
+{
+    ScopedLock sl(audioCallbackLock);
+    audioCallback = callback;
+}
+
 void Medley::updateFadingFactor() {
     double outRange = 1000.0 - 1.0;
     double inRange = 100.0;
@@ -654,11 +669,20 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
     lastGain = gain;
 
     if (prepared) {
-        AudioBlock<float> block(*info.buffer, (size_t)info.startSample);
+        AudioBlock<float> block(
+            info.buffer->getArrayOfWritePointers(),
+            info.buffer->getNumChannels(),
+            (size_t)info.startSample,
+            (size_t)info.numSamples
+        );
+
         processor.process(ProcessContextReplacing<float>(block));
+
+        medley.interceptAudio(info);
+
         {
             ScopedLock sl(levelTrackerLock);
-            levelTracker.process(*info.buffer);
+            levelTracker.process(info);
         }
     }
 }
@@ -695,12 +719,13 @@ void Medley::Mixer::updateAudioConfig()
 
         auto numSamples = device->getCurrentBufferSizeSamples();
         numChannels = device->getOutputChannelNames().size();
+        sampleRate = (int)config.sampleRate;
 
         processor.prepare({ config.sampleRate, (uint32)numSamples, (uint32)numChannels });
 
         levelTracker.prepare(
             numChannels,
-            (int)config.sampleRate,
+            sampleRate,
             latencyInSamples
         );
 

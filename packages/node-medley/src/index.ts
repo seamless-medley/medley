@@ -1,8 +1,39 @@
 import { inherits } from 'util';
 import { EventEmitter } from 'events';
+import { Readable } from 'stream';
+import type { RequestAudioStreamOptions, RequestAudioStreamResult } from './index.d';
+
 const medley = require('bindings')({ module_root: process.cwd(), bindings: 'medley' });
 
 inherits(medley.Medley, EventEmitter);
 
 export const Medley = medley.Medley;
 export const Queue = medley.Queue;
+
+Medley.prototype.requestAudioStream = function(format: RequestAudioStreamOptions = { format: 'FloatLE' }): RequestAudioStreamResult {
+  const result = this['*$rac'](format) as Omit<RequestAudioStreamResult, 'stream'>;
+  const streamId = result.id;
+
+  const stream = new Readable({
+    highWaterMark: 16384,
+    objectMode: false,
+
+    read: async (size: number) => {
+      const result = await this['*$rac$consume'](streamId, size);
+      stream.push(result);
+    }
+  });
+
+  stream.on('close', async () => {
+    stream.emit('closed');
+  });
+
+  stream.on('finish', async () => {
+    stream.emit('finished');
+  });
+
+  return {
+    stream,
+    ...result
+  };
+}

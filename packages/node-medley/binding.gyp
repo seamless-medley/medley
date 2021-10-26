@@ -10,6 +10,7 @@
                 "../engine/src"
             ],
             "sources": [
+                "src/audio/SecretRabbitCode.cpp",
                 "src/queue.cpp",
                 "src/core.cpp",
                 "src/module.cpp",
@@ -89,7 +90,7 @@
                                     },
                                     'VCLinkerTool': {
                                         'AdditionalLibraryDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\debug\lib'],
-                                        'AdditionalDependencies': ['tag.lib']
+                                        'AdditionalDependencies': ['tag.lib', 'samplerate.lib']
                                     }
                                 }
                             },
@@ -106,7 +107,7 @@
                                     },
                                     'VCLinkerTool': {
                                         'AdditionalLibraryDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\lib'],
-                                        'AdditionalDependencies': ['tag.lib']
+                                        'AdditionalDependencies': ['tag.lib', 'samplerate.lib']
                                     }
                                 }
                             }
@@ -168,6 +169,58 @@
                                     'DEAD_CODE_STRIPPINT': 'YES',
                                     'GCC_OPTIMIZATION_LEVEL': '3'
                                 }
+                            }
+                        }
+                    }
+                ],
+                [
+                    'OS=="linux"',
+                    {
+                        'include_dirs': [
+                            "<!@(pkg-config taglib --cflags-only-I | sed s/-I//g)",
+                            "<!@(pkg-config freetype2 --cflags-only-I | sed s/-I//g)"
+                        ],
+                        'libraries': [
+                            "<!@(pkg-config taglib --libs)",
+                            "<!@(pkg-config freetype2 --libs)",
+                            "<!@(pkg-config libcurl --libs)",
+                            "-lasound"
+                        ],
+                        "cflags_cc": [
+                            "-std=c++17"
+                        ],
+                        'sources': [
+                            "../engine/juce/include_juce_audio_basics.cpp",
+                            "../engine/juce/include_juce_audio_devices.cpp",
+                            "../engine/juce/include_juce_audio_formats.cpp",
+                            "../engine/juce/include_juce_audio_processors.cpp",
+                            "../engine/juce/include_juce_audio_utils.cpp",
+                            "../engine/juce/include_juce_core.cpp",
+                            "../engine/juce/include_juce_data_structures.cpp",
+                            "../engine/juce/include_juce_dsp.cpp",
+                            "../engine/juce/include_juce_events.cpp",
+                            "../engine/juce/include_juce_graphics.cpp",
+                            "../engine/juce/include_juce_gui_basics.cpp",
+                            "../engine/juce/include_juce_gui_extra.cpp",
+                        ],
+                        'defines': [
+                            'JUCE_USE_XRANDR=0',
+                            'JUCE_USE_XINERAMA=0',
+                            'JUCE_USE_XRENDER=0',
+                            'JUCE_USE_XCURSOR=0',
+                            'JUCE_WEB_BROWSER=0'
+                        ],
+                        'configurations': {
+                            'Debug': {
+                                'defines': [
+                                    'DEBUG',
+                                    '_DEBUG',
+                                ]
+                            },
+                            'Release': {
+                                'defines': [
+                                    'NDEBUG'
+                                ]
                             }
                         }
                     }
