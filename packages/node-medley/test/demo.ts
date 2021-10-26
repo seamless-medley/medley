@@ -20,4 +20,16 @@ m.on('finished', (deck) => {
   console.log('Finished', deck);
 });
 
+const audioStream = m.requestAudioStream({
+  format: 'Int16LE'
+});
+
+console.log('audioStream', audioStream);
+
+const out = fs.createWriteStream('test.audio');
+
+audioStream.stream.pipe(out);
+
 m.play();
+
+// setInterval(() => console.log(m.level), 1000);

@@ -359,7 +359,10 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
         return env.Undefined();
     }
 
-    auto format = info[0];
+    auto options = info[0].ToObject();
+    auto format = options.Get("format").ToString();
+    auto requestedSampleRate = options.Has("sampleRate") ? options.Get("sampleRate") : env.Undefined();
+
     auto formatStr = juce::String(format.ToString().Utf8Value());
     auto validFormats = juce::StringArray("Int16LE", "Int16BE", "FloatLE", "FloatBE");
     auto formatIndex = validFormats.indexOf(formatStr);
@@ -407,12 +410,27 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
     auto device = engine->getCurrentAudioDevice();
     auto numChannels = device->getOutputChannelNames().size();
     auto sampleRate = device->getCurrentSampleRate();
+    auto outSampleRate = (!requestedSampleRate.IsNull() && !requestedSampleRate.IsUndefined()) ? requestedSampleRate.ToNumber().DoubleValue() : sampleRate;
 
-    auto request = std::make_shared<AudioRequest>(audioRequestId, numChannels, sampleRate, bytesPerSample, audioConverters[audioFormat]);
+    auto request = std::make_shared<AudioRequest>(
+        audioRequestId,
+        numChannels,
+        sampleRate,
+        outSampleRate,
+        bytesPerSample,
+        audioConverters[audioFormat]
+    );
     audioRequests.emplace(audioRequestId, request);
 
-    // TODO: Return numChannels, sampleRate, bytesPerSample along with audioRequestId
-    return Napi::Number::New(env, audioRequestId++);
+    auto result = Object::New(env);
+    //
+    result.Set("id", audioRequestId++);
+    result.Set("channels", numChannels);
+    result.Set("bitPerSample", bytesPerSample * 8);
+    result.Set("originalSampleRate", sampleRate);
+    result.Set("sampleRate", outSampleRate);
+    //
+    return result;
 }
 
 void Medley::audioData(const AudioSourceChannelInfo& info) {
@@ -438,22 +456,44 @@ namespace {
 
         void Execute() override
         {
-            auto bytesPerSample = request->bytesPerSample;
+            auto outputBytesPerSample = request->outputBytesPerSample;
             auto numChannels = request->numChannels;
-            auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedSize / bytesPerSample / numChannels);
+            auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedSize / outputBytesPerSample / numChannels);
 
             juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
-            // request->buffer.read(tempBuffer, numSamples);
+            request->buffer.read(tempBuffer, numSamples);
 
-            AudioSourceChannelInfo readInfo(&tempBuffer, 0, numSamples);
-            request->audioSource.getNextAudioBlock(readInfo);
+            juce::AudioBuffer<float>* sourceBuffer = &tempBuffer;
+            std::unique_ptr<juce::AudioBuffer<float>> resampleBuffer;
+            auto outSamples = numSamples;
 
-            auto& scratch = request->scratch;
-            bytesReady = numSamples * numChannels * bytesPerSample;
-            scratch.ensureSize(bytesReady);
+            if (request->inSampleRate != request->requestedSampleRate)
+            {
+                outSamples = roundToInt(numSamples * (double)request->requestedSampleRate / (double)request->inSampleRate);
+                resampleBuffer = std::make_unique<juce::AudioBuffer<float>>(numChannels, outSamples);
+
+                long used = 0;
+                int actualSamples = outSamples;
+
+                for (int i = 0; i < numChannels; i++) {
+                    actualSamples = request->resamplers[i]->process(
+                        tempBuffer.getReadPointer(i),
+                        numSamples,
+                        resampleBuffer->getWritePointer(i),
+                        outSamples,
+                        used
+                    );
+                }
+
+                sourceBuffer = resampleBuffer.get();
+                outSamples = actualSamples;
+            }
+
+            bytesReady = outSamples * numChannels * outputBytesPerSample;
+            request->scratch.ensureSize(bytesReady);
 
             for (int i = 0; i < numChannels; i++) {
-                request->converter->convertSamples(scratch.getData(), i, tempBuffer.getReadPointer(i), 0, numSamples);
+                request->converter->convertSamples(request->scratch.getData(), i, sourceBuffer->getReadPointer(i), 0, outSamples);
             }
         }
 

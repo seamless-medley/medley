@@ -99,39 +99,47 @@ public:
     Napi::Value racConsume(const CallbackInfo& info);
 
     struct AudioRequest {
-        AudioRequest(uint32_t id, uint8_t numChannels, int sampleRate, uint8_t bytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter)
+        AudioRequest(uint32_t id, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter)
             :
             id(id),
             numChannels(numChannels),
-            sampleRate(sampleRate),
-            bytesPerSample(bytesPerSample),
+            inSampleRate(inSampleRate),
+            requestedSampleRate(requestedSampleRate),
+            outputBytesPerSample(outputBytesPerSample),
             converter(converter),
-            buffer(numChannels, 512 * 16),
-            audioSource(buffer)
+            buffer(numChannels, 512 * 16)
         {
-
+            if (inSampleRate != requestedSampleRate) {
+                for (auto i = 0; i < numChannels; i++) {
+                    resamplers.push_back(std::make_unique<SecretRabbitCode>(inSampleRate, requestedSampleRate));
+                }
+            }
         }
 
         AudioRequest(const AudioRequest& other)
             :
             id(other.id),
             numChannels(other.numChannels),
-            sampleRate(other.sampleRate),
+            inSampleRate(inSampleRate),
+            requestedSampleRate(requestedSampleRate),
+            outputBytesPerSample(outputBytesPerSample),
             converter(other.converter),
             buffer(other.buffer),
-            audioSource(other.audioSource)
+            resamplers(resamplers)
         {
 
         }
 
         uint32_t id;
         uint8_t numChannels;
-        int sampleRate;
-        uint8_t bytesPerSample;
+        int inSampleRate;
+        int requestedSampleRate;
+        uint8_t outputBytesPerSample;
         //
         std::shared_ptr<juce::AudioData::Converter> converter;
         RingBuffer<float> buffer;
-        RingBufferAudioSource audioSource;
+        //
+        std::vector<std::shared_ptr<SecretRabbitCode>> resamplers;
         //
         juce::MemoryBlock scratch;
     };

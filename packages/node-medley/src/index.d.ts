@@ -205,10 +205,24 @@ export declare class Medley extends EventEmitter {
 
   getMetadata(index: DeckIndex): Metadata;
 
-  requestAudioStream(format: AudioFormat): Readable;
+  requestAudioStream(options: RequestAudioStreamOptions): RequestAudioStreamResult;
 }
 
 export type AudioFormat = 'Int16LE' | 'Int16BE' | 'FloatLE' | 'FloatBE';
+
+export type RequestAudioStreamOptions = {
+  sampleRate?: number;
+  format: AudioFormat;
+}
+
+export type RequestAudioStreamResult = {
+  readonly stream: Readable;
+  readonly id: number;
+  readonly channels: number;
+  readonly originalSampleRate: number;
+  readonly sampleRate: number;
+  readonly bitPerSample: number;
+}
 
 export type AudioDeviceTypeInfo = {
   type: string;

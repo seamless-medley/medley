@@ -1,8 +1,7 @@
-////// <reference path="./index.d.ts" />
-
 import { inherits } from 'util';
 import { EventEmitter } from 'events';
 import { Readable } from 'stream';
+import type { RequestAudioStreamOptions, RequestAudioStreamResult } from './index.d';
 
 const medley = require('bindings')({ module_root: process.cwd(), bindings: 'medley' });
 
@@ -11,20 +10,16 @@ inherits(medley.Medley, EventEmitter);
 export const Medley = medley.Medley;
 export const Queue = medley.Queue;
 
-Medley.prototype.requestAudioStream = function(format: string = 'FloatLE') {
-  const streamId: number = this['*$rac'](format);
-
-  console.log('streamId', streamId);
+Medley.prototype.requestAudioStream = function(format: RequestAudioStreamOptions = { format: 'FloatLE' }): RequestAudioStreamResult {
+  const result = this['*$rac'](format) as Omit<RequestAudioStreamResult, 'stream'>;
+  const streamId = result.id;
 
   const stream = new Readable({
     highWaterMark: 16384,
     objectMode: false,
 
     read: async (size: number) => {
-      // console.log('Reading', size);
       const result = await this['*$rac$consume'](streamId, size);
-      // console.log('result', result);
-      void size;
       stream.push(result);
     }
   });
@@ -37,5 +32,8 @@ Medley.prototype.requestAudioStream = function(format: string = 'FloatLE') {
     stream.emit('finished');
   });
 
-  return stream;
+  return {
+    stream,
+    ...result
+  };
 }
