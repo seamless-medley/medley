@@ -10,7 +10,6 @@
                 "../engine/src"
             ],
             "sources": [
-                "src/audio/RingBufferAudioSource.cpp",
                 "src/queue.cpp",
                 "src/core.cpp",
                 "src/module.cpp",
