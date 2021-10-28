@@ -99,9 +99,9 @@ public:
 
     void setAudioCallback(AudioCallback* callback);
 
-    inline void setGain(float newGain) { mainOut.setGain(newGain); }
+    inline void setVolume(float newVolume) { mixer.setVolume(newVolume); }
 
-    inline float getGain() const { return mainOut.getGain(); }
+    inline float getVolume() const { return mixer.getVolume(); }
 
     bool togglePause();
 
@@ -225,6 +225,10 @@ private:
 
         void fadeOut(double durationMs, Fader::OnDone callback);
 
+        float getVolume() const { return volume; }
+
+        void setVolume(float newVolume) { volume = newVolume; }
+
     private:
         Medley& medley;
 
@@ -236,6 +240,8 @@ private:
         bool outputStarted = false;
 
         double currentTime = 0;
+
+        float volume = 1.0f;
         float gain = 1.0f;
         float lastGain = 1.0f;
 

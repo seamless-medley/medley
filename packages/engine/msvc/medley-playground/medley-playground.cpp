@@ -1048,7 +1048,7 @@ private:
             volumeSlider.setTextBoxStyle(Slider::TextEntryBoxPosition::NoTextBox, "", 0, 0);
             volumeSlider.setTextValueSuffix("dB");
             volumeSlider.setRange(0.0, 1.0);
-            volumeSlider.setValue(medley.getGain());
+            volumeSlider.setValue(medley.getVolume());
             volumeSlider.addListener(this);
 
             playhead = new PlayHead(*this, backgroundThread);
@@ -1254,7 +1254,7 @@ private:
 
         void sliderValueChanged(Slider* slider) override {
             if (slider == &volumeSlider) {
-                medley.setGain((float)slider->getValue());
+                medley.setVolume((float)slider->getValue());
             }
         }
 

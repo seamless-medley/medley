@@ -139,10 +139,10 @@ export declare class Medley extends EventEmitter {
   set position(time: number);
 
   /**
-   * Audio gain in linear value, `0` = silent, `1` = 0dBFS
+   * Audio volume in linear scale, `0` = silent, `1` = 0dBFS
    */
-  get gain(): number;
-  set gain(value: number);
+  get volume(): number;
+  set volume(value: number);
 
   /**
    * S-Curve for fading in/out, range from `0` to `100`

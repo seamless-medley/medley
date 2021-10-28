@@ -663,7 +663,7 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
         }
     }
 
-    gain = fader.update(currentTime);
+    gain = volume * fader.update(currentTime);
 
     for (int i = info.buffer->getNumChannels(); --i >= 0;) {
         info.buffer->applyGainRamp(i, info.startSample, info.numSamples, lastGain, gain);

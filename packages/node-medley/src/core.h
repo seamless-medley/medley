@@ -72,9 +72,9 @@ public:
 
     void setPosition(const CallbackInfo& info, const Napi::Value& value);
 
-    Napi::Value getGain(const CallbackInfo& info);
+    Napi::Value getVolume(const CallbackInfo& info);
 
-    void setGain(const CallbackInfo& info, const Napi::Value& value);
+    void setVolume(const CallbackInfo& info, const Napi::Value& value);
 
     Napi::Value getFadingCurve(const CallbackInfo& info);
 

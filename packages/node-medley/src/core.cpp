@@ -23,7 +23,7 @@ void Medley::Initialize(Object& exports) {
         InstanceAccessor<&Medley::paused>("paused"),
         InstanceAccessor<&Medley::duration>("duration"),
         InstanceAccessor<&Medley::getPosition, &Medley::setPosition>("position"),
-        InstanceAccessor<&Medley::getGain, &Medley::setGain>("gain"),
+        InstanceAccessor<&Medley::getVolume, &Medley::setVolume>("volume"),
         InstanceAccessor<&Medley::getFadingCurve, &Medley::setFadingCurve>("fadingCurve"),
         InstanceAccessor<&Medley::getMinimumLeadingToFade, &Medley::setMinimumLeadingToFade>("minimumLeadingToFade"),
         InstanceAccessor<&Medley::getMaximumFadeOutDuration, &Medley::setMaximumFadeOutDuration>("maximumFadeOutDuration"),
@@ -286,12 +286,12 @@ void Medley::setPosition(const CallbackInfo& info, const Napi::Value& value) {
     engine->setPosition(value.ToNumber().DoubleValue());
 }
 
-Napi::Value Medley::getGain(const CallbackInfo& info) {
-    return Napi::Number::New(info.Env(), engine->getGain());
+Napi::Value Medley::getVolume(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getVolume());
 }
 
-void Medley::setGain(const CallbackInfo& info, const Napi::Value& value) {
-    engine->setGain(value.ToNumber().DoubleValue());
+void Medley::setVolume(const CallbackInfo& info, const Napi::Value& value) {
+    engine->setVolume(value.ToNumber().DoubleValue());
 }
 
 Napi::Value Medley::getFadingCurve(const CallbackInfo& info) {
