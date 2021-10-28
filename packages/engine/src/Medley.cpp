@@ -1,5 +1,6 @@
 #include "Medley.h"
 #include "MiniMP3AudioFormat.h"
+#include "NullAudioDevice.h"
 #include "utils.h"
 
 #if JUCE_WINDOWS
@@ -27,6 +28,8 @@ Medley::Medley(IQueue& queue)
     if (error.isNotEmpty()) {
         throw std::runtime_error(error.toStdString());
     }
+
+    deviceMgr.addAudioDeviceType(std::make_unique<NullAudioDeviceType>());
 
     mixer.updateAudioConfig();
 

@@ -26,7 +26,8 @@
                 "../engine/src/Deck.cpp",
                 "../engine/src/Medley.cpp",
                 "../engine/src/Metadata.cpp",
-                "../engine/src/Fader.cpp"
+                "../engine/src/Fader.cpp",
+                "../engine/Src/NullAudioDevice.cpp"
             ],
             "cflags!": ["-fno-exceptions", '-fno-rtti'],
             "cflags_cc!": ["-fno-exceptions", '-fno-rtti'],
