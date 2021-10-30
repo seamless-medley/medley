@@ -1,4 +1,4 @@
-import _, { random, range, sample, sampleSize, times, zip } from "lodash";
+import _, { create, random, range, sample, sampleSize, times, without, zip } from "lodash";
 import { join as joinPath } from "path";
 import { Crate, TrackCollection, WatchTrackCollection } from ".";
 import { MedleyPlayer } from "./player";
@@ -9,11 +9,11 @@ const collections: Map<string, TrackCollection> = new Map(
 );
 
 const sequences: [string, number][] = [
-  ['bright', 3],
-  ['chill', 3],
-  ['lovesong', 3],
-  ['lonely', 2],
-  ['brokenhearted', 1],
+  // ['bright', 3],
+  // ['chill', 3],
+  // ['lovesong', 3],
+  // ['lonely', 2],
+  // ['brokenhearted', 1],
   // ['hurt', 1],
   // ['brokenhearted', 1],
   // ['lonely', 1],
@@ -26,13 +26,15 @@ const sequences: [string, number][] = [
 const crates = sequences.map(([id, max]) => new Crate(collections.get(id)!, max));
 const player = new MedleyPlayer(crates);
 
-const test_adding_crate = false;
+const test_adding_crate = true;
 if (test_adding_crate) {
   setTimeout(() => {
-    const id = sample([...collections.keys()])!;
+    const id = sample(without([...collections.keys()], 'upbeat'))!;
     const max = random(1, 5);
     console.log(`Inserting a new crate from collection ${id} with maximum of ${max} tracks`);
     crates.push(new Crate(collections.get(id)!, max));
+
+    player.medley.play();
   }, 5000);
 }
 
@@ -48,7 +50,7 @@ if (test_reset_crates) {
   }, 8000);
 }
 
-const test_mutate_crates_order = true;
+const test_mutate_crates_order = false;
 if (test_mutate_crates_order) {
   setTimeout(() => {
     console.log('Swap crates element 1 and 2 directly')
@@ -57,6 +59,17 @@ if (test_mutate_crates_order) {
 
     crates[2] = n1;
     crates[1] = n2;
+  }, 8000);
+}
+
+const test_removing_crate = true;
+if (test_removing_crate) {
+  setTimeout(() => {
+    console.log('Making crates[1] to be an invalid crate');
+    crates[1] = {} as any;
+    crates[99] = new Crate(collections.get('upbeat')!, 2);
+
+    console.log('Crates length', crates.length);
   }, 8000);
 }
 
