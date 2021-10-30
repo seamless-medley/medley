@@ -156,9 +156,8 @@ void Queue::set(const CallbackInfo& info) {
             auto p = info[1];
             if (p.IsString()) {
                 auto obj = Arr::getUnchecked(index);
-                auto preGain = obj.getPreGain();
 
-                Arr::setUnchecked(index, Track(File(p.ToString().Utf8Value()), preGain));
+                Arr::setUnchecked(index, Track(File(p.ToString().Utf8Value())));
             } else {
                 Arr::setUnchecked(index, Track::fromJS(p));
             }

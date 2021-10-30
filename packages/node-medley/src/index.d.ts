@@ -8,12 +8,6 @@ export interface TrackInfo {
    * Path to the physical file.
    */
   path: string;
-
-  /**
-   *
-   * @default 1.0
-   */
-  preGain: number;
 }
 
 export type TrackDescriptor = string | TrackInfo;

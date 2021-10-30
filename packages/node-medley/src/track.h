@@ -10,33 +10,32 @@ public:
 
     }
 
-    Track(const File& file, float preGain = 1.0f)
-        : file(file), preGain(preGain)
+    Track(const File& file)
+        : file(file)
     {
 
     }
 
-    Track(const juce::String& path, float preGain = 1.0f)
-        : Track(File(path), preGain)
+    Track(const juce::String& path)
+        : Track(File(path))
     {
 
     }
 
     Track(const Track& other)
-        : file(other.file), preGain(other.preGain)
+        : file(other.file)
     {
 
     }
 
     Track(Track&& other)
-        : file(std::move(other.file)), preGain(other.preGain)
+        : file(std::move(other.file))
     {
 
     }
 
     Track operator=(const Track& other) {
         file = other.file;
-        preGain = other.preGain;
         return *this;
     }
 
@@ -52,32 +51,26 @@ public:
         return file;
     }
 
-    float getPreGain() const { return preGain; }
-
     Napi::Object toObject(Napi::Env env) {
         auto obj = Napi::Object::New(env);
         obj.Set("path", Napi::String::New(env, file.getFullPathName().toStdString()));
-        obj.Set("preGain", Napi::Number::New(env, preGain));
         return obj;
     }
 
     static Track fromJS(const Napi::Value p) {
         juce::String path;
-        float preGain = 1.0f;
 
         if (p.IsObject()) {
             auto obj = p.ToObject();
 
             path = obj.Get("path").ToString().Utf8Value();
-            preGain = obj.Get("preGain").ToNumber();
         } else {
             path = p.ToString().Utf8Value();
         }
 
-        return Track(juce::String(path), preGain);
+        return Track(juce::String(path));
     }
 
 private:
     File file;
-    float preGain = 1.0f;
 };
