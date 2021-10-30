@@ -206,6 +206,10 @@ export type AudioFormat = 'Int16LE' | 'Int16BE' | 'FloatLE' | 'FloatBE';
 
 export type RequestAudioStreamOptions = {
   sampleRate?: number;
+  /**
+   * Buffer size, in frames
+   */
+  bufferSize?: number;
   format: AudioFormat;
 }
 

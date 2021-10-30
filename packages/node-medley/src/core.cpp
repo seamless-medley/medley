@@ -361,6 +361,7 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
 
     auto options = info[0].ToObject();
     auto format = options.Get("format").ToString();
+    auto bufferSize = jmax(options.Get("bufferSize").ToNumber().Uint32Value(), 512U * 64U);
     auto requestedSampleRate = options.Has("sampleRate") ? options.Get("sampleRate") : env.Undefined();
 
     auto formatStr = juce::String(format.ToString().Utf8Value());
@@ -414,6 +415,7 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
 
     auto request = std::make_shared<AudioRequest>(
         audioRequestId,
+        bufferSize,
         numChannels,
         sampleRate,
         outSampleRate,

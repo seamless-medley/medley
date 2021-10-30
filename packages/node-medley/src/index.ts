@@ -10,8 +10,8 @@ inherits(medley.Medley, EventEmitter);
 export const Medley = medley.Medley;
 export const Queue = medley.Queue;
 
-Medley.prototype.requestAudioStream = function(format: RequestAudioStreamOptions = { format: 'FloatLE' }): RequestAudioStreamResult {
-  const result = this['*$rac'](format) as Omit<RequestAudioStreamResult, 'stream'>;
+Medley.prototype.requestAudioStream = function(options: RequestAudioStreamOptions = { format: 'FloatLE' }): RequestAudioStreamResult {
+  const result = this['*$rac'](options) as Omit<RequestAudioStreamResult, 'stream'>;
   const streamId = result.id;
 
   const stream = new Readable({
@@ -19,8 +19,8 @@ Medley.prototype.requestAudioStream = function(format: RequestAudioStreamOptions
     objectMode: false,
 
     read: async (size: number) => {
-      const result = await this['*$rac$consume'](streamId, size);
-      stream.push(result);
+      const buffer = await this['*$rac$consume'](streamId, size) as Buffer;
+      stream.push(buffer);
     }
   });
 
