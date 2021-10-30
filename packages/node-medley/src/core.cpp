@@ -187,7 +187,11 @@ void Medley::audioDeviceChanged() {
     });
 }
 
+/**
+ * Called from Medley
+ */
 void Medley::preQueueNext(PreCueNextDone done) {
+    // Emit preQueueNext event to JS, propagate the result back to Medley via `done` function
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
         try {
             Napi::Value ret = fn.Call(self.Value(), { Napi::String::New(env, "preQueueNext") });
@@ -196,7 +200,6 @@ void Medley::preQueueNext(PreCueNextDone done) {
             done(Napi::Boolean::New(env, false));
         }
     });
-
 }
 
 void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck) {

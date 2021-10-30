@@ -209,7 +209,7 @@ void Medley::changeListenerCallback(ChangeBroadcaster* source)
     }
 }
 
-void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone callback) {
+void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onLoadingDone) {
     auto nextDeck = getAnotherDeck(currentDeck);
 
     if (nextDeck == nullptr) {
@@ -222,10 +222,10 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone cal
         nextDeck->unloadTrack();
     }
 
-    auto pQueue = &queue;
-    Deck::OnLoadingDone loadingHandler = [&, _callback = callback, p = play, _pQueue = pQueue, _nextDeck = nextDeck](bool loadingResult) {
+    auto const pQueue = &queue;
+    Deck::OnLoadingDone deckLoadingHandler = [&, _onLoadingDone = onLoadingDone, p = play, _pQueue = pQueue, _nextDeck = nextDeck](bool loadingResult) {
         if (loadingResult) {
-            _callback(true);
+            _onLoadingDone(true);
 
             if (p) {
                 _nextDeck->start();
@@ -234,38 +234,48 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone cal
             return;
         }
 
+        // Fetch next track from queue
         if (_pQueue->count() > 0) {
             auto track = _pQueue->fetchNextTrack();
-            _nextDeck->loadTrack(track, loadingHandler);
-        } else {
-            Logger::writeToLog("Track loading has failed and there is no next track left in queue, try PRE CUE");
+            _nextDeck->loadTrack(track, deckLoadingHandler);
+            return;
+        }
 
+        {
+            // Queue is empty, request to fill it with some tracks
             ScopedLock sl(callbackLock);
-            listeners.call([&](Callback& cb) {
-                cb.preQueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _callback = callback](bool preCueDone) {
-                    if (preCueDone && _pQueue->count() > 0) {
-                        loadNextTrack(cd, p, _callback);
+            listeners.call([&](Callback& listener) {
+                listener.preQueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _onLoadingDone = onLoadingDone](bool preQueueResult) {
+                    if (preQueueResult && _pQueue->count() > 0) {
+                        // preQueue succeeded, try to load again
+                        loadNextTrack(cd, p, _onLoadingDone);
                     }
                     else {
-                        _callback(false);
+                        _onLoadingDone(false);
                     }
                 });
             });
         }
     };
 
+    // Fetch next track from queue
     if (queue.count() > 0) {
         auto track = queue.fetchNextTrack();
-        nextDeck->loadTrack(track, loadingHandler);
-    } else {
+        nextDeck->loadTrack(track, deckLoadingHandler);
+        return;
+    }
+
+    // Queue is empty, request to fill it with some tracks
+    {
         ScopedLock sl(callbackLock);
-        listeners.call([&](Callback& cb) {
-            cb.preQueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _callback = callback](bool preCueDone) {
-                if (preCueDone && _pQueue->count() > 0) {
-                    loadNextTrack(cd, p, _callback);
+        listeners.call([&](Callback& listener) {
+            listener.preQueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _onLoadingDone = onLoadingDone](bool preQueueResult) {
+                if (preQueueResult && _pQueue->count() > 0) {
+                    // preQueue succeeded, try to load again
+                    loadNextTrack(cd, p, _onLoadingDone);
                 }
                 else {
-                    _callback(false);
+                    _onLoadingDone(false);
                 }
             });
         });
