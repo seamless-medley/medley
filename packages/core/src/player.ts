@@ -1,4 +1,4 @@
-import { Medley, Queue } from "@medley/medley";
+import { Medley, PreQueueListener, Queue } from "@medley/medley";
 import { EventEmitter } from "stream";
 import { Crate, CrateSequencer, TrackCollection } from ".";
 
@@ -20,14 +20,15 @@ export class MedleyPlayer extends EventEmitter {
 
   private currentCrate: Crate | undefined;
 
-  private isTrackLoadable = (path: string) => this.medley.isTrackLoadable(path);
+  private isTrackLoadable = async (path: string) => this.medley.isTrackLoadable(path);
 
-  private preQueue = () => {
+  private preQueue: PreQueueListener = async (done) => {
     try {
-      const nextTrack = this.sequencer.nextTrack(this.isTrackLoadable);
+      const nextTrack = await this.sequencer.nextTrack(this.isTrackLoadable);
 
       if (!nextTrack) {
-        return false;
+        done(false);
+        return;
       }
 
       this.queue.add(nextTrack);
@@ -39,13 +40,14 @@ export class MedleyPlayer extends EventEmitter {
 
       // TODO: Event
       console.log('preQueueNext', nextTrack.path);
-      return true;
+      done(true);
+      return;
     }
     catch (e) {
       // TODO: Event
       console.log('Error', e);
     }
 
-    return false;
+    done(false);
   }
 }

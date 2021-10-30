@@ -22,7 +22,7 @@ export class CrateSequencer extends EventEmitter {
     return isObjectLike(o) && (o.source instanceof TrackCollection);
   }
 
-  nextTrack(validator?: (path: string) => boolean): Track | undefined {
+  async nextTrack(validator?: (path: string) => Promise<boolean>): Promise<Track | undefined> {
     if (this.crates.length < 1) {
       return undefined;
     }
@@ -42,7 +42,7 @@ export class CrateSequencer extends EventEmitter {
           const track = crate.next();
 
           if (track) {
-            const valid = validator ? validator(track.path) : true;
+            const valid = validator ? await validator(track.path) : true;
 
             if (valid) {
               if (++this._playCounter >= crate.max) {

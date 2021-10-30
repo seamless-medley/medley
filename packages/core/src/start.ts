@@ -47,6 +47,7 @@ if (test_reset_crates) {
     console.log('Reset crate', newSequences);
 
     player.sequencer.crates = newSequences.map(([id, max]) => new Crate(collections.get(id!)!, max!));
+    player.medley.play();
   }, 8000);
 }
 
@@ -70,6 +71,7 @@ if (test_removing_crate) {
     crates[99] = new Crate(collections.get('upbeat')!, 2);
 
     console.log('Crates length', crates.length);
+    player.medley.play();
   }, 8000);
 }
 

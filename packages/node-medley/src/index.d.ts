@@ -89,6 +89,8 @@ export declare enum DeckIndex {
 
 type Listener<T = void> = () => T;
 type DeckListener = (deckIndex: DeckIndex) => void;
+type PreQueueListener = (done: PreQueueCallback) => void;
+type PreQueueCallback = (result: boolean) => void;
 
 export declare class Medley extends EventEmitter {
   constructor(queue: Queue);
@@ -97,9 +99,9 @@ export declare class Medley extends EventEmitter {
   once(event: DeckEvent, listener: DeckListener): this;
   off(event: DeckEvent, listener: DeckListener): this;
 
-  on(event: 'preQueueNext', listener: Listener<boolean>): this;
-  once(event: 'preQueueNext', listener: Listener<boolean>): this;
-  off(event: 'preQueueNext', listener: Listener<boolean>): this;
+  on(event: 'preQueueNext', listener: PreQueueListener): this;
+  once(event: 'preQueueNext', listener: PreQueueListener): this;
+  off(event: 'preQueueNext', listener: PreQueueListener): this;
 
   on(event: NormalEvent, listener: Listener): this;
   once(event: NormalEvent, listener: Listener): this;

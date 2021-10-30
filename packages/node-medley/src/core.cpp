@@ -192,10 +192,13 @@ void Medley::audioDeviceChanged() {
  */
 void Medley::preQueueNext(PreCueNextDone done) {
     // Emit preQueueNext event to JS, propagate the result back to Medley via `done` function
-    threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
+    threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function emitFn) {
         try {
-            Napi::Value ret = fn.Call(self.Value(), { Napi::String::New(env, "preQueueNext") });
-            done(ret.ToBoolean());
+            auto callback = Napi::Function::New(env, [done](const CallbackInfo &cbInfo) {
+                done(cbInfo.Length() > 0 ? cbInfo[0].ToBoolean() : false);
+            });
+
+            emitFn.Call(self.Value(), { Napi::String::New(env, "preQueueNext"), callback });
         } catch (const Error&) {
             done(Napi::Boolean::New(env, false));
         }
