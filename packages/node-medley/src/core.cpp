@@ -189,8 +189,12 @@ void Medley::audioDeviceChanged() {
 
 void Medley::preQueueNext(PreCueNextDone done) {
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
-        Napi::Value ret = fn.Call(self.Value(), { Napi::String::New(env, "preQueueNext") });
-        done(ret.ToBoolean());
+        try {
+            Napi::Value ret = fn.Call(self.Value(), { Napi::String::New(env, "preQueueNext") });
+            done(ret.ToBoolean());
+        } catch (const Error&) {
+            done(Napi::Boolean::New(env, false));
+        }
     });
 
 }
