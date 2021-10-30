@@ -50,7 +50,7 @@ export class TrackCollection<M = void> extends EventEmitter {
   add(path: string | string[]) {
     if (isArray(path)) {
       const transformFn = this.options.newTracksMapper ? this.options.newTracksMapper : (tracks: Track<M>[]) => tracks;
-      const newTracks = transformFn(uniq(path).map(this.createTrack));
+      const newTracks = transformFn(uniq(path).map(p => this.createTrack(p)));
       this.tracks = uniqBy(this.tracks.concat(newTracks), 'path');
       return;
     }
