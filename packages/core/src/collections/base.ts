@@ -1,13 +1,16 @@
 import EventEmitter from "events";
-import { castArray, isArray, reject, remove, shuffle, uniq, uniqBy } from "lodash";
+import { castArray, isArray, reject, shuffle, uniq, uniqBy } from "lodash";
 import { Track } from "../track";
 
+export type TrackCollectionOptions<M> = {
+  newTracksMapper?: (tracks: Track<M>[]) => Track<M>[];
+}
 export class TrackCollection<M = void> extends EventEmitter {
   protected _ready: boolean = false;
 
   protected tracks: Track<M>[] = [];
 
-  constructor() {
+  constructor(protected options: TrackCollectionOptions<M>) {
     super();
     this.afterConstruct();
   }
@@ -46,7 +49,8 @@ export class TrackCollection<M = void> extends EventEmitter {
 
   add(path: string | string[]) {
     if (isArray(path)) {
-      const newTracks = uniq(path).map(this.createTrack);
+      const transformFn = this.options.newTracksMapper ? this.options.newTracksMapper : (tracks: Track<M>[]) => tracks;
+      const newTracks = transformFn(uniq(path).map(this.createTrack));
       this.tracks = uniqBy(this.tracks.concat(newTracks), 'path');
       return;
     }

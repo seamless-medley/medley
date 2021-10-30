@@ -1,28 +1,36 @@
 import EventEmitter from "events";
+import type TypedEventEmitter from "typed-emitter";
 import { isObjectLike } from "lodash";
-import { TrackCollection } from "..";
+import { TrackCollection } from "../collections";
 import { Track } from "../track";
 import { Crate } from "./base";
 
-export class CrateSequencer extends EventEmitter {
+export interface CrateSequencerEvents {
+  change: (crate: Crate) => void;
+}
+export class CrateSequencer<M extends object | void = void> extends (EventEmitter as new () => TypedEventEmitter<CrateSequencerEvents>) {
   private _playCounter = 0;
   private _crateIndex = 0;
-  private _lastCrate: Crate | undefined;
+  private _lastCrate: Crate<M> | undefined;
 
-  constructor(public crates: Crate[] = []) {
+  constructor(public crates: Crate<M>[] = []) {
     super();
     this._lastCrate = this.current;
   }
 
-  get current(): Crate | undefined {
+  get current(): Crate<M> | undefined {
     return this.crates[this._crateIndex];
   }
 
-  private isCrate(o: any): o is Crate {
+  private isCrate(o: any): o is Crate<M> {
     return isObjectLike(o) && (o.source instanceof TrackCollection);
   }
 
-  async nextTrack(validator?: (path: string) => Promise<boolean>): Promise<Track | undefined> {
+  private isMetadata(o: any): o is M {
+    return isObjectLike(o);
+  }
+
+  async nextTrack(validator?: (path: string) => Promise<M | boolean>): Promise<Track<M> | undefined> {
     if (this.crates.length < 1) {
       return undefined;
     }
@@ -33,9 +41,8 @@ export class CrateSequencer extends EventEmitter {
 
       if (this.isCrate(crate)) {
         if (this._lastCrate !== crate) {
-          console.log('Crate change');
           this._lastCrate = crate;
-          // this.emit('next_crate', c); // TODO: Sequence update event
+          this.emit('change', crate as unknown as Crate);
         }
 
         for (let i = 0; i < crate.source.length; i++) {
@@ -44,12 +51,17 @@ export class CrateSequencer extends EventEmitter {
           if (track) {
             const valid = validator ? await validator(track.path) : true;
 
-            if (valid) {
+            if (!!valid) {
               if (++this._playCounter >= crate.max) {
                 this.next();
               }
 
               track.crate = crate;
+
+              if (this.isMetadata(valid)) {
+                track.metadata = valid;
+              }
+
               return track;
             }
             // track is not valid, go to next track
@@ -67,7 +79,7 @@ export class CrateSequencer extends EventEmitter {
     return undefined;
   }
 
-  next(): Crate {
+  next() {
     this._playCounter = 0;
 
     if (this.crates.length <= 0) {
@@ -75,6 +87,7 @@ export class CrateSequencer extends EventEmitter {
     }
 
     this._crateIndex = (this._crateIndex + 1) % this.crates.length;
-    return this.current!;
   }
+
+  // TODO: Method for setting crateIndex, by the Crate object or by number
 }

@@ -1,32 +1,36 @@
-import _, { create, random, range, sample, sampleSize, times, without, zip } from "lodash";
+import { Medley, Queue } from "@medley/medley";
+import { every, random, sample, sampleSize, times, without, zip } from "lodash";
 import { join as joinPath } from "path";
-import { Crate, TrackCollection, WatchTrackCollection } from ".";
-import { MedleyPlayer } from "./player";
+import { TrackCollection, WatchTrackCollection } from "./collections";
+import { Crate } from "./crate";
+import { MedleyPlayer, MedleyPlayerMetadata } from "./player";
 
-const collections: Map<string, TrackCollection> = new Map(
+const collections: Map<string, TrackCollection<MedleyPlayerMetadata>> = new Map(
   ['bright', 'chill', 'lovesong', 'lonely', 'brokenhearted', 'hurt', 'upbeat']
-    .map(sub => [sub, WatchTrackCollection.init(joinPath(`D:\\vittee\\Google Drive\\musics\\`, sub))])
+    .map(sub => [sub, WatchTrackCollection.initWithWatch<MedleyPlayerMetadata>(joinPath(`D:\\vittee\\Google Drive\\musics\\`, sub))])
 );
 
 const sequences: [string, number][] = [
-  // ['bright', 3],
-  // ['chill', 3],
-  // ['lovesong', 3],
-  // ['lonely', 2],
-  // ['brokenhearted', 1],
-  // ['hurt', 1],
-  // ['brokenhearted', 1],
-  // ['lonely', 1],
-  // ['lovesong', 1],
-  // ['chill', 2],
-  // ['bright', 2],
-  // ['upbeat', 2]
+  ['bright', 3],
+  ['chill', 3],
+  ['lovesong', 3],
+  ['lonely', 2],
+  ['brokenhearted', 1],
+  ['hurt', 1],
+  ['brokenhearted', 1],
+  ['lonely', 1],
+  ['lovesong', 1],
+  ['chill', 2],
+  ['bright', 2],
+  ['upbeat', 2]
 ];
 
+const queue = new Queue();
+const medley = new Medley(queue);
 const crates = sequences.map(([id, max]) => new Crate(collections.get(id)!, max));
-const player = new MedleyPlayer(crates);
+const player = new MedleyPlayer(medley, queue, crates);
 
-const test_adding_crate = true;
+const test_adding_crate = false;
 if (test_adding_crate) {
   setTimeout(() => {
     const id = sample(without([...collections.keys()], 'upbeat'))!;
@@ -34,11 +38,11 @@ if (test_adding_crate) {
     console.log(`Inserting a new crate from collection ${id} with maximum of ${max} tracks`);
     crates.push(new Crate(collections.get(id)!, max));
 
-    player.medley.play();
+    medley.play();
   }, 5000);
 }
 
-const test_reset_crates = false;
+const test_reset_crates = true;
 if (test_reset_crates) {
   setTimeout(() => {
     const newCollectionIds = sampleSize([...collections.keys()], random(2, 5));
@@ -47,7 +51,7 @@ if (test_reset_crates) {
     console.log('Reset crate', newSequences);
 
     player.sequencer.crates = newSequences.map(([id, max]) => new Crate(collections.get(id!)!, max!));
-    player.medley.play();
+    medley.play();
   }, 8000);
 }
 
@@ -63,7 +67,7 @@ if (test_mutate_crates_order) {
   }, 8000);
 }
 
-const test_removing_crate = true;
+const test_removing_crate = false;
 if (test_removing_crate) {
   setTimeout(() => {
     console.log('Making crates[1] to be an invalid crate');
@@ -71,22 +75,22 @@ if (test_removing_crate) {
     crates[99] = new Crate(collections.get('upbeat')!, 2);
 
     console.log('Crates length', crates.length);
-    player.medley.play();
+    medley.play();
   }, 8000);
 }
 
-player.medley.on('started', () => {
-  setTimeout(() => {
-    console.log('Force fading to next track');
-    player.medley.fadeOut();
-  }, 6000);
-});
+// medley.on('started', () => {
+//   setTimeout(() => {
+//     console.log('Force fading to next track');
+//     medley.fadeOut();
+//   }, 6000);
+// });
 
-setTimeout(function wait() {
-  if (_.every([...collections.values()], col => col.ready)) {
-    player.medley.play();
+setTimeout(function playWhenReady() {
+  if (every([...collections.values()], col => col.ready)) {
+    medley.play();
     return;
   }
 
-  setTimeout(wait, 1000);
-}, 1000);
+  setTimeout(playWhenReady, 100);
+}, 100);
