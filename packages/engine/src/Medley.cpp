@@ -308,23 +308,23 @@ inline String Medley::getDeckName(Deck& deck) {
     return deck.getName();
 }
 
-void Medley::deckStarted(Deck& sender) {
+void Medley::deckStarted(Deck& sender, ITrack::Ptr& track) {
     sender.log("Started");
 
     ScopedLock sl(callbackLock);
-    listeners.call([&sender](Callback& cb) {
-        cb.deckStarted(sender);
+    listeners.call([&](Callback& cb) {
+        cb.deckStarted(sender, track);
     });
 }
 
-void Medley::deckFinished(Deck& sender) {
+void Medley::deckFinished(Deck& sender, ITrack::Ptr& track) {
     ScopedLock sl(callbackLock);
-    listeners.call([&sender](Callback& cb) {
-        cb.deckFinished(sender);
+    listeners.call([&](Callback& cb) {
+        cb.deckFinished(sender, track);
     });
 }
 
-void Medley::deckLoaded(Deck& sender)
+void Medley::deckLoaded(Deck& sender, ITrack::Ptr& track)
 {
     {
         ScopedLock sl(callbackLock);
@@ -333,12 +333,12 @@ void Medley::deckLoaded(Deck& sender)
         deckQueue.front()->markAsMain(true);
 
         listeners.call([&](Callback& cb) {
-            cb.deckLoaded(sender);
+            cb.deckLoaded(sender, track);
         });
     }
 }
 
-void Medley::deckUnloaded(Deck& sender) {
+void Medley::deckUnloaded(Deck& sender, ITrack::Ptr& track) {
     sender.log("Unloaded");
 
     if (&sender == transitingDeck) {
@@ -375,7 +375,7 @@ void Medley::deckUnloaded(Deck& sender) {
         }
 
         listeners.call([&](Callback& cb) {
-            cb.deckUnloaded(sender);
+            cb.deckUnloaded(sender, track);
         });
     }
 

@@ -3,6 +3,7 @@
 #include <napi.h>
 #include <Medley.h>
 #include <RingBuffer.h>
+#include <ITrack.h>
 #include "audio/SecretRabbitCode.h"
 #include "track.h"
 #include "queue.h"
@@ -30,13 +31,13 @@ public:
 
     void deckPosition(medley::Deck& sender, double position) override;
 
-    void deckStarted(medley::Deck& sender) override;
+    void deckStarted(medley::Deck& sender, medley::ITrack::Ptr& track) override;
 
-    void deckFinished(medley::Deck& sender) override;
+    void deckFinished(medley::Deck& sender, medley::ITrack::Ptr& track) override;
 
-    void deckLoaded(medley::Deck& sender) override;
+    void deckLoaded(medley::Deck& sender, medley::ITrack::Ptr& track) override;
 
-    void deckUnloaded(medley::Deck& sender) override;
+    void deckUnloaded(medley::Deck& sender, medley::ITrack::Ptr& track) override;
 
     void audioDeviceChanged() override;
 
@@ -144,7 +145,7 @@ public:
         juce::MemoryBlock scratch;
     };
 private:
-    void emitDeckEvent(const std::string& name,  medley::Deck& deck);
+    void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::ITrack::Ptr& track);
 
     enum class AudioRequestFormat : uint8_t {
         Int16LE, Int16BE, FloatLE, FloatBE

@@ -18,13 +18,13 @@ public:
 
         virtual void deckPosition(Deck& sender, double position) = 0;
 
-        virtual void deckStarted(Deck& sender) = 0;
+        virtual void deckStarted(Deck& sender, ITrack::Ptr& track) = 0;
 
-        virtual void deckFinished(Deck& sender) = 0;
+        virtual void deckFinished(Deck& sender, ITrack::Ptr& track) = 0;
 
-        virtual void deckLoaded(Deck& sender) = 0;
+        virtual void deckLoaded(Deck& sender, ITrack::Ptr& track) = 0;
 
-        virtual void deckUnloaded(Deck& sender) = 0;
+        virtual void deckUnloaded(Deck& sender, ITrack::Ptr& track) = 0;
     };
 
     typedef std::function<void(bool)> OnLoadingDone;

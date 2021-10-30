@@ -165,20 +165,20 @@ void Medley::deckPosition(medley::Deck& sender, double position) {
 
 }
 
-void Medley::deckStarted(medley::Deck& sender) {
-    emitDeckEvent("started", sender);
+void Medley::deckStarted(medley::Deck& sender, medley::ITrack::Ptr& track) {
+    emitDeckEvent("started", sender, track);
 }
 
-void Medley::deckFinished(medley::Deck& sender) {
-    emitDeckEvent("finished", sender);
+void Medley::deckFinished(medley::Deck& sender, medley::ITrack::Ptr& track) {
+    emitDeckEvent("finished", sender, track);
 }
 
-void Medley::deckLoaded(medley::Deck& sender) {
-    emitDeckEvent("loaded", sender);
+void Medley::deckLoaded(medley::Deck& sender, medley::ITrack::Ptr& track) {
+    emitDeckEvent("loaded", sender, track);
 }
 
-void Medley::deckUnloaded(medley::Deck& sender) {
-    emitDeckEvent("unloaded", sender);
+void Medley::deckUnloaded(medley::Deck& sender, medley::ITrack::Ptr& track) {
+    emitDeckEvent("unloaded", sender, track);
 }
 
 void Medley::audioDeviceChanged() {
@@ -205,13 +205,15 @@ void Medley::preQueueNext(PreCueNextDone done) {
     });
 }
 
-void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck) {
+void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley::ITrack::Ptr& track) {
     auto index = &deck == &engine->getDeck1() ? 0 : 1;
+    auto path = track->getFile().getFullPathName().toRawUTF8();
 
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
         fn.Call(self.Value(), {
             Napi::String::New(env, name),
-            Number::New(env, index)
+            Napi::Number::New(env, index),
+            Napi::String::New(env, path)
         });
     });
 }

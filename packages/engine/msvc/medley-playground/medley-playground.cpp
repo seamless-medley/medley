@@ -458,21 +458,21 @@ private:
 
         }
 
-        void deckStarted(Deck& sender) override {
+        void deckStarted(Deck& sender, ITrack::Ptr& track) override {
 
         }
 
-        void deckFinished(Deck& sender) override {
+        void deckFinished(Deck& sender, ITrack::Ptr& track) override {
 
         }
 
-        void deckLoaded(Deck& sender) override {
+        void deckLoaded(Deck& sender, ITrack::Ptr& track) override {
             thread.addTimeSliceClient(this);
             thumbnailLoader.load();
             thread.addTimeSliceClient(&thumbnailLoader);
         }
 
-        void deckUnloaded(Deck& sender) override {
+        void deckUnloaded(Deck& sender, ITrack::Ptr& track) override {
             ScopedLock sl(coverImageLock);
             coverImage = Image();
             thread.addTimeSliceClient(&thumbnailCleaner);
@@ -1270,11 +1270,11 @@ private:
 
         }
 
-        void deckStarted(Deck& sender) override {
+        void deckStarted(Deck& sender, ITrack::Ptr& track) override {
 
         }
 
-        void deckFinished(Deck& sender) override {
+        void deckFinished(Deck& sender, ITrack::Ptr& track) override {
 
         }
 
@@ -1296,11 +1296,11 @@ private:
             updatePauseButton();
         }
 
-        void deckLoaded(Deck& sender) override {
+        void deckLoaded(Deck& sender, ITrack::Ptr& track) override {
 
         }
 
-        void deckUnloaded(Deck& sender) override {
+        void deckUnloaded(Deck& sender, ITrack::Ptr& track) override {
 
         }
 

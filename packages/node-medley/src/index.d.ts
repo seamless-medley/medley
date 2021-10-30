@@ -87,10 +87,10 @@ export declare enum DeckIndex {
   B = 1
 }
 
-type Listener<T = void> = () => T;
-type DeckListener = (deckIndex: DeckIndex) => void;
-type PreQueueListener = (done: PreQueueCallback) => void;
-type PreQueueCallback = (result: boolean) => void;
+export type Listener<T = void> = () => T;
+export type DeckListener = (deckIndex: DeckIndex, path: string) => void;
+export type PreQueueListener = (done: PreQueueCallback) => void;
+export type PreQueueCallback = (result: boolean) => void;
 
 export declare class Medley extends EventEmitter {
   constructor(queue: Queue);

@@ -157,13 +157,13 @@ private:
 
     void deckTrackScanned(Deck& sender) override;
 
-    void deckStarted(Deck& sender) override;
+    void deckStarted(Deck& sender, ITrack::Ptr& track) override;
 
-    void deckFinished(Deck& sender) override;
+    void deckFinished(Deck& sender, ITrack::Ptr& track) override;
 
-    void deckLoaded(Deck& sender) override;
+    void deckLoaded(Deck& sender, ITrack::Ptr& track) override;
 
-    void deckUnloaded(Deck& sender) override;
+    void deckUnloaded(Deck& sender, ITrack::Ptr& track) override;
 
     void deckPosition(Deck& sender, double position) override;
 
