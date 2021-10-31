@@ -582,7 +582,7 @@ private:
             ScopedLock sl(coverImageLock);
             coverImage = ImageFileFormat::loadFrom(vector.data(), vector.size());
 
-            // TODO: Resize if too large
+            // Resize if too large
             auto size = coverImage.getBounds().toFloat();
             if (size.getWidth() > 800.0f || size.getHeight() > 800.0f) {
                 auto h = 800;

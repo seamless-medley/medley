@@ -15,6 +15,18 @@ export interface MedleyPlayerEvents {
   error: (error: Error) => void;
 }
 
+// TODO: Options
+type MedleyPlayerOptions = {
+  medley: Medley;
+  queue: Queue;
+  crates: Crate<MedleyPlayerMetadata>[];
+  /**
+   * Number of last tracks that artist name will be kept
+   * Any new track containing these artists will be skipped
+   */
+  noDuplicatedArtist: number;
+  // TODO: Sting similarity threshold for matching artist
+}
 export class MedleyPlayer extends (EventEmitter as new () => TypedEventEmitter<MedleyPlayerEvents>) {
   readonly sequencer: CrateSequencer<MedleyPlayerMetadata>;
 
@@ -39,12 +51,13 @@ export class MedleyPlayer extends (EventEmitter as new () => TypedEventEmitter<M
 
     try {
       const metadata = await parseMetadataFromFile(path);
+      // TODO: Check for artist duplication
+      // TODO: Store artists
       return metadata.common;
     }
     catch {
 
     }
-
 
     return true;
   }
@@ -83,13 +96,21 @@ export class MedleyPlayer extends (EventEmitter as new () => TypedEventEmitter<M
     done(false);
   }
 
-  private deckLoaded: DeckListener = (deck, path) => {
+  private deckLoaded: DeckListener = (deck) => {
     console.log('Deck', deck, 'loaded', this.nextTrack);
   }
 
-  private deckStarted: DeckListener = (deck, path) => {
+  private deckStarted: DeckListener = (deck) => {
     console.log('Deck', deck, 'start', this.nextTrack);
 
     this.nextTrack = undefined;
+  }
+
+  get crates() {
+    return this.sequencer.crates;
+  }
+
+  set crates(value: Crate<MedleyPlayerMetadata>[]) {
+    this.sequencer.crates = value;
   }
 }
