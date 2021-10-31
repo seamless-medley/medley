@@ -3,11 +3,11 @@ import { every, random, sample, sampleSize, times, without, zip } from "lodash";
 import { join as joinPath } from "path";
 import { TrackCollection, WatchTrackCollection } from "./collections";
 import { Crate } from "./crate";
-import { MedleyPlayer, MedleyPlayerMetadata } from "./player";
+import { BoomBox, BoomBoxMetadata } from "./boombox";
 
-const collections: Map<string, TrackCollection<MedleyPlayerMetadata>> = new Map(
+const collections: Map<string, TrackCollection<BoomBoxMetadata>> = new Map(
   ['bright', 'chill', 'lovesong', 'lonely', 'brokenhearted', 'hurt', 'upbeat']
-    .map(sub => [sub, WatchTrackCollection.initWithWatch<MedleyPlayerMetadata>(joinPath(`D:\\vittee\\Google Drive\\musics\\`, sub))])
+    .map(sub => [sub, WatchTrackCollection.initWithWatch<BoomBoxMetadata>(joinPath(`D:\\vittee\\Google Drive\\musics\\`, sub))])
 );
 
 const sequences: [string, number][] = [
@@ -28,7 +28,11 @@ const sequences: [string, number][] = [
 const queue = new Queue();
 const medley = new Medley(queue);
 const crates = sequences.map(([id, max]) => new Crate(collections.get(id)!, max));
-const player = new MedleyPlayer(medley, queue, crates);
+const boombox = new BoomBox({
+  medley,
+  queue,
+  crates
+});
 
 const test_adding_crate = false;
 if (test_adding_crate) {
@@ -42,7 +46,7 @@ if (test_adding_crate) {
   }, 5000);
 }
 
-const test_reset_crates = true;
+const test_reset_crates = false;
 if (test_reset_crates) {
   setTimeout(() => {
     const newCollectionIds = sampleSize([...collections.keys()], random(2, 5));
@@ -50,7 +54,7 @@ if (test_reset_crates) {
 
     console.log('Reset crate', newSequences);
 
-    player.sequencer.crates = newSequences.map(([id, max]) => new Crate(collections.get(id!)!, max!));
+    boombox.sequencer.crates = newSequences.map(([id, max]) => new Crate(collections.get(id!)!, max!));
     medley.play();
   }, 8000);
 }
@@ -85,6 +89,12 @@ if (test_removing_crate) {
 //     medley.fadeOut();
 //   }, 6000);
 // });
+
+boombox.on('currentCrateChange', (oldCrate, newCrate) => {
+  console.log('New crate!!');
+});
+
+boombox.on('trackStarted', track => console.log('Playing:', `${track.metadata?.artist} - ${track.metadata?.title}`));
 
 setTimeout(function playWhenReady() {
   if (every([...collections.values()], col => col.ready)) {

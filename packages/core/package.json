@@ -14,7 +14,8 @@
     "@medley/medley": "file:../node-medley",
     "chokidar": "^3.5.1",
     "lodash": "^4.17.21",
-    "music-metadata": "^7.11.4"
+    "music-metadata": "^7.11.4",
+    "string-similarity": "^4.0.4"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.176",
