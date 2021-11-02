@@ -1,4 +1,4 @@
-import _, { clamp, last, reject, some, tail, takeRight } from "lodash";
+import _, { clamp, reject, some } from "lodash";
 
 export type LyricLine = {
   time: number;
