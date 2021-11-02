@@ -154,6 +154,8 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     }
   }
 
+  private requests: TrackCollection<BoomBoxMetadata> = new TrackCollection('$_requests');
+
   private isTrackLoadable = async (path: string) => this.medley.isTrackLoadable(path);
 
   private validateTrack = async (path: string): Promise<boolean | BoomBoxMetadata> => {
@@ -181,9 +183,51 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     return true;
   }
 
+  private async fetchRequestTrack(): Promise<Track<BoomBoxMetadata> | undefined> {
+    while (this.requests.length) {
+      const track = this.requests.shift()!;
+      if (await this.isTrackLoadable(track.path)) {
+        const musicMetadata = await this.getMusicMetadata(track.path);
+
+        track.metadata = {
+          tags: musicMetadata?.common,
+          rotation: 'request',
+          priority: 0
+        };
+
+        return track;
+      }
+    }
+
+    return undefined;
+  }
+
+  request(path: string) {
+    const existing = this.requests.find(path);
+    if (!existing) {
+      this.requests.add(path);
+      return;
+    }
+
+    if (existing.metadata) {
+      existing.metadata.priority = (existing.metadata.priority || 0) + 1;
+    }
+  }
 
   private preQueue: PreQueueListener = async (done) => {
     try {
+      const requestedTrack = await this.fetchRequestTrack();
+      if (requestedTrack) {
+        console.log('Got track from request');
+        // TODO: Detect transition from normal rotation to request rotation
+        // if this is the case, call a callback for providing sweeper/bumper/sting track to play before actually playing the requested track
+        this._nextTrack = requestedTrack;
+        this.queue.add(requestedTrack);
+
+        done(true);
+        return;
+      }
+
       const nextTrack = await this.sequencer.nextTrack(this.validateTrack);
 
       if (!nextTrack) {
