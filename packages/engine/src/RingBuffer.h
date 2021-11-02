@@ -8,7 +8,7 @@ template <typename SampleType>
 class RingBuffer
 {
 public:
-    RingBuffer::RingBuffer(int numChannels, int numSamples)
+    RingBuffer(int numChannels, int numSamples)
         :
         numChannels(numChannels),
         numSamples(numSamples),

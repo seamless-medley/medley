@@ -1,4 +1,5 @@
 #include "NullAudioDevice.h"
+#include <thread>
 
 NullAudioDeviceType::NullAudioDeviceType()
     : AudioIODeviceType("Null")
