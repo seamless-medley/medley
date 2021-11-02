@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import { castArray, isArray, reject, shuffle, uniq, uniqBy } from "lodash";
+import _, { castArray, isArray, reject, shuffle, uniq, uniqBy } from "lodash";
 import { Track } from "../track";
 
 export type TrackCollectionOptions<M> = {
@@ -11,7 +11,7 @@ export class TrackCollection<M = void> extends EventEmitter {
 
   protected tracks: Track<M>[] = [];
 
-  constructor(readonly id: string, protected options: TrackCollectionOptions<M>) {
+  constructor(readonly id: string, protected options: TrackCollectionOptions<M> = {}) {
     super();
     this.afterConstruct();
   }
@@ -77,7 +77,15 @@ export class TrackCollection<M = void> extends EventEmitter {
     this.tracks = shuffle(this.tracks);
   }
 
-  sort() {
-    this.tracks.sort()
+  sort(...sortFn: ((track: Track<M>) => unknown)[]) {
+    if (!sortFn.length) {
+      sortFn = [track => track.path];
+    }
+
+    this.tracks = _.sortBy(this.tracks, ...sortFn);
+  }
+
+  find(path: string) {
+    return _.find(this.tracks, track => track.path === path);
   }
 }
