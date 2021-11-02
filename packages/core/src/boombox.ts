@@ -23,7 +23,10 @@ type BoomBoxOptions = {
   queue: Queue;
   crates: Crate<BoomBoxMetadata>[];
 
-  // TODO: accept initial artistHistory: string[][]
+  /**
+   * Initalize artist history
+   */
+  artistHistory?: string[][];
 
   /**
    * Number of tracks to be kept to be check for duplication
@@ -45,10 +48,12 @@ type BoomBoxOptions = {
 export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
   readonly sequencer: CrateSequencer<BoomBoxMetadata>;
 
-  private options: Required<Omit<BoomBoxOptions, 'medley' | 'queue' | 'crates'>>;
+  private options: Required<Omit<BoomBoxOptions, 'medley' | 'queue' | 'crates' | 'artistHistory'>>;
 
   private medley: Medley;
   private queue: Queue;
+
+  artistHistory: string[][];
 
   constructor(options: BoomBoxOptions) {
     super();
@@ -57,6 +62,8 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
       noDuplicatedArtist: options.noDuplicatedArtist || 3,
       duplicationSimilarity: options.duplicationSimilarity || 0.8
     };
+    //
+    this.artistHistory = options.artistHistory || [];
     //
     this.medley = options.medley;
     this.queue = options.queue;
@@ -69,7 +76,6 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     this.sequencer.on('change', (crate: Crate) => this.emit('sequenceChange', crate as unknown as Crate<BoomBoxMetadata>));
   }
 
-  private artistHistory: string[][] = [];
 
   private currentCrate: Crate<BoomBoxMetadata> | undefined;
 
