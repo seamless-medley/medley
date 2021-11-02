@@ -185,7 +185,7 @@
                             "<!@(pkg-config taglib --libs)",
                             "<!@(pkg-config freetype2 --libs)",
                             "<!@(pkg-config libcurl --libs)",
-                            "<!@(pkg-config samplerate --libs)"
+                            "<!@(pkg-config samplerate --libs)",
                             "-lasound"
                         ],
                         "cflags_cc": [
