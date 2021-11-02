@@ -7,7 +7,7 @@ import { BoomBox, BoomBoxMetadata } from "./boombox";
 
 const collections: Map<string, TrackCollection<BoomBoxMetadata>> = new Map(
   ['bright', 'chill', 'lovesong', 'lonely', 'brokenhearted', 'hurt', 'upbeat']
-    .map(sub => [sub, WatchTrackCollection.initWithWatch<BoomBoxMetadata>(joinPath(`D:\\vittee\\Google Drive\\musics\\`, sub))])
+    .map(sub => [sub, WatchTrackCollection.initWithWatch<BoomBoxMetadata>(sub, joinPath(`D:\\vittee\\Google Drive\\musics\\`, sub))])
 );
 
 const sequences: [string, number][] = [
@@ -27,7 +27,7 @@ const sequences: [string, number][] = [
 
 const queue = new Queue();
 const medley = new Medley(queue);
-const crates = sequences.map(([id, max]) => new Crate(collections.get(id)!, max));
+const crates = sequences.map(([id, max]) => new Crate(`${id}-${max}`, collections.get(id)!, max));
 const boombox = new BoomBox({
   medley,
   queue,

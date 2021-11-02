@@ -1,20 +1,17 @@
 import chokidar from "chokidar";
 import { debounce, reject, shuffle } from "lodash";
-import { Track } from "../track";
 import { TrackCollection, TrackCollectionOptions } from "./base";
-
-
 
 // A track collection capable of watching for changes in file system directory
 export class WatchTrackCollection<M = void> extends TrackCollection<M> {
-  static initWithWatch<M>(paths: string, options: TrackCollectionOptions<M> = {}): WatchTrackCollection<M> {
-    const inst = new WatchTrackCollection<M>(options);
+  static initWithWatch<M>(id: string, paths: string, options: TrackCollectionOptions<M> = {}): WatchTrackCollection<M> {
+    const inst = new WatchTrackCollection<M>(id, options);
     inst.watch(paths);
     return inst;
   }
 
-  constructor(options: TrackCollectionOptions<M> = {}) {
-    super({
+  constructor(id: string, options: TrackCollectionOptions<M> = {}) {
+    super(id, {
       newTracksMapper: shuffle,
       ...options
     });

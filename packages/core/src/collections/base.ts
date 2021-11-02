@@ -5,12 +5,13 @@ import { Track } from "../track";
 export type TrackCollectionOptions<M> = {
   newTracksMapper?: (tracks: Track<M>[]) => Track<M>[];
 }
+
 export class TrackCollection<M = void> extends EventEmitter {
   protected _ready: boolean = false;
 
   protected tracks: Track<M>[] = [];
 
-  constructor(protected options: TrackCollectionOptions<M>) {
+  constructor(readonly id: string, protected options: TrackCollectionOptions<M>) {
     super();
     this.afterConstruct();
   }

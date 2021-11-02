@@ -2,7 +2,7 @@ import { TrackCollection } from "../collections/base";
 import { Track } from "../track";
 
 export class Crate<M = void> {
-  constructor(public source: TrackCollection<M>, public max: number) {
+  constructor(readonly id: string, public source: TrackCollection<M>, public max: number) {
 
   }
 
