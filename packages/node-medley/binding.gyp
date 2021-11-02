@@ -27,7 +27,7 @@
                 "../engine/src/Medley.cpp",
                 "../engine/src/Metadata.cpp",
                 "../engine/src/Fader.cpp",
-                "../engine/Src/NullAudioDevice.cpp"
+                "../engine/src/NullAudioDevice.cpp"
             ],
             "cflags!": ["-fno-exceptions", '-fno-rtti'],
             "cflags_cc!": ["-fno-exceptions", '-fno-rtti'],
