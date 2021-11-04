@@ -18,8 +18,9 @@ namespace medley {
 
 using namespace medley::utils;
 
-Deck::Deck(const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
+Deck::Deck(uint8_t index, const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
+    index(index),
     formatMgr(formatMgr),
     loadingThread(loadingThread),
     readAheadThread(readAheadThread),
@@ -572,7 +573,7 @@ bool Deck::start()
         if (!internallyPaused) {
             listeners.call([this](Callback& cb) {
                 cb.deckStarted(*this, this->track);
-                });
+            });
         }
 
         playing = true;
@@ -584,10 +585,7 @@ bool Deck::start()
         return true;
     }
 
-    // Something went wrong
-    log("Could not start playing");
-    main = false;
-    return false;
+    return playing;
 }
 
 void Deck::stop()
@@ -602,6 +600,10 @@ void Deck::stop()
 
 void Deck::fireFinishedCallback()
 {
+    if (track == nullptr) {
+        return;
+    }
+
     log("Finished");    
 
     listeners.call([this](Callback& cb) {

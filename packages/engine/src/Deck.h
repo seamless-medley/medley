@@ -29,11 +29,13 @@ public:
 
     typedef std::function<void(bool)> OnLoadingDone;
 
-    Deck(const juce::String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
+    Deck(uint8_t index, const juce::String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
 
     ~Deck() override;
 
     const juce::String& getName() const { return name; }
+
+    inline const int getIndex() const { return index; }
 
     double getDuration() const;
 
@@ -241,6 +243,7 @@ private:
     //
     ListenerList<Callback> listeners;
     //
+    uint8_t index;
     juce::String name;
     Loader loader;
 

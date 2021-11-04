@@ -35,6 +35,8 @@ public:
         virtual void audioData(const AudioSourceChannelInfo& info) = 0;
     };
 
+    static constexpr int numDecks = 3;
+
     Medley(IQueue& queue);
 
     virtual ~Medley();
@@ -73,13 +75,17 @@ public:
 
     inline AudioIODevice* getCurrentAudioDevice() const { return deviceMgr.getCurrentAudioDevice(); }
 
-    inline Deck& getDeck1() const { return *deck1; }
+    inline Deck& getDeck1() const { return *decks[0]; }
 
-    inline Deck& getDeck2() const { return *deck2; }
+    inline Deck& getDeck2() const { return *decks[1]; }
+
+    inline Deck& getDeck3() const { return *decks[2]; }
 
     Deck* getMainDeck() const;
 
-    Deck* getAnotherDeck(Deck* from);
+    Deck* getNextDeck(Deck* from);
+
+    Deck* getPreviousDeck(Deck* from);
 
     double getFadingCurve() const { return fadingCurve; }
 
@@ -257,8 +263,7 @@ private:
     AudioDeviceManager deviceMgr;
     AudioFormatManager formatMgr;
 
-    Deck* deck1 = nullptr;
-    Deck* deck2 = nullptr;
+    Deck* decks[numDecks]{};
 
     Fader faderIn;
     Fader faderOut;
@@ -274,18 +279,17 @@ private:
 
     bool keepPlaying = false;
 
-    enum class TransitionState {
+    Deck* transitingFromDeck = nullptr;
+
+    enum class DeckTransitionState {
         Idle,
-        Cueing,
-        CueLoading,
-        Cued,
-        Transit
+        CueNext,
+        NextIsLoading,
+        NextIsReady,
+        TransitToNext
     };
 
-    TransitionState transitionState = TransitionState::Idle;
-    Deck* transitingDeck = nullptr;
-
-    std::list<Deck*> deckQueue;
+    DeckTransitionState decksTransitionState[numDecks]{};
 
     double fadingCurve = 60;
     float fadingFactor;
