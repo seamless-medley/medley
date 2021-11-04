@@ -43,7 +43,7 @@ boombox.on('trackStarted', track => {
   console.log('Playing:', `${track.metadata?.tags?.artist} - ${track.metadata?.tags?.title}`);
   const lyrics = first(track.metadata?.tags?.lyrics);
   if (lyrics) {
-    console.log(lyricsToText(parseLyrics(lyrics.toString())));
+    console.log(lyricsToText(parseLyrics(lyrics), false));
   }
 });
 

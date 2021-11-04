@@ -1,4 +1,4 @@
-import _, { flatten, some, uniq } from "lodash";
+import _, { flatten, get, intersection, some, toLower, trim, uniq } from "lodash";
 import { EventEmitter } from "stream";
 import { IAudioMetadata, ICommonTagsResult, parseFile as parseMetadataFromFile } from "music-metadata";
 import { compareTwoStrings } from "string-similarity";
@@ -115,14 +115,14 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
       // music-metadata does not map TXXX:LYRICS into the lyrics field
 
       // Try looking up from ID3v2
-      const id3Types = _.intersection(tagTypes, ['ID3v2.3', 'ID3v2.4']);
+      const id3Types = intersection(tagTypes, ['ID3v2.3', 'ID3v2.4']);
       for (const tagType of id3Types) {
         const tags = result.native[tagType];
 
-        const uslt = tags.find(t => t.id === 'USLT');
-        if (uslt) {
-          const value = _.get(uslt, 'value.text');
-          if (value) {
+        const tag = tags.find(t => ['SYLT', 'USLT'].includes(t.id));
+        if (tag) {
+          const value = get(tag, 'value.text');
+          if (typeof value === 'string') {
             result.common.lyrics = [value];
             break;
           }
@@ -131,7 +131,7 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
         const lyricTags = tags.filter(t => t.id === 'TXXX:LYRICS');
         if (lyricTags.length === 1) {
           const { value } = lyricTags[0];
-          if (value) {
+          if (typeof value === 'string') {
             result.common.lyrics = [value];
             break;
           }
@@ -171,8 +171,8 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
       }
 
       const boomBoxMetadata: BoomBoxMetadata = { tags: musicMetadata.common, rotation: 'normal' };
-      const playedArtists = flatten(this.artistHistory).map(_.toLower);
-      const currentArtists = getArtists(boomBoxMetadata).map(_.toLower);
+      const playedArtists = flatten(this.artistHistory).map(toLower);
+      const currentArtists = getArtists(boomBoxMetadata).map(toLower);
       const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));
       return !dup ? boomBoxMetadata : false;
     }
@@ -311,5 +311,5 @@ function getArtists(metadata: BoomBoxMetadata): string[] {
     artists.push(artist);
   }
 
-  return uniq(artists).map(_.trim);
+  return uniq(artists).map(trim);
 }

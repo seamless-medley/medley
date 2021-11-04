@@ -3,7 +3,7 @@ import _, { clamp, reject, some } from "lodash";
 export type LyricLine = {
   time: number;
   text: string;
-  // far?: boolean;
+  // far?: boolean; // TODO: calculate far flag from BPM and gap between lines
 };
 
 export type Timeline = LyricLine[];
@@ -142,7 +142,7 @@ export function parse(s: string): Lyrics {
           fillers = reject(fillers, ({ time }) => (time === t) && (c > 1));
         }
 
-        timeline.splice(index + 1, gaps, ...fillers)
+        timeline.splice(index + 1, gaps, ...fillers);
       }
 
       index = nextIndex;
