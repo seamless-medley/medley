@@ -201,9 +201,9 @@ private:
 
         void paint(Graphics& g) override {
             Deck* deck = nullptr;
-            Deck* anotherDeck = nullptr;
+            Deck* nextDeck = nullptr;
 
-            callback.getDecks(&deck, &anotherDeck);
+            callback.getDecks(&deck, &nextDeck);
 
             if (deck == nullptr) {
                 return;
@@ -237,7 +237,7 @@ private:
             auto leading = deck->getLeadingSamplePosition() / sr;
             auto trailing = deck->getTrailingSamplePosition() / sr;
 
-            auto nextLeading = (float)((anotherDeck != nullptr && anotherDeck->isTrackLoaded() && !anotherDeck->isMain()) ? anotherDeck->getLeadingDuration() : 0);
+            auto nextLeading = (float)((nextDeck != nullptr && nextDeck->isTrackLoaded() && !nextDeck->isMain()) ? nextDeck->getLeadingDuration() : 0);
             //
             auto cuePoint = deck->getTransitionCuePosition();
             auto transitionStart = (float)deck->getTransitionStartPosition() - nextLeading;
@@ -569,6 +569,11 @@ private:
                     g.drawText(volStr, lineX(3), Justification::topRight);
 
                     g.drawText(deck.isPlaying() ? "Playing" : "Cued", lineX(4), Justification::topRight);
+
+                    if (deck.isMain()) {
+                        g.setColour(Colours::orangered);
+                        g.drawText("Main", lineX(5), Justification::topRight);
+                    }
                 }
             }
             else {
@@ -1016,12 +1021,16 @@ private:
 
             thumbnails[&medley.getDeck1()] = std::make_unique<AudioThumbnail>(1024, medley.getAudioFormatManager(), thumbnailCache);
             thumbnails[&medley.getDeck2()] = std::make_unique<AudioThumbnail>(1024, medley.getAudioFormatManager(), thumbnailCache);
+            thumbnails[&medley.getDeck3()] = std::make_unique<AudioThumbnail>(1024, medley.getAudioFormatManager(), thumbnailCache);
 
             deckA = new DeckComponent(medley, medley.getDeck1(), medley.getDeck2(), backgroundThread, thumbnails[&medley.getDeck1()].get());
             addAndMakeVisible(deckA);
 
-            deckB = new DeckComponent(medley, medley.getDeck2(), medley.getDeck1(), backgroundThread, thumbnails[&medley.getDeck2()].get());
+            deckB = new DeckComponent(medley, medley.getDeck2(), medley.getDeck3(), backgroundThread, thumbnails[&medley.getDeck2()].get());
             addAndMakeVisible(deckB);
+
+            deckC = new DeckComponent(medley, medley.getDeck3(), medley.getDeck1(), backgroundThread, thumbnails[&medley.getDeck3()].get());
+            addAndMakeVisible(deckC);
 
             btnShuffle.addListener(this);
             addAndMakeVisible(btnShuffle);
@@ -1088,6 +1097,7 @@ private:
         void timerCallback() override {
             deckA->repaint();
             deckB->repaint();
+            deckC->repaint();
             playhead->repaint();
             vuMeter->repaint();
 
@@ -1156,10 +1166,11 @@ private:
             }
 
             {
-                auto deckPanelArea = b.reduced(10, 2);
-                auto w = (deckPanelArea.getWidth() - 10) / 2;
+                auto deckPanelArea = b.reduced(20, 2).translated(-10, 0);
+                auto w = deckPanelArea.getWidth() / 3;
                 deckA->setBounds(deckPanelArea.removeFromLeft(w));
                 deckB->setBounds(deckPanelArea.translated(10, 0).removeFromLeft(w));
+                deckC->setBounds(deckPanelArea.translated(20 + w, 0).removeFromLeft(w));
             }
         }
 
@@ -1174,18 +1185,20 @@ private:
 
             removeChildComponent(deckA);
             removeChildComponent(deckB);
+            removeChildComponent(deckC);
             removeChildComponent(playhead);
             removeChildComponent(vuMeter);
 
             delete deckA;
             delete deckB;
+            delete deckC;
             delete playhead;
             delete vuMeter;
         }
 
         void getDecks(Deck** pDeck, Deck** pAnotherDeck) {
             *pDeck = medley.getMainDeck();
-            *pAnotherDeck = medley.getAnotherDeck(nullptr);
+            *pAnotherDeck = medley.getNextDeck(nullptr);
         }
 
         AudioThumbnail* getThumbnail(Deck* deck) {
@@ -1322,6 +1335,7 @@ private:
 
         DeckComponent* deckA = nullptr;
         DeckComponent* deckB = nullptr;
+        DeckComponent* deckC = nullptr;
 
         ComboBox comboDeviceTypes;
         ComboBox comboDeviceNames;
@@ -1345,7 +1359,7 @@ private:
         {
             setUsingNativeTitleBar(true);
             setContentOwned(new MainContentComponent(), true);
-            setBounds(100, 50, 800, 600);
+            setBounds(100, 50, 800, 830);
             setResizable(true, false);
             setVisible(true);
 
