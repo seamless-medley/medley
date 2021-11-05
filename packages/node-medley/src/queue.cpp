@@ -43,7 +43,11 @@ void Queue::Initialize(Object& exports) {
 }
 
 medley::ITrack::Ptr Queue::fetchNextTrack() {
-    return !Arr::isEmpty() ? new Track(removeAndReturn(0)) : nullptr;
+    if (!Arr::isEmpty()) {
+        return removeAndReturn(0);
+    }
+
+    return nullptr;
 }
 
 void Queue::add(const CallbackInfo& info) {
@@ -56,19 +60,19 @@ void Queue::add(const CallbackInfo& info) {
 
     auto p = info[0];
 
-    if (p.IsArray()) {
-        auto arr = p.As<Napi::Array>();
-
-        auto tracks = std::make_unique<Track[]>(arr.Length());
-
-        for (uint32_t index = 0; index < arr.Length(); index++) {
-            tracks[index] = Track::fromJS(arr.Get(index));
-        }
-
-        Arr::addArray(tracks.get(), arr.Length());
-    } else if (!p.IsUndefined() && !p.IsNull()) {
+    if (!p.IsArray()) {
         Arr::add(Track::fromJS(p));
+        return;
     }
+
+    auto arr = p.As<Napi::Array>();
+    auto tracks = std::make_unique<Track::Ptr[]>(arr.Length());
+
+    for (uint32_t index = 0; index < arr.Length(); index++) {
+        tracks[index] = Track::fromJS(arr.Get(index));
+    }
+
+    Arr::addArray(tracks.get(), arr.Length());
 }
 
 void Queue::clear(const CallbackInfo& info) {
@@ -93,7 +97,7 @@ void Queue::insert(const CallbackInfo& info) {
     if (p.IsArray()) {
         auto arr = p.As<Napi::Array>();
 
-        auto tracks = std::make_unique<Track[]>(arr.Length());
+        auto tracks = std::make_unique<Track::Ptr[]>(arr.Length());
 
         for (uint32_t index = 0; index < arr.Length(); index++) {
             tracks[index] = Track::fromJS(arr.Get(index));
@@ -114,9 +118,10 @@ void Queue::del(const CallbackInfo& info) {{
         return;
     }
 
+
     if (info.Length() > 0) {
         auto p = info[0];
-        auto index = p.IsNumber() ? p.ToNumber() : Arr::indexOf(juce::String(p.ToString().Utf8Value()));
+        auto index = p.ToNumber().Int32Value();
 
         if (index >= 0 && index < size()) {
             Arr::remove(index);
@@ -142,7 +147,7 @@ Napi::Value Queue::get(const CallbackInfo& info) {
     if (info.Length() >= 1) {
         int32_t index = info[0].ToNumber();
         if (index >= 0 && index < size()) {
-            return Arr::getUnchecked(index).toObject(env);
+            return Arr::getUnchecked(index)->toObject(env);
         }
     }
 
@@ -154,13 +159,7 @@ void Queue::set(const CallbackInfo& info) {
         int32_t index = info[0].ToNumber();
         if (index >= 0 && index < size()) {
             auto p = info[1];
-            if (p.IsString()) {
-                auto obj = Arr::getUnchecked(index);
-
-                Arr::setUnchecked(index, Track(File(p.ToString().Utf8Value())));
-            } else {
-                Arr::setUnchecked(index, Track::fromJS(p));
-            }
+            Arr::setUnchecked(index, Track::fromJS(p));
         }
     }
 }
@@ -169,8 +168,9 @@ Napi::Value Queue::toArray(const CallbackInfo& info) {
     auto env = info.Env();
 
     auto result = Napi::Array::New(env, size());
+
     for (auto index = 0; index < size(); index++) {
-        result[index] = Arr::getUnchecked(index).toObject(env);
+        result[index] = Arr::getUnchecked(index)->toObject(env);
     }
 
     return result;

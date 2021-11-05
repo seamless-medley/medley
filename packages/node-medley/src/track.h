@@ -5,72 +5,62 @@
 
 class Track : public medley::ITrack {
 public:
+    using Ptr = ReferenceCountedObjectPtr<Track>;
+
     Track()
+        : ref(Napi::ObjectReference())
     {
 
     }
 
-    Track(const File& file)
-        : file(file)
-    {
+    ~Track() {
 
     }
 
-    Track(const juce::String& path)
-        : Track(File(path))
+    Track(const Napi::Object& obj)
+        : ref(Napi::Persistent(obj))
     {
-
-    }
-
-    Track(const Track& other)
-        : file(other.file)
-    {
-
-    }
-
-    Track(Track&& other)
-        : file(std::move(other.file))
-    {
-
-    }
-
-    Track operator=(const Track& other) {
-        file = other.file;
-        return *this;
+        createFileObject();
     }
 
     bool operator== (const Track& other) const {
-        return file == other.file;
+        return ref == other.ref;
     }
 
     bool operator!= (const Track& other) const {
-        return file != other.file;
+        return ref != other.ref;
     }
 
     File getFile() {
         return file;
     }
 
-    Napi::Object toObject(Napi::Env env) {
-        auto obj = Napi::Object::New(env);
-        obj.Set("path", Napi::String::New(env, file.getFullPathName().toStdString()));
-        return obj;
+    inline Napi::ObjectReference& getObjectRef() {
+        return ref;
     }
 
-    static Track fromJS(const Napi::Value p) {
-        juce::String path;
+    inline Napi::Object toObject(Napi::Env env) {
+        return ref.Value();
+    }
+
+    static Track::Ptr fromJS(const Napi::Value p) {
+        Napi::Object obj;
 
         if (p.IsObject()) {
-            auto obj = p.ToObject();
-
-            path = obj.Get("path").ToString().Utf8Value();
+            obj = p.ToObject();
         } else {
-            path = p.ToString().Utf8Value();
+            obj = Napi::Object::New(p.Env());
+            obj.Set("path", Napi::String::New(p.Env(), p.ToString().Utf8Value()));
         }
 
-        return Track(juce::String(path));
+        return new Track(obj);
     }
 
 private:
+    void createFileObject() {
+        file = ref.Get("path").ToString().Utf8Value();
+    }
+
     File file;
+    Napi::ObjectReference ref;
 };

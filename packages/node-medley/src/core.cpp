@@ -2,7 +2,7 @@
 
 void Medley::Initialize(Object& exports) {
     auto proto = {
-        StaticMethod<&Medley::shutdown>("shutdown"),
+        // StaticMethod<&Medley::shutdown>("shutdown"),
         //
         InstanceMethod<&Medley::getAvailableDevices>("getAvailableDevices"),
         InstanceMethod<&Medley::setAudioDevice>("setAudioDevice"),
@@ -33,13 +33,13 @@ void Medley::Initialize(Object& exports) {
     exports.Set("Medley", DefineClass(env, "Medley", proto));
 }
 
-void Medley::shutdown(const CallbackInfo& info) {
-    // shutdownWorker();
-}
+// void Medley::shutdown(const CallbackInfo& info) {
 
-void Medley::workerFinalizer(const CallbackInfo&) {
+// }
 
-}
+// void Medley::workerFinalizer(const CallbackInfo&) {
+
+// }
 
 Napi::Value Medley::getAvailableDevices(const CallbackInfo& info) {
     auto env = info.Env();
@@ -206,14 +206,15 @@ void Medley::preQueueNext(PreCueNextDone done) {
 }
 
 void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley::ITrack::Ptr& track) {
-    auto index = &deck == &engine->getDeck1() ? 0 : 1;
-    auto path = track->getFile().getFullPathName().toRawUTF8();
+    auto index = deck.getIndex();
 
-    threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
-        fn.Call(self.Value(), {
+    threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function emitFn) {
+        auto obj = static_cast<Track*>(track.get())->getObjectRef().Value();
+
+        emitFn.Call(self.Value(), {
             Napi::String::New(env, name),
             Napi::Number::New(env, index),
-            Napi::String::New(env, path)
+            obj
         });
     });
 }
@@ -250,7 +251,7 @@ Napi::Value Medley::isTrackLoadable(const CallbackInfo& info) {
         return Boolean::New(env, false);
     }
 
-    auto trackPtr = new Track(Track::fromJS(info[0]));
+    auto trackPtr = Track::fromJS(info[0]);
     return Boolean::New(env, engine->isTrackLoadable(trackPtr));
 }
 
@@ -454,6 +455,7 @@ void Medley::audioData(const AudioSourceChannelInfo& info) {
 }
 
 namespace {
+    // TODO: Extract this
     class AudioConsumer : public AsyncWorker {
     public:
         AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)

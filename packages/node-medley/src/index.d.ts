@@ -39,11 +39,11 @@ export declare class Queue {
    */
   delete(from: number, count: number): void;
 
-  /**
-   * Delete a track specified by `track`
-   * @param track
-   */
-  delete(track: TrackDescriptor): void;
+  // /**
+  //  * Delete a track specified by `track`
+  //  * @param track
+  //  */
+  // delete(track: T): void;
 
   swap(index1: number, index2: number): void;
   move(currentIndex: number, newIndex: number): void;

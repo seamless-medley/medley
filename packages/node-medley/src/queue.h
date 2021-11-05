@@ -5,9 +5,9 @@
 
 using namespace Napi;
 
-class Queue : public ObjectWrap<Queue>, public juce::Array<Track>, public medley::IQueue {
+class Queue : public ObjectWrap<Queue>, public juce::Array<Track::Ptr>, public medley::IQueue {
 public:
-    using Arr = Array<Track>;
+    using Arr = juce::Array<Track::Ptr>;
 
     static void Initialize(Object& exports);
     static FunctionReference ctor;

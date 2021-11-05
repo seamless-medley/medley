@@ -258,8 +258,10 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
     // Fetch next track from queue
     if (queue.count() > 0) {
         auto track = queue.fetchNextTrack();
-        nextDeck->loadTrack(track, deckLoadingHandler);
-        return;
+        if (track) {
+            nextDeck->loadTrack(track, deckLoadingHandler);
+            return;
+        }
     }
 
     // Queue is empty, request to fill it with some tracks
@@ -453,6 +455,8 @@ void Medley::deckPosition(Deck& sender, double position) {
             if (position > preQueuePoint) {
                 // We're passing the queue point while idling, call preQueueNext to ensure that there is enough track enqueued
                 *pState = DeckTransitionState::CueNext;
+
+                if (queue.count() == 0)
                 {
                     ScopedLock sl(callbackLock);
 
