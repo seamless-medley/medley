@@ -559,7 +559,7 @@ void Medley::doTransition(Deck* deck, double position) {
             // Fade in next
             auto newVolume = (leadingDuration > minimumLeadingToFade) ? faderIn.update(position) : 1.0f;
             if (newVolume != nextDeck->getVolume()) {
-                nextDeck->log(String::formatted("Fading in: %.2f", newVolume));
+                //nextDeck->log(String::formatted("Fading in: %.2f", newVolume));
                 nextDeck->setVolume(newVolume);
             }
         }
@@ -568,7 +568,7 @@ void Medley::doTransition(Deck* deck, double position) {
         auto currentVolume = deck->getVolume();
         auto newVolume = faderOut.update(position);
         if (newVolume != currentVolume) {
-            deck->log(String::formatted("Fading out: %.2f", newVolume));
+            //deck->log(String::formatted("Fading out: %.2f", newVolume));
             deck->setVolume(newVolume);
         }
 
