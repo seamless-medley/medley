@@ -117,28 +117,34 @@ void Medley::setPositionFractional(double fraction)
 }
 
 void Medley::updateTransition(Deck* deck) {
-    auto pState = &decksTransitionState[deck->index];
+    auto d = deck;
 
-    if (*pState == DeckTransitionState::TransitToNext) {
-        deck->log("Update Transition");
+    for (int i = 0; i < numDecks - 1; i++) {
+        auto pState = &decksTransitionState[d->index];
 
-        auto position = deck->getPosition();
-        auto transitionStartPos = deck->getTransitionStartPosition();
+        if (*pState == DeckTransitionState::TransitToNext) {
+            d->log("Update Transition");
 
-        auto nextDeck = getNextDeck(deck);
-        if (nextDeck->isTrackLoaded()) {
-            auto first = nextDeck->getFirstAudiblePosition();
-            auto leadingDuration = nextDeck->getLeadingDuration();
+            auto position = d->getPosition();
+            auto transitionStartPos = d->getTransitionStartPosition();
 
-            auto nextDeckStart = transitionStartPos - leadingDuration;
-            auto nextDeckPosition = jmax(position - nextDeckStart + first, first);
-            nextDeck->setPosition(nextDeckPosition);
+            auto nextDeck = getNextDeck(d);
+            if (nextDeck->isTrackLoaded()) {
+                auto first = nextDeck->getFirstAudiblePosition();
+                auto leadingDuration = nextDeck->getLeadingDuration();
 
-            if (position < nextDeckStart) {
-                nextDeck->internalPause();
-                nextDeck->setVolume(1.0f);
-                *pState = DeckTransitionState::NextIsReady;
+                auto nextDeckStart = transitionStartPos - leadingDuration;
+                auto nextDeckPosition = jmax(position - nextDeckStart + first, first);
+                nextDeck->setPosition(nextDeckPosition);
+
+                if (position < nextDeckStart) {
+                    nextDeck->internalPause();
+                    nextDeck->setVolume(1.0f);
+                    *pState = DeckTransitionState::NextIsReady;
+                }
             }
+
+            d = nextDeck;
         }
     }
 }
@@ -508,16 +514,12 @@ void Medley::deckPosition(Deck& sender, double position) {
 void Medley::doTransition(Deck* deck, double position) {
     auto pState = &decksTransitionState[deck->index];
 
-    if (*pState < DeckTransitionState::NextIsReady) {
-        return;
-    }
-
-    auto nextDeck = getNextDeck(deck);    
-
     auto transitionStartPos = deck->getTransitionStartPosition();
     auto transitionEndPos = deck->getTransitionEndPosition();
 
-    if (nextDeck->isTrackLoaded()) {
+    auto nextDeck = getNextDeck(deck);
+
+    if (*pState >= DeckTransitionState::NextIsReady && nextDeck->isTrackLoaded()) {
         auto lastAudible = deck->getLastAudiblePosition();
         auto leadingDuration = nextDeck->getLeadingDuration();
         auto nextDeckStart = (transitionStartPos - leadingDuration) - 0.05 /* Correct clock drift caused by playhead timer */;
@@ -563,24 +565,24 @@ void Medley::doTransition(Deck* deck, double position) {
                 nextDeck->setVolume(newVolume);
             }
         }
+    }
 
-        // Fade out current
-        auto currentVolume = deck->getVolume();
-        auto newVolume = faderOut.update(position);
-        if (newVolume != currentVolume) {
-            //deck->log(String::formatted("Fading out: %.2f", newVolume));
-            deck->setVolume(newVolume);
-        }
+    // Fade out current
+    auto currentVolume = deck->getVolume();
+    auto newVolume = faderOut.update(position);
+    if (newVolume != currentVolume) {
+        //deck->log(String::formatted("Fading out: %.2f", newVolume));
+        deck->setVolume(newVolume);
+    }
 
-        if (position >= transitionStartPos) {
-            auto transitionDuration = (transitionEndPos - transitionStartPos);
-            auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
+    if (position >= transitionStartPos) {
+        auto transitionDuration = (transitionEndPos - transitionStartPos);
+        auto transitionProgress = jlimit(0.0, 1.0, (position - transitionStartPos) / transitionDuration);
 
-            if (*pState != DeckTransitionState::Idle && position > transitionEndPos) {
-                if (transitionProgress >= 1.0) {
-                    forceFadingOut = 0;
-                    deck->stop();
-                }
+        if (*pState != DeckTransitionState::Idle && position > transitionEndPos) {
+            if (transitionProgress >= 1.0) {
+                forceFadingOut = 0;
+                deck->stop();
             }
         }
     }
