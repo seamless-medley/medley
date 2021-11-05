@@ -2,27 +2,28 @@ import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
 import { isObjectLike } from "lodash";
 import { TrackCollection } from "../collections";
-import { Track } from "../track";
+import { Track, TrackMetadata } from "../track";
 import { Crate } from "./base";
 
 export interface CrateSequencerEvents {
-  change: (crate: Crate) => void;
+  change: (crate: Crate<Track<any>>) => void;
 }
-export class CrateSequencer<M extends object | void = void> extends (EventEmitter as new () => TypedEventEmitter<CrateSequencerEvents>) {
+
+export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (EventEmitter as new () => TypedEventEmitter<CrateSequencerEvents>) {
   private _playCounter = 0;
   private _crateIndex = 0;
-  private _lastCrate: Crate<M> | undefined;
+  private _lastCrate: Crate<T> | undefined;
 
-  constructor(public crates: Crate<M>[] = []) {
+  constructor(public crates: Crate<T>[] = []) {
     super();
     this._lastCrate = this.current;
   }
 
-  get current(): Crate<M> | undefined {
+  get current(): Crate<T> | undefined {
     return this.crates[this._crateIndex];
   }
 
-  private isCrate(o: any): o is Crate<M> {
+  private isCrate(o: any): o is Crate<T> {
     return isObjectLike(o) && (o.source instanceof TrackCollection);
   }
 
@@ -30,7 +31,7 @@ export class CrateSequencer<M extends object | void = void> extends (EventEmitte
     return isObjectLike(o);
   }
 
-  async nextTrack(validator?: (path: string) => Promise<M | boolean>): Promise<Track<M> | undefined> {
+  async nextTrack(validator?: (path: string) => Promise<M | boolean>): Promise<T | undefined> {
     if (this.crates.length < 1) {
       return undefined;
     }
@@ -42,7 +43,7 @@ export class CrateSequencer<M extends object | void = void> extends (EventEmitte
       if (this.isCrate(crate)) {
         if (this._lastCrate !== crate) {
           this._lastCrate = crate;
-          this.emit('change', crate as unknown as Crate);
+          this.emit('change', crate as unknown as Crate<Track<any>>);
         }
 
         for (let i = 0; i < crate.source.length; i++) {
@@ -56,7 +57,7 @@ export class CrateSequencer<M extends object | void = void> extends (EventEmitte
                 this.next();
               }
 
-              track.crate = crate;
+              track.crate = crate as unknown as Crate<Track<M>>;
 
               if (this.isMetadata(valid)) {
                 track.metadata = valid;

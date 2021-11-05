@@ -9,27 +9,32 @@ import { Track } from "./track";
 import { TrackCollection } from "./collections";
 import { getMusicMetadata } from "./utils";
 
-type Rotation = 'normal' | 'request';
+type Rotation = 'normal' | 'request' | 'insertion';
 
 export type BoomBoxMetadata = {
   tags?: ICommonTagsResult;
   rotation: Rotation;
   priority?: number;
+
+  // TODO: Callback for providing insertion for requedted track
 };
 
+export type BoomBoxTrack = Track<BoomBoxMetadata>;
+export type BoomBoxCrate = Crate<BoomBoxTrack>;
+
 export interface BoomBoxEvents {
-  sequenceChange: (activeCrate: Crate<BoomBoxMetadata>) => void;
-  currentCrateChange: (oldCrate: Crate<BoomBoxMetadata>, newCrate: Crate<BoomBoxMetadata>) => void;
-  trackQueued: (track: Track<BoomBoxMetadata>) => void;
-  trackLoaded: (track: Track<BoomBoxMetadata>) => void;
-  trackStarted: (track: Track<BoomBoxMetadata>, lastTrack?: Track<BoomBoxMetadata>) => void;
+  sequenceChange: (activeCrate: BoomBoxCrate) => void;
+  currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
+  trackQueued: (track: BoomBoxTrack) => void;
+  trackLoaded: (track: BoomBoxTrack) => void;
+  trackStarted: (track: BoomBoxTrack, lastTrack?: BoomBoxTrack) => void;
   error: (error: Error) => void;
 }
 
 type BoomBoxOptions = {
-  medley: Medley;
-  queue: Queue;
-  crates: Crate<BoomBoxMetadata>[];
+  medley: Medley<BoomBoxTrack>;
+  queue: Queue<BoomBoxTrack>;
+  crates: BoomBoxCrate[];
 
   /**
    * Initalize artist history
@@ -55,12 +60,12 @@ type BoomBoxOptions = {
 }
 
 export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
-  readonly sequencer: CrateSequencer<BoomBoxMetadata>;
+  readonly sequencer: CrateSequencer<BoomBoxTrack>;
 
   private options: Required<Omit<BoomBoxOptions, 'medley' | 'queue' | 'crates' | 'artistHistory'>>;
 
-  private medley: Medley;
-  private queue: Queue;
+  private medley: Medley<BoomBoxTrack>;
+  private queue: Queue<BoomBoxTrack>;
 
   artistHistory: string[][];
 
@@ -81,13 +86,12 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     this.medley.on('loaded', this.deckLoaded);
     this.medley.on('started', this.deckStarted);
     //
-    this.sequencer = new CrateSequencer<BoomBoxMetadata>(options.crates);
-    this.sequencer.on('change', (crate: Crate) => this.emit('sequenceChange', crate as unknown as Crate<BoomBoxMetadata>));
+    this.sequencer = new CrateSequencer<BoomBoxTrack>(options.crates);
+    this.sequencer.on('change', (crate: BoomBoxCrate) => this.emit('sequenceChange', crate));
   }
 
-  private _currentCrate: Crate<BoomBoxMetadata> | undefined;
-  private _currentTrack: Track<BoomBoxMetadata> | undefined = undefined;
-  private _nextTrack: Track<BoomBoxMetadata> | undefined;
+  private _currentCrate: BoomBoxCrate | undefined;
+  private _currentTrack: BoomBoxTrack | undefined = undefined;
 
   get crate() {
     return this._currentCrate;
@@ -97,14 +101,9 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     return this._currentTrack;
   }
 
-  get nextTrack() {
-    return this._nextTrack;
-  }
 
 
-
-
-  private requests: TrackCollection<BoomBoxMetadata> = new TrackCollection('$_requests');
+  private requests: TrackCollection<BoomBoxTrack> = new TrackCollection('$_requests');
 
   private isTrackLoadable = async (path: string) => this.medley.isTrackLoadable(path);
 
@@ -165,15 +164,20 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
   }
 
   private preQueue: PreQueueListener = async (done) => {
+    if (this.queue.length > 0) {
+      done(true);
+    }
+
     try {
       const requestedTrack = await this.fetchRequestTrack();
       if (requestedTrack) {
         console.log('Got track from request');
         // TODO: Detect transition from normal rotation to request rotation
         // if this is the case, call a callback for providing sweeper/bumper/sting track to play before actually playing the requested track
-        this._nextTrack = requestedTrack;
-        this.queue.add(requestedTrack);
 
+        const currentRotation = this._currentTrack?.metadata?.rotation || 'normal';
+
+        this.queue.add(requestedTrack);
         done(true);
         return;
       }
@@ -185,9 +189,6 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
         return;
       }
 
-      this._nextTrack = nextTrack;
-      this.queue.add(nextTrack);
-
       if (this._currentCrate !== nextTrack.crate) {
 
         if (this._currentCrate && nextTrack.crate) {
@@ -196,6 +197,8 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
 
         this._currentCrate = nextTrack.crate;
       }
+
+      this.queue.add(nextTrack);
 
       this.emit('trackQueued', nextTrack);
       done(true);
@@ -208,44 +211,42 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     done(false);
   }
 
-  private deckLoaded: DeckListener = (deck) => {
-    if (this._nextTrack) {
-      this.emit('trackLoaded', this._nextTrack);
-    }
+  private deckLoaded: DeckListener<BoomBoxTrack> = (deck, track) => {
+    console.log(`Deck ${deck} loaded`, track.path);
   }
 
-  private deckStarted: DeckListener = (deck) => {
-    if (this._nextTrack) {
-      const newTrack = this._nextTrack;
-      const lastTrack = this._currentTrack;
+  private deckStarted: DeckListener<BoomBoxTrack> = (deck, track) => {
+    if (track?.metadata?.rotation === 'insertion') {
+      console.log('Playing insertion, do not track history', track.path);
+      return;
+    }
 
-      this._currentTrack = newTrack;
-      this._nextTrack = undefined;
+    console.log(`Deck ${deck} started`, track?.metadata?.tags?.title);
 
-      this.emit('trackStarted', newTrack, lastTrack);
+    const lastTrack = this._currentTrack;
+    this._currentTrack = track;
 
-      const { noDuplicatedArtist } = this.options;
+    this.emit('trackStarted', track, lastTrack);
 
-      if (noDuplicatedArtist > 0) {
-        const { metadata } = newTrack;
-        if (metadata) {
-          this.artistHistory.push(getArtists(metadata));
+    const { noDuplicatedArtist } = this.options;
 
-          while (this.artistHistory.length > noDuplicatedArtist) {
-            this.artistHistory.shift();
-          }
+    if (noDuplicatedArtist > 0) {
+      const { metadata } = track;
+      if (metadata) {
+        this.artistHistory.push(getArtists(metadata));
+
+        while (this.artistHistory.length > noDuplicatedArtist) {
+          this.artistHistory.shift();
         }
       }
     }
-
-    this._nextTrack = undefined;
   }
 
   get crates() {
     return this.sequencer.crates;
   }
 
-  set crates(value: Crate<BoomBoxMetadata>[]) {
+  set crates(value: BoomBoxCrate[]) {
     this.sequencer.crates = value;
   }
 }

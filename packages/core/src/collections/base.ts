@@ -1,17 +1,17 @@
 import EventEmitter from "events";
-import _, { castArray, isArray, reject, shuffle, uniq, uniqBy } from "lodash";
+import _, { castArray, reject, shuffle, uniqBy } from "lodash";
 import { Track } from "../track";
 
-export type TrackCollectionOptions<M> = {
-  newTracksMapper?: (tracks: Track<M>[]) => Track<M>[];
+export type TrackCollectionOptions<T extends Track<any>> = {
+  newTracksMapper?: (tracks: T[]) => T[] | Promise<T[]>;
 }
 
-export class TrackCollection<M = void> extends EventEmitter {
+export class TrackCollection<T extends Track<any>> extends EventEmitter {
   protected _ready: boolean = false;
 
-  protected tracks: Track<M>[] = [];
+  protected tracks: T[] = [];
 
-  constructor(readonly id: string, protected options: TrackCollectionOptions<M> = {}) {
+  constructor(readonly id: string, protected options: TrackCollectionOptions<T> = {}) {
     super();
     this.afterConstruct();
   }
@@ -25,11 +25,11 @@ export class TrackCollection<M = void> extends EventEmitter {
     this.emit('ready');
   }
 
-  protected createTrack(path: string): Track<M> {
+  protected async createTrack(path: string): Promise<T> {
     return {
       path,
       collection: this
-    }
+    } as unknown as T;
   }
 
   get length(): number {
@@ -40,26 +40,28 @@ export class TrackCollection<M = void> extends EventEmitter {
     return this._ready;
   }
 
-  shift(): Track<M> | undefined {
+  shift(): T | undefined {
     return this.tracks.shift();
   }
 
-  push(track: Track<M>): void {
+  push(track: T): void {
     this.tracks.push(track);
   }
 
-  add(path: string | string[]) {
-    if (isArray(path)) {
-      const transformFn = this.options.newTracksMapper ? this.options.newTracksMapper : (tracks: Track<M>[]) => tracks;
-      const newTracks = transformFn(uniq(path).map(p => this.createTrack(p)));
-      this.tracks = uniqBy(this.tracks.concat(newTracks), 'path');
-      return;
-    }
+  async add(path: string | string[]) {
+    const tracks = await Promise.all(
+      _(path).castArray()
+      .uniq().map(p => this.createTrack(p))
+      .value()
+    );
 
-    this.tracks.push(this.createTrack(path));
+    const { newTracksMapper } = this.options;
+    const newTracks = newTracksMapper ? await newTracksMapper(tracks) : tracks;
+
+    this.tracks = uniqBy(this.tracks.concat(newTracks), 'path');
   }
 
-  removeBy(predicate: (track: Track<M>) => boolean) {
+  removeBy(predicate: (track: T) => boolean) {
     this.tracks = reject(this.tracks, predicate);
   }
 
@@ -68,7 +70,7 @@ export class TrackCollection<M = void> extends EventEmitter {
     this.removeBy(track => toRemove.includes(track.path))
   }
 
-  removeTrack(track: Track<M> | Track<M>[]) {
+  removeTrack(track: T |T[]) {
     const toRemove = castArray(track).map(track => track.path);
     this.remove(toRemove);
   }
@@ -77,7 +79,7 @@ export class TrackCollection<M = void> extends EventEmitter {
     this.tracks = shuffle(this.tracks);
   }
 
-  sort(...sortFn: ((track: Track<M>) => unknown)[]) {
+  sort(...sortFn: ((track: T) => unknown)[]) {
     if (!sortFn.length) {
       sortFn = [track => track.path];
     }

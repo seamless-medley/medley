@@ -1,12 +1,12 @@
 import { TrackCollection } from "../collections/base";
 import { Track } from "../track";
 
-export class Crate<M = void> {
-  constructor(readonly id: string, public source: TrackCollection<M>, public max: number) {
+export class Crate<T extends Track<any>> {
+  constructor(readonly id: string, public source: TrackCollection<T>, public max: number) {
 
   }
 
-  next(): Track<M> | undefined {
+  next(): T | undefined {
     const item = this.source.shift();
 
     if (item) {
