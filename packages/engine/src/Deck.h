@@ -104,6 +104,8 @@ public:
 
     double getFirstAudiblePosition() const;
 
+    double getLastAudiblePosition() const;
+
     double getEndPosition() const;
 
     int64 getLeadingSamplePosition() const { return leadingSamplePosition; }

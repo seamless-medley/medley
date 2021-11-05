@@ -636,6 +636,11 @@ double Deck::getFirstAudiblePosition() const {
     return (double)firstAudibleSamplePosition / sourceSampleRate;
 }
 
+double Deck::getLastAudiblePosition() const
+{
+    return (double)lastAudibleSamplePosition / sourceSampleRate;
+}
+
 double Deck::getEndPosition() const
 {
     return totalSourceSamplesToPlay / sourceSampleRate;

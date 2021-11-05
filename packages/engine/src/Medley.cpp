@@ -376,12 +376,10 @@ void Medley::deckUnloaded(Deck& sender, ITrack::Ptr& track) {
     if (&sender == transitingFromDeck) {
         faderOut.reset();
 
-        //    if (transitionState == TransitionState::Cued) {
-        //        sender.log("stopped before transition would happen, try starting next deck");
-        //        if (nextDeck->isTrackLoaded()) {
-        //            nextDeck->start();
-        //        }
-        //    }
+        if (nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
+            sender.log("Stopped before transition would happen, try starting next deck");
+            nextDeck->start();
+        }
     }
 
     decksTransitionState[sender.index] = DeckTransitionState::Idle;
@@ -405,7 +403,7 @@ void Medley::deckUnloaded(Deck& sender, ITrack::Ptr& track) {
 
     // Just in case
     if (keepPlaying && !isDeckPlaying()) {
-        auto shouldContinuePlaying = queue.count() > 0;
+        auto shouldContinuePlaying = (nextDeck->getTrack() != nullptr) || (queue.count() > 0);
         keepPlaying = shouldContinuePlaying;
 
         if (shouldContinuePlaying) {
@@ -519,12 +517,17 @@ void Medley::doTransition(Deck* deck, double position) {
     auto transitionStartPos = deck->getTransitionStartPosition();
     auto transitionEndPos = deck->getTransitionEndPosition();
 
-    if (nextDeck) {
+    if (nextDeck->isTrackLoaded()) {
+        auto lastAudible = deck->getLastAudiblePosition();
         auto leadingDuration = nextDeck->getLeadingDuration();
-        auto nextDeckStart = transitionStartPos - leadingDuration;
+        auto nextDeckStart = (transitionStartPos - leadingDuration) - 0.05 /* Correct clock drift caused by playhead timer */;
+
+        if (nextDeckStart > lastAudible) {
+            nextDeckStart = lastAudible - 0.01;
+        }
 
         if (position > nextDeckStart) {
-            if (*pState == DeckTransitionState::NextIsReady && nextDeck->isTrackLoaded()) {
+            if (*pState == DeckTransitionState::NextIsReady) {
                 nextDeck->log("Transiting to this deck");
 
                 *pState = DeckTransitionState::TransitToNext;
