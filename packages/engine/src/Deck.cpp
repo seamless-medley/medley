@@ -110,14 +110,31 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     firstAudibleSamplePosition = jmax(0LL, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
     totalSourceSamplesToPlay = reader->lengthInSamples;
     lastAudibleSamplePosition = totalSourceSamplesToPlay;
+
+    auto providedCueIn = track->getCueInPosition();
+
+    if (providedCueIn >= 0) {
+        // Calculate cue-in position if it was hinted from the track itself
+        auto cueInSamplePosition = (int64)(providedCueIn * reader->sampleRate);
+
+        if (cueInSamplePosition > firstAudibleSamplePosition && cueInSamplePosition <= mid) {
+            firstAudibleSamplePosition = cueInSamplePosition;
+        }
+    }
+
     leadingSamplePosition = -1;
     trailingSamplePosition = -1;
     trailingDuration = 0;
 
     auto playDuration = getEndPosition();
 
-    {   // Seamless mode
+    // If no cue in provided
+    if (providedCueIn < 0)
+    {
+        // and the track is longer than 3 seconds
         if (playDuration >= 3.0) {
+            // Try to detect leading fade-in
+
             Range<float> maxLevels[2]{};
             reader->readMaxLevels(
                 firstAudibleSamplePosition,
@@ -152,6 +169,9 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     }
 
     leadingDuration = ((leadingSamplePosition > -1) ? leadingSamplePosition - firstAudibleSamplePosition : firstAudibleSamplePosition) / reader->sampleRate;
+    if (leadingDuration < 0) {
+        leadingDuration = 0;
+    }
 
     setSource(new AudioFormatReaderSource(reader, false));
 
@@ -384,6 +404,26 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
     }
 
     trailingSamplePosition = findFadingPosition(scanningReader, tailPosition, lastAudibleSamplePosition - tailPosition);
+
+    {
+        auto providedCueOut = track->getCueOutPosition();
+
+        // Calculate trailing position if it was hinted from the track itself
+        if (providedCueOut > 0) {
+            trailingSamplePosition = (int64)(providedCueOut * scanningReader->sampleRate);
+
+            // Reset, if the provided trailing is too far
+            if ((trailingSamplePosition < 0) || (trailingSamplePosition > lastAudibleSamplePosition)) {
+                trailingSamplePosition = -1;
+            }
+        }
+    }
+
+    // trailingSamplePosition is unknown, try to find
+    if (trailingSamplePosition < 0) {
+        trailingSamplePosition = findFadingPosition(scanningReader, tailPosition, lastAudibleSamplePosition - tailPosition);
+    }
+
     trailingDuration = (trailingSamplePosition > -1) ? (lastAudibleSamplePosition - trailingSamplePosition) / scanningReader->sampleRate : 0;
 
     calculateTransition();

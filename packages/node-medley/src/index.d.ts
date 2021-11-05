@@ -7,24 +7,28 @@ export interface TrackInfo {
   /**
    * Path to the physical file.
    */
-  path: string;
+  readonly path: string;
+
+  readonly cueInPosition?: number;
+
+  readonly cueOutPosition?: number;
 }
 
-export type TrackDescriptor = string | TrackInfo;
+export type TrackDescriptor<T extends TrackInfo> = string | T;
 
-export declare class Queue {
-  constructor(tracks?: TrackDescriptor[]);
+export declare class Queue<T extends TrackInfo = TrackInfo> {
+  constructor(tracks?: TrackDescriptor<T> | TrackDescriptor<T>[]);
 
   get length(): number;
 
-  add(track: TrackDescriptor | TrackDescriptor[]): void;
+  add(track: TrackDescriptor<T> | TrackDescriptor<T>[]): void;
 
   /**
    * Insert track(s) at position specified by the `index` parameter.
    * @param index
    * @param track
    */
-  insert(index: number, track: TrackDescriptor | TrackDescriptor[]): void;
+  insert(index: number, track: TrackDescriptor<T> | TrackDescriptor<T>[]): void;
 
   /**
    * Delete a track at `index`
@@ -48,8 +52,8 @@ export declare class Queue {
   swap(index1: number, index2: number): void;
   move(currentIndex: number, newIndex: number): void;
 
-  get(index: number): TrackInfo;
-  set(index: number, track: TrackDescriptor): void;
+  get(index: number): T;
+  set(index: number, track: TrackDescriptor<T>): void;
 
   /**
    * Convert tracks list into an array
@@ -59,7 +63,7 @@ export declare class Queue {
    *
    * @returns Array
    */
-  toArray(): TrackInfo[];
+  toArray(): T[];
 }
 
 export interface AudioLevel {
@@ -88,16 +92,16 @@ export declare enum DeckIndex {
 }
 
 export type Listener<T = void> = () => T;
-export type DeckListener = (deckIndex: DeckIndex, path: string) => void;
+export type DeckListener<T extends TrackInfo> = (deckIndex: DeckIndex, track: T) => void;
 export type PreQueueListener = (done: PreQueueCallback) => void;
 export type PreQueueCallback = (result: boolean) => void;
 
-export declare class Medley extends EventEmitter {
-  constructor(queue: Queue);
+export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitter {
+  constructor(queue: Queue<T>);
 
-  on(event: DeckEvent, listener: DeckListener): this;
-  once(event: DeckEvent, listener: DeckListener): this;
-  off(event: DeckEvent, listener: DeckListener): this;
+  on(event: DeckEvent, listener: DeckListener<T>): this;
+  once(event: DeckEvent, listener: DeckListener<T>): this;
+  off(event: DeckEvent, listener: DeckListener<T>): this;
 
   on(event: 'preQueueNext', listener: PreQueueListener): this;
   once(event: 'preQueueNext', listener: PreQueueListener): this;

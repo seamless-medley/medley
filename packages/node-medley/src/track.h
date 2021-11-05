@@ -20,7 +20,7 @@ public:
     Track(const Napi::Object& obj)
         : ref(Napi::Persistent(obj))
     {
-        createFileObject();
+        initFromJS();
     }
 
     bool operator== (const Track& other) const {
@@ -33,6 +33,14 @@ public:
 
     File getFile() {
         return file;
+    }
+
+    double getCueInPosition() override {
+        return cueIn;
+    }
+
+    double getCueOutPosition() override {
+        return cueOut;
     }
 
     inline Napi::ObjectReference& getObjectRef() {
@@ -57,10 +65,22 @@ public:
     }
 
 private:
-    void createFileObject() {
+    void initFromJS() {
         file = ref.Get("path").ToString().Utf8Value();
+
+        auto cueInPosition = ref.Get("cueInPosition");
+        if (!cueInPosition.IsUndefined() && !cueInPosition.IsNull()) {
+            cueIn = cueInPosition.ToNumber().DoubleValue();
+        }
+
+        auto cueOutPosition = ref.Get("cueOutPosition");
+        if (!cueOutPosition.IsUndefined() && !cueOutPosition.IsNull()) {
+            cueOut = cueOutPosition.ToNumber().DoubleValue();
+        }
     }
 
-    File file;
     Napi::ObjectReference ref;
+    File file;
+    double cueIn = -1.0;
+    double cueOut = -1.0;
 };
