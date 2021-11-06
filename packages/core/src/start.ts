@@ -6,7 +6,7 @@ import { BoomBox, BoomBoxMetadata } from "./boombox";
 import { TrackCollection, WatchTrackCollection } from "./collections";
 import { Crate } from "./crate";
 import { lyricsToText, parse as parseLyrics } from "./lyrics";
-import { getMusicMetadata } from "./utils";
+import { getCuePoints, getMusicMetadata } from "./utils";
 
 const collections: Map<string, TrackCollection<BoomBoxTrack>> = new Map(
   ['bright', 'chill', 'lovesong', 'lonely', 'brokenhearted', 'hurt', 'upbeat']
@@ -43,6 +43,7 @@ const drops = WatchTrackCollection.initWithWatch<Track<BoomBoxMetadata>>('drops'
       const musicMetadata = await getMusicMetadata(track.path);
 
       console.log("Drop's meta:", musicMetadata?.common?.title);
+      const cuePoints = (musicMetadata) ? getCuePoints(musicMetadata) : undefined;
 
       const metadata: BoomBoxMetadata = {
         tags: musicMetadata?.common,
@@ -52,8 +53,8 @@ const drops = WatchTrackCollection.initWithWatch<Track<BoomBoxMetadata>>('drops'
       return {
         ...track,
         metadata,
-        cueInPosition: 4.5,
-        cueOutPosition: 6.5,
+        cueInPosition: cuePoints?.in,
+        cueOutPosition: cuePoints?.out,
       }
     })));
   }
