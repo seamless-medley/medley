@@ -8,6 +8,10 @@ import { Crate } from "./crate";
 import { lyricsToText, parse as parseLyrics } from "./lyrics";
 import { getCuePoints, getMusicMetadata } from "./utils";
 
+process.on('uncaughtException', (e) => {
+  console.log('Uncaught exception', e);
+});
+
 const collections: Map<string, TrackCollection<BoomBoxTrack>> = new Map(
   ['bright', 'chill', 'lovesong', 'lonely', 'brokenhearted', 'hurt', 'upbeat']
     .map(sub => [sub, WatchTrackCollection.initWithWatch<BoomBoxTrack>(sub, joinPath(`D:\\vittee\\Google Drive\\musics\\`, sub))])
@@ -17,15 +21,15 @@ const sequences: [string, number][] = [
   ['bright', 1],
   ['chill', 1],
   ['lovesong', 1],
-  ['lonely', 2],
+  ['lonely', 1],
   ['brokenhearted', 1],
   ['hurt', 1],
   ['brokenhearted', 1],
   ['lonely', 1],
   ['lovesong', 1],
-  ['chill', 2],
-  ['bright', 2],
-  ['upbeat', 2]
+  ['chill', 1],
+  ['bright', 1],
+  ['upbeat', 1]
 ];
 
 const queue = new Queue<BoomBoxTrack>(['D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3']);
@@ -36,6 +40,9 @@ const boombox = new BoomBox({
   queue,
   crates
 });
+
+// const nullDevice = medley.getAvailableDevices().filter(d => d.type == 'Null')[0];
+// medley.setAudioDevice({ type: nullDevice.type, device: nullDevice.defaultDevice });
 
 const drops = WatchTrackCollection.initWithWatch<Track<BoomBoxMetadata>>('drops', 'D:\\vittee\\Desktop\\test-transition\\drops', {
   newTracksMapper: async tracks => {
