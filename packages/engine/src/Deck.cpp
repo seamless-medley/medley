@@ -111,9 +111,25 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     auto mid = reader->lengthInSamples / 2;
     firstAudibleSamplePosition = jmax(0LL, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
     totalSourceSamplesToPlay = reader->lengthInSamples;
-    lastAudibleSamplePosition = totalSourceSamplesToPlay;
+    lastAudibleSamplePosition = -1;
+
+    auto embededLastAudible = m_metadata.getLastAudible();
+    if (embededLastAudible > 0) {
+        lastAudibleSamplePosition = m_metadata.getLastAudible() * reader->sampleRate;
+    }
+
+    if (lastAudibleSamplePosition > 0 && lastAudibleSamplePosition < totalSourceSamplesToPlay) {
+        totalSourceSamplesToPlay = lastAudibleSamplePosition;
+    }
+    else {
+        lastAudibleSamplePosition = totalSourceSamplesToPlay;
+    }
 
     auto providedCueIn = track->getCueInPosition();
+
+    if (providedCueIn < 0) {
+        providedCueIn = m_metadata.getCueIn();
+    }
 
     if (providedCueIn >= 0) {
         // Calculate cue-in position if it was hinted from the track itself
@@ -405,7 +421,11 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
     trailingSamplePosition = findFadingPosition(scanningReader, tailPosition, lastAudibleSamplePosition - tailPosition);
 
     {
-        auto providedCueOut = track->getCueOutPosition();
+        auto providedCueOut = trackToScan->getCueOutPosition();
+
+        if (providedCueOut < 0) {
+            providedCueOut = m_metadata.getCueOut();
+        }
 
         // Calculate trailing position if it was hinted from the track itself
         if (providedCueOut > 0) {

@@ -30,6 +30,9 @@ public:
     const String& getArtist() const { return artist; }
     const String& getAlbum() const { return album; }
     float getTrackGain() const { return trackGain; }
+    double getCueIn() const { return cueIn; }
+    double getCueOut() const { return cueOut; }
+    double getLastAudible() const { return lastAudible; }
 
 private:
     bool readID3V2(const ITrack::Ptr track);
@@ -41,6 +44,9 @@ private:
     String artist;
     String album;
     float trackGain = 0.0f;
+    double cueIn = -1.0;
+    double cueOut = -1.0;
+    double lastAudible = -1.0;
 };
 
 }

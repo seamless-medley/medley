@@ -131,6 +131,24 @@ bool medley::Metadata::readID3V2(const ITrack::Ptr track)
     if (tag.header()->majorVersion() >= 3) {
         auto trackGain = readFirstUserTextIdentificationFrame(tag, L"REPLAYGAIN_TRACK_GAIN");
         this->trackGain = (float)parseReplayGainGain(trackGain);
+
+        auto cueIn = readFirstUserTextIdentificationFrame(tag, L"CUE-IN");
+        if (cueIn.isEmpty()) {
+            cueIn = readFirstUserTextIdentificationFrame(tag, L"CUE_IN");
+        }
+
+        this->cueIn = cueIn.isNotEmpty() ? cueIn.getDoubleValue() : -1.0;
+
+        auto cueOut = readFirstUserTextIdentificationFrame(tag, L"CUE-OUT");
+        if (cueOut.isEmpty()) {
+            cueOut = readFirstUserTextIdentificationFrame(tag, L"CUE_OUT");
+        }
+
+        this->cueOut = cueOut.isNotEmpty() ? cueOut.getDoubleValue() : -1.0;
+
+        auto lastAudible = readFirstUserTextIdentificationFrame(tag, L"LAST_AUDIBLE");
+
+        this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
     }
 
     return true;
@@ -154,6 +172,27 @@ bool medley::Metadata::readXiph(const ITrack::Ptr track)
     juce::String trackGain;
     readXiphCommentField(tag, "REPLAYGAIN_TRACK_GAIN", &trackGain);
     this->trackGain = (float)parseReplayGainGain(trackGain);
+
+    juce::String cueIn;
+    readXiphCommentField(tag, L"CUE-IN", &cueIn);
+    if (cueIn.isEmpty()) {
+        readXiphCommentField(tag, L"CUE_IN", &cueIn);
+    }
+
+    this->cueIn = cueIn.isNotEmpty() ? cueIn.getDoubleValue() : -1.0;
+
+    juce::String cueOut;
+    readXiphCommentField(tag, L"CUE-OUT", &cueOut);
+    if (cueOut.isEmpty()) {
+        readXiphCommentField(tag, L"CUE_OUT", &cueOut);
+    }
+
+    this->cueOut = cueOut.isNotEmpty() ? cueOut.getDoubleValue() : -1.0;
+
+    juce::String lastAudible;
+    readXiphCommentField(tag, L"LAST_AUDIBLE", &lastAudible);
+
+    this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
 }
 
 void medley::Metadata::readTag(const TagLib::Tag& tag)
