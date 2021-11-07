@@ -117,21 +117,24 @@ void NullAudioDevice::run()
     seconds_t last = nowInSeconds();
 
     while (!threadShouldExit()) {
-        auto const now = nowInSeconds();
+        seconds_t const now = nowInSeconds();
+        seconds_t const diff = now - last;
 
-        if (now - last >= dropout) {
+        if (diff >= dropout) {
             last = now;
             continue;
         }
 
-        if (now - last >= frameDuration) {
+        if (diff >= frameDuration) {
             const ScopedTryLock sl(startStopLock);
 
-            callback->audioDeviceIOCallback(
-                const_cast<const float**>(inputBuffers), 0,
-                outputBuffers, 2,
-                480
-            );
+            if (callback) {
+                callback->audioDeviceIOCallback(
+                    const_cast<const float**>(inputBuffers), 0,
+                    outputBuffers, 2,
+                    480
+                );
+            }
 
             last += frameDuration;
             continue;
