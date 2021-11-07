@@ -737,30 +737,35 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
         }
     }
 
-    gain = volume * fader.update(currentTime);
-
-    for (int i = info.buffer->getNumChannels(); --i >= 0;) {
-        info.buffer->applyGainRamp(i, info.startSample, info.numSamples, lastGain, gain);
-    }
-
-    lastGain = gain;
-
     if (prepared) {
-        AudioBlock<float> block(
-            info.buffer->getArrayOfWritePointers(),
-            info.buffer->getNumChannels(),
-            (size_t)info.startSample,
-            (size_t)info.numSamples
-        );
+        // Process Audio
+        {
+            AudioBlock<float> block(
+                info.buffer->getArrayOfWritePointers(),
+                info.buffer->getNumChannels(),
+                (size_t)info.startSample,
+                (size_t)info.numSamples
+            );
+            processor.process(ProcessContextReplacing<float>(block));
+        }
 
-        processor.process(ProcessContextReplacing<float>(block));
-
-        medley.interceptAudio(info);
-
+        // Level Measurement
         {
             ScopedLock sl(levelTrackerLock);
             levelTracker.process(info);
         }
+
+        // Main Volume
+        {
+            gain = volume * fader.update(currentTime);
+            for (int i = info.buffer->getNumChannels(); --i >= 0;) {
+                info.buffer->applyGainRamp(i, info.startSample, info.numSamples, lastGain, gain);
+            }
+            lastGain = gain;
+        }
+
+        // Tap
+        medley.interceptAudio(info);
     }
 }
 
