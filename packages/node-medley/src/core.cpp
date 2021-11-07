@@ -335,23 +335,23 @@ Napi::Value Medley::getMetadata(const CallbackInfo& info) {
     auto env = info.Env();
 
     if (info.Length() < 1) {
-        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        RangeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
         return env.Undefined();
     }
 
     auto arg1 = info[0];
     if (!arg1.IsNumber()) {
-        TypeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
+        RangeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
         return env.Undefined();
     }
 
     auto index = arg1.ToNumber().Int32Value();
-    if (index != 0 && index != 1) {
-        TypeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
+    if (index < 0 || index >= engine->numDecks) {
+        RangeError::New(env, "Invalid deck " + std::to_string(index)).ThrowAsJavaScriptException();
         return env.Undefined();
     }
 
-    auto& deck = (index == 0) ? engine->getDeck1() : engine->getDeck2();
+    auto& deck = (index == 0) ? engine->getDeck1() : (index == 1 ? engine->getDeck2() : engine->getDeck3());
 
     auto metadata = deck.metadata();
     auto result = Object::New(env);
