@@ -193,13 +193,8 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     setSource(new AudioFormatReaderSource(reader, false));
 
-    if (playDuration >= 3) {
-        scanner.scan(track);
-        loadingThread.addTimeSliceClient(&scanner);
-    }
-    else {
-        calculateTransition();
-    }
+    scanner.scan(track);
+    loadingThread.addTimeSliceClient(&scanner);
 
     log(String::formatted("Loaded - leading@%.2f duration=%.2f", leadingSamplePosition / reader->sampleRate, leadingDuration));
 
