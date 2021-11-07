@@ -265,9 +265,6 @@ private:
 
     Deck* decks[numDecks]{};
 
-    Fader faderIn;
-    Fader faderOut;
-
     Mixer mixer;
     AudioSourcePlayer mainOut;
 
@@ -289,7 +286,18 @@ private:
         TransitToNext
     };
 
-    DeckTransitionState decksTransitionState[numDecks]{};
+    struct deck_transition_t {
+        deck_transition_t()
+            : fader(1.0)
+        {
+
+        }
+
+        DeckTransitionState state = DeckTransitionState::Idle;
+        Fader fader;
+    };
+
+    deck_transition_t decksTransition[numDecks]{};
 
     double fadingCurve = 60;
     float fadingFactor;
