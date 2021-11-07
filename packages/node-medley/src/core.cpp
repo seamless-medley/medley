@@ -209,13 +209,18 @@ void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley:
     auto index = deck.getIndex();
 
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function emitFn) {
-        auto obj = static_cast<Track*>(track.get())->getObjectRef().Value();
+        try {
+            auto obj = static_cast<Track*>(track.get())->getObjectRef().Value();
 
-        emitFn.Call(self.Value(), {
-            Napi::String::New(env, name),
-            Napi::Number::New(env, index),
-            obj
-        });
+            emitFn.Call(self.Value(), {
+                Napi::String::New(env, name),
+                Napi::Number::New(env, index),
+                obj
+            });
+        }
+        catch (...) {
+            // To survive any exceptions raised from C++ land
+        }
     });
 }
 
