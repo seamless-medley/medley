@@ -106,6 +106,8 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
         reader = newReader;
     }
 
+    m_metadata.readFromTrack(track);
+
     auto mid = reader->lengthInSamples / 2;
     firstAudibleSamplePosition = jmax(0LL, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
     totalSourceSamplesToPlay = reader->lengthInSamples;
@@ -185,10 +187,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     log(String::formatted("Loaded - leading@%.2f duration=%.2f", leadingSamplePosition / reader->sampleRate, leadingDuration));
 
-    m_metadata.readFromTrack(track);
-
     setReplayGain(m_metadata.getTrackGain());
-
     log(String::formatted("Gain correction: %.2fdB", Decibels::gainToDecibels(gainCorrection)));
 
     this->track = track;
@@ -644,7 +643,7 @@ void Deck::fireFinishedCallback()
         return;
     }
 
-    log("Finished");    
+    log("Finished");
 
     listeners.call([this](Callback& cb) {
         cb.deckFinished(*this, this->track);

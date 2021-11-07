@@ -1,7 +1,7 @@
 /// <reference types="node" />
 
 import type { EventEmitter } from 'events';
-import { Readable } from 'stream';
+import type { Readable } from 'stream';
 
 export interface TrackInfo {
   /**
@@ -88,7 +88,8 @@ type DeckEvent = 'loaded' | 'unloaded' | 'started' | 'finished';
 
 export declare enum DeckIndex {
   A = 0,
-  B = 1
+  B = 1,
+  C = 2
 }
 
 export type Listener<T = void> = () => T;

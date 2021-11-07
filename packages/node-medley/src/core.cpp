@@ -2,8 +2,6 @@
 
 void Medley::Initialize(Object& exports) {
     auto proto = {
-        // StaticMethod<&Medley::shutdown>("shutdown"),
-        //
         InstanceMethod<&Medley::getAvailableDevices>("getAvailableDevices"),
         InstanceMethod<&Medley::setAudioDevice>("setAudioDevice"),
         InstanceMethod<&Medley::play>("play"),
@@ -32,14 +30,6 @@ void Medley::Initialize(Object& exports) {
     auto env = exports.Env();
     exports.Set("Medley", DefineClass(env, "Medley", proto));
 }
-
-// void Medley::shutdown(const CallbackInfo& info) {
-
-// }
-
-// void Medley::workerFinalizer(const CallbackInfo&) {
-
-// }
 
 Napi::Value Medley::getAvailableDevices(const CallbackInfo& info) {
     auto env = info.Env();
@@ -199,7 +189,7 @@ void Medley::preQueueNext(PreCueNextDone done) {
             });
 
             emitFn.Call(self.Value(), { Napi::String::New(env, "preQueueNext"), callback });
-        } catch (const Error&) {
+        } catch (...) {
             done(Napi::Boolean::New(env, false));
         }
     });

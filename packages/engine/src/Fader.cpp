@@ -53,6 +53,9 @@ float Fader::update(double time)
 
         if (time >= timeEnd) {
             stop();
+            if (resetTo != -1.0f) {
+                gain = resetTo;
+            }
         }
     }
 

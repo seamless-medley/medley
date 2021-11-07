@@ -1,5 +1,5 @@
 import { Medley, Queue } from "@medley/medley";
-import { every, first, shuffle } from "lodash";
+import { every, shuffle } from "lodash";
 import { join as joinPath } from "path";
 import { BoomBoxTrack, Track } from ".";
 import { BoomBox, BoomBoxMetadata } from "./boombox";
@@ -30,7 +30,7 @@ const sequences: [string, number][] = [
 
 const queue = new Queue<BoomBoxTrack>(['D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3']);
 const medley = new Medley(queue);
-const crates = sequences.map(([id, max]) => new Crate(`${id}-${max}`, collections.get(id)!, max));
+const crates = sequences.map(([id, max], index) => new Crate(`${index}:${id}-${max}`, collections.get(id)!, max));
 const boombox = new BoomBox({
   medley,
   queue,
@@ -42,8 +42,8 @@ const drops = WatchTrackCollection.initWithWatch<Track<BoomBoxMetadata>>('drops'
     return shuffle(await Promise.all(tracks.map(async track => {
       const musicMetadata = await getMusicMetadata(track.path);
 
-      console.log("Drop's meta:", musicMetadata?.common?.title);
       const cuePoints = (musicMetadata) ? getCuePoints(musicMetadata) : undefined;
+      console.log("Drop's meta:", cuePoints);
 
       const metadata: BoomBoxMetadata = {
         tags: musicMetadata?.common,

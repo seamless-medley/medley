@@ -1,4 +1,4 @@
-import _, { get, intersection } from "lodash";
+import { chain, get, intersection } from "lodash";
 import { IAudioMetadata, ITag, parseFile as parseMetadataFromFile } from "music-metadata";
 import { TagType } from "music-metadata/lib/common/GenericTagTypes";
 import { Promise as NodeID3 } from 'node-id3';
@@ -61,13 +61,13 @@ const cueTagNames = ['cue-in', 'cue-out', 'cue_in', 'cue_out'];
 
 function _tagCollection(tag: ITag[], type: TagType) {
   if (type.startsWith('ID3v2')) {
-    return _(tag)
+    return chain(tag)
       .filter(({ id }) => id.startsWith('TXXX'))
       .mapKeys(({ id }) => id.substr(5).toLowerCase())
   }
 
   if (type === 'vorbis') {
-    return _(tag)
+    return chain(tag)
       .mapKeys(({ id }) => id.toLowerCase())
   }
 }
