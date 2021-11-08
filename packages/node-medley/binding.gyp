@@ -119,10 +119,12 @@
                     'OS=="mac"',
                     {
                         'include_dirs': [
-                            "<!@(pkg-config taglib --cflags-only-I | sed s/-I//g)"
+                            "<!@(pkg-config taglib --cflags-only-I | sed s/-I//g)",
+                            "<!@(pkg-config samplerate --cflags-only-I | sed s/-I//g)"
                         ],
                         'libraries': [
-                            "<!@(pkg-config taglib --libs)"
+                            "<!@(pkg-config taglib --libs)",
+                            "<!@(pkg-config samplerate --libs)",
                         ],
                         'sources': [
                             "../engine/juce/include_juce_audio_basics.mm",
