@@ -1,6 +1,6 @@
-import _, { flatten, get, intersection, some, toLower, trim, uniq } from "lodash";
+import _, { flatten, some, toLower, trim, uniq } from "lodash";
 import { EventEmitter } from "stream";
-import { IAudioMetadata, ICommonTagsResult, parseFile as parseMetadataFromFile } from "music-metadata";
+import type { ICommonTagsResult } from "music-metadata";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
 import { DeckListener, Medley, PreQueueListener, Queue } from "@medley/medley";
@@ -8,7 +8,7 @@ import { Crate, CrateSequencer } from "../crate";
 import { Track } from "../track";
 import { TrackCollection } from "../collections";
 import { getMusicMetadata } from "../utils";
-import { SweeperInserter, SweeperInsertionRule } from "./sweeper";
+import { SweeperInserter } from "./sweeper";
 
 type Rotation = 'normal' | 'request' | 'insertion';
 

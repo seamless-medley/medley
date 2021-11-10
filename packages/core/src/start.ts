@@ -1,13 +1,10 @@
 import { Medley, Queue } from "@medley/medley";
-import { every, shuffle } from "lodash";
+import { every } from "lodash";
 import { join as joinPath } from "path";
-import { BoomBoxEvents, BoomBoxTrack, Track } from ".";
-import { BoomBox, BoomBoxMetadata } from "./playout";
+import { BoomBoxTrack, Track } from ".";
 import { TrackCollection, WatchTrackCollection } from "./collections";
 import { Crate } from "./crate";
-import { lyricsToText, parse as parseLyrics } from "./lyrics";
-import { getCuePoints, getMusicMetadata } from "./utils";
-import { SweeperInserter } from "./playout/sweeper";
+import { BoomBox, BoomBoxMetadata } from "./playout";
 
 process.on('uncaughtException', (e) => {
   console.log('Uncaught exception', e);
