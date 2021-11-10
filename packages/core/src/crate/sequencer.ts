@@ -52,8 +52,19 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
           if (track) {
             const valid = validator ? await validator(track.path) : true;
 
-            if (!!valid) {
-              if (++this._playCounter >= crate.max) {
+            if (valid) {
+              this._playCounter++;
+
+              if (this.latchFor > 0) {
+                this.latchCount++;
+
+                if (this.latchCount >= this.latchFor) {
+                  this.next();
+
+                  this.latchCount = 0;
+                  this.latchFor = 0;
+                }
+              } else if (this._playCounter >= crate.max) {
                 this.next();
               }
 
@@ -90,5 +101,19 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     this._crateIndex = (this._crateIndex + 1) % this.crates.length;
   }
 
-  // TODO: Method for setting crateIndex, by the Crate object or by number
+  setCurrentCrate(crate: Crate<T> | number) {
+    const index = (typeof crate !== 'number') ? this.crates.indexOf(crate) : crate;
+
+    if (index >= 0 && index < this.crates.length) {
+      this._crateIndex = index;
+    }
+  }
+
+  private latchFor: number = 0;
+  private latchCount: number = 0;
+
+  latch(n: number) {
+    this.latchFor = isNaN(n) ? 0 : Math.max(0, n);
+    this.latchCount = 0;
+  }
 }

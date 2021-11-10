@@ -1,19 +1,20 @@
 import { Medley, Queue } from "@medley/medley";
 import { every, shuffle } from "lodash";
 import { join as joinPath } from "path";
-import { BoomBoxTrack, Track } from ".";
-import { BoomBox, BoomBoxMetadata } from "./boombox";
+import { BoomBoxEvents, BoomBoxTrack, Track } from ".";
+import { BoomBox, BoomBoxMetadata } from "./playout";
 import { TrackCollection, WatchTrackCollection } from "./collections";
 import { Crate } from "./crate";
 import { lyricsToText, parse as parseLyrics } from "./lyrics";
 import { getCuePoints, getMusicMetadata } from "./utils";
+import { SweeperInserter } from "./playout/sweeper";
 
 process.on('uncaughtException', (e) => {
   console.log('Uncaught exception', e);
 });
 
 const collections: Map<string, TrackCollection<BoomBoxTrack>> = new Map(
-  ['bright', 'chill', 'lovesong', 'lonely', 'brokenhearted', 'hurt', 'upbeat']
+  ['bright', 'chill', 'lovesong', 'lonely', 'brokenhearted', 'hurt', 'upbeat', 'new-released']
     .map(sub => [sub, WatchTrackCollection.initWithWatch<BoomBoxTrack>(sub, joinPath(`D:\\vittee\\Google Drive\\musics\\`, sub))])
 );
 
@@ -29,7 +30,8 @@ const sequences: [string, number][] = [
   ['lovesong', 1],
   ['chill', 1],
   ['bright', 1],
-  ['upbeat', 1]
+  ['upbeat', 1],
+  ['new-released', 2]
 ];
 
 const queue = new Queue<BoomBoxTrack>(['D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3']);
@@ -44,36 +46,23 @@ const boombox = new BoomBox({
 // const nullDevice = medley.getAvailableDevices().filter(d => d.type == 'Null')[0];
 // medley.setAudioDevice({ type: nullDevice.type, device: nullDevice.defaultDevice });
 
-const drops = WatchTrackCollection.initWithWatch<Track<BoomBoxMetadata>>('drops', 'D:\\vittee\\Desktop\\test-transition\\drops', {
-  newTracksMapper: async tracks => {
-    return shuffle(await Promise.all(tracks.map(async track => {
-      const musicMetadata = await getMusicMetadata(track.path);
+const sweepers = WatchTrackCollection.initWithWatch<Track<BoomBoxMetadata>>('drops', 'D:\\vittee\\Desktop\\test-transition\\drops');
 
-      const cuePoints = (musicMetadata) ? getCuePoints(musicMetadata) : undefined;
-      console.log("Drop's meta:", cuePoints);
-
-      const metadata: BoomBoxMetadata = {
-        tags: musicMetadata?.common,
-        rotation: 'insertion'
-      }
-
-      return {
-        ...track,
-        metadata,
-        cueInPosition: cuePoints?.in,
-        cueOutPosition: cuePoints?.out,
-      }
-    })));
+boombox.sweeperInsertionRules = [
+  {
+    to: ['upbeat'],
+    collection: sweepers
+  },
+  {
+    to: ['new-released'],
+    collection: sweepers
+  },
+  {
+    from: ['lonely', 'brokenhearted', 'hurt'],
+    to: ['bright', 'chill'],
+    collection: sweepers
   }
-});
-
-boombox.on('currentCrateChange', (oldCrate, newCrate) => {
-  const insertion = drops.shift();
-  if (insertion) {
-    queue.add(insertion);
-    drops.push(insertion);
-  }
-});
+];
 
 boombox.on('trackQueued', track => {
   console.log('Add to Queue:', track.path);
@@ -82,6 +71,10 @@ boombox.on('trackQueued', track => {
 let skipTimer: NodeJS.Timeout;
 
 boombox.on('trackStarted', track => {
+  if (track.metadata?.rotation !== 'insertion') {
+
+  }
+
   console.log('Playing:', `${track.metadata?.tags?.artist} - ${track.metadata?.tags?.title}`);
   // const lyrics = first(track.metadata?.tags?.lyrics);
   // if (lyrics) {
@@ -95,10 +88,29 @@ boombox.on('trackStarted', track => {
   if (track.metadata?.rotation !== 'insertion') {
     skipTimer = setTimeout(() => {
       console.log('Seeking');
-      medley.seekFractional(0.8);
-    }, 8000);
+      medley.seekFractional(0.75);
+    }, 10000);
   }
 });
+
+boombox.on('requestTrackFetched', track => {
+  const currentRotation = boombox.track?.metadata?.rotation || 'normal';
+  if (currentRotation !== 'request') {
+    const sweeper = sweepers.shift();
+    if (sweeper) {
+      queue.add(sweeper.path);
+    }
+  }
+})
+
+// Test request
+setTimeout(() => {
+  const track = collections.get('new-released')!.sample();
+  if (track) {
+    boombox.request(track.path);
+  }
+
+}, 5000);
 
 setTimeout(function playWhenReady() {
   if (every([...collections.values()], col => col.ready)) {

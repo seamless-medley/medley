@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import _, { castArray, reject, shuffle, uniqBy } from "lodash";
+import _, { castArray, reject, sample, shuffle, uniqBy } from "lodash";
 import { Track } from "../track";
 
 export type TrackCollectionOptions<T extends Track<any>> = {
@@ -89,5 +89,9 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
 
   find(path: string) {
     return _.find(this.tracks, track => track.path === path);
+  }
+
+  sample(): T | undefined {
+    return sample(this.tracks);
   }
 }
