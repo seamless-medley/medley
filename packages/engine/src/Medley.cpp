@@ -137,7 +137,7 @@ void Medley::updateTransition(Deck* deck) {
 
                 if (position < nextDeckStart) {
                     nextDeck->internalPause();
-                    nextDeck->setVolume(1.0f);
+                    nextDeck->setVolume(decksTransition[nextDeck->index].fader.getFrom());
                     *pState = DeckTransitionState::NextIsReady;
                 }
             }
@@ -358,6 +358,8 @@ void Medley::deckStarted(Deck& sender, ITrack::Ptr& track) {
 }
 
 void Medley::deckFinished(Deck& sender, ITrack::Ptr& track) {
+    decksTransition[sender.index].state = DeckTransitionState::Idle;
+
     ScopedLock sl(callbackLock);
     listeners.call([&](Callback& cb) {
         cb.deckFinished(sender, track);
@@ -366,6 +368,8 @@ void Medley::deckFinished(Deck& sender, ITrack::Ptr& track) {
 
 void Medley::deckLoaded(Deck& sender, ITrack::Ptr& track)
 {
+    decksTransition[sender.index].state = DeckTransitionState::Idle;
+
     ScopedLock sl(callbackLock);
     listeners.call([&](Callback& cb) {
         cb.deckLoaded(sender, track);
@@ -532,6 +536,7 @@ void Medley::doTransition(Deck* deck, double position) {
                 nextDeck->log("Transiting to this deck");
 
                 pTransition->state = DeckTransitionState::TransitToNext;
+
                 nextDeck->setVolume(1.0f);
                 nextDeck->setPosition(nextDeck->getFirstAudiblePosition());
 
@@ -551,9 +556,14 @@ void Medley::doTransition(Deck* deck, double position) {
 
                         decksTransition[nextDeck->index].fader.start(position, transitionEndPos, 0.25f, 1.0f, fadingFactor);
                     }
+                    else if (leadingDuration >= minimumLeadingToFade) {
+                        auto fadeInStart = jmax(0.0, transitionStartPos - leadingDuration);
+                        decksTransition[nextDeck->index].fader.start(fadeInStart, fadeInStart + leadingDuration, 0.25f, 1.0f, fadingFactor);
+                    }
                 }
 
                 pTransition->fader.start(transitionStartPos, transitionEndPos, 1.0f, 0.0f, fadingFactor);
+                nextDeck->setVolume(decksTransition[nextDeck->index].fader.getFrom());
                 nextDeck->start();
             }
 
@@ -567,23 +577,23 @@ void Medley::doTransition(Deck* deck, double position) {
     }
 
     // Fade out current
-    auto isForceFadingOutMainDeck = forceFadingOut > 0 && deck->isMain();
+    if (deck->isMain()) {
+        auto shouldFade = pTransition->fader.isFadeOut() && (forceFadingOut > 0 || pTransition->state >= DeckTransitionState::NextIsReady);
+        if (shouldFade) {
+            auto currentVolume = deck->getVolume();
 
-    if (isForceFadingOutMainDeck || (pTransition->state >= DeckTransitionState::NextIsReady)) {
-        auto currentVolume = deck->getVolume();
-        auto newVolume = pTransition->fader.update(position);
-        if (newVolume != currentVolume) {
-            //deck->log(String::formatted("Fading out: %.2f", newVolume));
-            deck->setVolume(newVolume);
+            auto newVolume = position >= pTransition->fader.getTimeStart() ? pTransition->fader.update(position) : 1.0f;
+            if (newVolume != currentVolume) {
+                deck->log(String::formatted("Fading out: %.2f", newVolume));
+                deck->setVolume(newVolume);
+            }
         }
     }
 
-    if (position >= transitionStartPos) {
-        if (isForceFadingOutMainDeck || (pTransition->state != DeckTransitionState::Idle)) {
-            if (position > transitionEndPos) {
-                forceFadingOut = 0;
-                deck->stop();
-            }
+    if (position >= transitionEndPos) {
+        if (pTransition->state != DeckTransitionState::Idle) {
+            forceFadingOut = 0;
+            deck->stop();
         }
     }
 }

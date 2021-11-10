@@ -15,6 +15,11 @@ public:
     inline double getTimeStart() const { return timeStart; }
     inline double getTimeEnd() const { return timeEnd; }
 
+    inline float getFrom() const { return from; }
+    inline float getTo() const { return to; }
+
+    inline bool isFadeOut() const { return fadeOut; }
+
     void start(double timeStart, double timeEnd, float from, float to, float factor = 2.0f, float resetTo = -1.0f, OnDone callback = []() {});
     float start(double time, double timeStart, double timeEnd, float from, float to, float factor = 2.0f, OnDone callback = []() {});
     float update(double time);

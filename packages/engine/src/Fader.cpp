@@ -15,6 +15,7 @@ void Fader::start(double timeStart, double timeEnd, float from, float to, float 
     this->callback = callback;
     this->resetTo = resetTo;
     fadeOut = to < from;
+    gain = from;
 }
 
 float Fader::start(double time, double timeStart, double timeEnd, float from, float to, float factor, OnDone callback)
@@ -53,9 +54,6 @@ float Fader::update(double time)
 
         if (time >= timeEnd) {
             stop();
-            if (resetTo != -1.0f) {
-                gain = resetTo;
-            }
         }
     }
 
@@ -64,13 +62,13 @@ float Fader::update(double time)
 
 void Fader::stop()
 {
-    reset(to);
+    reset(resetTo);
     callback();
 }
 
 void Fader::reset(float toGain)
 {
-    timeStart = timeEnd = -1.0;
+    //timeStart = timeEnd = -1.0;
 
     auto g = toGain;
     if (g == -1.0f) {
