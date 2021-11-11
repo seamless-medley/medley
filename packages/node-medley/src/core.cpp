@@ -369,9 +369,6 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
 
     auto options = info[0].ToObject();
     auto format = options.Get("format").ToString();
-    auto bufferSize = jmax(options.Get("bufferSize").ToNumber().Uint32Value(), 512U * 64U);
-    auto requestedSampleRate = options.Has("sampleRate") ? options.Get("sampleRate") : env.Undefined();
-
     auto formatStr = juce::String(format.ToString().Utf8Value());
     auto validFormats = juce::StringArray("Int16LE", "Int16BE", "FloatLE", "FloatBE");
     auto formatIndex = validFormats.indexOf(formatStr);
@@ -419,11 +416,36 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
     auto device = engine->getCurrentAudioDevice();
     auto numChannels = device->getOutputChannelNames().size();
     auto sampleRate = device->getCurrentSampleRate();
+
+    auto requestedSampleRate = options.Has("sampleRate") ? options.Get("sampleRate") : env.Undefined();
     auto outSampleRate = (!requestedSampleRate.IsNull() && !requestedSampleRate.IsUndefined()) ? requestedSampleRate.ToNumber().DoubleValue() : sampleRate;
+
+    uint32_t bufferSize = (uint32_t)(outSampleRate * 0.25f);
+    {
+        auto jsValue = options.Get("bufferSize");
+        if (jsValue.IsNumber()) {
+            auto value = jsValue.ToNumber().Uint32Value();
+            if (value > 0) {
+                bufferSize = value;
+            }
+        }
+    }
+
+    uint32_t buffering = (uint32_t)(outSampleRate * 0.01f);
+    {
+        auto jsValue = options.Get("buffering");
+        if (jsValue.IsNumber()) {
+            auto value = jsValue.ToNumber().Uint32Value();
+            if (value >= 0) {
+                buffering = value;
+            }
+        }
+    }
 
     auto request = std::make_shared<AudioRequest>(
         audioRequestId,
         bufferSize,
+        buffering,
         numChannels,
         sampleRate,
         outSampleRate,
@@ -469,6 +491,11 @@ namespace {
         {
             auto outputBytesPerSample = request->outputBytesPerSample;
             auto numChannels = request->numChannels;
+
+            while (request->buffer.getNumReady() < request->buffering) {
+                std::this_thread::sleep_for(std::chrono::duration<double>(0.01));
+            }
+
             auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedSize / outputBytesPerSample / numChannels);
 
             juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);

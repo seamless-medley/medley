@@ -96,7 +96,7 @@ public:
     Napi::Value racConsume(const CallbackInfo& info);
 
     struct AudioRequest {
-        AudioRequest(uint32_t id, uint32_t bufferSize, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter)
+        AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter)
             :
             id(id),
             numChannels(numChannels),
@@ -104,7 +104,8 @@ public:
             requestedSampleRate(requestedSampleRate),
             outputBytesPerSample(outputBytesPerSample),
             converter(converter),
-            buffer(numChannels, bufferSize)
+            buffer(numChannels, bufferSize),
+            buffering(buffering)
         {
             if (inSampleRate != requestedSampleRate) {
                 for (auto i = 0; i < numChannels; i++) {
@@ -128,6 +129,7 @@ public:
         }
 
         uint32_t id;
+        uint32_t buffering;
         uint8_t numChannels;
         int inSampleRate;
         int requestedSampleRate;

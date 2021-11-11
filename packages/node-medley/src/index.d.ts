@@ -214,9 +214,23 @@ export type AudioFormat = 'Int16LE' | 'Int16BE' | 'FloatLE' | 'FloatBE';
 export type RequestAudioStreamOptions = {
   sampleRate?: number;
   /**
-   * Buffer size, in frames
+   * Maximun frames the buffer can hold, increase this value helps reduce stuttering in some situations
+   * Default value is 32768
+   *
+   * @default 250ms (sampleRate * 0.25)
    */
   bufferSize?: number;
+
+  /**
+   * Number of frames to buffer before returning the buffered frames back to NodeJS stream
+   * Reduce this value will cause the stream to pump faster
+   * Setting this value to 0 may cause the underlying stream to return empty buffers
+   * and may cause NodeJS to utilize more CPU cycles while waiting for data
+   *
+   * @default 10ms (sampleRate * 0.01)
+   */
+  buffering?: number;
+
   format: AudioFormat;
 }
 
