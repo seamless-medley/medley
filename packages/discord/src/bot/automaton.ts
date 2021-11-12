@@ -2,6 +2,7 @@ import { REST as RestClient } from "@discordjs/rest";
 import { AutocompleteInteraction, Client, CommandInteraction, Intents, Interaction } from "discord.js";
 import { Routes } from "discord-api-types/v9";
 import payload from "./command/payload";
+import { MedleyMix } from "./mix";
 
 export type MedleyAutomatonOptions = {
   clientId: string;
@@ -12,7 +13,7 @@ export type MedleyAutomatonOptions = {
 export class MedleyAutomaton {
   private client: Client;
 
-  constructor(private options: MedleyAutomatonOptions) {
+  constructor(private dj: MedleyMix, private options: MedleyAutomatonOptions) {
     this.client = new Client({
       intents: [
         Intents.FLAGS.GUILDS,
@@ -128,24 +129,35 @@ export class MedleyAutomaton {
   }
 
   private handleJoin = async (interaction: CommandInteraction) => {
-    console.log('handleJoin');
     const channel = interaction.options.getChannel('channel');
+    if (channel) {
+      const c = await this.client.channels.fetch(channel.id);
+
+      if (c?.isVoice()) {
+        this.dj.join(c);
+      }
+    }
+
     const reply = `Joined ${channel}`;
     console.log(reply);
     interaction.reply(reply);
   }
 
-  async registerCommands(guildId: string) {
+  static async registerCommands(botToken: string, clientId: string, guildId: string) {
     const client = new RestClient({ version: '9' })
-      .setToken(this.options.botToken);
+      .setToken(botToken);
 
     await client.put(
-      Routes.applicationGuildCommands(this.options.clientId, guildId),
+      Routes.applicationGuildCommands(clientId, guildId),
       {
         body: [payload]
       }
     );
 
     console.log('Registered');
+  }
+
+  async registerCommands(guildId: string) {
+    return MedleyAutomaton.registerCommands(this.options.botToken, this.options.clientId, guildId);
   }
 }

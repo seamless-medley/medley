@@ -14,7 +14,7 @@ import {
   VoiceConnectionStatus
 } from "@discordjs/voice";
 
-import { VoiceChannel } from "discord.js";
+import { BaseGuildVoiceChannel, VoiceChannel } from "discord.js";
 
 export type MedleyMixOptions = {
   collections: Record<string, string>;
@@ -79,7 +79,7 @@ export class MedleyMix {
     this.audioPlayer.play(this.audioResource);
   }
 
-  async join(channel: VoiceChannel) {
+  async join(channel: BaseGuildVoiceChannel) {
     const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
 
     this.voiceConnection = joinVoiceChannel({
