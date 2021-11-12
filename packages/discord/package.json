@@ -1,0 +1,36 @@
+{
+  "name": "@medley/discord",
+  "version": "0.1.0",
+  "description": "Discord Music Bot built on top of Medley",
+  "author": {
+    "name": "Wittawas Nakkasem",
+    "email": "vittee@hotmail.com"
+  },
+  "license": "AGPL-3.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "npm-run-all dev:*",
+    "dev:pre": "copyfiles --up 4 ../node-medley/build/Release/medley.node build/Release/",
+    "dev:bot": "tsnd src/bot/main.ts",
+    "sample": "ts-node src/bot/sample_main.ts"
+  },
+  "dependencies": {
+    "@discordjs/builders": "^0.8.2",
+    "@discordjs/opus": "^0.5.3",
+    "@discordjs/rest": "^0.1.0-canary.0",
+    "@discordjs/voice": "^0.7.2",
+    "@medley/core": "file:../core",
+    "discord-api-types": "^0.24.0",
+    "discord.js": "^13.3.1",
+    "libsodium-wrappers": "^0.7.9",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.176",
+    "@types/node": "^16.11.7",
+    "copyfiles": "^2.4.1",
+    "npm-run-all": "^4.1.5",
+    "ts-node-dev": "^1.1.8",
+    "typescript": "^4.4.4"
+  }
+}
