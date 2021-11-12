@@ -89,6 +89,8 @@ public:
 
     Napi::Value setAudioDevice(const CallbackInfo& info);
 
+    Napi::Value getAudioDevice(const CallbackInfo& info);
+
     Napi::Value getMetadata(const CallbackInfo& info);
 
     Napi::Value requestAudioCallback(const CallbackInfo& info);

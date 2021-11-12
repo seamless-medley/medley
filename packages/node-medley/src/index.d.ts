@@ -200,7 +200,9 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
 
   getAvailableDevices(): AudioDeviceTypeInfo[];
 
-  setAudioDevice(descriptor: { type?: string, device: string }): boolean;
+  setAudioDevice(descriptor: { type?: string, device?: string }): boolean;
+
+  getAudioDevice(): { type: string, device: string };
 
   isTrackLoadable(track: TrackDescriptor): boolean;
 
@@ -223,9 +225,11 @@ export type RequestAudioStreamOptions = {
 
   /**
    * Number of frames to buffer before returning the buffered frames back to NodeJS stream
-   * Reduce this value will cause the stream to pump faster
+   *
+   * Reducing this value will cause the stream to pump faster
+   *
    * Setting this value to 0 may cause the underlying stream to return empty buffers
-   * and may cause NodeJS to utilize more CPU cycles while waiting for data
+   * which cause NodeJS to utilize more CPU cycles while waiting for data
    *
    * @default 10ms (sampleRate * 0.01)
    */

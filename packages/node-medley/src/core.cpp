@@ -4,6 +4,7 @@ void Medley::Initialize(Object& exports) {
     auto proto = {
         InstanceMethod<&Medley::getAvailableDevices>("getAvailableDevices"),
         InstanceMethod<&Medley::setAudioDevice>("setAudioDevice"),
+        InstanceMethod<&Medley::getAudioDevice>("getAudioDevice"),
         InstanceMethod<&Medley::play>("play"),
         InstanceMethod<&Medley::stop>("stop"),
         InstanceMethod<&Medley::togglePause>("togglePause"),
@@ -29,6 +30,57 @@ void Medley::Initialize(Object& exports) {
 
     auto env = exports.Env();
     exports.Set("Medley", DefineClass(env, "Medley", proto));
+}
+
+Medley::Medley(const CallbackInfo& info)
+    : ObjectWrap<Medley>(info)
+{
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return;
+    }
+
+    auto arg1 = info[0];
+    if (!arg1.IsObject()) {
+        TypeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
+        return;
+    }
+
+    auto obj = arg1.ToObject();
+
+    if (!obj.InstanceOf(Queue::ctor.Value())) {
+        TypeError::New(env, "Is not a queue").ThrowAsJavaScriptException();
+        return;
+    }
+
+    self = Persistent(info.This());
+    queueJS = Persistent(obj);
+
+    try {
+        queue = Queue::Unwrap(obj);
+        engine = new Engine(*queue);
+        engine->addListener(this);
+        engine->setAudioCallback(this);
+
+        threadSafeEmitter = ThreadSafeFunction::New(
+            env, info.This().ToObject().Get("emit").As<Function>(),
+            "Medley Emitter",
+            0, 1
+        );
+    }
+    catch (std::exception& e) {
+        throw Napi::Error::New(info.Env(), e.what());
+    }
+    catch (...) {
+        throw Napi::Error::New(info.Env(), "Unknown Error while initializing engine.");
+    }
+}
+
+Medley::~Medley() {
+    delete engine;
+    delete queue;
 }
 
 Napi::Value Medley::getAvailableDevices(const CallbackInfo& info) {
@@ -92,55 +144,15 @@ Napi::Value Medley::setAudioDevice(const CallbackInfo& info) {
     return Boolean::From(env, engine->getCurrentAudioDevice() != nullptr);
 }
 
-Medley::Medley(const CallbackInfo& info)
-    : ObjectWrap<Medley>(info)
-{
+Napi::Value Medley::getAudioDevice(const CallbackInfo& info) {
     auto env = info.Env();
 
-    if (info.Length() < 1) {
-        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
-        return;
-    }
+    auto device = engine->getCurrentAudioDevice();
+    auto desc = Object::New(env);
+    desc.Set("type", device->getTypeName().toStdString());
+    desc.Set("device", device->getName().toStdString());
 
-    auto arg1 = info[0];
-    if (!arg1.IsObject()) {
-        TypeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
-        return;
-    }
-
-    auto obj = arg1.ToObject();
-
-    if (!obj.InstanceOf(Queue::ctor.Value())) {
-        TypeError::New(env, "Is not a queue").ThrowAsJavaScriptException();
-        return;
-    }
-
-    self = Persistent(info.This());
-    queueJS = Persistent(obj);
-
-    try {
-        queue = Queue::Unwrap(obj);
-        engine = new Engine(*queue);
-        engine->addListener(this);
-        engine->setAudioCallback(this);
-
-        threadSafeEmitter = ThreadSafeFunction::New(
-            env, info.This().ToObject().Get("emit").As<Function>(),
-            "Medley Emitter",
-            0, 1
-        );
-    }
-    catch (std::exception& e) {
-        throw Napi::Error::New(info.Env(), e.what());
-    }
-    catch (...) {
-        throw Napi::Error::New(info.Env(), "Unknown Error while initializing engine.");
-    }
-}
-
-Medley::~Medley() {
-    delete engine;
-    delete queue;
+    return desc;
 }
 
 void Medley::deckTrackScanning(medley::Deck& sender) {
@@ -472,7 +484,6 @@ void Medley::audioData(const AudioSourceChannelInfo& info) {
 }
 
 namespace {
-    // TODO: Extract this
     class AudioConsumer : public AsyncWorker {
     public:
         AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)
