@@ -46,17 +46,20 @@ const boombox = new BoomBox({
 const sweepers = WatchTrackCollection.initWithWatch<Track<BoomBoxMetadata>>('drops', 'D:\\vittee\\Desktop\\test-transition\\drops');
 
 boombox.sweeperInsertionRules = [
-  {
+  { // Upbeat
     to: ['upbeat'],
     collection: sweepers
   },
-  {
-    to: ['new-released'],
+  { // Easy mood
+    to: ['lovesong', 'bright', 'chill'],
     collection: sweepers
   },
-  {
-    from: ['lonely', 'brokenhearted', 'hurt'],
-    to: ['bright', 'chill'],
+  { // Sad mood
+    to: ['lonely', 'brokenhearted', 'hurt'],
+    collection: sweepers
+  },
+  { // Fresh
+    to: ['new-released'],
     collection: sweepers
   }
 ];
@@ -69,20 +72,16 @@ let skipTimer: NodeJS.Timeout;
 
 boombox.on('trackStarted', track => {
   if (track.metadata?.rotation !== 'insertion') {
+    console.log('Playing:', `${track.metadata?.tags?.artist} - ${track.metadata?.tags?.title}`);
+    // const lyrics = first(track.metadata?.tags?.lyrics);
+    // if (lyrics) {
+    //   console.log(lyricsToText(parseLyrics(lyrics), false));
+    // }
 
-  }
+    if (skipTimer) {
+      clearTimeout(skipTimer);
+    }
 
-  console.log('Playing:', `${track.metadata?.tags?.artist} - ${track.metadata?.tags?.title}`);
-  // const lyrics = first(track.metadata?.tags?.lyrics);
-  // if (lyrics) {
-  //   console.log(lyricsToText(parseLyrics(lyrics), false));
-  // }
-
-  if (skipTimer) {
-    clearTimeout(skipTimer);
-  }
-
-  if (track.metadata?.rotation !== 'insertion') {
     skipTimer = setTimeout(() => {
       console.log('Seeking');
       medley.seekFractional(0.75);
@@ -101,13 +100,15 @@ boombox.on('requestTrackFetched', track => {
 })
 
 // Test request
-setTimeout(() => {
-  const track = collections.get('new-released')!.sample();
-  if (track) {
-    boombox.request(track.path);
-  }
+// setTimeout(() => {
+//   for (let i = 0; i < 2; i++) {
+//     const track = collections.get('new-released')!.sample();
+//     if (track) {
+//       boombox.request(track.path);
+//     }
+//   }
 
-}, 5000);
+// }, 5000);
 
 setTimeout(function playWhenReady() {
   if (every([...collections.values()], col => col.ready)) {
