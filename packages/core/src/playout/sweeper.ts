@@ -1,4 +1,4 @@
-import { curry, every } from "lodash";
+import { curry, every, without } from "lodash";
 import { TrackCollection } from "../collections";
 import { BoomBox, BoomBoxEvents, BoomBoxTrack } from "./boombox";
 
@@ -9,7 +9,20 @@ export type SweeperInsertionRule = {
 };
 
 const isIn = (value: string, list: string[] | undefined) => !list || list.includes(value);
-const validateRule = (predicates: [string, string[] | undefined][]) => every(predicates, ([id, list]) => isIn(id, list));
+
+// const validateRule = (predicates: [string, string[] | undefined][]) => every(predicates, ([id, list]) => isIn(id, list));
+const validateRule = (predicates: [string, string[] | undefined][]) => {
+  const [from, to] = predicates;
+  const [fromId, fromList] = from;
+  const [toId, toList] = to;
+
+  if (isIn(fromId, toList)) {
+    return false;
+  }
+
+  return isIn(fromId, fromList) && isIn(toId, without(toList));
+};
+
 const matchRule = curry((from: string, to: string, rule: SweeperInsertionRule) => validateRule([
     [from, rule.from],
     [to, rule.to]
