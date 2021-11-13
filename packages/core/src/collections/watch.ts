@@ -1,5 +1,5 @@
 import chokidar from "chokidar";
-import { debounce, reject, shuffle } from "lodash";
+import _, { debounce, reject, shuffle } from "lodash";
 import { Track } from "../track";
 import { TrackCollection, TrackCollectionOptions } from "./base";
 
@@ -21,6 +21,8 @@ export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<
   protected afterConstruct() {
 
   }
+
+  private watchingPaths: string[] = [];
 
   private newPaths: string[] = [];
   private removedPaths: string[] = [];
@@ -59,14 +61,16 @@ export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<
 
   watch(paths: string): this {
     this.watcher.add(paths);
+    this.watchingPaths.push(paths);
     return this;
   }
 
   unwatch(paths: string) {
     this.watcher.unwatch(paths);
+    this.watchingPaths = _.without(this.watchingPaths, paths);
   }
 
   get watched() {
-    return Object.keys(this.watcher.getWatched());
+    return this.watchingPaths;
   }
 }
