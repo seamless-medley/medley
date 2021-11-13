@@ -454,6 +454,9 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
         }
     }
 
+    auto gainJS = options.Has("gain") ? options.Get("gain") : env.Undefined();
+    auto gain = (!gainJS.IsNull() && !gainJS.IsUndefined()) ? gainJS.ToNumber().FloatValue() : 1.0f;
+
     auto request = std::make_shared<AudioRequest>(
         audioRequestId,
         bufferSize,
@@ -462,7 +465,8 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
         sampleRate,
         outSampleRate,
         bytesPerSample,
-        audioConverters[audioFormat]
+        audioConverters[audioFormat],
+        gain
     );
     audioRequests.emplace(audioRequestId, request);
 
@@ -511,6 +515,11 @@ namespace {
 
             juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
             request->buffer.read(tempBuffer, numSamples);
+
+            if (request->lastGain != request->gain) {
+                tempBuffer.applyGainRamp(0, numSamples, request->lastGain, request->gain);
+                request->lastGain = request->gain;
+            }
 
             juce::AudioBuffer<float>* sourceBuffer = &tempBuffer;
             std::unique_ptr<juce::AudioBuffer<float>> resampleBuffer;

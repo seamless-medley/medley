@@ -98,7 +98,7 @@ public:
     Napi::Value racConsume(const CallbackInfo& info);
 
     struct AudioRequest {
-        AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter)
+        AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter, float gain)
             :
             id(id),
             numChannels(numChannels),
@@ -107,7 +107,8 @@ public:
             outputBytesPerSample(outputBytesPerSample),
             converter(converter),
             buffer(numChannels, bufferSize),
-            buffering(buffering)
+            buffering(buffering),
+            gain(gain)
         {
             if (inSampleRate != requestedSampleRate) {
                 for (auto i = 0; i < numChannels; i++) {
@@ -143,6 +144,9 @@ public:
         std::vector<std::shared_ptr<SecretRabbitCode>> resamplers;
         //
         juce::MemoryBlock scratch;
+        //
+        float lastGain = 1.0f;
+        float gain = 1.0f;
     };
 private:
     void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::ITrack::Ptr& track);

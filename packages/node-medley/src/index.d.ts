@@ -236,6 +236,13 @@ export type RequestAudioStreamOptions = {
   buffering?: number;
 
   format: AudioFormat;
+
+  /**
+   * Output gain, a floating point number range from 0-1
+   *
+   * @default 1.0 (0dBFS)
+   */
+  gain?: number;
 }
 
 export type RequestAudioStreamResult = {
