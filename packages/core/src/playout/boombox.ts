@@ -10,11 +10,15 @@ import { TrackCollection } from "../collections";
 import { getMusicMetadata } from "../utils";
 import { SweeperInserter } from "./sweeper";
 
-type Rotation = 'normal' | 'request' | 'insertion';
+export enum TrackKind {
+  Normal,
+  Request,
+  Insertion
+}
 
 export type BoomBoxMetadata = {
   tags?: ICommonTagsResult;
-  rotation: Rotation;
+  kind: TrackKind;
 };
 
 export type BoomBoxTrack = Track<BoomBoxMetadata>;
@@ -140,10 +144,10 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
       const musicMetadata = await getMusicMetadata(path);
 
       if (!musicMetadata) {
-        return { rotation: 'normal' };
+        return { kind: TrackKind.Normal };
       }
 
-      const boomBoxMetadata: BoomBoxMetadata = { tags: musicMetadata.common, rotation: 'normal' };
+      const boomBoxMetadata: BoomBoxMetadata = { tags: musicMetadata.common, kind: TrackKind.Normal };
       const playedArtists = flatten(this.artistHistory).map(toLower);
       const currentArtists = getArtists(boomBoxMetadata).map(toLower);
       const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));
@@ -164,7 +168,7 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
 
         track.metadata = {
           tags: musicMetadata?.common,
-          rotation: 'request'
+          kind: TrackKind.Request
         };
 
         return track;
@@ -233,7 +237,7 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
   }
 
   private deckStarted: DeckListener<BoomBoxTrack> = (deck, track) => {
-    if (track?.metadata?.rotation === 'insertion') {
+    if (track?.metadata?.kind === TrackKind.Insertion) {
       console.log('Playing insertion, do not track history', track.path);
       return;
     }
