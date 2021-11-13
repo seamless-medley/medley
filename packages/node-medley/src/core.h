@@ -97,6 +97,8 @@ public:
 
     Napi::Value racConsume(const CallbackInfo& info);
 
+    Napi::Value updateAudioStream(const CallbackInfo& info);
+
     struct AudioRequest {
         AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter, float gain)
             :

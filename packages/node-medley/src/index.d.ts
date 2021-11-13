@@ -209,6 +209,8 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   getMetadata(index: DeckIndex): Metadata;
 
   requestAudioStream(options: RequestAudioStreamOptions): RequestAudioStreamResult;
+
+  updateAudioStream(id: RequestAudioStreamResult['id'], options: Pick<RequestAudioStreamOptions, 'bufferring' | 'gain'>): boolean;
 }
 
 export type AudioFormat = 'Int16LE' | 'Int16BE' | 'FloatLE' | 'FloatBE';

@@ -15,6 +15,7 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::getMetadata>("getMetadata"),
         InstanceMethod<&Medley::requestAudioCallback>("*$rac"),
         InstanceMethod<&Medley::racConsume>("*$rac$consume"),
+        InstanceMethod<&Medley::updateAudioStream>("updateAudioStream"),
         //
         InstanceAccessor<&Medley::level>("level"),
         InstanceAccessor<&Medley::reduction>("reduction"),
@@ -582,6 +583,33 @@ Napi::Value Medley::racConsume(const CallbackInfo& info) {
     consumer->Queue();
 
     return deferred.Promise();
+}
+
+Napi::Value Medley::updateAudioStream(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto streamId = static_cast<uint32_t>(info[0].As<Number>().Int32Value());
+    auto options = info[1].ToObject();
+
+    auto it = audioRequests.find(streamId);
+    if (it == audioRequests.end()) {
+        return Boolean::New(env, false);
+    }
+
+    if (options.Has("gain")) {
+        it->second->gain = options.Get("gain").ToNumber().FloatValue();
+    }
+
+    if (options.Has("buffering")) {
+        it->second->buffering = options.Get("buffering").ToNumber().Uint32Value();
+    }
+
+    return Boolean::New(env, true);
 }
 
 
