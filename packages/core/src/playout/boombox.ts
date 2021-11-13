@@ -234,6 +234,7 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
 
   private deckLoaded: DeckListener<BoomBoxTrack> = (deck, track) => {
     console.log(`Deck ${deck} loaded`, track.path);
+    this.emit('trackLoaded', track);
   }
 
   private deckStarted: DeckListener<BoomBoxTrack> = (deck, track) => {
@@ -261,8 +262,6 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
         this.trackHistory.shift();
       }
     }
-
-    if (this.trackHistory.length)
 
     if (noDuplicatedArtist > 0) {
       const { metadata } = track;

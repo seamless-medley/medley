@@ -1,16 +1,15 @@
-import { curry, every, without } from "lodash";
+import { curry, without } from "lodash";
 import { TrackCollection } from "../collections";
 import { BoomBox, BoomBoxEvents, BoomBoxTrack } from "./boombox";
 
 export type SweeperInsertionRule = {
-  from?: string[]
-  to?: string[],
+  from?: string[];
+  to?: string[];
   collection: TrackCollection<BoomBoxTrack>;
 };
 
 const isIn = (value: string, list: string[] | undefined) => !list || list.includes(value);
 
-// const validateRule = (predicates: [string, string[] | undefined][]) => every(predicates, ([id, list]) => isIn(id, list));
 const validateRule = (predicates: [string, string[] | undefined][]) => {
   const [from, to] = predicates;
   const [fromId, fromList] = from;
@@ -40,8 +39,6 @@ export class SweeperInserter {
     const matched = findRule(oldCrate.source.id, newCrate.source.id, this.rules);
 
     if (matched) {
-      console.log('SWEEPER', matched);
-
       const insertion = matched.collection.shift();
       if (insertion) {
         this.boombox.queue.add(insertion);

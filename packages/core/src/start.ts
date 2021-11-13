@@ -4,7 +4,7 @@ import { join as joinPath } from "path";
 import { BoomBoxTrack, Track } from ".";
 import { TrackCollection, WatchTrackCollection } from "./collections";
 import { Crate } from "./crate";
-import { BoomBox, BoomBoxMetadata } from "./playout";
+import { TrackKind, BoomBox, BoomBoxMetadata } from "./playout";
 
 process.on('uncaughtException', (e) => {
   console.log('Uncaught exception', e);
@@ -71,7 +71,7 @@ boombox.on('trackQueued', track => {
 let skipTimer: NodeJS.Timeout;
 
 boombox.on('trackStarted', track => {
-  if (track.metadata?.rotation !== 'insertion') {
+  if (track.metadata?.kind !== TrackKind.Insertion) {
     console.log('Playing:', `${track.metadata?.tags?.artist} - ${track.metadata?.tags?.title}`);
     // const lyrics = first(track.metadata?.tags?.lyrics);
     // if (lyrics) {
@@ -90,8 +90,8 @@ boombox.on('trackStarted', track => {
 });
 
 boombox.on('requestTrackFetched', track => {
-  const currentRotation = boombox.track?.metadata?.rotation || 'normal';
-  if (currentRotation !== 'request') {
+  const currentKind = boombox.track?.metadata?.kind || TrackKind.Normal;
+  if (currentKind !== TrackKind.Request) {
     const sweeper = sweepers.shift();
     if (sweeper) {
       queue.add(sweeper.path);
