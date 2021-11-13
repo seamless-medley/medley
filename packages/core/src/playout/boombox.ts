@@ -298,3 +298,11 @@ function getArtists(metadata: BoomBoxMetadata): string[] {
 
   return uniq(artists).map(trim);
 }
+
+export const mapTracksMetadata = async (tracks: BoomBoxTrack[]) => Promise.all(tracks.map(async track => ({
+  ...track,
+  metadata: {
+    tags: (await getMusicMetadata(track.path))?.common,
+    kind: TrackKind.Normal
+  }
+})));

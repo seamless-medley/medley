@@ -1,19 +1,29 @@
 import { REST as RestClient } from "@discordjs/rest";
-import { AutocompleteInteraction, Client, CommandInteraction, Intents, Interaction } from "discord.js";
+import { BoomBoxTrack } from "@medley/core";
 import { Routes } from "discord-api-types/v9";
-import payload from "./command/payload";
+import { BaseCommandInteraction, BaseGuildVoiceChannel, Client, CommandInteraction, Guild, Intents, Interaction, InteractionReplyOptions, MessageAttachment, MessageEmbed, MessagePayload, Permissions, Snowflake } from "discord.js";
+import commands from "./commands";
 import { MedleyMix } from "./mix";
 
 export type MedleyAutomatonOptions = {
   clientId: string;
   botToken: string;
+  owners?: Snowflake[];
+}
+
+export enum HighlightTextType {
+  Cyan = 'yaml',
+  Yellow = 'fix',
+  Red = 'diff'
 }
 
 // Handle interactions, send message to channels
 export class MedleyAutomaton {
-  private client: Client;
+  readonly client: Client;
 
-  constructor(private dj: MedleyMix, private options: MedleyAutomatonOptions) {
+  private joinedChannels: Map<Guild['id'], BaseGuildVoiceChannel['id']> = new Map();
+
+  constructor(readonly dj: MedleyMix, private options: MedleyAutomatonOptions) {
     this.client = new Client({
       intents: [
         Intents.FLAGS.GUILDS,
@@ -70,11 +80,17 @@ export class MedleyAutomaton {
       }
 
       console.log('Someone deaf status', o.deaf, n.deaf);
-    })
+    });
+
+    this.dj.on('trackStarted', this.handleTrackStarted);
   }
 
   login() {
     this.client.login(this.options.botToken);
+  }
+
+  private handleTrackStarted = async (track: BoomBoxTrack, lastTrack?: BoomBoxTrack) => {
+    // TODO: Send embed to a certain channels
   }
 
   private handleInteraction = async (interaction: Interaction) => {
@@ -87,35 +103,7 @@ export class MedleyAutomaton {
       const group = interaction.options.getSubcommandGroup(false);
       return group ? this.handleGroupCommand(group, interaction) : this.handleTopLevelCommand(interaction.options.getSubcommand().toLowerCase(), interaction);
     }
-
-    // if (interaction.isContextMenu()) {
-    //   return;
-    // }
-
-    // // Message component
-    // if (interaction.isButton()) {
-    //   return;
-    // }
-
-    // if (interaction.isSelectMenu()) {
-    //   return;
-    // }
-
-    // if (interaction.isAutocomplete()) {
-    //   return this.handleAutocomplete(interaction);
-    // }
   }
-
-  // private handleAutocomplete = async (autocomplete: AutocompleteInteraction) => {
-  //   const value = autocomplete.options.getString('test') + '-auto';
-
-  //   autocomplete.respond([
-  //     {
-  //       name: value,
-  //       value
-  //     }
-  //   ])
-  // }
 
   private handleTopLevelCommand = async (command: string, interaction: CommandInteraction) => {
     switch (command) {
@@ -129,18 +117,68 @@ export class MedleyAutomaton {
   }
 
   private handleJoin = async (interaction: CommandInteraction) => {
-    const channel = interaction.options.getChannel('channel');
-    if (channel) {
-      const c = await this.client.channels.fetch(channel.id);
+    // TODO: Helper to check for permissions
+    const hasPermission = interaction.memberPermissions?.any([
+      Permissions.FLAGS.MANAGE_CHANNELS,
+      Permissions.FLAGS.MANAGE_GUILD
+    ]);
 
-      if (c?.isVoice()) {
-        this.dj.join(c);
+    // TODO: Check permission
+    console.log('hasPermission', hasPermission);
+
+    let error: string | undefined;
+    let moved = false;
+
+    const channel = interaction.options.getChannel('channel');
+
+    if (channel) {
+      const channelToJoin = await this.client.channels.fetch(channel.id);
+
+      if (channelToJoin?.isVoice()) {
+        await this.reply(interaction, `Joining ${channelToJoin}`);
+
+        try {
+          await this.dj.join(channelToJoin);
+
+          moved = this.joinedChannels.get(channelToJoin.guildId) === channelToJoin.id;
+
+          if (!moved) {
+            this.joinedChannels.set(channelToJoin.guildId, channelToJoin.id);
+          }
+
+          const reply = `Joined ${channel}`;
+          this.reply(interaction, {
+            content: null,
+            embeds: [
+              new MessageEmbed()
+                .setColor('DARK_RED')
+                .setTitle(reply)
+                .setDescription(reply)
+                .addField('channel', channel?.toString())
+            ]
+          });
+        }
+        catch (e) {
+          const msg = this.makeHighlightedMessage('Could not join', HighlightTextType.Red);
+          await this.reply(interaction, msg);
+        }
       }
     }
+  }
 
-    const reply = `Joined ${channel}`;
-    console.log(reply);
-    interaction.reply(reply);
+  private async reply(interaction: BaseCommandInteraction, options: string | MessagePayload | InteractionReplyOptions) {
+    if (!interaction.replied) {
+      await interaction.reply(options);
+    } else {
+      await interaction.editReply(options);
+    }
+  }
+
+  private makeHighlightedMessage(s: string, type: HighlightTextType) {
+    return '```' + type + '\n' +
+      (type === HighlightTextType.Red ? '-' : '') + s + '\n' +
+      '```'
+    ;
   }
 
   static async registerCommands(botToken: string, clientId: string, guildId: string) {
@@ -150,7 +188,7 @@ export class MedleyAutomaton {
     await client.put(
       Routes.applicationGuildCommands(clientId, guildId),
       {
-        body: [payload]
+        body: [commands]
       }
     );
 
