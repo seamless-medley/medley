@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
-import { isObjectLike } from "lodash";
+import _, { isObjectLike } from "lodash";
 import { TrackCollection } from "../collections";
 import { Track, TrackMetadata } from "../track";
 import { Crate } from "./base";
@@ -14,13 +14,13 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
   private _crateIndex = 0;
   private _lastCrate: Crate<T> | undefined;
 
-  constructor(public crates: Crate<T>[] = []) {
+  constructor(private _crates: Crate<T>[] = []) {
     super();
     this._lastCrate = this.current;
   }
 
   get current(): Crate<T> | undefined {
-    return this.crates[this._crateIndex];
+    return this._crates[this._crateIndex % this._crates.length];
   }
 
   private isCrate(o: any): o is Crate<T> {
@@ -32,11 +32,11 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
   }
 
   async nextTrack(validator?: (path: string) => Promise<M | boolean>): Promise<T | undefined> {
-    if (this.crates.length < 1) {
+    if (this._crates.length < 1) {
       return undefined;
     }
 
-    let count = this.crates.length;
+    let count = this._crates.length;
     while (count-- > 0) {
       const crate = this.current;
 
@@ -47,27 +47,32 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
         }
 
         for (let i = 0; i < crate.source.length; i++) {
+          this._playCounter++;
+
+          // Latching is active
+          if (this.latchFor > 0) {
+            this.latchCount++;
+
+            if (this.latchCount > this.latchFor) {
+              this.latchCount = 0;
+              this.latchFor = 0;
+
+              // Stop searching for next track and flow to the next crate
+              break;
+            }
+          }
+
+          if (this._playCounter > crate.max) {
+            // Stop searching for next track and flow to the next crate
+            break;
+          }
+
           const track = crate.next();
 
           if (track) {
             const valid = validator ? await validator(track.path) : true;
 
             if (valid) {
-              this._playCounter++;
-
-              if (this.latchFor > 0) {
-                this.latchCount++;
-
-                if (this.latchCount >= this.latchFor) {
-                  this.next();
-
-                  this.latchCount = 0;
-                  this.latchFor = 0;
-                }
-              } else if (this._playCounter >= crate.max) {
-                this.next();
-              }
-
               track.crate = crate as unknown as Crate<Track<M>>;
 
               if (this.isMetadata(valid)) {
@@ -91,22 +96,56 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     return undefined;
   }
 
+  private ensureCrateIndex(index: number) {
+    return (index % this._crates.length) || 0;
+  }
+
+  private setCreateIndex(newIndex: number) {
+    this._crateIndex = this.ensureCrateIndex(newIndex);
+  }
+
   next() {
     this._playCounter = 0;
 
-    if (this.crates.length <= 0) {
+    if (this._crates.length <= 0) {
       throw new Error('There is no crate');
     }
 
-    this._crateIndex = (this._crateIndex + 1) % this.crates.length;
+    this.setCreateIndex(this._crateIndex + 1);
   }
 
   setCurrentCrate(crate: Crate<T> | number) {
-    const index = (typeof crate !== 'number') ? this.crates.indexOf(crate) : crate;
+    const index = (typeof crate !== 'number') ? this._crates.indexOf(crate) : crate;
 
-    if (index >= 0 && index < this.crates.length) {
+    if (index >= 0 && index < this._crates.length) {
       this._crateIndex = index;
     }
+  }
+
+  get crates() {
+    return this._crates;
+  }
+
+  set crates(newCrates: Crate<T>[]) {
+    const oldCurrent = this.current;
+    const saved = oldCurrent ? { id: oldCurrent.source.id, max: oldCurrent.max } : undefined;
+
+    this._crates = newCrates;
+
+    let newIndex = this.ensureCrateIndex(this._crateIndex);
+
+    if (saved) {
+      let found = this._crates.findIndex(crate => crate.source.id === saved.id && crate.max === saved.max);
+      if (found === -1) {
+        found = this._crates.findIndex(crate => crate.source.id === saved.id);
+      }
+
+      if (found !== -1) {
+        newIndex = found;
+      }
+    }
+
+    this.setCreateIndex(newIndex);
   }
 
   private latchFor: number = 0;
