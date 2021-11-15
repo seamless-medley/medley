@@ -1,6 +1,6 @@
 import { curry, without } from "lodash";
 import { TrackCollection } from "../collections";
-import { BoomBox, BoomBoxEvents, BoomBoxTrack } from "./boombox";
+import { BoomBox, BoomBoxEvents, BoomBoxTrack, TrackKind } from "./boombox";
 
 export type SweeperInsertionRule = {
   from?: string[];
@@ -41,6 +41,14 @@ export class SweeperInserter {
     if (matched) {
       const insertion = matched.collection.shift();
       if (insertion) {
+        // ensure track kind
+        if (!insertion.metadata?.kind) {
+          insertion.metadata = {
+            ...insertion.metadata,
+            kind: TrackKind.Insertion
+          }
+        }
+
         this.boombox.queue.add(insertion);
         matched.collection.push(insertion);
       }
