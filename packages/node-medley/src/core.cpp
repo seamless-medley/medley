@@ -517,10 +517,8 @@ namespace {
             juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
             request->buffer.read(tempBuffer, numSamples);
 
-            if (request->lastGain != request->gain) {
-                tempBuffer.applyGainRamp(0, numSamples, request->lastGain, request->gain);
-                request->lastGain = request->gain;
-            }
+            tempBuffer.applyGainRamp(0, numSamples, request->lastGain, request->gain);
+            request->lastGain = request->gain;
 
             juce::AudioBuffer<float>* sourceBuffer = &tempBuffer;
             std::unique_ptr<juce::AudioBuffer<float>> resampleBuffer;

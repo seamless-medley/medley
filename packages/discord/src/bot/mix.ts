@@ -11,14 +11,30 @@ import {
   VoiceConnection,
   VoiceConnectionStatus
 } from "@discordjs/voice";
-import { BoomBox, BoomBoxEvents, BoomBoxTrack, Crate, mapTracksMetadata, Medley, Queue, RequestAudioStreamResult, SweeperInsertionRule, TrackCollection, WatchTrackCollection } from "@medley/core";
-import { BaseGuildVoiceChannel } from "discord.js";
+
+import { BoomBox,
+  BoomBoxEvents,
+  BoomBoxTrack,
+  Crate,
+  mapTracksMetadata,
+  Medley,
+  Queue,
+  RequestAudioStreamResult,
+  SweeperInsertionRule,
+  WatchTrackCollection
+} from "@medley/core";
+
+import { BaseGuildVoiceChannel, Guild } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
 import _, { flow, shuffle } from "lodash";
 
 export type MedleyMixOptions = {
-
+  /**
+   * Initial audio gain, default to 0.15 (appx. -16 dbFS)
+   * @default 0.15
+   */
+  initialGain?: number;
 }
 
 export type SweeperConfig = {
@@ -31,22 +47,24 @@ export interface MedleyMixEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'tr
 
 }
 
+type MixState = {
+  audioRequest: RequestAudioStreamResult;
+  audioResource: AudioResource;
+  audioPlayer: AudioPlayer;
+  voiceConnection?: VoiceConnection;
+  gain: number;
+}
+
 // This is the DJ
 export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<MedleyMixEvents>) {
-  private queue: Queue<BoomBoxTrack>;
-  private medley: Medley<BoomBoxTrack>;
-
-  private audioRequest: RequestAudioStreamResult;
-  private audioResource: AudioResource;
-  private audioPlayer: AudioPlayer;
-
-  private voiceConnection?: VoiceConnection;
+  readonly queue: Queue<BoomBoxTrack>;
+  readonly medley: Medley<BoomBoxTrack>;
+  private states: Map<Guild['id'], MixState> = new Map();
 
   private collections: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
-
   private boombox: BoomBox;
 
-  constructor(options: MedleyMixOptions) {
+  constructor(private options: MedleyMixOptions = {}) {
     super();
 
     this.queue = new Queue();
@@ -63,34 +81,6 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
       crates: []
     });
 
-    // Request audio stream
-    this.audioRequest = this.medley.requestAudioStream({
-      bufferSize: 480 * 50,
-      buffering: 480 * 4, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
-      sampleRate: 48000, // discord voice only accept 48KHz sample rate
-      format: 'Int16LE', // It's discord voice again, 16 bit per sample
-      // TODO: Volume
-    });
-
-    // Create discord voice AudioResource
-    this.audioResource = createAudioResource(this.audioRequest.stream, { inputType: StreamType.Raw });
-    const { encoder } = this.audioResource;
-    if (encoder) {
-      encoder.setBitrate(128_000);
-      encoder.setFEC(true);
-      encoder.setPLP(0);
-    }
-
-    // Create discord voice AudioPlayer
-    this.audioPlayer = createAudioPlayer({
-      behaviors: {
-        noSubscriber: NoSubscriberBehavior.Play,
-        maxMissedFrames: 1000
-      }
-    });
-
-    this.audioPlayer.play(this.audioResource);
-
     this.boombox.on('trackQueued', this.handleTrackQueued);
     this.boombox.on('trackLoaded', this.handleTrackLoaded);
     this.boombox.on('trackStarted', this.handleTrackStarted);
@@ -106,34 +96,121 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
 
   private handleTrackStarted = (track: BoomBoxTrack, lastTrack?: BoomBoxTrack) => {
     this.emit('trackStarted', track, lastTrack);
-    // TODO: Send to channel
+  }
+
+  prepareFor(guildId: Guild['id']) {
+    if (this.states.has(guildId)) {
+      return;
+    }
+
+    const gain = this.options.initialGain || 0.15;
+
+    // Request audio stream
+    const audioRequest = this.medley.requestAudioStream({
+      bufferSize: 480 * 50,
+      buffering: 480 * 4, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
+      sampleRate: 48000, // discord voice only accept 48KHz sample rate
+      format: 'Int16LE', // It's discord voice again, 16 bit per sample
+      gain,
+    });
+
+    // Create discord voice AudioResource
+    const audioResource = createAudioResource(audioRequest.stream, { inputType: StreamType.Raw });
+    const { encoder } = audioResource;
+    if (encoder) {
+      encoder.setBitrate(128_000);
+      encoder.setFEC(true);
+      encoder.setPLP(0);
+    }
+
+    // Create discord voice AudioPlayer
+    const audioPlayer = createAudioPlayer({
+      behaviors: {
+        noSubscriber: NoSubscriberBehavior.Play,
+        maxMissedFrames: 1000
+      }
+    });
+
+    audioPlayer.play(audioResource);
+
+    this.states.set(guildId, {
+      audioRequest,
+      audioResource,
+      audioPlayer,
+      gain
+    });
+  }
+
+  getGain(guildId: Guild['id']) {
+    const state = this.states.get(guildId);
+    return state ? state.gain : 0;
+  }
+
+  setGain(guildId: Guild['id'], val: number): boolean {
+    const state = this.states.get(guildId);
+    if (!state) {
+      return false;
+    }
+
+    state.gain = val;
+
+    this.medley.updateAudioStream(state.audioRequest.id, { gain: val });
+    return true;
+  }
+
+  get playing() {
+    return this.medley.playing;
+  }
+
+  skip() {
+    this.medley.fadeOut();
   }
 
   async join(channel: BaseGuildVoiceChannel) {
     const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
 
-    this.voiceConnection = joinVoiceChannel({
+    this.prepareFor(guildId);
+    const state = this.states.get(guildId)!;
+
+    let voiceConnection: VoiceConnection | undefined = joinVoiceChannel({
       channelId,
       guildId,
       adapterCreator: voiceAdapterCreator as DiscordGatewayAdapterCreator
     });
 
     try {
-      await entersState(this.voiceConnection, VoiceConnectionStatus.Ready, 30e3);
-      this.voiceConnection.subscribe(this.audioPlayer);
-
-      // TODO: Check audiences first
-      // This will start playback if it was stopped or paused
-      if (!this.medley.playing && this.queue.length === 0) {
-      }
-
-      this.medley.play();
+      await entersState(voiceConnection, VoiceConnectionStatus.Ready, 30e3);
+      voiceConnection.subscribe(state.audioPlayer);
     }
     catch (e) {
-      this.voiceConnection?.destroy();
-      this.voiceConnection = undefined;
+      voiceConnection?.destroy();
+      voiceConnection = undefined;
 
       throw e;
+    }
+
+    if (voiceConnection) {
+      state.voiceConnection = voiceConnection;
+    }
+  }
+
+  start() {
+    // This will start playback if it was stopped or paused
+    if (!this.medley.playing && this.queue.length === 0) {
+      this.queue.add('D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3');
+    }
+
+    if (!this.medley.playing) {
+      console.log('Start playing');
+    }
+
+    this.medley.play();
+  }
+
+  pause() {
+    if (!this.medley.paused) {
+      console.log('Pause');
+      this.medley.togglePause();
     }
   }
 
