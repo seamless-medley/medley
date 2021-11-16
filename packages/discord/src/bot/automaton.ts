@@ -1,21 +1,45 @@
 /// <reference path="../types.d.ts" />
 
 import { REST as RestClient } from "@discordjs/rest";
-import { BoomBoxTrack, TrackKind } from "@medley/core";
-import { decibelsToGain, gainToDecibels } from "@medley/core/src/utils";
 import { Routes } from "discord-api-types/v9";
-import { BaseCommandInteraction, BaseGuildVoiceChannel, ButtonInteraction, Client, CommandInteraction, Guild, Intents, Interaction, InteractionReplyOptions, Message, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, MessageOptions, MessagePayload, Permissions, Snowflake, VoiceState } from "discord.js";
-import _, { capitalize, castArray, first, isEmpty, without } from "lodash";
-import { parse as parsePath } from "path";
-import mime from 'mime-types';
-import splashy from 'splashy';
+import {
+  BaseCommandInteraction,
+  BaseGuildVoiceChannel,
+  ButtonInteraction,
+  Client,
+  CommandInteraction,
+  Guild,
+  Intents,
+  Interaction,
+  InteractionReplyOptions,
+  Message,
+  MessageActionRow,
+  MessageAttachment,
+  MessageButton,
+  MessageComponentInteraction,
+  MessageEmbed,
+  MessageOptions,
+  MessagePayload,
+  PermissionResolvable,
+  Permissions,
+  Snowflake,
+  VoiceState
+} from "discord.js";
+
+import { BoomBoxTrack, decibelsToGain, gainToDecibels, lyricsToText, parseLyrics, TrackKind } from "@medley/core";
 import colorableDominant from 'colorable-dominant';
+
+import { capitalize, castArray, first, isEmpty, without } from "lodash";
+import mime from 'mime-types';
+import { parse as parsePath } from "path";
+import splashy from 'splashy';
 import commands from "./commands";
 import { MedleyMix } from "./mix";
 
 export type MedleyAutomatonOptions = {
   clientId: string;
   botToken: string;
+  // TODO: Use this
   owners?: Snowflake[];
 }
 
@@ -25,22 +49,33 @@ export enum HighlightTextType {
   Red = 'diff'
 }
 
-// TODO: Use this for each guild
 type AutomatonGuildState = {
   voiceChannelId?: BaseGuildVoiceChannel['id'];
   trackMessages: TrackMessage[];
   audiences: Snowflake[];
 }
 
+export enum TrackMessageStatus {
+  Playing,
+  Paused,
+  Played,
+  Skipped
+}
+
 type TrackMessage = {
+  track: BoomBoxTrack;
+  status: TrackMessageStatus;
   embed: MessageEmbed;
   coverImage?: MessageAttachment;
   buttons: {
-    skip: MessageButton,
-    lyric: MessageButton
+    skip?: MessageButton,
+    lyric?: MessageButton
   };
   sentMessage?: Message;
+  lyricMessage?: Message;
 }
+
+class CommandError extends Error {};
 
 export class MedleyAutomaton {
   readonly client: Client;
@@ -67,6 +102,7 @@ export class MedleyAutomaton {
     this.client.on('interactionCreate', this.handleInteraction);
 
     this.dj.on('trackStarted', this.handleTrackStarted);
+    this.dj.on('trackFinished', this.handleTrackFinished);
   }
 
   login() {
@@ -136,6 +172,9 @@ export class MedleyAutomaton {
 
       if (newState.channelId !== state.voiceChannelId) {
         console.log('Me Just joined or moved, collecting...');
+
+        state.voiceChannelId = newState.channelId || undefined;
+
         const { members } = newState.channel!;
 
         state.audiences = members
@@ -149,16 +188,13 @@ export class MedleyAutomaton {
         }
       }
 
-      state.voiceChannelId = newState.channelId || undefined;
-      console.log('Set state.voiceChannelId', state.voiceChannelId);
-
       if (oldState.serverMute != newState.serverMute) {
         if (newState.serverMute) {
-          console.log('Me Has been muted by server');
           this.dj.pause();
+          this.hideActivity();
         } else {
-          console.log('Me Has been unmuted by server');
           this.dj.start();
+          this.showActivity();
         }
       }
 
@@ -227,9 +263,6 @@ export class MedleyAutomaton {
   private audiencesUpdated() {
     console.log('Audiences updated');
 
-    // TODO: Update bot activity
-    // client.user?.setActivity('Artist - Title', { type: 'LISTENING' });
-
     for (const [guildId, state] of this.states) {
       if (!state.voiceChannelId) {
         state.audiences = [];
@@ -238,14 +271,46 @@ export class MedleyAutomaton {
       if (state.audiences.length > 0) {
         // has some audience
         this.dj.start();
-        // TODO: Update bot activity
+        this.showActivity();
         return;
       }
     }
 
     // no audience, pause
-    // TODO: Hide bot activity
+    this.hideActivity();
     this.dj.pause();
+  }
+
+  private getTrackBanner(track: BoomBoxTrack) {
+    const tags = track.metadata?.tags;
+    const info: string[] = [];
+
+    if (tags?.artist) {
+      info.push(tags.artist);
+    }
+
+    if (tags?.title) {
+      info.push(tags.title);
+    }
+
+    return info.length ? info.join(' - ') : parsePath(track.path).name;
+  }
+
+  private showActivity() {
+    const { user } = this.client;
+
+    if (!user) {
+      return;
+    }
+
+    const { track } = this.dj;
+    const banner = track ? this.getTrackBanner(track) : 'Medley';
+
+    user.setActivity(banner, { type: 'LISTENING' });
+  }
+
+  private hideActivity() {
+    this.client.user?.setPresence({ activities: [] });
   }
 
   private handleGuildCreate = async (guild: Guild) => {
@@ -268,6 +333,7 @@ export class MedleyAutomaton {
     const { metadata } = track;
 
     let coverImage: MessageAttachment | undefined;
+    let hasLyric = false;
 
     if (metadata) {
       if (metadata.kind === TrackKind.Request) {
@@ -277,6 +343,8 @@ export class MedleyAutomaton {
       const { tags } = metadata;
       if (tags) {
         const { title, lyrics } = tags;
+
+        hasLyric = !!lyrics;
 
         if (title) {
           embed.setDescription(title);
@@ -316,17 +384,23 @@ export class MedleyAutomaton {
       embed.setImage(`attachment://${coverImage.name}`)
     }
 
-    const lyricButton = new MessageButton()
-      .setLabel('Lyrics')
-      .setStyle('SECONDARY')
-      .setCustomId('b');
+    const lyricButton = hasLyric
+      ? new MessageButton()
+        .setLabel('Lyrics')
+        .setEmoji('📜')
+        .setStyle('SECONDARY')
+        .setCustomId(`lyric:${track.id}`)
+      : undefined
 
     const skipButton = new MessageButton()
       .setLabel('Skip')
+      .setEmoji('⛔')
       .setStyle('DANGER')
-      .setCustomId('a');
+      .setCustomId('skip');
 
     return {
+      track,
+      status: TrackMessageStatus.Playing,
       embed,
       coverImage,
       buttons: {
@@ -336,42 +410,139 @@ export class MedleyAutomaton {
     };
   }
 
+  private trackMessageToMessageOptions(msg: TrackMessage): MessageOptions {
+    const { lyric, skip } = msg.buttons;
+
+    let actionRow: MessageActionRow | undefined = undefined;
+
+    if (lyric || skip) {
+      actionRow = new MessageActionRow();
+
+      if (lyric) {
+        actionRow.addComponents(lyric);
+      }
+
+      if (skip) {
+        actionRow.addComponents(skip);
+      }
+    }
+
+    return {
+      embeds: [msg.embed],
+      files: msg.coverImage ? [msg.coverImage] : undefined,
+      components: actionRow ? [actionRow] : []
+    }
+  }
+
   private handleTrackStarted = async (track: BoomBoxTrack, lastTrack?: BoomBoxTrack) => {
     if (track.metadata?.kind === TrackKind.Insertion) {
       return;
     }
 
-    // TODO: Update bot activity
+    this.showActivity();
 
-    const msg = await this.createTrackMessage(track);
+    const trackMsg = await this.createTrackMessage(track);
+    const sentMessages = await this.sendAll(this.trackMessageToMessageOptions(trackMsg));
 
-    const sentMessages = await this.sendAll({
-      embeds: [msg.embed],
-      files: msg.coverImage ? [msg.coverImage] : undefined,
-      components: [
-        new MessageActionRow()
-          .addComponents(msg.buttons.lyric, msg.buttons.skip)
-      ]
-    });
+    // Store message for each guild
+    for (const [guildId, maybeMessage] of sentMessages) {
+      const state = this.states.get(guildId);
+      if (state) {
+        state.trackMessages.push({
+          ...trackMsg,
+          sentMessage: await maybeMessage
+        });
 
-    // TODO: Store message for each guild
-    // Also update/delete old messages
+        // TODO: Configurable number
+        while (state.trackMessages.length > 3) {
+          const oldMsg = state.trackMessages.shift();
+          if (oldMsg) {
+            const { sentMessage, lyricMessage } = oldMsg;
+
+            if (sentMessage?.deletable) {
+              sentMessage.delete();
+            }
+
+            if (lyricMessage?.deletable) {
+              lyricMessage.delete();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private handleTrackFinished = async (track: BoomBoxTrack) => {
+    this.updateTrackMessage(track.id, async msg => msg.status < TrackMessageStatus.Played, TrackMessageStatus.Played, 'Played');
+  }
+
+  private async updateTrackMessage(trackId: BoomBoxTrack['id'], predicate: (msg: TrackMessage) => Promise<boolean>, status: TrackMessageStatus, title?: string) {
+    for (const [guildId, state] of this.states) {
+      const msg = state.trackMessages.find(msg => msg.track.id === trackId);
+      if (msg) {
+        if (await predicate(msg)) {
+          msg.status = status;
+          if (title) {
+            msg.embed.setTitle(title);
+          }
+
+          const showSkipButton = status < TrackMessageStatus.Played;
+
+          if (showSkipButton || title) {
+            const { sentMessage } = msg;
+            if (sentMessage?.editable) {
+              sentMessage.edit(this.trackMessageToMessageOptions({
+                ...msg,
+                buttons: {
+                  lyric: msg.buttons.lyric,
+                  skip: showSkipButton ? msg.buttons.skip : undefined
+                }
+              }));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private permissionGuard(permissions: Permissions | null, perm: PermissionResolvable, checkAdmin: boolean = true) {
+    if (permissions &&  !permissions?.any(perm, checkAdmin)) {
+      throw new CommandError('Insufficient permissions');
+    }
   }
 
   private handleInteraction = async (interaction: Interaction) => {
-    // Application commands
-    if (interaction.isCommand()) {
-      if (interaction.commandName !== 'medley') {
-        return;
+    if (interaction.member.user.bot) {
+      return;
+    }
+
+    try {
+      // Application commands
+      if (interaction.isCommand()) {
+        if (interaction.commandName !== 'medley') {
+          return;
+        }
+
+
+          const group = interaction.options.getSubcommandGroup(false);
+          const promise = group ? this.handleGroupCommand(group.toLowerCase(), interaction) : this.handleTopLevelCommand(interaction.options.getSubcommand().toLowerCase(), interaction);
+          return await promise;
       }
 
-      const group = interaction.options.getSubcommandGroup(false);
-      return group ? this.handleGroupCommand(group, interaction) : this.handleTopLevelCommand(interaction.options.getSubcommand().toLowerCase(), interaction);
+      if (interaction.isButton()) {
+        return await this.handleButton(interaction);
+      }
+
+    }
+    catch (e) {
+      if (e instanceof CommandError) {
+        if (interaction.isApplicationCommand() || interaction.isMessageComponent()) {
+          this.deny(interaction, `Command Error: ${e.message}`, undefined, true);
+        }
+      }
     }
 
-    if (interaction.isButton()) {
-      return this.handleButton(interaction);
-    }
+    // TODO: request command, with autocomplete
   }
 
   private handleTopLevelCommand = async (command: string, interaction: CommandInteraction) => {
@@ -393,50 +564,62 @@ export class MedleyAutomaton {
   }
 
   private handleButton = async (interaction: ButtonInteraction) => {
-    const r = await interaction.reply({ content: 'Test' + interaction.customId, fetchReply: true });
-    console.log(r);
+    const { customId } = interaction;
+
+    switch (customId) {
+      case 'skip':
+        return this.handleSkip(interaction);
+    }
+
+    const matched = customId.match(/^(.*)\:(.*)$/);
+    if (!matched) {
+      this.deny(interaction, 'What ya say?', undefined,true);
+      return;
+    }
+
+    const [, tag, value] = matched;
+
+    switch (tag.toLowerCase()) {
+      case 'lyric':
+        return this.handleLyricButton(interaction, value);
+    }
   }
 
   private handleJoin = async (interaction: CommandInteraction) => {
-    // TODO: Helper to check for permissions
-    const hasPermission = interaction.memberPermissions?.any([
+    this.permissionGuard(interaction.memberPermissions, [
       Permissions.FLAGS.MANAGE_CHANNELS,
       Permissions.FLAGS.MANAGE_GUILD
     ]);
 
-    // TODO: Check permission
-    console.log('hasPermission', hasPermission);
-
-    let error: string | undefined;
-    let moved = false;
-
     const channel = interaction.options.getChannel('channel');
 
-    if (channel) {
-      const channelToJoin = this.client.channels.cache.get(channel.id);
+    if (!channel) {
+      return;
+    }
 
-      if (channelToJoin?.isVoice()) {
-        await this.reply(interaction, `Joining ${channelToJoin}`);
+    const channelToJoin = this.client.channels.cache.get(channel.id);
 
-        try {
-          await this.dj.join(channelToJoin);
+    if (!channelToJoin?.isVoice()) {
+      return;
+    }
 
-          const reply = `Joined ${channel}`;
-          this.reply(interaction, {
-            content: null,
-            embeds: [
-              new MessageEmbed()
-                .setColor('DARK_RED')
-                .setTitle(reply)
-                .setDescription(reply)
-                .addField('channel', channel?.toString())
-            ]
-          });
-        }
-        catch (e) {
-          this.deny(interaction, 'Could not join');
-        }
-      }
+    await this.reply(interaction, `Joining ${channelToJoin}`);
+
+    try {
+      await this.dj.join(channelToJoin);
+
+      this.reply(interaction, {
+        content: null,
+        embeds: [
+          new MessageEmbed()
+            .setColor('RANDOM')
+            .setTitle('Joined')
+            .addField('channel', channel?.toString())
+        ]
+      });
+    }
+    catch (e) {
+      this.deny(interaction, 'Could not join');
     }
   }
 
@@ -451,31 +634,106 @@ export class MedleyAutomaton {
     this.accept(interaction, `OK, Volume set to ${decibels}dB`);
   }
 
-  private handleSkip = async (interaction: CommandInteraction) => {
-    if (!this.dj.playing) {
-      await this.deny(interaction, 'Not currently playing');
+  private handleSkip = async (interaction: CommandInteraction | ButtonInteraction) => {
+    this.permissionGuard(interaction.memberPermissions, [
+      Permissions.FLAGS.MANAGE_CHANNELS,
+      Permissions.FLAGS.MANAGE_GUILD,
+      Permissions.FLAGS.MOVE_MEMBERS
+    ]);
+
+    if (this.dj.paused || !this.dj.playing) {
+      await this.deny(interaction, 'Not currently playing', `@${interaction.member.user.id}`);
       return;
     }
 
-    // TODO: Deny if havn't joined a channel in this guild
-
-    this.dj.skip();
-    this.accept(interaction,'OK, Skipping to the next track');
+    this.skipCurrentSong();
+    this.accept(interaction,`OK, Skipping to the next track`, `@${interaction.member.user.id}`);
   }
 
-  private async reply(interaction: BaseCommandInteraction, options: string | MessagePayload | InteractionReplyOptions) {
+  private skipCurrentSong() {
+    if (!this.dj.paused && this.dj.playing) {
+      const { track } = this.dj;
+      if (track) {
+        this.updateTrackMessage(track.id, async () => true, TrackMessageStatus.Skipped, 'Skipped');
+      }
+
+      this.dj.skip();
+    }
+  }
+
+  private handleLyricButton = async (interaction: ButtonInteraction, trackId: BoomBoxTrack['id']) => {
+    const track = this.dj.findTrackById(trackId);
+    if (!track) {
+      this.deny(interaction, 'Invalid track identifier', undefined, true);
+      return;
+    }
+
+    const banner = this.getTrackBanner(track);
+
+    const state = this.states.get(interaction.guildId);
+    const trackMsg = state?.trackMessages.find(m => m.track.id === trackId);
+
+    if (trackMsg?.lyricMessage) {
+      await trackMsg?.lyricMessage.reply({
+        content: `${interaction.member} Lyric for ${banner} is right here ☝🏻`
+      });
+
+      await interaction.reply({
+        content: ' ',
+        ephemeral: true
+      });
+      await interaction.deleteReply();
+      return;
+    }
+
+    const lyric = first(track.metadata?.tags?.lyrics);
+    if (!lyric) {
+      this.warn(interaction, 'No lyric');
+      return
+    }
+
+    const text = lyricsToText(parseLyrics(lyric), false).join('\n');
+    const lyricMessage = await interaction.reply({
+      embeds: [
+        new MessageEmbed()
+          .setTitle('Lyric')
+          .setDescription(banner)
+      ],
+      files: [
+        new MessageAttachment(Buffer.from(text), `lyric-${banner.toLowerCase()}.txt`)
+      ],
+      fetchReply: true
+    });
+
+
+    if (trackMsg && lyricMessage instanceof Message) {
+      trackMsg.lyricMessage = lyricMessage;
+    }
+  }
+
+  private async reply(interaction: BaseCommandInteraction | MessageComponentInteraction, options: string | MessagePayload | InteractionReplyOptions) {
     return (!interaction.replied)
       ? interaction.reply(options)
       : interaction.editReply(options);
   }
 
-  private async accept(interaction: BaseCommandInteraction, s: string) {
-    return this.reply(interaction, this.makeHighlightedMessage(s, HighlightTextType.Cyan));
+  private async declare(interaction: BaseCommandInteraction | MessageComponentInteraction, type: HighlightTextType, s: string, mention?: string, ephemeral?: boolean) {
+    return this.reply(interaction, {
+      content: this.makeHighlightedMessage(s, type, mention),
+      ephemeral
+    });
   }
 
+  private async accept(interaction: BaseCommandInteraction | MessageComponentInteraction, s: string, mention?: string, ephemeral?: boolean) {
+    return this.declare(interaction, HighlightTextType.Cyan, s, mention, ephemeral);
+  }
 
-  private async deny(interaction: BaseCommandInteraction, s: string) {
-    return this.reply(interaction, this.makeHighlightedMessage(s, HighlightTextType.Red));
+  private async deny(interaction: BaseCommandInteraction | MessageComponentInteraction, s: string, mention?: string, ephemeral?: boolean) {
+    return this.declare(interaction, HighlightTextType.Red, s, mention, ephemeral);
+  }
+
+  private async warn(interaction: BaseCommandInteraction | MessageComponentInteraction, s: string, mention?: string, ephemeral?: boolean) {
+    return this.declare(interaction, HighlightTextType.Yellow, s, mention, ephemeral);
   }
 
   /**
@@ -486,7 +744,7 @@ export class MedleyAutomaton {
       this.client.guilds.cache.mapValues(async (guild, id) => {
         const state = this.states.get(id);
 
-        if (state) {
+        if (state?.voiceChannelId) {
           // TODO: Configurable channel
           return guild.systemChannel?.send(options).catch(() => undefined)
         }
@@ -496,9 +754,10 @@ export class MedleyAutomaton {
     return results;
   }
 
-  private makeHighlightedMessage(s: string | string[], type: HighlightTextType) {
+  private makeHighlightedMessage(s: string | string[], type: HighlightTextType, mention?: string) {
     const isRed = type === HighlightTextType.Red;
-    return '```' + type + '\n' +
+    return (mention ? `<${mention}>` : '') +
+      '```' + type + '\n' +
       castArray(s).map(line => (isRed ? '-' : '') + line).join('\n') + '\n' +
       '```'
     ;
