@@ -39,6 +39,7 @@ export interface BoomBoxEvents {
   trackQueued: (track: BoomBoxTrack) => void;
   trackLoaded: (track: BoomBoxTrack) => void;
   trackStarted: (track: BoomBoxTrack, lastTrack?: BoomBoxTrack) => void;
+  trackFinished: (track: BoomBoxTrack) => void;
   requestTrackFetched: (track: RequestTrack) => void;
   error: (error: Error) => void;
 }
@@ -105,6 +106,7 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     this.medley.on('preQueueNext', this.preQueue);
     this.medley.on('loaded', this.deckLoaded);
     this.medley.on('started', this.deckStarted);
+    this.medley.on('finished', this.deckFinished);
     //
     this.sequencer = new CrateSequencer<BoomBoxTrack>(options.crates);
     this.sequencer.on('change', (crate: BoomBoxCrate) => this.emit('sequenceChange', crate));
@@ -273,6 +275,14 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
         }
       }
     }
+  }
+
+  private deckFinished: DeckListener<BoomBoxTrack> = (deck, track) => {
+    if (track?.metadata?.kind === TrackKind.Insertion) {
+      return;
+    }
+
+    this.emit('trackFinished', track);
   }
 
   get crates() {
