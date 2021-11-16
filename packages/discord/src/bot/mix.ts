@@ -21,6 +21,7 @@ import { BoomBox,
   Queue,
   RequestAudioStreamResult,
   SweeperInsertionRule,
+  TrackKind,
   WatchTrackCollection
 } from "@medley/core";
 
@@ -43,7 +44,7 @@ export type SweeperConfig = {
   path: string;
 }
 
-export interface MedleyMixEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted'> {
+export interface MedleyMixEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackFinished'> {
 
 }
 
@@ -84,6 +85,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     this.boombox.on('trackQueued', this.handleTrackQueued);
     this.boombox.on('trackLoaded', this.handleTrackLoaded);
     this.boombox.on('trackStarted', this.handleTrackStarted);
+    this.boombox.on('trackFinished', this.handleTrackFinished)
   }
 
   private handleTrackQueued = (track: BoomBoxTrack) => {
@@ -96,6 +98,10 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
 
   private handleTrackStarted = (track: BoomBoxTrack, lastTrack?: BoomBoxTrack) => {
     this.emit('trackStarted', track, lastTrack);
+  }
+
+  private handleTrackFinished = (track: BoomBoxTrack) => {
+    this.emit('trackFinished', track);
   }
 
   prepareFor(guildId: Guild['id']) {
