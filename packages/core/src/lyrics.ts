@@ -77,7 +77,7 @@ function parseLine(line: string): MaybeLine {
   }
 }
 
-export function parse(s: string): Lyrics {
+export function parseLyrics(s: string): Lyrics {
   const lines = s.replace(/\r\n/g, "\n").split(/\n/).map(parseLine);
 
   const infos = _(lines)
