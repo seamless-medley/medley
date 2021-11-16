@@ -8,6 +8,7 @@ export interface Track<M> extends TrackInfo {
    * The current crate it was fetched from
    */
   crate?: Crate<Track<M>>;
+  readonly id: string;
   readonly path: string;
   metadata?: M;
 }

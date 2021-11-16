@@ -1,5 +1,6 @@
 import EventEmitter from "events";
-import _, { castArray, reject, sample, shuffle, uniqBy } from "lodash";
+import { createHash } from 'crypto';
+import _, { castArray, partition, reject, sample, shuffle, uniqBy } from "lodash";
 import { Track } from "../track";
 
 export type TrackCollectionOptions<T extends Track<any>> = {
@@ -10,6 +11,7 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];
+  protected trackIdMap: Map<string, T> = new Map();
 
   constructor(readonly id: string, protected options: TrackCollectionOptions<T> = {}) {
     super();
@@ -26,7 +28,10 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
   }
 
   protected async createTrack(path: string): Promise<T> {
+    const id = createHash('md5').update(path).digest('base64');
+
     return {
+      id,
       path,
       collection: this
     } as unknown as T;
@@ -58,16 +63,25 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
     const { newTracksMapper } = this.options;
     const newTracks = newTracksMapper ? await newTracksMapper(tracks) : tracks;
 
+    for (const track of newTracks) {
+      this.trackIdMap.set(track.id, track);
+    }
+
     this.tracks = uniqBy(this.tracks.concat(newTracks), 'path');
   }
 
   removeBy(predicate: (track: T) => boolean) {
-    this.tracks = reject(this.tracks, predicate);
+    const [removed, rejected] = partition(this.tracks, predicate);
+    this.tracks = rejected;
+
+    for (const { id } of removed) {
+      this.trackIdMap.delete(id);
+    }
   }
 
   remove(item: string | string[]) {
     const toRemove = castArray(item);
-    this.removeBy(track => toRemove.includes(track.path))
+    this.removeBy(track => toRemove.includes(track.path));
   }
 
   removeTrack(track: T |T[]) {
@@ -89,6 +103,10 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
 
   find(path: string) {
     return _.find(this.tracks, track => track.path === path);
+  }
+
+  fromId(id: string): T | undefined {
+    return this.trackIdMap.get(id);
   }
 
   sample(): T | undefined {
