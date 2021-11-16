@@ -268,4 +268,13 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
       }
     });
   }
+
+  findTrackById(id: BoomBoxTrack['id']) {
+    for (const collection of this.collections.values()) {
+      const track = collection.fromId(id);
+      if (track) {
+        return track;
+      }
+    }
+  }
 }
