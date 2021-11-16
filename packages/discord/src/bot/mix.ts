@@ -168,6 +168,14 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     return this.medley.playing;
   }
 
+  get paused() {
+    return this.medley.paused;
+  }
+
+  get track() {
+    return this.boombox.track;
+  }
+
   skip() {
     this.medley.fadeOut();
   }
