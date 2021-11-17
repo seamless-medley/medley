@@ -6,7 +6,7 @@ import type TypedEventEmitter from "typed-emitter";
 import { DeckListener, Medley, PreQueueListener, Queue } from "@medley/medley";
 import { Crate, CrateSequencer } from "../crate";
 import { Track } from "../track";
-import { TrackCollection } from "../collections";
+import { TrackCollection, TrackPeek } from "../collections";
 import { getMusicMetadata } from "../utils";
 import { SweeperInserter } from "./sweeper";
 
@@ -29,9 +29,15 @@ export type TrackHistory = {
   playedTime: Date;
 }
 
-export type RequestTrack = BoomBoxTrack & {
+export type RequestTrack<Requester> = BoomBoxTrack & {
   priority?: number;
+  requestedBy?: Requester;
+  lastRequestTime?: Date;
 };
+
+export function isRequestTrack(o: Track<any>): o is RequestTrack<any> {
+  return !!(o as any).requestedBy;
+}
 
 export interface BoomBoxEvents {
   sequenceChange: (activeCrate: BoomBoxCrate) => void;
@@ -40,7 +46,7 @@ export interface BoomBoxEvents {
   trackLoaded: (track: BoomBoxTrack) => void;
   trackStarted: (track: BoomBoxTrack, lastTrack?: BoomBoxTrack) => void;
   trackFinished: (track: BoomBoxTrack) => void;
-  requestTrackFetched: (track: RequestTrack) => void;
+  requestTrackFetched: (track: RequestTrack<any>) => void;
   error: (error: Error) => void;
 }
 
@@ -77,7 +83,7 @@ type BoomBoxOptions = {
 
 }
 
-export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
+export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
   readonly sequencer: CrateSequencer<BoomBoxTrack>;
 
   private options: Required<Omit<BoomBoxOptions, 'medley' | 'queue' | 'crates' | 'artistHistory'>>;
@@ -112,7 +118,7 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     this.sequencer.on('change', (crate: BoomBoxCrate) => this.emit('sequenceChange', crate));
   }
 
-  private sweeperInserter = new SweeperInserter(this, []);
+  private sweeperInserter: SweeperInserter = new SweeperInserter(this, []);
 
   get sweeperInsertionRules() {
     return this.sweeperInserter.rules;
@@ -133,7 +139,7 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     return this._currentTrack;
   }
 
-  private requests: TrackCollection<RequestTrack> = new TrackCollection('$_requests');
+  private requests: TrackCollection<RequestTrack<Requester>> = new TrackCollection('$_requests');
 
   private isTrackLoadable = async (path: string) => this.medley.isTrackLoadable(path);
 
@@ -162,17 +168,44 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     return true;
   }
 
-  private async fetchRequestTrack(): Promise<RequestTrack | undefined> {
+  request(track: BoomBoxTrack, requestedBy?: Requester): TrackPeek<RequestTrack<Requester>> {
+    const existing = this.requests.fromId(track.id);
+
+    if (existing) {
+      existing.priority = (existing.priority || 0) + 1;
+      existing.lastRequestTime = new Date();
+
+      this.requests.sort(t => -(t.priority || 0), t => (t.lastRequestTime?.valueOf() || 0));
+      return {
+        index: this.requests.indexOf(existing),
+        track: existing
+      }
+    }
+
+    const requested: RequestTrack<Requester> = {
+      ...track,
+      priority: 0,
+      requestedBy,
+      lastRequestTime: new Date()
+    };
+
+    requested.metadata = {
+      ...requested.metadata,
+      kind: TrackKind.Request
+    }
+
+    const index = this.requests.push(requested);
+    return {
+      index,
+      track: requested
+    }
+  }
+
+  private async fetchRequestTrack(): Promise<RequestTrack<Requester> | undefined> {
     while (this.requests.length) {
       const track = this.requests.shift()!;
+
       if (await this.isTrackLoadable(track.path)) {
-        const musicMetadata = await getMusicMetadata(track.path);
-
-        track.metadata = {
-          tags: musicMetadata?.common,
-          kind: TrackKind.Request
-        };
-
         return track;
       }
     }
@@ -180,14 +213,8 @@ export class BoomBox extends (EventEmitter as new () => TypedEventEmitter<BoomBo
     return undefined;
   }
 
-  request(path: string) {
-    const existing = this.requests.find(path);
-    if (!existing) {
-      this.requests.add(path);
-      return;
-    }
-
-    existing.priority = (existing.priority || 0) + 1;
+  peekRequests(from: number, n: number) {
+    return this.requests.peek(from, n);
   }
 
   private preQueue: PreQueueListener = async (done) => {

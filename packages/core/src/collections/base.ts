@@ -7,6 +7,11 @@ export type TrackCollectionOptions<T extends Track<any>> = {
   newTracksMapper?: (tracks: T[]) => T[] | Promise<T[]>;
 }
 
+export type TrackPeek<T extends Track<any>> = {
+  index: number;
+  track: T;
+}
+
 export class TrackCollection<T extends Track<any>> extends EventEmitter {
   protected _ready: boolean = false;
 
@@ -46,14 +51,23 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
   }
 
   shift(): T | undefined {
-    return this.tracks.shift();
+    const track = this.tracks.shift();
+    if (track) {
+      this.trackIdMap.delete(track.id);
+    }
+    return track;
   }
 
-  push(track: T): void {
-    this.tracks.push(track);
+  push(track: T): number {
+    if (track) {
+      this.trackIdMap.set(track.id, track);
+      return this.tracks.push(track) - 1;
+    }
+
+    return -1;
   }
 
-  async add(path: string | string[]) {
+  async add(path: string | string[]): Promise<T[]> {
     const tracks = await Promise.all(
       _(path).castArray()
       .uniq().map(p => this.createTrack(p))
@@ -68,6 +82,8 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
     }
 
     this.tracks = uniqBy(this.tracks.concat(newTracks), 'path');
+
+    return newTracks;
   }
 
   removeBy(predicate: (track: T) => boolean) {
@@ -101,6 +117,10 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
     this.tracks = _.sortBy(this.tracks, ...sortFn);
   }
 
+  indexOf(track: T): number {
+    return _.findIndex(this.tracks, t => t.id === track.id);
+  }
+
   find(path: string) {
     return _.find(this.tracks, track => track.path === path);
   }
@@ -111,5 +131,26 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
 
   sample(): T | undefined {
     return sample(this.tracks);
+  }
+
+  peek(from: number = 0, n: number): TrackPeek<T>[] {
+    const max = this.tracks.length - 1;
+    const sib = Math.floor((n - 1) / 2);
+
+    let left = from - sib;
+    let right = from + sib;
+
+    if (left <= 0) {
+      left = 0;
+      right = Math.min(max, n - 1);
+    } else if (right >= max) {
+      right = max;
+      left = Math.max(0, right - n + 1);
+    }
+
+    return this.tracks.slice(left, right + 1).map((track, i) => ({
+      index: left + i,
+      track
+    }))
   }
 }
