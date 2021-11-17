@@ -3,6 +3,8 @@
 import { REST as RestClient } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v9";
 import {
+  ApplicationCommandOptionChoice,
+  AutocompleteInteraction,
   BaseCommandInteraction,
   BaseGuildVoiceChannel,
   ButtonInteraction,
@@ -20,21 +22,36 @@ import {
   MessageEmbed,
   MessageOptions,
   MessagePayload,
+  MessageSelectMenu,
+  MessageSelectOptionData,
   PermissionResolvable,
   Permissions,
+  SelectMenuInteraction,
   Snowflake,
+  User,
   VoiceState
 } from "discord.js";
 
-import { BoomBoxTrack, decibelsToGain, gainToDecibels, lyricsToText, parseLyrics, TrackKind } from "@medley/core";
+import { BoomBoxTrack,
+  decibelsToGain,
+  gainToDecibels,
+  isRequestTrack,
+  lyricsToText,
+  parseLyrics,
+  RequestTrack,
+  TrackKind,
+  TrackPeek
+} from "@medley/core";
+
 import colorableDominant from 'colorable-dominant';
 
-import { capitalize, castArray, first, isEmpty, without } from "lodash";
+import _, { capitalize, castArray, first, isEmpty, without } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from "path";
 import splashy from 'splashy';
 import commands from "./commands";
 import { MedleyMix } from "./mix";
+import lyricsSearcher from "lyrics-searcher";
 
 export type MedleyAutomatonOptions = {
   clientId: string;
@@ -384,13 +401,11 @@ export class MedleyAutomaton {
       embed.setImage(`attachment://${coverImage.name}`)
     }
 
-    const lyricButton = hasLyric
-      ? new MessageButton()
-        .setLabel('Lyrics')
-        .setEmoji('📜')
-        .setStyle('SECONDARY')
-        .setCustomId(`lyric:${track.id}`)
-      : undefined
+    const lyricButton = new MessageButton()
+      .setLabel('Lyrics')
+      .setEmoji('📜')
+      .setStyle('SECONDARY')
+      .setCustomId(`lyric:${track.id}`);
 
     const skipButton = new MessageButton()
       .setLabel('Skip')
@@ -505,6 +520,28 @@ export class MedleyAutomaton {
     }
   }
 
+  private async removeLyricsButton(trackId: BoomBoxTrack['id']) {
+    for (const state of this.states.values()) {
+      const msg = state.trackMessages.find(msg => msg.track.id === trackId);
+      if (msg) {
+        msg.buttons.lyric = undefined;
+
+        const showSkipButton = msg.status < TrackMessageStatus.Played;
+
+        const { sentMessage } = msg;
+        if (sentMessage?.editable) {
+          sentMessage.edit(this.trackMessageToMessageOptions({
+            ...msg,
+            buttons: {
+              lyric: undefined,
+              skip: showSkipButton ? msg.buttons.skip : undefined
+            }
+          }));
+        }
+      }
+    }
+  }
+
   private permissionGuard(permissions: Permissions | null, perm: PermissionResolvable, checkAdmin: boolean = true) {
     if (permissions &&  !permissions?.any(perm, checkAdmin)) {
       throw new CommandError('Insufficient permissions');
@@ -581,7 +618,7 @@ export class MedleyAutomaton {
 
     switch (tag.toLowerCase()) {
       case 'lyric':
-        return this.handleLyricButton(interaction, value);
+        return this.handleLyricsButton(interaction, value);
     }
   }
 
@@ -661,7 +698,16 @@ export class MedleyAutomaton {
     }
   }
 
-  private handleLyricButton = async (interaction: ButtonInteraction, trackId: BoomBoxTrack['id']) => {
+  private handleSkipButton = async (interaction: ButtonInteraction, trackId: BoomBoxTrack['id']) => {
+    if (this.dj.track?.id !== trackId) {
+      this.deny(interaction, 'Could not skip this track', undefined, true);
+      return;
+    }
+
+    return this.handleSkip(interaction);
+  }
+
+  private handleLyricsButton = async (interaction: ButtonInteraction, trackId: BoomBoxTrack['id']) => {
     const track = this.dj.findTrackById(trackId);
     if (!track) {
       this.deny(interaction, 'Invalid track identifier', undefined, true);
@@ -675,7 +721,7 @@ export class MedleyAutomaton {
 
     if (trackMsg?.lyricMessage) {
       await trackMsg?.lyricMessage.reply({
-        content: `${interaction.member} Lyric for ${banner} is right here ☝🏻`
+        content: `${interaction.member} Lyrics for \`${banner}\` is right here ↖`
       });
 
       await interaction.reply({
@@ -686,21 +732,43 @@ export class MedleyAutomaton {
       return;
     }
 
-    const lyric = first(track.metadata?.tags?.lyrics);
-    if (!lyric) {
-      this.warn(interaction, 'No lyric');
+    let lyricsText: string | undefined = undefined;
+    let lyricsSource = 'N/A';
+
+    const lyrics = first(track.metadata?.tags?.lyrics);
+
+    if (lyrics) {
+      lyricsText = lyricsToText(parseLyrics(lyrics), false).join('\n');
+      lyricsSource = 'metadata';
+
+    } else {
+      const artist = track.metadata?.tags?.artist;
+      const title = track.metadata?.tags?.title;
+
+      if (artist && title) {
+        await interaction.deferReply();
+        lyricsText = await lyricsSearcher(artist, title).catch(() => undefined);
+        lyricsSource = 'Google';
+      }
+    }
+
+    if (!lyricsText) {
+      this.warn(interaction, 'No lyrics');
+      this.removeLyricsButton(trackId);
       return
     }
 
-    const text = lyricsToText(parseLyrics(lyric), false).join('\n');
-    const lyricMessage = await interaction.reply({
+
+    const lyricMessage = await this.reply(interaction, {
       embeds: [
         new MessageEmbed()
-          .setTitle('Lyric')
+          .setTitle('Lyrics')
           .setDescription(banner)
+          .addField('Requested by', `${interaction.member}`, true)
+          .addField('Source', lyricsSource, true)
       ],
       files: [
-        new MessageAttachment(Buffer.from(text), `lyric-${banner.toLowerCase()}.txt`)
+        new MessageAttachment(Buffer.from(lyricsText), `lyric-${banner.toLowerCase()}.txt`)
       ],
       fetchReply: true
     });
@@ -712,7 +780,7 @@ export class MedleyAutomaton {
   }
 
   private async reply(interaction: BaseCommandInteraction | MessageComponentInteraction, options: string | MessagePayload | InteractionReplyOptions) {
-    return (!interaction.replied)
+    return (!interaction.replied && !interaction.deferred)
       ? interaction.reply(options)
       : interaction.editReply(options);
   }
@@ -760,7 +828,7 @@ export class MedleyAutomaton {
       '```' + type + '\n' +
       castArray(s).map(line => (isRed ? '-' : '') + line).join('\n') + '\n' +
       '```'
-    ;
+      ;
   }
 
   static async registerCommands(botToken: string, clientId: string, guildId: string) {
