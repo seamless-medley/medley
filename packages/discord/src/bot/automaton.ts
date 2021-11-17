@@ -343,25 +343,20 @@ export class MedleyAutomaton {
   }
 
   private async createTrackMessage(track: BoomBoxTrack): Promise<TrackMessage> {
+    const requestedBy = isRequestTrack(track) ? track.requestedBy : undefined;
+
     const embed = new MessageEmbed()
       .setColor('RANDOM')
-      .setTitle('Playing');
+      .setTitle(requestedBy ? 'Playing your request' : 'Playing');
 
     const { metadata } = track;
 
     let coverImage: MessageAttachment | undefined;
-    let hasLyric = false;
 
     if (metadata) {
-      if (metadata.kind === TrackKind.Request) {
-        embed.setTitle('Playing your request')
-      }
-
       const { tags } = metadata;
       if (tags) {
         const { title, lyrics } = tags;
-
-        hasLyric = !!lyrics;
 
         if (title) {
           embed.setDescription(title);
@@ -395,6 +390,10 @@ export class MedleyAutomaton {
 
     if (track.collection) {
       embed.addField('Collection', track.collection.id);
+    }
+
+    if (requestedBy) {
+      embed.addField('Requested by', `<@${requestedBy}>`);
     }
 
     if (coverImage) {
@@ -560,14 +559,25 @@ export class MedleyAutomaton {
           return;
         }
 
-
-          const group = interaction.options.getSubcommandGroup(false);
-          const promise = group ? this.handleGroupCommand(group.toLowerCase(), interaction) : this.handleTopLevelCommand(interaction.options.getSubcommand().toLowerCase(), interaction);
-          return await promise;
+        const group = interaction.options.getSubcommandGroup(false);
+        const promise = group ? this.handleGroupCommand(group.toLowerCase(), interaction) : this.handleTopLevelCommand(interaction.options.getSubcommand().toLowerCase(), interaction);
+        return await promise;
       }
 
       if (interaction.isButton()) {
         return await this.handleButton(interaction);
+      }
+
+      if (interaction.isAutocomplete()) {
+        if (interaction.commandName !== 'medley') {
+          return;
+        }
+
+        return await this.handleAutoComplete(interaction.options.getSubcommand().toLowerCase(), interaction);
+      }
+
+      if (interaction.isSelectMenu()) {
+        return await this.handleSelectMenu(interaction);
       }
 
     }
@@ -576,10 +586,10 @@ export class MedleyAutomaton {
         if (interaction.isApplicationCommand() || interaction.isMessageComponent()) {
           this.deny(interaction, `Command Error: ${e.message}`, undefined, true);
         }
+      } else {
+        console.error('Interaction Error', e);
       }
     }
-
-    // TODO: request command, with autocomplete
   }
 
   private handleTopLevelCommand = async (command: string, interaction: CommandInteraction) => {
@@ -593,6 +603,9 @@ export class MedleyAutomaton {
       case 'skip':
       case 'next':
         return this.handleSkip(interaction);
+
+      case 'request':
+        return this.handleRequest(interaction);
     }
   }
 
@@ -603,20 +616,18 @@ export class MedleyAutomaton {
   private handleButton = async (interaction: ButtonInteraction) => {
     const { customId } = interaction;
 
-    switch (customId) {
-      case 'skip':
-        return this.handleSkip(interaction);
-    }
-
     const matched = customId.match(/^(.*)\:(.*)$/);
     if (!matched) {
-      this.deny(interaction, 'What ya say?', undefined,true);
+      this.deny(interaction, 'What ya say?', undefined, true);
       return;
     }
 
     const [, tag, value] = matched;
 
     switch (tag.toLowerCase()) {
+      case 'skip':
+        return this.handleSkipButton(interaction, value);
+
       case 'lyric':
         return this.handleLyricsButton(interaction, value);
     }
@@ -679,12 +690,12 @@ export class MedleyAutomaton {
     ]);
 
     if (this.dj.paused || !this.dj.playing) {
-      await this.deny(interaction, 'Not currently playing', `@${interaction.member.user.id}`);
+      await this.deny(interaction, 'Not currently playing', `@${interaction.user.id}`);
       return;
     }
 
     this.skipCurrentSong();
-    this.accept(interaction,`OK, Skipping to the next track`, `@${interaction.member.user.id}`);
+    this.accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
   }
 
   private skipCurrentSong() {
@@ -776,6 +787,176 @@ export class MedleyAutomaton {
 
     if (trackMsg && lyricMessage instanceof Message) {
       trackMsg.lyricMessage = lyricMessage;
+    }
+  }
+
+  private handleRequest = async (interaction: CommandInteraction) => {
+    const query = interaction.options.getString('query');
+    if (query === null) {
+      const preview = await this.makeRequestPreview();
+
+      if (preview) {
+        interaction.reply(preview.join('\n'))
+      } else {
+        interaction.reply('Request list is empty');
+      }
+
+      return;
+    }
+
+    if (!query) {
+      this.warn(interaction, 'Empty query', undefined, true);
+      return;
+    }
+
+    const issuer = interaction.user.id;
+
+    await interaction.deferReply();
+
+    const results = this.dj.search(query, 10);
+
+    if (results.length < 1) {
+      this.reply(interaction, `Your search **\`${query}\`** did not match any tracks`)
+      return;
+    }
+
+    const selections = results.map<MessageSelectOptionData>(track => ({
+      label: track.metadata?.tags?.artist || 'Unknown Artist',
+      description: track.metadata?.tags?.title,
+      value: track.id
+    }));
+
+    const selector = await this.reply(interaction, {
+      content: 'Search result:',
+      components: [
+        new MessageActionRow()
+          .addComponents(
+            new MessageSelectMenu()
+              .setCustomId('request')
+              .setPlaceholder('Select a track')
+              .addOptions(selections)
+          )
+      ],
+      fetchReply: true
+    });
+
+    if (selector instanceof Message) {
+      const collector = selector.createMessageComponentCollector({ componentType: 'SELECT_MENU', time: 30_000 });
+
+      collector.on('collect', async i => {
+        if (i.user.id !== issuer) {
+          i.reply({
+            content: `Sorry, this selection is for <@${issuer}> only`,
+            ephemeral: true
+          })
+          return;
+        }
+
+        collector.removeAllListeners();
+        await this.handleSelectMenuForRequest(i);
+      });
+
+      collector.on('end', () => {
+        if (selector.editable) {
+          selector.edit({
+            content: this.makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
+            components: []
+          });
+        }
+      });
+    }
+  }
+
+  private handleAutoComplete = async (command: string, interaction: AutocompleteInteraction) => {
+    switch (command) {
+      case 'request':
+        return this.handleAutoCompleteForRequest(interaction);
+    }
+
+    interaction.respond([]);
+  }
+
+  private handleAutoCompleteForRequest = async (interaction: AutocompleteInteraction) => {
+    const query = interaction.options.getString('query');
+    const completions = query ? _(this.dj.autoSuggest(query))
+      .take(25)
+      .map<ApplicationCommandOptionChoice>(s => ({ name: s, value: s }))
+      .value()
+      : []
+
+    // TODO: return some suggestion if query is empty, from search history?, request history?
+
+    interaction.respond(completions);
+  }
+
+  private handleSelectMenu = async (interaction: SelectMenuInteraction) => {
+
+  }
+
+  private async makeRequestPreview(index: number = 0, focus?: number) {
+    const peeking = this.dj.peekRequests(index, 5);
+
+    if (peeking.length <= 0) {
+      return;
+    }
+
+    const padding = 2 + (_.maxBy(peeking, 'index')?.index.toString().length || 0);
+
+    const previewTrack = (focus?: number) => ({ index, track }: TrackPeek<RequestTrack<User['id']>>) => {
+      const label = _.padStart(`${focus === index ? '+ ' : ''}${index + 1}`, padding);
+      return `${label}: ${this.getTrackBanner(track)} [${track.priority || 0}]`;
+    };
+
+    const lines: string[] = [];
+
+    if (peeking[0].index > 0) {
+      const first = this.dj.peekRequests(0, 1);
+      if (first.length) {
+        lines.push(previewTrack(focus)(first[0]));
+        lines.push(_.padStart('...', padding));
+      }
+    }
+
+    for (const peek of peeking) {
+      lines.push(previewTrack(focus)(peek));
+    }
+
+    return lines.length
+      ? [
+        '```diff',
+        ...lines,
+        '```'
+      ]
+      : undefined;
+  }
+
+  private handleSelectMenuForRequest = async (interaction: SelectMenuInteraction) => {
+    const { values } = interaction;
+    if (values.length) {
+      const trackId = values[0];
+      if (trackId) {
+        const ok = await this.dj.request(trackId, interaction.member.user.id);
+
+        if (ok === false || ok.index < 0) {
+          await interaction.update({
+            content: this.makeHighlightedMessage('Track could not be requested for some reasons', HighlightTextType.Red),
+            components: []
+          });
+          return;
+        }
+
+        const preview = await this.makeRequestPreview(ok.index, ok.index);
+        await interaction.update({
+          content: `Request accepted: \`${this.getTrackBanner(ok.track)}\``,
+          components: []
+        });
+
+        if (preview) {
+          interaction.followUp({
+            content: preview.join('\n')
+          })
+        }
+      }
     }
   }
 
