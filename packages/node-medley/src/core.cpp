@@ -168,19 +168,19 @@ void Medley::deckPosition(medley::Deck& sender, double position) {
 
 }
 
-void Medley::deckStarted(medley::Deck& sender, medley::ITrack::Ptr& track) {
+void Medley::deckStarted(medley::Deck& sender, medley::TrackPlay& track) {
     emitDeckEvent("started", sender, track);
 }
 
-void Medley::deckFinished(medley::Deck& sender, medley::ITrack::Ptr& track) {
+void Medley::deckFinished(medley::Deck& sender, medley::TrackPlay& track) {
     emitDeckEvent("finished", sender, track);
 }
 
-void Medley::deckLoaded(medley::Deck& sender, medley::ITrack::Ptr& track) {
+void Medley::deckLoaded(medley::Deck& sender, medley::TrackPlay& track) {
     emitDeckEvent("loaded", sender, track);
 }
 
-void Medley::deckUnloaded(medley::Deck& sender, medley::ITrack::Ptr& track) {
+void Medley::deckUnloaded(medley::Deck& sender, medley::TrackPlay& track) {
     emitDeckEvent("unloaded", sender, track);
 }
 
@@ -208,12 +208,17 @@ void Medley::preQueueNext(PreCueNextDone done) {
     });
 }
 
-void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley::ITrack::Ptr& track) {
+void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley::TrackPlay& trackPlay) {
     auto index = deck.getIndex();
 
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function emitFn) {
         try {
-            auto obj = static_cast<Track*>(track.get())->getObjectRef().Value();
+            auto uuid = trackPlay.getUuid().toDashedString();
+            auto track = static_cast<Track*>(trackPlay.getTrack().get())->getObjectRef().Value();
+
+            auto obj = Napi::Object::New(env);
+            obj.Set("uuid", Napi::String::New(env, uuid.toStdString()));
+            obj.Set("track", track);
 
             emitFn.Call(self.Value(), {
                 Napi::String::New(env, name),

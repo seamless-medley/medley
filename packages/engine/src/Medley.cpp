@@ -343,7 +343,7 @@ inline String Medley::getDeckName(Deck& deck) {
     return deck.getName();
 }
 
-void Medley::deckStarted(Deck& sender, ITrack::Ptr& track) {
+void Medley::deckStarted(Deck& sender, TrackPlay& track) {
     sender.log("Started");
 
     auto prevDeck = getPreviousDeck(&sender);
@@ -357,7 +357,7 @@ void Medley::deckStarted(Deck& sender, ITrack::Ptr& track) {
     });
 }
 
-void Medley::deckFinished(Deck& sender, ITrack::Ptr& track) {
+void Medley::deckFinished(Deck& sender, TrackPlay& track) {
     decksTransition[sender.index].state = DeckTransitionState::Idle;
 
     ScopedLock sl(callbackLock);
@@ -366,7 +366,7 @@ void Medley::deckFinished(Deck& sender, ITrack::Ptr& track) {
     });
 }
 
-void Medley::deckLoaded(Deck& sender, ITrack::Ptr& track)
+void Medley::deckLoaded(Deck& sender, TrackPlay& track)
 {
     decksTransition[sender.index].state = DeckTransitionState::Idle;
 
@@ -376,7 +376,7 @@ void Medley::deckLoaded(Deck& sender, ITrack::Ptr& track)
     });
 }
 
-void Medley::deckUnloaded(Deck& sender, ITrack::Ptr& track) {
+void Medley::deckUnloaded(Deck& sender, TrackPlay& track) {
     sender.log("Unloaded");
 
     auto nextDeck = getNextDeck(&sender);

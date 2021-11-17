@@ -92,8 +92,13 @@ export declare enum DeckIndex {
   C = 2
 }
 
+export type TrackPlay<T extends TrackInfo> = {
+  uuid: string;
+  track: T;
+}
+
 export type Listener<T = void> = () => T;
-export type DeckListener<T extends TrackInfo> = (deckIndex: DeckIndex, track: T) => void;
+export type DeckListener<T extends TrackInfo> = (deckIndex: DeckIndex, trackPlay: TrackPlay<T>) => void;
 export type PreQueueListener = (done: PreQueueCallback) => void;
 export type PreQueueCallback = (result: boolean) => void;
 

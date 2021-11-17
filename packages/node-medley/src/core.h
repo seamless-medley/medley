@@ -27,13 +27,13 @@ public:
 
     void deckPosition(medley::Deck& sender, double position) override;
 
-    void deckStarted(medley::Deck& sender, medley::ITrack::Ptr& track) override;
+    void deckStarted(medley::Deck& sender, medley::TrackPlay& track) override;
 
-    void deckFinished(medley::Deck& sender, medley::ITrack::Ptr& track) override;
+    void deckFinished(medley::Deck& sender, medley::TrackPlay& track) override;
 
-    void deckLoaded(medley::Deck& sender, medley::ITrack::Ptr& track) override;
+    void deckLoaded(medley::Deck& sender, medley::TrackPlay& track) override;
 
-    void deckUnloaded(medley::Deck& sender, medley::ITrack::Ptr& track) override;
+    void deckUnloaded(medley::Deck& sender, medley::TrackPlay& track) override;
 
     void audioDeviceChanged() override;
 
@@ -151,7 +151,7 @@ public:
         float gain = 1.0f;
     };
 private:
-    void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::ITrack::Ptr& track);
+    void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::TrackPlay& track);
 
     enum class AudioRequestFormat : uint8_t {
         Int16LE, Int16BE, FloatLE, FloatBE

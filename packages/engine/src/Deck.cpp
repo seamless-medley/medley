@@ -205,7 +205,9 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     isTrackLoading = false;
 
     listeners.call([this](Callback& cb) {
-        cb.deckLoaded(*this, this->track);
+        this->trackPlay = TrackPlay(this->track);
+
+        cb.deckLoaded(*this, this->trackPlay);
     });
 
     return true;
@@ -250,13 +252,16 @@ void Deck::unloadTrackInternal()
     }
 
     if (deckUnloaded) {
-        listeners.call([this](Callback& cb) {
-            cb.deckUnloaded(*this, this->track);
+        auto play = this->trackPlay;
+
+        listeners.call([this, &play](Callback& cb) {
+            cb.deckUnloaded(*this, play);
         });
     }
 
     nextReadPosition = 0;
     track = nullptr;
+    trackPlay = TrackPlay();
     setReplayGain(0.0f);
     setVolume(1.0f);
 }
@@ -626,7 +631,7 @@ bool Deck::start()
     {
         if (!internallyPaused) {
             listeners.call([this](Callback& cb) {
-                cb.deckStarted(*this, this->track);
+                cb.deckStarted(*this, this->trackPlay);
             });
         }
 
@@ -661,7 +666,7 @@ void Deck::fireFinishedCallback()
     log("Finished");
 
     listeners.call([this](Callback& cb) {
-        cb.deckFinished(*this, this->track);
+        cb.deckFinished(*this, this->trackPlay);
     });
 
     unloadTrackInternal();
