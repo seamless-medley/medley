@@ -15,6 +15,7 @@ import {
 import { BoomBox,
   BoomBoxEvents,
   BoomBoxTrack,
+  BoomBoxTrackPlay,
   Crate,
   mapTracksMetadata,
   Medley,
@@ -111,15 +112,15 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     this.emit('trackQueued', track);
   }
 
-  private handleTrackLoaded = (track: BoomBoxTrack) => {
-    this.emit('trackLoaded', track);
+  private handleTrackLoaded = (trackPlay: BoomBoxTrackPlay) => {
+    this.emit('trackLoaded', trackPlay);
   }
 
-  private handleTrackStarted = (track: BoomBoxTrack, lastTrack?: BoomBoxTrack) => {
-    this.emit('trackStarted', track, lastTrack);
+  private handleTrackStarted = (trackPlay: BoomBoxTrackPlay, lastTrack?: BoomBoxTrackPlay) => {
+    this.emit('trackStarted', trackPlay, lastTrack);
   }
 
-  private handleTrackFinished = (track: BoomBoxTrack) => {
+  private handleTrackFinished = (track: BoomBoxTrackPlay) => {
     this.emit('trackFinished', track);
   }
 
@@ -191,8 +192,8 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     return this.medley.paused;
   }
 
-  get track() {
-    return this.boombox.track;
+  get trackPlay() {
+    return this.boombox.trackPlay;
   }
 
   skip() {

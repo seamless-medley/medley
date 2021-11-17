@@ -70,9 +70,9 @@ boombox.on('trackQueued', track => {
 
 let skipTimer: NodeJS.Timeout;
 
-boombox.on('trackStarted', track => {
-  if (track.metadata?.kind !== TrackKind.Insertion) {
-    console.log('Playing:', `${track.metadata?.tags?.artist} - ${track.metadata?.tags?.title}`);
+boombox.on('trackStarted', trackPlay => {
+  if (trackPlay.track.metadata?.kind !== TrackKind.Insertion) {
+    console.log('Playing:', `${trackPlay.track.metadata?.tags?.artist} - ${trackPlay.track.metadata?.tags?.title}`);
     // const lyrics = first(track.metadata?.tags?.lyrics);
     // if (lyrics) {
     //   console.log(lyricsToText(parseLyrics(lyrics), false));
@@ -90,7 +90,7 @@ boombox.on('trackStarted', track => {
 });
 
 boombox.on('requestTrackFetched', track => {
-  const currentKind = boombox.track?.metadata?.kind || TrackKind.Normal;
+  const currentKind = boombox.trackPlay?.track.metadata?.kind || TrackKind.Normal;
   if (currentKind !== TrackKind.Request) {
     const sweeper = sweepers.shift();
     if (sweeper) {
