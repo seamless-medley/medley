@@ -20,15 +20,18 @@ import { BoomBox,
   Medley,
   Queue,
   RequestAudioStreamResult,
+  RequestTrack,
   SweeperInsertionRule,
   TrackKind,
+  TrackPeek,
   WatchTrackCollection
 } from "@medley/core";
 
-import { BaseGuildVoiceChannel, Guild } from "discord.js";
+import { BaseGuildVoiceChannel, Guild, GuildMember, User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
 import _, { flow, shuffle } from "lodash";
+import MiniSearch from 'minisearch'
 
 export type MedleyMixOptions = {
   /**
@@ -63,7 +66,18 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   private states: Map<Guild['id'], MixState> = new Map();
 
   private collections: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
-  private boombox: BoomBox;
+  private boombox: BoomBox<User['id']>;
+
+  private miniSearch = new MiniSearch<BoomBoxTrack>({
+    fields: ['artist', 'title'],
+    extractField: (track, field) => {
+      if (field === 'id') {
+        return track.id;
+      }
+
+      return _.get(track.metadata?.tags, field);
+    }
+  });
 
   constructor(private options: MedleyMixOptions = {}) {
     super();
@@ -85,7 +99,12 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     this.boombox.on('trackQueued', this.handleTrackQueued);
     this.boombox.on('trackLoaded', this.handleTrackLoaded);
     this.boombox.on('trackStarted', this.handleTrackStarted);
-    this.boombox.on('trackFinished', this.handleTrackFinished)
+    this.boombox.on('trackFinished', this.handleTrackFinished);
+
+    this.boombox.on('requestTrackFetched', (track: RequestTrack<void>) => {
+      // TODO: Sweeper
+      // console.log('Request track fetched', track);
+    });
   }
 
   private handleTrackQueued = (track: BoomBoxTrack) => {
@@ -228,6 +247,15 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     }
   }
 
+  private indexNewTracks = async (awaitable: Promise<BoomBoxTrack[]>) => {
+    const tracks = await awaitable;
+    this.miniSearch.addAllAsync(tracks);
+
+    return tracks;
+  }
+
+  private newTracksMapper = flow(shuffle, mapTracksMetadata, this.indexNewTracks);
+
   // TODO: Manipulating collections directly might be a good option
   updateCollections(newCollections: Record<string, string>) {
     const existingIds = [...this.collections.keys()];
@@ -248,11 +276,14 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
       this.collections.delete(id);
     }
 
+
     const todo =_.uniq(tobeAdded.concat(invalidatedIds));
     for (const id of todo) {
-      const collection = WatchTrackCollection.initWithWatch<BoomBoxTrack>(id, newCollections[id], {
-        newTracksMapper: flow(shuffle, mapTracksMetadata)
-      });
+      const collection = WatchTrackCollection.initWithWatch<BoomBoxTrack>(
+        id,
+        newCollections[id],
+        { newTracksMapper: this.newTracksMapper }
+      );
       this.collections.set(id, collection);
     }
 
@@ -290,5 +321,35 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
         return track;
       }
     }
+  }
+
+  autoSuggest(q: string) {
+    return this.miniSearch.autoSuggest(q, { prefix: true, fuzzy: 0.5 }).map(s => s.suggestion);
+  }
+
+  search(q: string, limit?: number): BoomBoxTrack[] {
+    const chain = _(this.miniSearch.search(q, { fuzzy: 0.5 }))
+      .map(t => this.findTrackById(t.id))
+      .filter((t): t is BoomBoxTrack => t !== undefined)
+      .uniqBy(t => t.id)
+
+    return (limit ? chain.take(limit) : chain).value();
+  }
+
+  async request(trackId: BoomBoxTrack['id'], requestedBy: User['id']) {
+    const track = this.findTrackById(trackId);
+    if (!track) {
+      return false;
+    }
+
+    if (!this.medley.isTrackLoadable(track)) {
+      return false;
+    }
+
+    return this.boombox.request(track, requestedBy);
+  }
+
+  peekRequests(from: number, n: number) {
+    return this.boombox.peekRequests(from, n);
   }
 }
