@@ -92,7 +92,7 @@ type TrackMessage = {
   lyricMessage?: Message;
 }
 
-class CommandError extends Error {};
+class CommandError extends Error { };
 
 export class MedleyAutomaton {
   readonly client: Client;
@@ -144,6 +144,7 @@ export class MedleyAutomaton {
     const guilds = await client.guilds.fetch();
     for (const [id] of guilds) {
       this.ensureGuildState(id);
+      this.registerCommands(id);
     }
 
     // TODO: Try to join last voice channel
@@ -244,7 +245,7 @@ export class MedleyAutomaton {
 
     if (channelChange === 'join' || channelChange === 'move') {
       if (newState.channelId === state.voiceChannelId) {
-        console.log(newState.member.displayName,'is joining or moving to my channel', 'deaf?', newState.deaf);
+        console.log(newState.member.displayName, 'is joining or moving to my channel', 'deaf?', newState.deaf);
         if (!newState.deaf) {
           state.audiences.push(newState.member.id);
           this.audiencesUpdated();
@@ -410,7 +411,7 @@ export class MedleyAutomaton {
       .setLabel('Skip')
       .setEmoji('⛔')
       .setStyle('DANGER')
-      .setCustomId('skip');
+      .setCustomId(`skip:${track.id}`);
 
     return {
       track,
@@ -491,8 +492,10 @@ export class MedleyAutomaton {
   }
 
   private async updateTrackMessage(trackId: BoomBoxTrack['id'], predicate: (msg: TrackMessage) => Promise<boolean>, status: TrackMessageStatus, title?: string) {
-    for (const [guildId, state] of this.states) {
-      const msg = state.trackMessages.find(msg => msg.track.id === trackId);
+    for (const state of this.states.values()) {
+      // Find the first non-played/non-skipped track matching the trackId
+      const msg = state.trackMessages.find(msg => msg.status < TrackMessageStatus.Played && msg.track.id === trackId);
+
       if (msg) {
         if (await predicate(msg)) {
           msg.status = status;
@@ -542,13 +545,13 @@ export class MedleyAutomaton {
   }
 
   private permissionGuard(permissions: Permissions | null, perm: PermissionResolvable, checkAdmin: boolean = true) {
-    if (permissions &&  !permissions?.any(perm, checkAdmin)) {
+    if (permissions && !permissions?.any(perm, checkAdmin)) {
       throw new CommandError('Insufficient permissions');
     }
   }
 
   private handleInteraction = async (interaction: Interaction) => {
-    if (interaction.member.user.bot) {
+    if (interaction.user.bot) {
       return;
     }
 
@@ -679,7 +682,7 @@ export class MedleyAutomaton {
     }
 
     this.dj.setGain(interaction.guildId, decibelsToGain(decibels));
-    this.accept(interaction, `OK, Volume set to ${decibels}dB`);
+    this.accept(interaction, `OK: Volume set to ${decibels}dB`);
   }
 
   private handleSkip = async (interaction: CommandInteraction | ButtonInteraction) => {
