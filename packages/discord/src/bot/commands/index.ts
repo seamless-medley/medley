@@ -2,11 +2,13 @@ import { Command, CommandType } from "./type";
 import join from "./join";
 import volume from "./volume";
 import skip from './skip';
+import request from './request';
 
 const commands = [
   join,
   volume,
-  ...skip
+  ...skip,
+  request
 ]
 
 const payload: Command = {
