@@ -36,8 +36,8 @@ export type RequestTrack<Requester> = BoomBoxTrack & {
   lastRequestTime?: Date;
 };
 
-export function isRequestTrack(o: Track<any>): o is RequestTrack<any> {
-  return !!(o as any).requestedBy;
+export function isRequestTrack(o: any): o is RequestTrack<any> {
+  return o && !!o.requestedBy;
 }
 
 export interface BoomBoxEvents {
