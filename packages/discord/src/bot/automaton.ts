@@ -864,6 +864,14 @@ export class MedleyAutomaton {
               .setCustomId('request')
               .setPlaceholder('Select a track')
               .addOptions(selections)
+          ),
+        new MessageActionRow()
+          .addComponents(
+            new MessageButton()
+              .setCustomId('cancel_request')
+              .setLabel('Cancel')
+              .setStyle('SECONDARY')
+              .setEmoji('❌')
           )
       ],
       fetchReply: true
@@ -892,6 +900,21 @@ export class MedleyAutomaton {
             components: []
           });
         }
+      });
+
+      selector.awaitMessageComponent({
+        componentType: 'BUTTON',
+        filter: (i) => {
+          i.deferUpdate();
+          return i.user.id === issuer;
+        },
+        time: 60_000
+      })
+      .then(_.identity)
+      .catch(() => void 0)
+      .finally(() => {
+        collector.removeAllListeners();
+        selector.delete();
       });
     }
   }
