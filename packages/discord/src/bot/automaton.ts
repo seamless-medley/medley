@@ -81,7 +81,7 @@ export enum TrackMessageStatus {
 }
 
 type TrackMessage = {
-  track: BoomBoxTrack;
+  trackPlay: BoomBoxTrackPlay;
   status: TrackMessageStatus;
   embed: MessageEmbed;
   coverImage?: MessageAttachment;
@@ -344,7 +344,8 @@ export class MedleyAutomaton {
     this.states.delete(guild.id);
   }
 
-  private async createTrackMessage(track: BoomBoxTrack): Promise<TrackMessage> {
+  private async createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<TrackMessage> {
+    const { track } = trackPlay;
     const requestedBy = isRequestTrack(track) ? track.requestedBy : undefined;
 
     const embed = new MessageEmbed()
@@ -412,10 +413,10 @@ export class MedleyAutomaton {
       .setLabel('Skip')
       .setEmoji('⛔')
       .setStyle('DANGER')
-      .setCustomId(`skip:${track.id}`);
+      .setCustomId(`skip:${trackPlay.uuid}`);
 
     return {
-      track,
+      trackPlay,
       status: TrackMessageStatus.Playing,
       embed,
       coverImage,
@@ -457,7 +458,7 @@ export class MedleyAutomaton {
 
     this.showActivity();
 
-    const trackMsg = await this.createTrackMessage(trackPlay.track);
+    const trackMsg = await this.createTrackMessage(trackPlay);
     const sentMessages = await this.sendAll(this.trackMessageToMessageOptions(trackMsg));
 
     // Store message for each guild
@@ -489,13 +490,12 @@ export class MedleyAutomaton {
   }
 
   private handleTrackFinished = async (trackPlay: BoomBoxTrackPlay) => {
-    this.updateTrackMessage(trackPlay.track.id, async msg => msg.status < TrackMessageStatus.Played, TrackMessageStatus.Played, 'Played');
+    this.updateTrackMessage(trackPlay, async msg => msg.status < TrackMessageStatus.Played, TrackMessageStatus.Played, 'Played');
   }
 
-  private async updateTrackMessage(trackId: BoomBoxTrack['id'], predicate: (msg: TrackMessage) => Promise<boolean>, status: TrackMessageStatus, title?: string) {
+  private async updateTrackMessage(trackPlay: BoomBoxTrackPlay, predicate: (msg: TrackMessage) => Promise<boolean>, status: TrackMessageStatus, title?: string) {
     for (const state of this.states.values()) {
-      // Find the first non-played/non-skipped track matching the trackId
-      const msg = state.trackMessages.find(msg => msg.status < TrackMessageStatus.Played && msg.track.id === trackId);
+      const msg = state.trackMessages.find(msg => msg.status < TrackMessageStatus.Played && msg.trackPlay.uuid === trackPlay.uuid);
 
       if (msg) {
         if (await predicate(msg)) {
@@ -525,8 +525,9 @@ export class MedleyAutomaton {
 
   private async removeLyricsButton(trackId: BoomBoxTrack['id']) {
     for (const state of this.states.values()) {
-      const msg = state.trackMessages.find(msg => msg.track.id === trackId);
-      if (msg) {
+
+      const messages = state.trackMessages.filter(msg => msg.trackPlay.track.id === trackId);
+      for (const msg of messages) {
         msg.buttons.lyric = undefined;
 
         const showSkipButton = msg.status < TrackMessageStatus.Played;
@@ -686,12 +687,21 @@ export class MedleyAutomaton {
     this.accept(interaction, `OK: Volume set to ${decibels}dB`);
   }
 
-  private handleSkip = async (interaction: CommandInteraction | ButtonInteraction) => {
+  private handleSkip = async (interaction: CommandInteraction | ButtonInteraction, trackPlay?: BoomBoxTrackPlay) => {
     this.permissionGuard(interaction.memberPermissions, [
       Permissions.FLAGS.MANAGE_CHANNELS,
       Permissions.FLAGS.MANAGE_GUILD,
       Permissions.FLAGS.MOVE_MEMBERS
     ]);
+
+    if (trackPlay && isRequestTrack(trackPlay.track)) {
+      const { requestedBy } = trackPlay.track;
+
+      if (requestedBy && requestedBy !== interaction.user.id) {
+        await this.reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by <@${requestedBy}>`);
+        return;
+      }
+    }
 
     if (this.dj.paused || !this.dj.playing) {
       await this.deny(interaction, 'Not currently playing', `@${interaction.user.id}`);
@@ -706,20 +716,20 @@ export class MedleyAutomaton {
     if (!this.dj.paused && this.dj.playing) {
       const { trackPlay } = this.dj;
       if (trackPlay) {
-        this.updateTrackMessage(trackPlay.track.id, async () => true, TrackMessageStatus.Skipped, 'Skipped');
+        this.updateTrackMessage(trackPlay, async () => true, TrackMessageStatus.Skipped, 'Skipped');
       }
 
       this.dj.skip();
     }
   }
 
-  private handleSkipButton = async (interaction: ButtonInteraction, trackId: BoomBoxTrack['id']) => {
-    if (this.dj.trackPlay?.track.id !== trackId) {
+  private handleSkipButton = async (interaction: ButtonInteraction, playUuid: string) => {
+    if (this.dj.trackPlay?.uuid !== playUuid) {
       this.deny(interaction, 'Could not skip this track', undefined, true);
       return;
     }
 
-    return this.handleSkip(interaction);
+    return this.handleSkip(interaction, this.dj.trackPlay);
   }
 
   private handleLyricsButton = async (interaction: ButtonInteraction, trackId: BoomBoxTrack['id']) => {
@@ -732,7 +742,8 @@ export class MedleyAutomaton {
     const banner = this.getTrackBanner(track);
 
     const state = this.states.get(interaction.guildId);
-    const trackMsg = state?.trackMessages.find(m => m.track.id === trackId);
+
+    const trackMsg = state ? _.findLast(state.trackMessages, m => m.trackPlay.track.id === trackId && !!m.lyricMessage) : undefined;
 
     if (trackMsg?.lyricMessage) {
       await trackMsg?.lyricMessage.reply({
