@@ -809,8 +809,9 @@ export class MedleyAutomaton {
   }
 
   private handleRequest = async (interaction: CommandInteraction) => {
-    const query = interaction.options.getString('query');
-    if (query === null) {
+    const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f));
+
+    if (options.every(_.isNull)) {
       const preview = await this.makeRequestPreview();
 
       if (preview) {
@@ -822,21 +823,31 @@ export class MedleyAutomaton {
       return;
     }
 
-    if (!query) {
-      this.warn(interaction, 'Empty query', undefined, true);
+    await interaction.deferReply();
+
+    const [artist, title, query] = options;
+
+    const results = this.dj.search({
+      artist,
+      title,
+      query
+    }, 10);
+
+    if (results.length < 1) {
+      const tagTerms = _.zip(['artist', 'title'], [artist, title])
+        .filter(([, t]) => !!t)
+        .map(([n, v]) => `(${n} ~ "${v}")`)
+        .join(' AND ');
+
+      const queryString = [tagTerms, query ? `"${query}"` : null]
+        .filter(t => !!t)
+        .join(' OR ');
+
+      this.reply(interaction, `Your search **\`${queryString}\`** did not match any tracks`)
       return;
     }
 
     const issuer = interaction.user.id;
-
-    await interaction.deferReply();
-
-    const results = this.dj.search(query, 10);
-
-    if (results.length < 1) {
-      this.reply(interaction, `Your search **\`${query}\`** did not match any tracks`)
-      return;
-    }
 
     const selections = results.map<MessageSelectOptionData & { collection: BoomBoxTrack['collection'] }>(track => ({
       label: track.metadata?.tags?.title || parsePath(track.path).name,
@@ -929,8 +940,9 @@ export class MedleyAutomaton {
   }
 
   private handleAutoCompleteForRequest = async (interaction: AutocompleteInteraction) => {
-    const query = interaction.options.getString('query');
-    const completions = query ? _(this.dj.autoSuggest(query))
+    const { name, value } = interaction.options.getFocused(true);
+
+    const completions = value ? _(this.dj.autoSuggest(`${value}`, ['artist', 'title'].includes(name) ? name : undefined))
       .take(25)
       .map<ApplicationCommandOptionChoice>(s => ({ name: s, value: s }))
       .value()

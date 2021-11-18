@@ -10,6 +10,18 @@ const request: SubCommandLikeOption = {
       name: 'query',
       description: 'Search term',
       autocomplete: true
+    },
+    {
+      type: OptionType.String,
+      name: 'artist',
+      description: 'Artist name',
+      autocomplete: true
+    },
+    {
+      type: OptionType.String,
+      name: 'title',
+      description: 'Song title',
+      autocomplete: true
     }
   ]
 }

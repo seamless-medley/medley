@@ -31,8 +31,8 @@ import { BoomBox,
 import { BaseGuildVoiceChannel, Guild, GuildMember, User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
-import _, { flow, shuffle } from "lodash";
-import MiniSearch from 'minisearch'
+import _, { flow, shuffle, castArray } from "lodash";
+import MiniSearch, { Query, QueryCombination } from 'minisearch'
 
 export type MedleyMixOptions = {
   /**
@@ -324,12 +324,49 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     }
   }
 
-  autoSuggest(q: string) {
-    return this.miniSearch.autoSuggest(q, { prefix: true, fuzzy: 0.5 }).map(s => s.suggestion);
+  autoSuggest(q: string, field?: string) {
+    return this.miniSearch.autoSuggest(
+      q,
+      {
+        fields: field ? castArray(field) : undefined,
+        prefix: true,
+        fuzzy: 0.5
+      }
+    ).map(s => s.suggestion);
   }
 
-  search(q: string, limit?: number): BoomBoxTrack[] {
-    const chain = _(this.miniSearch.search(q, { fuzzy: 0.5 }))
+  search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): BoomBoxTrack[] {
+    const { artist, title, query } = q;
+
+    const queries: Query[] = [];
+
+    if (artist || title) {
+      const fields: string[] = [];
+      const values: string[] = [];
+
+      if (artist) {
+        fields.push('artist');
+        values.push(artist);
+      }
+
+      if (title) {
+        fields.push('title');
+        values.push(title);
+      }
+
+      queries.push({
+        fields,
+        queries: values,
+        combineWith: 'AND'
+      })
+    }
+
+    if (query) {
+      queries.push(query)
+    }
+
+    const chain = _(this.miniSearch.search({ queries, combineWith: 'OR' }, { prefix: true, fuzzy: 0.2 }))
+      .sortBy(s => -s.score)
       .map(t => this.findTrackById(t.id))
       .filter((t): t is BoomBoxTrack => t !== undefined)
       .uniqBy(t => t.id)
