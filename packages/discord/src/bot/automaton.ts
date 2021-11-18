@@ -838,11 +838,22 @@ export class MedleyAutomaton {
       return;
     }
 
-    const selections = results.map<MessageSelectOptionData>(track => ({
-      label: track.metadata?.tags?.artist || 'Unknown Artist',
-      description: track.metadata?.tags?.title,
-      value: track.id
+    const selections = results.map<MessageSelectOptionData & { collection: BoomBoxTrack['collection'] }>(track => ({
+      label: track.metadata?.tags?.title || parsePath(track.path).name,
+      description: track.metadata?.tags?.title ? (track.metadata?.tags?.artist || 'Unknown Artist') : undefined,
+      value: track.id,
+      collection: track.collection
     }));
+
+    // Distinguish duplicated track artist and title
+    _(selections)
+      .groupBy(({ label, description }) => `${label}:${description}`)
+      .pickBy(group => group.length > 1)
+      .forEach(group => {
+        for (const sel of group) {
+          sel.description += ` (from \'${sel.collection.id}\' collection)`
+        }
+      });
 
     const selector = await this.reply(interaction, {
       content: 'Search result:',
