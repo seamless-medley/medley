@@ -623,7 +623,6 @@ export class MedleyAutomaton {
 
     const matched = customId.match(/^(.*)\:(.*)$/);
     if (!matched) {
-      this.deny(interaction, 'What ya say?', undefined, true);
       return;
     }
 
@@ -739,21 +738,25 @@ export class MedleyAutomaton {
       return;
     }
 
-    const banner = this.getTrackBanner(track);
-
     const state = this.states.get(interaction.guildId);
 
-    const trackMsg = state ? _.findLast(state.trackMessages, m => m.trackPlay.track.id === trackId && !!m.lyricMessage) : undefined;
+    const trackMsg = state ? _.findLast(state.trackMessages, m => m.trackPlay.track.id === trackId) : undefined;
+
+    if (!trackMsg) {
+      this.warn(interaction, 'Track has been forgotten');
+      return;
+    }
+
+    const banner = this.getTrackBanner(track);
 
     if (trackMsg?.lyricMessage) {
-      await trackMsg?.lyricMessage.reply({
-        content: `${interaction.member} Lyrics for \`${banner}\` is right here ↖`
+      const referringMessage = await trackMsg.lyricMessage.reply({
+        content: `${interaction.member} Lyrics for \`${banner}\` is right here ↖`,
       });
 
-      await interaction.reply({
-        content: ' ',
-        ephemeral: true
-      });
+      setTimeout(() => referringMessage.delete(), 10_000);
+
+      await interaction.reply('.');
       await interaction.deleteReply();
       return;
     }
@@ -794,7 +797,7 @@ export class MedleyAutomaton {
           .addField('Source', lyricsSource, true)
       ],
       files: [
-        new MessageAttachment(Buffer.from(lyricsText), `lyric-${banner.toLowerCase()}.txt`)
+        new MessageAttachment(Buffer.from(lyricsText), 'lyrics.txt')
       ],
       fetchReply: true
     });
@@ -924,7 +927,7 @@ export class MedleyAutomaton {
 
     const lines: string[] = [];
 
-    if (peeking[0].index > 0) {
+    if (peeking[0].index > 1) {
       const first = this.dj.peekRequests(0, 1);
       if (first.length) {
         lines.push(previewTrack(focus)(first[0]));
