@@ -204,8 +204,18 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     }
   }
 
+  private _requestsEnabled = true;
+
+  get requestsEnabled() {
+    return this._requestsEnabled;
+  }
+
+  set requestsEnabled(value: boolean) {
+    this._requestsEnabled = value;
+  }
+
   private async fetchRequestTrack(): Promise<RequestTrack<Requester> | undefined> {
-    while (this.requests.length) {
+    while (this._requestsEnabled && this.requests.length) {
       const track = this.requests.shift()!;
 
       if (await this.isTrackLoadable(track.path)) {

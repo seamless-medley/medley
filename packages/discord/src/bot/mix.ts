@@ -394,4 +394,12 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   peekRequests(from: number, n: number) {
     return this.boombox.peekRequests(from, n);
   }
+
+  get requestsEnabled() {
+    return this.boombox.requestsEnabled;
+  }
+
+  set requestsEnabled(value: boolean) {
+    this.boombox.requestsEnabled = value;
+  }
 }
