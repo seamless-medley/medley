@@ -35,6 +35,7 @@ type AutomatonGuildState = {
   voiceChannelId?: BaseGuildVoiceChannel['id'];
   trackMessages: TrackMessage[];
   audiences: Snowflake[];
+  serverMuted: boolean;
 }
 
 export enum TrackMessageStatus {
@@ -151,7 +152,7 @@ export class MedleyAutomaton {
         console.log('Me Leaving');
         state.audiences = [];
         state.voiceChannelId = undefined;
-        this.audiencesUpdated();
+        this.audiencesOrServerMuteUpdated();
         return;
       }
 
@@ -166,7 +167,7 @@ export class MedleyAutomaton {
           .filter((member, id) => !member.user.bot && !newState.guild.voiceStates.cache.get(id)?.deaf)
           .map((member, id) => id);
 
-        this.audiencesUpdated();
+        this.audiencesOrServerMuteUpdated();
 
         if (state.audiences.length < 1) {
           console.log('No one is listening');
@@ -174,13 +175,8 @@ export class MedleyAutomaton {
       }
 
       if (oldState.serverMute != newState.serverMute) {
-        if (newState.serverMute) {
-          this.dj.pause();
-          this.hideActivity();
-        } else {
-          this.dj.start();
-          this.showActivity();
-        }
+        state.serverMuted = !!newState.serverMute;
+        this.audiencesOrServerMuteUpdated();
       }
 
       return;
@@ -206,7 +202,7 @@ export class MedleyAutomaton {
 
       console.log(newState.member.displayName, 'is leaving');
       state.audiences = without(state.audiences, newState.member.id);
-      this.audiencesUpdated();
+      this.audiencesOrServerMuteUpdated();
       return;
     }
 
@@ -215,7 +211,7 @@ export class MedleyAutomaton {
         console.log(newState.member.displayName, 'is joining or moving to my channel', 'deaf?', newState.deaf);
         if (!newState.deaf) {
           state.audiences.push(newState.member.id);
-          this.audiencesUpdated();
+          this.audiencesOrServerMuteUpdated();
         }
 
         return;
@@ -224,7 +220,7 @@ export class MedleyAutomaton {
       if (oldState.channelId === state.voiceChannelId) {
         console.log(newState.member.displayName, 'is moving away from my channel');
         state.audiences = without(state.audiences, newState.member.id);
-        this.audiencesUpdated();
+        this.audiencesOrServerMuteUpdated();
 
         return;
       }
@@ -241,11 +237,11 @@ export class MedleyAutomaton {
         state.audiences = without(state.audiences, newState.member.id);
       }
 
-      this.audiencesUpdated();
+      this.audiencesOrServerMuteUpdated();
     }
   }
 
-  private audiencesUpdated() {
+  private audiencesOrServerMuteUpdated() {
     console.log('Audiences updated');
 
     for (const [guildId, state] of this._guildStates) {
@@ -253,7 +249,7 @@ export class MedleyAutomaton {
         state.audiences = [];
       }
 
-      if (state.audiences.length > 0) {
+      if (!state.serverMuted && state.audiences.length > 0) {
         // has some audience
         this.dj.start();
         this.showActivity();
