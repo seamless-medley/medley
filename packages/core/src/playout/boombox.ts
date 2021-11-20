@@ -46,6 +46,7 @@ export interface BoomBoxEvents {
   trackQueued: (track: BoomBoxTrack) => void;
   trackLoaded: (trackPlay: BoomBoxTrackPlay) => void;
   trackStarted: (trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => void;
+  trackActive: (trackPlay: BoomBoxTrackPlay) => void;
   trackFinished: (trackPlay: BoomBoxTrackPlay) => void;
   requestTrackFetched: (track: RequestTrack<any>) => void;
   error: (error: Error) => void;
@@ -114,6 +115,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.medley.on('loaded', this.deckLoaded);
     this.medley.on('started', this.deckStarted);
     this.medley.on('finished', this.deckFinished);
+    this.medley.on('mainDeckChanged', this.mainDeckChanged);
     //
     this.sequencer = new CrateSequencer<BoomBoxTrack>(options.crates);
     this.sequencer.on('change', (crate: BoomBoxCrate) => this.emit('sequenceChange', crate));
@@ -273,7 +275,11 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       return;
     }
 
-    console.log(`Deck ${deck} started`, trackPlay.track.metadata?.tags?.title);
+    if (this._currentTrackPlay?.uuid === trackPlay.uuid) {
+      return;
+    }
+
+    console.log(`Deck ${deck} started`, trackPlay.uuid, trackPlay.track.metadata?.tags?.title);
 
     const lastTrack = this._currentTrackPlay;
     this._currentTrackPlay = trackPlay;
@@ -311,6 +317,14 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     }
 
     this.emit('trackFinished', trackPlay);
+  }
+
+  private mainDeckChanged: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
+    if (trackPlay.track.metadata?.kind === TrackKind.Insertion) {
+      return;
+    }
+
+    this.emit('trackActive', trackPlay);
   }
 
   get crates() {
