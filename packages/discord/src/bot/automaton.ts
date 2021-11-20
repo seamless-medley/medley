@@ -265,7 +265,6 @@ export class MedleyAutomaton {
     this._guildStates.delete(guild.id);
   }
 
-  // FIXME: This event sometimes called twice
   private handleTrackStarted = async (trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
     if (trackPlay.track.metadata?.kind === TrackKind.Insertion) {
       return;

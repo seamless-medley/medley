@@ -24,11 +24,10 @@ import { BoomBox,
   RequestTrack,
   SweeperInsertionRule,
   TrackKind,
-  TrackPeek,
   WatchTrackCollection
 } from "@medley/core";
 
-import { BaseGuildVoiceChannel, Guild, GuildMember, User } from "discord.js";
+import { BaseGuildVoiceChannel, Guild, User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
 import _, { flow, shuffle, castArray } from "lodash";
@@ -48,7 +47,7 @@ export type SweeperConfig = {
   path: string;
 }
 
-export interface MedleyMixEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackFinished'> {
+export interface MedleyMixEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
 
 }
 
@@ -100,6 +99,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     this.boombox.on('trackQueued', this.handleTrackQueued);
     this.boombox.on('trackLoaded', this.handleTrackLoaded);
     this.boombox.on('trackStarted', this.handleTrackStarted);
+    this.boombox.on('trackActive', this.handleTrackActive);
     this.boombox.on('trackFinished', this.handleTrackFinished);
 
     this.boombox.on('requestTrackFetched', (track: RequestTrack<void>) => {
@@ -120,8 +120,12 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     this.emit('trackStarted', trackPlay, lastTrack);
   }
 
-  private handleTrackFinished = (track: BoomBoxTrackPlay) => {
-    this.emit('trackFinished', track);
+  private handleTrackActive = (trackPlay: BoomBoxTrackPlay) => {
+    this.emit('trackActive', trackPlay);
+  }
+
+  private handleTrackFinished = (trackPlay: BoomBoxTrackPlay) => {
+    this.emit('trackFinished', trackPlay);
   }
 
   prepareFor(guildId: Guild['id']) {
