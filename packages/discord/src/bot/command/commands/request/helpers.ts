@@ -1,4 +1,4 @@
-import { RequestTrack, TrackPeek } from "@medley/core";
+import { getTrackBanner, RequestTrack, TrackPeek } from "@medley/core";
 import { User } from "discord.js";
 import { maxBy, padStart } from "lodash";
 import { MedleyAutomaton } from "../../../automaton";
@@ -14,7 +14,7 @@ export async function makeRequestPreview(automaton: MedleyAutomaton, index: numb
 
   const previewTrack = (focus?: number) => ({ index, track }: TrackPeek<RequestTrack<User['id']>>) => {
     const label = padStart(`${focus === index ? '+ ' : ''}${index + 1}`, padding);
-    return `${label}: ${automaton.getTrackBanner(track)} [${track.priority || 0}]`;
+    return `${label}: ${getTrackBanner(track)} [${track.priority || 0}]`;
   };
 
   const lines: string[] = [];

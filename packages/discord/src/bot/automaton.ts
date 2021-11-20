@@ -3,7 +3,7 @@
 import { REST as RestClient } from "@discordjs/rest";
 import {
   BoomBoxTrack,
-  BoomBoxTrackPlay, TrackKind
+  BoomBoxTrackPlay, getTrackBanner, TrackKind
 } from "@medley/core";
 import { Routes } from "discord-api-types/v9";
 import {
@@ -235,22 +235,6 @@ export class MedleyAutomaton {
     this.dj.pause();
   }
 
-  // TODO: Extract this
-  getTrackBanner(track: BoomBoxTrack) {
-    const tags = track.metadata?.tags;
-    const info: string[] = [];
-
-    if (tags?.artist) {
-      info.push(tags.artist);
-    }
-
-    if (tags?.title) {
-      info.push(tags.title);
-    }
-
-    return info.length ? info.join(' - ') : parsePath(track.path).name;
-  }
-
   private showActivity() {
     const { user } = this.client;
 
@@ -259,7 +243,7 @@ export class MedleyAutomaton {
     }
 
     const { trackPlay } = this.dj;
-    const banner = trackPlay ? this.getTrackBanner(trackPlay.track) : 'Medley';
+    const banner = trackPlay ? getTrackBanner(trackPlay.track) : 'Medley';
 
     user.setActivity(banner, { type: 'LISTENING' });
   }

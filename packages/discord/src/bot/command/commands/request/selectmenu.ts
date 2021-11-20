@@ -1,3 +1,4 @@
+import { getTrackBanner } from "@medley/core";
 import { SelectMenuInteraction } from "discord.js";
 import { MedleyAutomaton } from "../../../automaton";
 import { HighlightTextType, makeHighlightedMessage } from "../../utils";
@@ -20,7 +21,7 @@ export const handleSelectMenu = async (automaton: MedleyAutomaton, interaction: 
 
       const preview = await makeRequestPreview(automaton, ok.index, ok.index);
       await interaction.update({
-        content: `Request accepted: \`${automaton.getTrackBanner(ok.track)}\``,
+        content: `Request accepted: \`${getTrackBanner(ok.track)}\``,
         components: []
       });
 

@@ -343,3 +343,18 @@ export const mapTracksMetadata = async (tracks: BoomBoxTrack[]) => Promise.all(t
     kind: TrackKind.Normal
   }
 })));
+
+export function getTrackBanner(track: BoomBoxTrack) {
+  const tags = track.metadata?.tags;
+  const info: string[] = [];
+
+  if (tags?.artist) {
+    info.push(tags.artist);
+  }
+
+  if (tags?.title) {
+    info.push(tags.title);
+  }
+
+  return info.length ? info.join(' - ') : parsePath(track.path).name;
+}
