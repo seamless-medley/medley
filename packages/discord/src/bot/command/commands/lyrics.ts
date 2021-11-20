@@ -1,4 +1,4 @@
-import { BoomBoxTrack, lyricsToText, parseLyrics } from "@medley/core";
+import { BoomBoxTrack, getTrackBanner, lyricsToText, parseLyrics } from "@medley/core";
 import { ButtonInteraction, Message, MessageAttachment, MessageEmbed } from "discord.js";
 import { first, findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
@@ -20,7 +20,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
     return;
   }
 
-  const banner = automaton.getTrackBanner(track);
+  const banner = getTrackBanner(track);
 
   if (trackMsg?.lyricMessage) {
     const referringMessage = await trackMsg.lyricMessage.reply({
