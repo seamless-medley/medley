@@ -1,6 +1,9 @@
-import { ChannelType, OptionType, SubCommandLikeOption } from "./type";
+import { decibelsToGain, gainToDecibels } from "@medley/core";
+import { CommandInteraction } from "discord.js";
+import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { accept } from "../utils";
 
-const volume: SubCommandLikeOption = {
+const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
   name: 'volume',
   description: 'Set volume',
@@ -10,10 +13,27 @@ const volume: SubCommandLikeOption = {
       name: 'db',
       description: 'Volume in Decibels',
       min_value: -60,
-      max_value: 12,
+      max_value: 3,
       required: false
     }
   ]
 }
 
-export default volume;
+
+const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ dj }) => async (interaction) => {
+  const decibels = interaction.options.getNumber('db');
+  if (decibels === null) {
+    accept(interaction, `Current volume: ${gainToDecibels(dj.getGain(interaction.guildId))}dB`);
+    return;
+  }
+
+  dj.setGain(interaction.guildId, decibelsToGain(decibels));
+  accept(interaction, `OK: Volume set to ${decibels}dB`);
+}
+
+const descriptor: CommandDescriptor = {
+  declaration,
+  createCommandHandler
+}
+
+export default descriptor;

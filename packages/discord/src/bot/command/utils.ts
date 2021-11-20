@@ -1,6 +1,7 @@
 import { APIMessage } from "discord-api-types";
-import { BaseCommandInteraction, InteractionReplyOptions, Message, MessageComponentInteraction, MessagePayload } from "discord.js";
+import { BaseCommandInteraction, InteractionReplyOptions, Message, MessageComponentInteraction, MessagePayload, PermissionResolvable, Permissions } from "discord.js";
 import { castArray } from "lodash";
+import { CommandError } from "./type";
 
 export enum HighlightTextType {
   Cyan = 'yaml',
@@ -39,3 +40,9 @@ export const deny: SimpleDeclareFn = (interaction, s, mention?, ephemeral?) =>
 
 export const warn: SimpleDeclareFn = (interaction, s, mention?, ephemeral?) =>
   declare(interaction, HighlightTextType.Yellow, s, mention, ephemeral);
+
+export function permissionGuard(permissions: Permissions | null, perm: PermissionResolvable, checkAdmin: boolean = true) {
+  if (permissions && !permissions?.any(perm, checkAdmin)) {
+    throw new CommandError('Insufficient permissions');
+  }
+}

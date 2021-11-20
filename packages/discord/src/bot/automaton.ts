@@ -1,59 +1,28 @@
 /// <reference path="../types.d.ts" />
 
 import { REST as RestClient } from "@discordjs/rest";
+import {
+  BoomBoxTrack,
+  BoomBoxTrackPlay, isRequestTrack, TrackKind
+} from "@medley/core";
 import { Routes } from "discord-api-types/v9";
 import {
-  ApplicationCommandOptionChoice,
-  AutocompleteInteraction,
-  BaseCommandInteraction,
-  BaseGuildVoiceChannel,
-  ButtonInteraction,
-  Client,
-  CommandInteraction,
-  Guild,
-  Intents,
-  Interaction,
-  InteractionReplyOptions,
-  Message,
+  BaseGuildVoiceChannel, Client, Guild,
+  Intents, Message,
   MessageActionRow,
   MessageAttachment,
-  MessageButton,
-  MessageComponentInteraction,
-  MessageEmbed,
+  MessageButton, MessageEmbed,
   MessageOptions,
-  MessagePayload,
-  MessageSelectMenu,
-  MessageSelectOptionData,
-  PermissionResolvable,
-  Permissions,
-  SelectMenuInteraction,
-  Snowflake,
-  User,
-  VoiceState
+  MessagePayload, Snowflake, VoiceState
 } from "discord.js";
-
-import { BoomBoxTrack,
-  BoomBoxTrackPlay,
-  decibelsToGain,
-  gainToDecibels,
-  isRequestTrack,
-  lyricsToText,
-  parseLyrics,
-  RequestTrack,
-  TrackKind,
-  TrackPeek
-} from "@medley/core";
-
 import colorableDominant from 'colorable-dominant';
-
-import _, { capitalize, castArray, first, isEmpty, without } from "lodash";
+import _, { capitalize, first, isEmpty, without } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from "path";
 import splashy from 'splashy';
-import { createCommand } from "./command";
+import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { MedleyMix } from "./mix";
-import lyricsSearcher from "lyrics-searcher";
-import { accept, deny, HighlightTextType, makeHighlightedMessage, reply, warn } from "./command/utils";
+
 
 export type MedleyAutomatonOptions = {
   clientId: string;
@@ -88,12 +57,10 @@ type TrackMessage = {
   lyricMessage?: Message;
 }
 
-class CommandError extends Error { };
-
 export class MedleyAutomaton {
   readonly client: Client;
 
-  private states: Map<Guild['id'], AutomatonGuildState> = new Map();
+  private _guildStates: Map<Guild['id'], AutomatonGuildState> = new Map();
 
   constructor(readonly dj: MedleyMix, private options: MedleyAutomatonOptions) {
     this.client = new Client({
@@ -112,7 +79,7 @@ export class MedleyAutomaton {
     this.client.on('guildCreate', this.handleGuildCreate);
     this.client.on('guildDelete', this.handleGuildDelete);
     this.client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
-    this.client.on('interactionCreate', this.handleInteraction);
+    this.client.on('interactionCreate', createInteractionHandler('medley', this));
 
     this.dj.on('trackStarted', this.handleTrackStarted);
     this.dj.on('trackFinished', this.handleTrackFinished);
@@ -123,15 +90,20 @@ export class MedleyAutomaton {
   }
 
   private ensureGuildState(id: Guild['id']) {
-    if (this.states.has(id)) {
+    if (this._guildStates.has(id)) {
       return;
     }
 
-    this.states.set(id, {
+    this._guildStates.set(id, {
       voiceChannelId: undefined,
       trackMessages: [],
-      audiences: []
+      audiences: [],
+      serverMuted: false
     });
+  }
+
+  getGuildState(id: Guild['id']): AutomatonGuildState | undefined {
+    return this._guildStates.get(id);
   }
 
   private handleClientReady = async (client: Client) => {
@@ -165,14 +137,13 @@ export class MedleyAutomaton {
 
   private handleVoiceStateUpdate = async (oldState: VoiceState, newState: VoiceState) => {
     this.ensureGuildState(newState.guild.id);
-    const state = this.states.get(newState.guild.id)!;
+    const state = this._guildStates.get(newState.guild.id)!;
 
     const channelChange = this.detectVoiceChannelChange(oldState, newState);
     if (channelChange === 'invalid' || !newState.member) {
       return;
     }
 
-    // Who made this change?
     const isMe = (newState.member.id === newState.guild.me?.id);
 
     if (isMe) {
@@ -277,7 +248,7 @@ export class MedleyAutomaton {
   private audiencesUpdated() {
     console.log('Audiences updated');
 
-    for (const [guildId, state] of this.states) {
+    for (const [guildId, state] of this._guildStates) {
       if (!state.voiceChannelId) {
         state.audiences = [];
       }
@@ -295,7 +266,8 @@ export class MedleyAutomaton {
     this.dj.pause();
   }
 
-  private getTrackBanner(track: BoomBoxTrack) {
+  // TODO: Extract this
+  getTrackBanner(track: BoomBoxTrack) {
     const tags = track.metadata?.tags;
     const info: string[] = [];
 
@@ -336,7 +308,7 @@ export class MedleyAutomaton {
 
   private handleGuildDelete = async (guild: Guild) => {
     console.log('Removed from guild', guild.name);
-    this.states.delete(guild.id);
+    this._guildStates.delete(guild.id);
   }
 
   private async createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<TrackMessage> {
@@ -402,7 +374,7 @@ export class MedleyAutomaton {
       .setLabel('Lyrics')
       .setEmoji('📜')
       .setStyle('SECONDARY')
-      .setCustomId(`lyric:${track.id}`);
+      .setCustomId(`lyrics:${track.id}`);
 
     const skipButton = new MessageButton()
       .setLabel('Skip')
@@ -458,7 +430,7 @@ export class MedleyAutomaton {
 
     // Store message for each guild
     for (const [guildId, maybeMessage] of sentMessages) {
-      const state = this.states.get(guildId);
+      const state = this._guildStates.get(guildId);
       if (state) {
         state.trackMessages.push({
           ...trackMsg,
@@ -489,7 +461,7 @@ export class MedleyAutomaton {
   }
 
   private async updateTrackMessage(trackPlay: BoomBoxTrackPlay, predicate: (msg: TrackMessage) => Promise<boolean>, status: TrackMessageStatus, title?: string) {
-    for (const state of this.states.values()) {
+    for (const state of this._guildStates.values()) {
       const msg = state.trackMessages.find(msg => msg.status < TrackMessageStatus.Played && msg.trackPlay.uuid === trackPlay.uuid);
 
       if (msg) {
@@ -518,8 +490,8 @@ export class MedleyAutomaton {
     }
   }
 
-  private async removeLyricsButton(trackId: BoomBoxTrack['id']) {
-    for (const state of this.states.values()) {
+  async removeLyricsButton(trackId: BoomBoxTrack['id']) {
+    for (const state of this._guildStates.values()) {
 
       const messages = state.trackMessages.filter(msg => msg.trackPlay.track.id === trackId);
       for (const msg of messages) {
@@ -541,172 +513,7 @@ export class MedleyAutomaton {
     }
   }
 
-  private permissionGuard(permissions: Permissions | null, perm: PermissionResolvable, checkAdmin: boolean = true) {
-    if (permissions && !permissions?.any(perm, checkAdmin)) {
-      throw new CommandError('Insufficient permissions');
-    }
-  }
-
-  private handleInteraction = async (interaction: Interaction) => {
-    if (interaction.user.bot) {
-      return;
-    }
-
-    try {
-      // Application commands
-      if (interaction.isCommand()) {
-        if (interaction.commandName !== 'medley') {
-          return;
-        }
-
-        const group = interaction.options.getSubcommandGroup(false);
-        const promise = group ? this.handleGroupCommand(group.toLowerCase(), interaction) : this.handleTopLevelCommand(interaction.options.getSubcommand().toLowerCase(), interaction);
-        return await promise;
-      }
-
-      if (interaction.isButton()) {
-        return await this.handleButton(interaction);
-      }
-
-      if (interaction.isAutocomplete()) {
-        if (interaction.commandName !== 'medley') {
-          return;
-        }
-
-        return await this.handleAutoComplete(interaction.options.getSubcommand().toLowerCase(), interaction);
-      }
-
-      if (interaction.isSelectMenu()) {
-        return await this.handleSelectMenu(interaction);
-      }
-
-    }
-    catch (e) {
-      if (e instanceof CommandError) {
-        if (interaction.isApplicationCommand() || interaction.isMessageComponent()) {
-          deny(interaction, `Command Error: ${e.message}`, undefined, true);
-        }
-      } else {
-        console.error('Interaction Error', e);
-      }
-    }
-  }
-
-  private handleTopLevelCommand = async (command: string, interaction: CommandInteraction) => {
-    switch (command) {
-      case 'join':
-        return this.handleJoin(interaction);
-
-      case 'volume':
-        return this.handleVolume(interaction);
-
-      case 'skip':
-      case 'next':
-        return this.handleSkip(interaction);
-
-      case 'request':
-        return this.handleRequest(interaction);
-    }
-  }
-
-  private handleGroupCommand = async (group: string, interaction: CommandInteraction) => {
-
-  }
-
-  private handleButton = async (interaction: ButtonInteraction) => {
-    const { customId } = interaction;
-
-    const matched = customId.match(/^(.*)\:(.*)$/);
-    if (!matched) {
-      return;
-    }
-
-    const [, tag, value] = matched;
-
-    switch (tag.toLowerCase()) {
-      case 'skip':
-        return this.handleSkipButton(interaction, value);
-
-      case 'lyric':
-        return this.handleLyricsButton(interaction, value);
-    }
-  }
-
-  private handleJoin = async (interaction: CommandInteraction) => {
-    this.permissionGuard(interaction.memberPermissions, [
-      Permissions.FLAGS.MANAGE_CHANNELS,
-      Permissions.FLAGS.MANAGE_GUILD
-    ]);
-
-    const channel = interaction.options.getChannel('channel');
-
-    if (!channel) {
-      return;
-    }
-
-    const channelToJoin = this.client.channels.cache.get(channel.id);
-
-    if (!channelToJoin?.isVoice()) {
-      return;
-    }
-
-    await reply(interaction, `Joining ${channelToJoin}`);
-
-    try {
-      await this.dj.join(channelToJoin);
-
-      reply(interaction, {
-        content: null,
-        embeds: [
-          new MessageEmbed()
-            .setColor('RANDOM')
-            .setTitle('Joined')
-            .addField('channel', channel?.toString())
-        ]
-      });
-    }
-    catch (e) {
-      deny(interaction, 'Could not join');
-    }
-  }
-
-  private handleVolume = async (interaction: CommandInteraction) => {
-    const decibels = interaction.options.getNumber('db');
-    if (decibels === null) {
-      accept(interaction, `Current volume: ${gainToDecibels(this.dj.getGain(interaction.guildId))}dB`);
-      return;
-    }
-
-    this.dj.setGain(interaction.guildId, decibelsToGain(decibels));
-    accept(interaction, `OK: Volume set to ${decibels}dB`);
-  }
-
-  private handleSkip = async (interaction: CommandInteraction | ButtonInteraction, trackPlay?: BoomBoxTrackPlay) => {
-    this.permissionGuard(interaction.memberPermissions, [
-      Permissions.FLAGS.MANAGE_CHANNELS,
-      Permissions.FLAGS.MANAGE_GUILD,
-      Permissions.FLAGS.MOVE_MEMBERS
-    ]);
-
-    if (trackPlay && isRequestTrack(trackPlay.track)) {
-      const { requestedBy } = trackPlay.track;
-
-      if (requestedBy && requestedBy !== interaction.user.id) {
-        await reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by <@${requestedBy}>`);
-        return;
-      }
-    }
-
-    if (this.dj.paused || !this.dj.playing) {
-      await deny(interaction, 'Not currently playing', `@${interaction.user.id}`);
-      return;
-    }
-
-    this.skipCurrentSong();
-    accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
-  }
-
-  private skipCurrentSong() {
+  skipCurrentSong() {
     if (!this.dj.paused && this.dj.playing) {
       const { trackPlay } = this.dj;
       if (trackPlay) {
@@ -717,326 +524,21 @@ export class MedleyAutomaton {
     }
   }
 
-  private handleSkipButton = async (interaction: ButtonInteraction, playUuid: string) => {
-    if (this.dj.trackPlay?.uuid !== playUuid) {
-      deny(interaction, 'Could not skip this track', undefined, true);
-      return;
-    }
-
-    return this.handleSkip(interaction, this.dj.trackPlay);
-  }
-
-  private handleLyricsButton = async (interaction: ButtonInteraction, trackId: BoomBoxTrack['id']) => {
-    const track = this.dj.findTrackById(trackId);
-    if (!track) {
-      deny(interaction, 'Invalid track identifier', undefined, true);
-      return;
-    }
-
-    const state = this.states.get(interaction.guildId);
-
-    const trackMsg = state ? _.findLast(state.trackMessages, m => m.trackPlay.track.id === trackId) : undefined;
-
-    if (!trackMsg) {
-      warn(interaction, 'Track has been forgotten');
-      return;
-    }
-
-    const banner = this.getTrackBanner(track);
-
-    if (trackMsg?.lyricMessage) {
-      const referringMessage = await trackMsg.lyricMessage.reply({
-        content: `${interaction.member} Lyrics for \`${banner}\` is right here ↖`,
-      });
-
-      setTimeout(() => referringMessage.delete(), 10_000);
-
-      await interaction.reply('.');
-      await interaction.deleteReply();
-      return;
-    }
-
-    let lyricsText: string | undefined = undefined;
-    let lyricsSource = 'N/A';
-
-    const lyrics = first(track.metadata?.tags?.lyrics);
-
-    if (lyrics) {
-      lyricsText = lyricsToText(parseLyrics(lyrics), false).join('\n');
-      lyricsSource = 'metadata';
-
-    } else {
-      const artist = track.metadata?.tags?.artist;
-      const title = track.metadata?.tags?.title;
-
-      if (artist && title) {
-        await interaction.deferReply();
-        lyricsText = await lyricsSearcher(artist, title).catch(() => undefined);
-        lyricsSource = 'Google';
-      }
-    }
-
-    if (!lyricsText) {
-      warn(interaction, 'No lyrics');
-      this.removeLyricsButton(trackId);
-      return
-    }
-
-
-    const lyricMessage = await reply(interaction, {
-      embeds: [
-        new MessageEmbed()
-          .setTitle('Lyrics')
-          .setDescription(banner)
-          .addField('Requested by', `${interaction.member}`, true)
-          .addField('Source', lyricsSource, true)
-      ],
-      files: [
-        new MessageAttachment(Buffer.from(lyricsText), 'lyrics.txt')
-      ],
-      fetchReply: true
-    });
-
-
-    if (trackMsg && lyricMessage instanceof Message) {
-      trackMsg.lyricMessage = lyricMessage;
-    }
-  }
-
-  private handleRequest = async (interaction: CommandInteraction) => {
-    const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f));
-
-    if (options.every(_.isNull)) {
-      const preview = await this.makeRequestPreview();
-
-      if (preview) {
-        interaction.reply(preview.join('\n'))
-      } else {
-        interaction.reply('Request list is empty');
-      }
-
-      return;
-    }
-
-    await interaction.deferReply();
-
-    const [artist, title, query] = options;
-
-    const results = this.dj.search({
-      artist,
-      title,
-      query
-    }, 10);
-
-    if (results.length < 1) {
-      const tagTerms = _.zip(['artist', 'title'], [artist, title])
-        .filter(([, t]) => !!t)
-        .map(([n, v]) => `(${n} ~ "${v}")`)
-        .join(' AND ');
-
-      const queryString = [tagTerms, query ? `"${query}"` : null]
-        .filter(t => !!t)
-        .join(' OR ');
-
-      reply(interaction, [
-        'Your search:',
-        '**```scheme',
-        queryString,
-        '```**',
-        'Did not match any tracks'
-      ].join('\n'))
-      return;
-    }
-
-    const issuer = interaction.user.id;
-
-    const selections = results.map<MessageSelectOptionData & { collection: BoomBoxTrack['collection'] }>(track => ({
-      label: track.metadata?.tags?.title || parsePath(track.path).name,
-      description: track.metadata?.tags?.title ? (track.metadata?.tags?.artist || 'Unknown Artist') : undefined,
-      value: track.id,
-      collection: track.collection
-    }));
-
-    // Distinguish duplicated track artist and title
-    _(selections)
-      .groupBy(({ label, description }) => `${label}:${description}`)
-      .pickBy(group => group.length > 1)
-      .forEach(group => {
-        for (const sel of group) {
-          sel.description += ` (from \'${sel.collection.id}\' collection)`
-        }
-      });
-
-    const selector = await reply(interaction, {
-      content: 'Search result:',
-      components: [
-        new MessageActionRow()
-          .addComponents(
-            new MessageSelectMenu()
-              .setCustomId('request')
-              .setPlaceholder('Select a track')
-              .addOptions(selections)
-          ),
-        new MessageActionRow()
-          .addComponents(
-            new MessageButton()
-              .setCustomId('cancel_request')
-              .setLabel('Cancel')
-              .setStyle('SECONDARY')
-              .setEmoji('❌')
-          )
-      ],
-      fetchReply: true
-    });
-
-    if (selector instanceof Message) {
-      const collector = selector.createMessageComponentCollector({ componentType: 'SELECT_MENU', time: 30_000 });
-
-      collector.on('collect', async i => {
-        if (i.user.id !== issuer) {
-          i.reply({
-            content: `Sorry, this selection is for <@${issuer}> only`,
-            ephemeral: true
-          })
-          return;
-        }
-
-        collector.removeAllListeners();
-        await this.handleSelectMenuForRequest(i);
-      });
-
-      collector.on('end', () => {
-        if (selector.editable) {
-          selector.edit({
-            content: makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
-            components: []
-          });
-        }
-      });
-
-      selector.awaitMessageComponent({
-        componentType: 'BUTTON',
-        filter: (i) => {
-          i.deferUpdate();
-          return i.user.id === issuer;
-        },
-        time: 60_000
-      })
-      .then(_.identity)
-      .catch(() => void 0)
-      .finally(() => {
-        collector.removeAllListeners();
-        selector.delete();
-      });
-    }
-  }
-
-  private handleAutoComplete = async (command: string, interaction: AutocompleteInteraction) => {
-    switch (command) {
-      case 'request':
-        return this.handleAutoCompleteForRequest(interaction);
-    }
-
-    interaction.respond([]);
-  }
-
-  private handleAutoCompleteForRequest = async (interaction: AutocompleteInteraction) => {
-    const { name, value } = interaction.options.getFocused(true);
-
-    const completions = value ? _(this.dj.autoSuggest(`${value}`, ['artist', 'title'].includes(name) ? name : undefined))
-      .take(25)
-      .map<ApplicationCommandOptionChoice>(s => ({ name: s, value: s }))
-      .value()
-      : []
-
-    // TODO: return some suggestion if query is empty, from search history?, request history?
-
-    interaction.respond(completions);
-  }
-
-  private handleSelectMenu = async (interaction: SelectMenuInteraction) => {
-
-  }
-
-  private async makeRequestPreview(index: number = 0, focus?: number) {
-    const peeking = this.dj.peekRequests(index, 5);
-
-    if (peeking.length <= 0) {
-      return;
-    }
-
-    const padding = 2 + (_.maxBy(peeking, 'index')?.index.toString().length || 0);
-
-    const previewTrack = (focus?: number) => ({ index, track }: TrackPeek<RequestTrack<User['id']>>) => {
-      const label = _.padStart(`${focus === index ? '+ ' : ''}${index + 1}`, padding);
-      return `${label}: ${this.getTrackBanner(track)} [${track.priority || 0}]`;
-    };
-
-    const lines: string[] = [];
-
-    if (peeking[0].index > 1) {
-      const first = this.dj.peekRequests(0, 1);
-      if (first.length) {
-        lines.push(previewTrack(focus)(first[0]));
-        lines.push(_.padStart('...', padding));
-      }
-    }
-
-    for (const peek of peeking) {
-      lines.push(previewTrack(focus)(peek));
-    }
-
-    return lines.length
-      ? [
-        '```diff',
-        ...lines,
-        '```'
-      ]
-      : undefined;
-  }
-
-  private handleSelectMenuForRequest = async (interaction: SelectMenuInteraction) => {
-    const { values } = interaction;
-    if (values.length) {
-      const trackId = values[0];
-      if (trackId) {
-        const ok = await this.dj.request(trackId, interaction.member.user.id);
-
-        if (ok === false || ok.index < 0) {
-          await interaction.update({
-            content: makeHighlightedMessage('Track could not be requested for some reasons', HighlightTextType.Red),
-            components: []
-          });
-          return;
-        }
-
-        const preview = await this.makeRequestPreview(ok.index, ok.index);
-        await interaction.update({
-          content: `Request accepted: \`${this.getTrackBanner(ok.track)}\``,
-          components: []
-        });
-
-        if (preview) {
-          interaction.followUp({
-            content: preview.join('\n')
-          })
-        }
-      }
-    }
-  }
-
-
   /**
    * Send to all guilds
    */
   private async sendAll(options: string | MessagePayload | MessageOptions) {
     const results = await Promise.all(
       this.client.guilds.cache.mapValues(async (guild, id) => {
-        const state = this.states.get(id);
+        const state = this._guildStates.get(id);
 
-        if (state?.voiceChannelId) {
-          // TODO: Configurable channel
-          return guild.systemChannel?.send(options).catch(() => undefined)
+        if (state) {
+          const { voiceChannelId, audiences } = state;
+
+          if (voiceChannelId && audiences.length) {
+            // TODO: Configurable channel
+            return guild.systemChannel?.send(options).catch(() => undefined)
+          }
         }
       })
     );
@@ -1051,7 +553,7 @@ export class MedleyAutomaton {
     await client.put(
       Routes.applicationGuildCommands(clientId, guildId),
       {
-        body: [createCommand()]
+        body: [createCommandDeclarations('medley')]
       }
     );
 
