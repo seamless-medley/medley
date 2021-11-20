@@ -8,11 +8,11 @@ import {
 import { Routes } from "discord-api-types/v9";
 import {
   BaseGuildVoiceChannel, Client, Guild,
-  Intents, MessageActionRow, MessageOptions,
+  Intents, MessageOptions,
   MessagePayload, Snowflake, VoiceState
 } from "discord.js";
+
 import { without } from "lodash";
-import { parse as parsePath } from "path";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { MedleyMix } from "./mix";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
