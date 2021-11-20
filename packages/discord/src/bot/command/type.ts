@@ -79,3 +79,5 @@ type MinMaxCommandOption = BasicCommandOption & {
 }
 
 export type CommandOption = BasicCommandOption | ChoiceCommandOption | MinMaxCommandOption | ChannelCommandOption | SubCommandLikeOption;
+
+export type CommandFactory = () => SubCommandLikeOption;

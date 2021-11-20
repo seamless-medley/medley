@@ -50,21 +50,16 @@ import _, { capitalize, castArray, first, isEmpty, without } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from "path";
 import splashy from 'splashy';
-import commands from "./commands";
+import { createCommand } from "./command";
 import { MedleyMix } from "./mix";
 import lyricsSearcher from "lyrics-searcher";
+import { accept, deny, HighlightTextType, makeHighlightedMessage, reply, warn } from "./command/utils";
 
 export type MedleyAutomatonOptions = {
   clientId: string;
   botToken: string;
   // TODO: Use this
   owners?: Snowflake[];
-}
-
-export enum HighlightTextType {
-  Cyan = 'yaml',
-  Yellow = 'fix',
-  Red = 'diff'
 }
 
 type AutomatonGuildState = {
@@ -589,7 +584,7 @@ export class MedleyAutomaton {
     catch (e) {
       if (e instanceof CommandError) {
         if (interaction.isApplicationCommand() || interaction.isMessageComponent()) {
-          this.deny(interaction, `Command Error: ${e.message}`, undefined, true);
+          deny(interaction, `Command Error: ${e.message}`, undefined, true);
         }
       } else {
         console.error('Interaction Error', e);
@@ -655,12 +650,12 @@ export class MedleyAutomaton {
       return;
     }
 
-    await this.reply(interaction, `Joining ${channelToJoin}`);
+    await reply(interaction, `Joining ${channelToJoin}`);
 
     try {
       await this.dj.join(channelToJoin);
 
-      this.reply(interaction, {
+      reply(interaction, {
         content: null,
         embeds: [
           new MessageEmbed()
@@ -671,19 +666,19 @@ export class MedleyAutomaton {
       });
     }
     catch (e) {
-      this.deny(interaction, 'Could not join');
+      deny(interaction, 'Could not join');
     }
   }
 
   private handleVolume = async (interaction: CommandInteraction) => {
     const decibels = interaction.options.getNumber('db');
     if (decibels === null) {
-      this.accept(interaction, `Current volume: ${gainToDecibels(this.dj.getGain(interaction.guildId))}dB`);
+      accept(interaction, `Current volume: ${gainToDecibels(this.dj.getGain(interaction.guildId))}dB`);
       return;
     }
 
     this.dj.setGain(interaction.guildId, decibelsToGain(decibels));
-    this.accept(interaction, `OK: Volume set to ${decibels}dB`);
+    accept(interaction, `OK: Volume set to ${decibels}dB`);
   }
 
   private handleSkip = async (interaction: CommandInteraction | ButtonInteraction, trackPlay?: BoomBoxTrackPlay) => {
@@ -697,18 +692,18 @@ export class MedleyAutomaton {
       const { requestedBy } = trackPlay.track;
 
       if (requestedBy && requestedBy !== interaction.user.id) {
-        await this.reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by <@${requestedBy}>`);
+        await reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by <@${requestedBy}>`);
         return;
       }
     }
 
     if (this.dj.paused || !this.dj.playing) {
-      await this.deny(interaction, 'Not currently playing', `@${interaction.user.id}`);
+      await deny(interaction, 'Not currently playing', `@${interaction.user.id}`);
       return;
     }
 
     this.skipCurrentSong();
-    this.accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
+    accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
   }
 
   private skipCurrentSong() {
@@ -724,7 +719,7 @@ export class MedleyAutomaton {
 
   private handleSkipButton = async (interaction: ButtonInteraction, playUuid: string) => {
     if (this.dj.trackPlay?.uuid !== playUuid) {
-      this.deny(interaction, 'Could not skip this track', undefined, true);
+      deny(interaction, 'Could not skip this track', undefined, true);
       return;
     }
 
@@ -734,7 +729,7 @@ export class MedleyAutomaton {
   private handleLyricsButton = async (interaction: ButtonInteraction, trackId: BoomBoxTrack['id']) => {
     const track = this.dj.findTrackById(trackId);
     if (!track) {
-      this.deny(interaction, 'Invalid track identifier', undefined, true);
+      deny(interaction, 'Invalid track identifier', undefined, true);
       return;
     }
 
@@ -743,7 +738,7 @@ export class MedleyAutomaton {
     const trackMsg = state ? _.findLast(state.trackMessages, m => m.trackPlay.track.id === trackId) : undefined;
 
     if (!trackMsg) {
-      this.warn(interaction, 'Track has been forgotten');
+      warn(interaction, 'Track has been forgotten');
       return;
     }
 
@@ -782,13 +777,13 @@ export class MedleyAutomaton {
     }
 
     if (!lyricsText) {
-      this.warn(interaction, 'No lyrics');
+      warn(interaction, 'No lyrics');
       this.removeLyricsButton(trackId);
       return
     }
 
 
-    const lyricMessage = await this.reply(interaction, {
+    const lyricMessage = await reply(interaction, {
       embeds: [
         new MessageEmbed()
           .setTitle('Lyrics')
@@ -843,7 +838,13 @@ export class MedleyAutomaton {
         .filter(t => !!t)
         .join(' OR ');
 
-      this.reply(interaction, `Your search **\`${queryString}\`** did not match any tracks`)
+      reply(interaction, [
+        'Your search:',
+        '**```scheme',
+        queryString,
+        '```**',
+        'Did not match any tracks'
+      ].join('\n'))
       return;
     }
 
@@ -866,7 +867,7 @@ export class MedleyAutomaton {
         }
       });
 
-    const selector = await this.reply(interaction, {
+    const selector = await reply(interaction, {
       content: 'Search result:',
       components: [
         new MessageActionRow()
@@ -907,7 +908,7 @@ export class MedleyAutomaton {
       collector.on('end', () => {
         if (selector.editable) {
           selector.edit({
-            content: this.makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
+            content: makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
             components: []
           });
         }
@@ -1003,7 +1004,7 @@ export class MedleyAutomaton {
 
         if (ok === false || ok.index < 0) {
           await interaction.update({
-            content: this.makeHighlightedMessage('Track could not be requested for some reasons', HighlightTextType.Red),
+            content: makeHighlightedMessage('Track could not be requested for some reasons', HighlightTextType.Red),
             components: []
           });
           return;
@@ -1024,30 +1025,6 @@ export class MedleyAutomaton {
     }
   }
 
-  private async reply(interaction: BaseCommandInteraction | MessageComponentInteraction, options: string | MessagePayload | InteractionReplyOptions) {
-    return (!interaction.replied && !interaction.deferred)
-      ? interaction.reply(options)
-      : interaction.editReply(options);
-  }
-
-  private async declare(interaction: BaseCommandInteraction | MessageComponentInteraction, type: HighlightTextType, s: string, mention?: string, ephemeral?: boolean) {
-    return this.reply(interaction, {
-      content: this.makeHighlightedMessage(s, type, mention),
-      ephemeral
-    });
-  }
-
-  private async accept(interaction: BaseCommandInteraction | MessageComponentInteraction, s: string, mention?: string, ephemeral?: boolean) {
-    return this.declare(interaction, HighlightTextType.Cyan, s, mention, ephemeral);
-  }
-
-  private async deny(interaction: BaseCommandInteraction | MessageComponentInteraction, s: string, mention?: string, ephemeral?: boolean) {
-    return this.declare(interaction, HighlightTextType.Red, s, mention, ephemeral);
-  }
-
-  private async warn(interaction: BaseCommandInteraction | MessageComponentInteraction, s: string, mention?: string, ephemeral?: boolean) {
-    return this.declare(interaction, HighlightTextType.Yellow, s, mention, ephemeral);
-  }
 
   /**
    * Send to all guilds
@@ -1067,15 +1044,6 @@ export class MedleyAutomaton {
     return results;
   }
 
-  private makeHighlightedMessage(s: string | string[], type: HighlightTextType, mention?: string) {
-    const isRed = type === HighlightTextType.Red;
-    return (mention ? `<${mention}>` : '') +
-      '```' + type + '\n' +
-      castArray(s).map(line => (isRed ? '-' : '') + line).join('\n') + '\n' +
-      '```'
-      ;
-  }
-
   static async registerCommands(botToken: string, clientId: string, guildId: string) {
     const client = new RestClient({ version: '9' })
       .setToken(botToken);
@@ -1083,7 +1051,7 @@ export class MedleyAutomaton {
     await client.put(
       Routes.applicationGuildCommands(clientId, guildId),
       {
-        body: [commands]
+        body: [createCommand()]
       }
     );
 

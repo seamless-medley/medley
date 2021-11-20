@@ -1,4 +1,4 @@
-import { OptionType, SubCommandLikeOption } from "./type";
+import { OptionType, SubCommandLikeOption } from "../type";
 
 const skip: SubCommandLikeOption = {
   type: OptionType.SubCommand,

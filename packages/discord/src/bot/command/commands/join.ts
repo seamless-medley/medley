@@ -1,4 +1,4 @@
-import { ChannelType, OptionType, SubCommandLikeOption } from "./type";
+import { ChannelType, OptionType, SubCommandLikeOption } from "../type";
 
 const join: SubCommandLikeOption = {
   type: OptionType.SubCommand,
