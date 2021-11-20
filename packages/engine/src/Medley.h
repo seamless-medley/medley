@@ -28,6 +28,8 @@ public:
         virtual void audioDeviceChanged() = 0;
 
         virtual void preQueueNext(PreCueNextDone done = [](bool) { }) = 0;
+
+        virtual void mainDeckChanged(Deck& sender, TrackPlay& track) = 0;
     };
 
     class AudioCallback {

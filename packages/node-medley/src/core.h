@@ -35,6 +35,8 @@ public:
 
     void deckUnloaded(medley::Deck& sender, medley::TrackPlay& track) override;
 
+    void mainDeckChanged(medley::Deck& sender, medley::TrackPlay& track) override;
+
     void audioDeviceChanged() override;
 
     void preQueueNext(Engine::Callback::PreCueNextDone done) override;

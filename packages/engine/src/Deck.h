@@ -75,6 +75,8 @@ public:
 
     ITrack::Ptr getTrack() const { return track; }
 
+    TrackPlay getTrackPlay() { return trackPlay; }
+
     bool start();
 
     void stop();

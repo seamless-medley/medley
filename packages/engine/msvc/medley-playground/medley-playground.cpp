@@ -1300,6 +1300,10 @@ private:
             done(true);
         }
 
+        void mainDeckChanged(Deck& sender, TrackPlay& track) override {
+
+        }
+
         void updatePauseButton() {
             btnPause.setButtonText(medley.isPaused() ? "Paused" : "Pause");
         }

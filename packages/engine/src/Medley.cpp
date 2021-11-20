@@ -343,40 +343,47 @@ inline String Medley::getDeckName(Deck& deck) {
     return deck.getName();
 }
 
-void Medley::deckStarted(Deck& sender, TrackPlay& track) {
-    sender.log("Started");
+void Medley::deckStarted(Deck& sender, TrackPlay& trackPlay) {
+    sender.log("Started");    
+
+    auto markedAsMain = false;
 
     auto prevDeck = getPreviousDeck(&sender);
     if (decksTransition[prevDeck->index].state == DeckTransitionState::Idle) {
         sender.markAsMain(true);
+        markedAsMain = true;
     }
 
     ScopedLock sl(callbackLock);
     listeners.call([&](Callback& cb) {
-        cb.deckStarted(sender, track);
+        cb.deckStarted(sender, trackPlay);
+
+        if (markedAsMain) {
+            cb.mainDeckChanged(sender, trackPlay);
+        }
     });
 }
 
-void Medley::deckFinished(Deck& sender, TrackPlay& track) {
+void Medley::deckFinished(Deck& sender, TrackPlay& trackPlay) {
     decksTransition[sender.index].state = DeckTransitionState::Idle;
 
     ScopedLock sl(callbackLock);
     listeners.call([&](Callback& cb) {
-        cb.deckFinished(sender, track);
+        cb.deckFinished(sender, trackPlay);
     });
 }
 
-void Medley::deckLoaded(Deck& sender, TrackPlay& track)
+void Medley::deckLoaded(Deck& sender, TrackPlay& trackPlay)
 {
     decksTransition[sender.index].state = DeckTransitionState::Idle;
 
     ScopedLock sl(callbackLock);
     listeners.call([&](Callback& cb) {
-        cb.deckLoaded(sender, track);
+        cb.deckLoaded(sender, trackPlay);
     });
 }
 
-void Medley::deckUnloaded(Deck& sender, TrackPlay& track) {
+void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
     sender.log("Unloaded");
 
     auto nextDeck = getNextDeck(&sender);
@@ -398,14 +405,18 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& track) {
         forceFadingOut--;
     }
 
+    auto nextTrackLoaded = nextDeck->isTrackLoaded();
     sender.markAsMain(false);
-    nextDeck->markAsMain(nextDeck->isTrackLoaded());
+    nextDeck->markAsMain(nextTrackLoaded);
 
     {
         ScopedLock sl(callbackLock);
 
         listeners.call([&](Callback& cb) {
-            cb.deckUnloaded(sender, track);
+            cb.deckUnloaded(sender, trackPlay);
+            if (nextTrackLoaded) {
+                cb.mainDeckChanged(*nextDeck, nextDeck->getTrackPlay());
+            }
         });
     }
 

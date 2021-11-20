@@ -184,6 +184,10 @@ void Medley::deckUnloaded(medley::Deck& sender, medley::TrackPlay& track) {
     emitDeckEvent("unloaded", sender, track);
 }
 
+void Medley::mainDeckChanged(medley::Deck& sender, medley::TrackPlay& track) {
+    emitDeckEvent("mainDeckChanged", sender, track);
+}
+
 void Medley::audioDeviceChanged() {
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function fn) {
         fn.Call(self.Value(), { Napi::String::New(env, "audioDeviceChanged") });

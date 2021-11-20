@@ -84,7 +84,7 @@ export interface AudioLevels {
 }
 
 type NormalEvent = 'audioDeviceChanged';
-type DeckEvent = 'loaded' | 'unloaded' | 'started' | 'finished';
+type DeckEvent = 'loaded' | 'unloaded' | 'started' | 'finished' | 'mainDeckChanged';
 
 export declare enum DeckIndex {
   A = 0,
