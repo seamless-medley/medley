@@ -255,7 +255,6 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   private indexNewTracks = async (awaitable: Promise<BoomBoxTrack[]>) => {
     const tracks = await awaitable;
     this.miniSearch.addAllAsync(tracks);
-
     return tracks;
   }
 
@@ -271,7 +270,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     const remainingIds = _.intersection(existingIds, newIds);
 
     const invalidatedIds = remainingIds.filter((id) => {
-      const watched = _.sortedUniq(this.collections.get(id)?.watched || []);
+      const watched = _(this.collections.get(id)?.watched || []).sort().uniq().value();
       const tobeWatched = _.castArray(newCollections[id]);
 
       return !_.isEqual(tobeWatched, watched);
@@ -328,13 +327,39 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     }
   }
 
-  autoSuggest(q: string, field?: string) {
+  autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string) {
+    const nt = narrowTerm?.toLowerCase();
+
+    if (!q && field === 'title' && narrowBy === 'artist' && narrowTerm) {
+      // Start showing title suggestion for a known artist
+      const tracks = this.search({
+        artist: narrowTerm,
+        title: null,
+        query: null
+      });
+
+      const sorted = _(tracks).map(t => t.metadata?.tags?.title).filter(_.isString).uniq().value();
+      console.log('Sorted', sorted);
+      return sorted;
+    }
+
+    const narrow = (narrowBy && nt)
+      ? (result: SearchResult): boolean => {
+        const track = this.findTrackById(result.id);
+        const narrowing = (track?.metadata?.tags as any || {})[narrowBy] as string | undefined;
+        const match = narrowing?.toLowerCase().includes(nt) || false;
+        console.log('narrowing', narrowBy, narrowing, 'for', nt, match);
+        return match;
+      }
+      : undefined;
+
     return this.miniSearch.autoSuggest(
       q,
       {
         fields: field ? castArray(field) : undefined,
         prefix: true,
-        fuzzy: 0.5
+        fuzzy: 0.5,
+        filter: narrow
       }
     ).map(s => s.suggestion);
   }
