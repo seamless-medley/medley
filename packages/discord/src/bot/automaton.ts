@@ -12,7 +12,7 @@ import {
   MessagePayload, Snowflake, VoiceState
 } from "discord.js";
 
-import { without } from "lodash";
+import _, { without } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { MedleyMix } from "./mix";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
@@ -56,6 +56,7 @@ export class MedleyAutomaton {
     this.client.on('interactionCreate', createInteractionHandler('medley', this));
 
     this.dj.on('trackStarted', this.handleTrackStarted);
+    this.dj.on('trackActive', this.handleTrackActive);
     this.dj.on('trackFinished', this.handleTrackFinished);
   }
 
@@ -273,7 +274,13 @@ export class MedleyAutomaton {
     this.showActivity();
 
     const trackMsg = await createTrackMessage(trackPlay);
-    const sentMessages = await this.sendAll(trackMessageToMessageOptions(trackMsg));
+    const sentMessages = await this.sendAll(trackMessageToMessageOptions({
+      ...trackMsg,
+      buttons: {
+        lyric: trackMsg.buttons.lyric,
+        skip: undefined
+      }
+    }));
 
     // Store message for each guild
     for (const [guildId, maybeMessage] of sentMessages) {
@@ -303,31 +310,62 @@ export class MedleyAutomaton {
     }
   }
 
-  private handleTrackFinished = async (trackPlay: BoomBoxTrackPlay) => {
-    this.updateTrackMessage(trackPlay, async msg => msg.status < TrackMessageStatus.Played, TrackMessageStatus.Played, 'Played');
-  }
+  private handleTrackActive = async (trackPlay: BoomBoxTrackPlay) => _.delay(() => this.updateTrackMessage(
+    trackPlay,
+    async () => true,
+    {
+      showSkip: true,
+      showLyrics: true
+    }
+  ), 1000);
 
-  private async updateTrackMessage(trackPlay: BoomBoxTrackPlay, predicate: (msg: TrackMessage) => Promise<boolean>, status: TrackMessageStatus, title?: string) {
+  private handleTrackFinished = async (trackPlay: BoomBoxTrackPlay) => this.updateTrackMessage(
+    trackPlay,
+    async msg => msg.status < TrackMessageStatus.Played,
+    {
+      status: TrackMessageStatus.Played,
+      title: 'Played',
+      showSkip: false,
+      showLyrics: true
+    }
+  );
+
+  private async updateTrackMessage(
+    trackPlay: BoomBoxTrackPlay,
+    predicate: (msg: TrackMessage) => Promise<boolean>,
+    options: {
+      status?: TrackMessageStatus;
+      title?: string;
+      showSkip?: boolean;
+      showLyrics?: boolean;
+    }
+  ) {
     for (const state of this._guildStates.values()) {
-      const msg = state.trackMessages.find(msg => msg.status < TrackMessageStatus.Played && msg.trackPlay.uuid === trackPlay.uuid);
+      const msg = state.trackMessages.find(msg => msg.trackPlay.uuid === trackPlay.uuid);
 
       if (msg) {
         if (await predicate(msg)) {
-          msg.status = status;
-          if (title) {
-            msg.embed.setTitle(title);
+          const { status: newStatus, title: newTitle, showSkip, showLyrics } = options;
+
+          if (newStatus) {
+            msg.status = newStatus;
           }
 
-          const showSkipButton = status < TrackMessageStatus.Played;
+          if (newTitle) {
+            msg.embed.setTitle(newTitle);
+          }
 
-          if (showSkipButton || title) {
+          const changed = !!newStatus || !!newTitle || showSkip || showLyrics;
+
+          if (changed) {
             const { sentMessage } = msg;
+
             if (sentMessage?.editable) {
               sentMessage.edit(trackMessageToMessageOptions({
                 ...msg,
                 buttons: {
-                  lyric: msg.buttons.lyric,
-                  skip: showSkipButton ? msg.buttons.skip : undefined
+                  lyric: showLyrics ? msg.buttons.lyric : undefined,
+                  skip: showSkip ? msg.buttons.skip : undefined
                 }
               }));
             }
@@ -363,8 +401,18 @@ export class MedleyAutomaton {
   skipCurrentSong() {
     if (!this.dj.paused && this.dj.playing) {
       const { trackPlay } = this.dj;
+
       if (trackPlay) {
-        this.updateTrackMessage(trackPlay, async () => true, TrackMessageStatus.Skipped, 'Skipped');
+        this.updateTrackMessage(
+          trackPlay,
+          async () => true,
+          {
+            title: 'Skipped',
+            status: TrackMessageStatus.Skipped,
+            showSkip: false,
+            showLyrics: true
+          }
+        );
       }
 
       this.dj.skip();

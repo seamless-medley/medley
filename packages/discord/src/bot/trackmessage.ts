@@ -91,7 +91,6 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
     .setStyle('SECONDARY')
     .setCustomId(`lyrics:${track.id}`);
 
-  // TODO: Only show skip button, if this is the main deck
   const skipButton = new MessageButton()
     .setLabel('Skip')
     .setEmoji('⛔')
