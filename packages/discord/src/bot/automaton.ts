@@ -3,26 +3,19 @@
 import { REST as RestClient } from "@discordjs/rest";
 import {
   BoomBoxTrack,
-  BoomBoxTrackPlay, isRequestTrack, TrackKind
+  BoomBoxTrackPlay, TrackKind
 } from "@medley/core";
 import { Routes } from "discord-api-types/v9";
 import {
   BaseGuildVoiceChannel, Client, Guild,
-  Intents, Message,
-  MessageActionRow,
-  MessageAttachment,
-  MessageButton, MessageEmbed,
-  MessageOptions,
+  Intents, MessageActionRow, MessageOptions,
   MessagePayload, Snowflake, VoiceState
 } from "discord.js";
-import colorableDominant from 'colorable-dominant';
-import _, { capitalize, first, isEmpty, without } from "lodash";
-import mime from 'mime-types';
+import { without } from "lodash";
 import { parse as parsePath } from "path";
-import splashy from 'splashy';
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { MedleyMix } from "./mix";
-
+import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
 export type MedleyAutomatonOptions = {
   clientId: string;
@@ -36,26 +29,6 @@ type AutomatonGuildState = {
   trackMessages: TrackMessage[];
   audiences: Snowflake[];
   serverMuted: boolean;
-}
-
-export enum TrackMessageStatus {
-  Playing,
-  Paused,
-  Played,
-  Skipped
-}
-
-type TrackMessage = {
-  trackPlay: BoomBoxTrackPlay;
-  status: TrackMessageStatus;
-  embed: MessageEmbed;
-  coverImage?: MessageAttachment;
-  buttons: {
-    skip?: MessageButton,
-    lyric?: MessageButton
-  };
-  sentMessage?: Message;
-  lyricMessage?: Message;
 }
 
 export class MedleyAutomaton {
@@ -307,113 +280,7 @@ export class MedleyAutomaton {
     this._guildStates.delete(guild.id);
   }
 
-  private async createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<TrackMessage> {
-    const { track } = trackPlay;
-    const requestedBy = isRequestTrack(track) ? track.requestedBy : undefined;
-
-    const embed = new MessageEmbed()
-      .setColor('RANDOM')
-      .setTitle(requestedBy ? 'Playing your request' : 'Playing');
-
-    const { metadata } = track;
-
-    let coverImage: MessageAttachment | undefined;
-
-    if (metadata) {
-      const { tags } = metadata;
-      if (tags) {
-        const { title, lyrics } = tags;
-
-        if (title) {
-          embed.setDescription(title);
-        }
-
-        for (const tag of ['artist', 'album', 'genre']) {
-          const val = (tags as any)[tag];
-          if (!isEmpty(val)) {
-            embed.addField(capitalize(tag), `${val}`, true);
-          }
-        }
-
-        const { picture: pictures } = tags;
-        if (pictures?.length) {
-          const picture = first(pictures);
-          if (picture) {
-            const { color } = colorableDominant(await splashy(picture.data).catch(() => []));
-
-            if (color) {
-              embed.setColor(color);
-            }
-
-            const ext = mime.extension(picture.format);
-            coverImage = new MessageAttachment(picture.data, `cover.${ext}`);
-          }
-        }
-      }
-    } else {
-      embed.setDescription(parsePath(track.path).name);
-    }
-
-    if (track.collection) {
-      embed.addField('Collection', track.collection.id);
-    }
-
-    if (requestedBy) {
-      embed.addField('Requested by', `<@${requestedBy}>`);
-    }
-
-    if (coverImage) {
-      embed.setImage(`attachment://${coverImage.name}`)
-    }
-
-    const lyricButton = new MessageButton()
-      .setLabel('Lyrics')
-      .setEmoji('📜')
-      .setStyle('SECONDARY')
-      .setCustomId(`lyrics:${track.id}`);
-
-    const skipButton = new MessageButton()
-      .setLabel('Skip')
-      .setEmoji('⛔')
-      .setStyle('DANGER')
-      .setCustomId(`skip:${trackPlay.uuid}`);
-
-    return {
-      trackPlay,
-      status: TrackMessageStatus.Playing,
-      embed,
-      coverImage,
-      buttons: {
-        lyric: lyricButton,
-        skip: skipButton
-      }
-    };
-  }
-
-  private trackMessageToMessageOptions(msg: TrackMessage): MessageOptions {
-    const { lyric, skip } = msg.buttons;
-
-    let actionRow: MessageActionRow | undefined = undefined;
-
-    if (lyric || skip) {
-      actionRow = new MessageActionRow();
-
-      if (lyric) {
-        actionRow.addComponents(lyric);
-      }
-
-      if (skip) {
-        actionRow.addComponents(skip);
-      }
-    }
-
-    return {
-      embeds: [msg.embed],
-      files: msg.coverImage ? [msg.coverImage] : undefined,
-      components: actionRow ? [actionRow] : []
-    }
-  }
-
+  // FIXME: This event sometimes called twice
   private handleTrackStarted = async (trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
     if (trackPlay.track.metadata?.kind === TrackKind.Insertion) {
       return;
@@ -421,8 +288,8 @@ export class MedleyAutomaton {
 
     this.showActivity();
 
-    const trackMsg = await this.createTrackMessage(trackPlay);
-    const sentMessages = await this.sendAll(this.trackMessageToMessageOptions(trackMsg));
+    const trackMsg = await createTrackMessage(trackPlay);
+    const sentMessages = await this.sendAll(trackMessageToMessageOptions(trackMsg));
 
     // Store message for each guild
     for (const [guildId, maybeMessage] of sentMessages) {
@@ -472,7 +339,7 @@ export class MedleyAutomaton {
           if (showSkipButton || title) {
             const { sentMessage } = msg;
             if (sentMessage?.editable) {
-              sentMessage.edit(this.trackMessageToMessageOptions({
+              sentMessage.edit(trackMessageToMessageOptions({
                 ...msg,
                 buttons: {
                   lyric: msg.buttons.lyric,
@@ -497,7 +364,7 @@ export class MedleyAutomaton {
 
         const { sentMessage } = msg;
         if (sentMessage?.editable) {
-          sentMessage.edit(this.trackMessageToMessageOptions({
+          sentMessage.edit(trackMessageToMessageOptions({
             ...msg,
             buttons: {
               lyric: undefined,
