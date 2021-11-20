@@ -5,14 +5,16 @@ import { InteractionHandlerFactory } from "../../type";
 export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteInteraction> = (automaton) => async (interaction) => {
   const { name, value } = interaction.options.getFocused(true);
 
-  // TODO: nestedBy and nestedTerm
-  const completions = value ? _(automaton.dj.autoSuggest(`${value}`, ['artist', 'title'].includes(name) ? name : undefined))
-    .take(25)
-    .map<ApplicationCommandOptionChoice>(s => ({ name: s, value: s }))
-    .value()
-    : []
+  const forArtistOrTitleField = ['artist', 'title'].includes(name);
 
-  // TODO: return some suggestion if query is empty, from search history?, request history?
+  const searchField = forArtistOrTitleField ? name : undefined;
+  const narrowBy = forArtistOrTitleField ? (name !== 'artist' ? 'artist' : 'title') : undefined;
+  const narrowTerm = narrowBy ? interaction.options.getString(narrowBy) : undefined;
+
+  const completions = _(automaton.dj.autoSuggest(`${value}`, searchField, narrowTerm ? narrowBy : undefined, narrowTerm || undefined))
+      .take(25)
+      .map<ApplicationCommandOptionChoice>(s => ({ name: s, value: s }))
+      .value()
 
   interaction.respond(completions);
 }
