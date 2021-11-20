@@ -96,6 +96,8 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
   });
 
   if (selector instanceof Message) {
+    let canceled = false;
+
     const collector = selector.createMessageComponentCollector({ componentType: 'SELECT_MENU', time: 30_000 });
 
     collector.on('collect', async i => {
@@ -112,7 +114,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
     });
 
     collector.on('end', () => {
-      if (selector.editable) {
+      if (!canceled && selector.editable) {
         selector.edit({
           content: makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
           components: []
@@ -129,6 +131,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
       time: 60_000
     })
     .then(() => {
+      canceled = true;
       collector.removeAllListeners();
 
       if (selector.deletable) {
