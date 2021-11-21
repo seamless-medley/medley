@@ -1,8 +1,7 @@
 import { getTrackBanner } from "@medley/core";
 import { SelectMenuInteraction } from "discord.js";
 import { MedleyAutomaton } from "../../../automaton";
-import { HighlightTextType, makeHighlightedMessage } from "../../utils";
-import { makeRequestPreview } from "./helpers";
+import { HighlightTextType, makeHighlightedMessage, makeRequestPreview } from "../../utils";
 
 export const handleSelectMenu = async (automaton: MedleyAutomaton, interaction: SelectMenuInteraction) => {
   const { values } = interaction;

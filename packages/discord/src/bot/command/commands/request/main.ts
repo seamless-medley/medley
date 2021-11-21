@@ -3,8 +3,7 @@ import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSe
 import _ from "lodash";
 import { parse as parsePath } from 'path';
 import { InteractionHandlerFactory } from "../../type";
-import { HighlightTextType, makeHighlightedMessage, reply } from "../../utils";
-import { makeRequestPreview } from "./helpers";
+import { HighlightTextType, makeHighlightedMessage, makeRequestPreview, reply } from "../../utils";
 import { handleSelectMenu } from "./selectmenu";
 
 export const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
