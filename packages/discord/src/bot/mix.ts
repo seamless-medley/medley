@@ -24,6 +24,7 @@ import { BoomBox,
   RequestTrack,
   SweeperInsertionRule,
   TrackKind,
+  TrackPeek,
   WatchTrackCollection
 } from "@medley/core";
 
@@ -31,7 +32,7 @@ import { BaseGuildVoiceChannel, Guild, User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
 import _, { flow, shuffle, castArray } from "lodash";
-import MiniSearch, { Query, QueryCombination } from 'minisearch'
+import MiniSearch, { Query, SearchResult } from 'minisearch';
 
 export type MedleyMixOptions = {
   /**
@@ -338,9 +339,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
         query: null
       });
 
-      const sorted = _(tracks).map(t => t.metadata?.tags?.title).filter(_.isString).uniq().value();
-      console.log('Sorted', sorted);
-      return sorted;
+      return _(tracks).map(t => t.metadata?.tags?.title).filter(_.isString).uniq().value();
     }
 
     const narrow = (narrowBy && nt)
@@ -348,7 +347,6 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
         const track = this.findTrackById(result.id);
         const narrowing = (track?.metadata?.tags as any || {})[narrowBy] as string | undefined;
         const match = narrowing?.toLowerCase().includes(nt) || false;
-        console.log('narrowing', narrowBy, narrowing, 'for', nt, match);
         return match;
       }
       : undefined;

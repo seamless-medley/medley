@@ -1,9 +1,9 @@
-import { CommandInteraction, Message, MessageEmbed, MessageReaction, User } from "discord.js";
-import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import * as emojis from "../../emojis";
-import { chain, take, sampleSize, zip, maxBy, padStart, padEnd, keyBy, without, uniq } from "lodash";
 import { getTrackBanner, RequestTrack, TrackPeek } from "@medley/core";
-import { makeRequestPreview, reply, warn } from "../utils";
+import { CommandInteraction, Message, MessageEmbed, MessageReaction, User } from "discord.js";
+import { chain, keyBy, sampleSize, take } from "lodash";
+import * as emojis from "../../emojis";
+import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { makeRequestPreview, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,

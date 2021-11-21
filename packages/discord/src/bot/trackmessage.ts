@@ -1,4 +1,4 @@
-import { BoomBoxTrack, BoomBoxTrackPlay, isRequestTrack } from "@medley/core";
+import { BoomBoxTrackPlay, isRequestTrack } from "@medley/core";
 import colorableDominant from 'colorable-dominant';
 import { Message, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, MessageOptions } from "discord.js";
 import { capitalize, first, isEmpty } from "lodash";

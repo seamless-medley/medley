@@ -7,7 +7,7 @@ import lyrics from "./commands/lyrics";
 import request from "./commands/request";
 import vote from './commands/vote';
 
-import { Command, CommandError, CommandType, InteractionHandler, InteractionHandlerFactory, SubCommandLikeOption } from "./type";
+import { Command, CommandError, CommandType, InteractionHandler, SubCommandLikeOption } from "./type";
 import { deny } from "./utils";
 import { MedleyAutomaton } from "../automaton";
 

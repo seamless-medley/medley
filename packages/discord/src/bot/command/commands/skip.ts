@@ -1,4 +1,4 @@
-import { BoomBoxTrackPlay, isRequestTrack } from "@medley/core";
+import { isRequestTrack } from "@medley/core";
 import { ButtonInteraction, CommandInteraction, Permissions } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
@@ -26,8 +26,9 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
   if (trackPlay && isRequestTrack(trackPlay.track)) {
     const { requestedBy } = trackPlay.track;
 
-    if (requestedBy && requestedBy !== interaction.user.id) {
-      await reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by <@${requestedBy}>`);
+    if (!requestedBy.includes(interaction.user.id)) {
+      const mentions = requestedBy.map(id =>  `<@${id}>`).join(' ');
+      await reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by ${mentions}`);
       return;
     }
   }

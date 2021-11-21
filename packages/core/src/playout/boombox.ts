@@ -293,21 +293,17 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 
   private deckLoaded: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
-    console.log(`Deck ${deck} loaded`, trackPlay);
     this.emit('trackLoaded', trackPlay);
   }
 
   private deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
     if (trackPlay.track.metadata?.kind === TrackKind.Insertion) {
-      console.log('Playing insertion, do not track history', trackPlay.track.path);
       return;
     }
 
     if (this._currentTrackPlay?.uuid === trackPlay.uuid) {
       return;
     }
-
-    console.log(`Deck ${deck} started`, trackPlay.uuid, trackPlay.track.metadata?.tags?.title);
 
     const lastTrack = this._currentTrackPlay;
     this._currentTrackPlay = trackPlay;
