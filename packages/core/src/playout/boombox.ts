@@ -1,3 +1,4 @@
+import { parse as parsePath } from 'path';
 import _, { flatten, some, toLower, trim, uniq } from "lodash";
 import { EventEmitter } from "stream";
 import type { ICommonTagsResult } from "music-metadata";
@@ -31,12 +32,13 @@ export type TrackRecord = {
 }
 
 export type RequestTrack<Requester> = BoomBoxTrack & {
+  rid: number;
   priority?: number;
-  requestedBy?: Requester;
+  requestedBy: Requester[];
   lastRequestTime?: Date;
 };
 
-export function isRequestTrack(o: any): o is RequestTrack<any> {
+export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
   return o && !!o.requestedBy;
 }
 
@@ -171,6 +173,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     return true;
   }
 
+  private _lastRequestId = 0;
+
   request(track: BoomBoxTrack, requestedBy?: Requester): TrackPeek<RequestTrack<Requester>> {
     const existing = this.requests.fromId(track.id);
 
@@ -178,7 +182,12 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       existing.priority = (existing.priority || 0) + 1;
       existing.lastRequestTime = new Date();
 
-      this.requests.sort(t => -(t.priority || 0), t => (t.lastRequestTime?.valueOf() || 0));
+      if (requestedBy) {
+        existing.requestedBy.push(requestedBy)
+      }
+
+      this.sortRequests();
+
       return {
         index: this.requests.indexOf(existing),
         track: existing
@@ -187,8 +196,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     const requested: RequestTrack<Requester> = {
       ...track,
+      rid: ++this._lastRequestId,
       priority: 0,
-      requestedBy,
+      requestedBy: requestedBy ? [requestedBy]: [],
       lastRequestTime: new Date()
     };
 
@@ -204,6 +214,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     }
   }
 
+  sortRequests() {
+    this.requests.sort(t => -(t.priority || 0), t => (t.lastRequestTime?.valueOf() || 0));
+  }
+
   private _requestsEnabled = true;
 
   get requestsEnabled() {
@@ -212,6 +226,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   set requestsEnabled(value: boolean) {
     this._requestsEnabled = value;
+  }
+
+  get requestsCount() {
+    return this.requests.length;
   }
 
   private async fetchRequestTrack(): Promise<RequestTrack<Requester> | undefined> {

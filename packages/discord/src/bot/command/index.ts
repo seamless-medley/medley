@@ -5,6 +5,7 @@ import skip from './commands/skip';
 import volume from "./commands/volume";
 import lyrics from "./commands/lyrics";
 import request from "./commands/request";
+import vote from './commands/vote';
 
 import { Command, CommandError, CommandType, InteractionHandler, InteractionHandlerFactory, SubCommandLikeOption } from "./type";
 import { deny } from "./utils";
@@ -15,7 +16,8 @@ const descriptors = {
   skip,
   volume,
   lyrics,
-  request
+  request,
+  vote
 }
 
 export const createCommandDeclarations = (name: string = 'medley', description: string = 'Medley'): Command => {

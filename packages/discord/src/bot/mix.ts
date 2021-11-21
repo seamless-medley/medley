@@ -48,7 +48,7 @@ export type SweeperConfig = {
 }
 
 export interface MedleyMixEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
-
+  requestTrackAdded: (track: TrackPeek<RequestTrack<User['id']>>) => void;
 }
 
 type MixState = {
@@ -413,7 +413,15 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
       return false;
     }
 
-    return this.boombox.request(track, requestedBy);
+    const requestedTrack = this.boombox.request(track, requestedBy);
+
+    this.emit('requestTrackAdded', requestedTrack);
+
+    return requestedTrack;
+  }
+
+  get requestsCount() {
+    return this.boombox.requestsCount;
   }
 
   peekRequests(from: number, n: number) {
@@ -426,5 +434,9 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
 
   set requestsEnabled(value: boolean) {
     this.boombox.requestsEnabled = value;
+  }
+
+  sortRequests() {
+    this.boombox.sortRequests();
   }
 }

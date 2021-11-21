@@ -1,4 +1,4 @@
-import { BoomBoxTrackPlay, isRequestTrack } from "@medley/core";
+import { BoomBoxTrack, BoomBoxTrackPlay, isRequestTrack } from "@medley/core";
 import colorableDominant from 'colorable-dominant';
 import { Message, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, MessageOptions } from "discord.js";
 import { capitalize, first, isEmpty } from "lodash";
@@ -28,7 +28,7 @@ export type TrackMessage = {
 
 export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<TrackMessage> {
   const { track } = trackPlay;
-  const requestedBy = isRequestTrack(track) ? track.requestedBy : undefined;
+  const requestedBy = isRequestTrack<string>(track) ? track.requestedBy : undefined;
 
   const embed = new MessageEmbed()
     .setColor('RANDOM')
@@ -77,8 +77,9 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
     embed.addField('Collection', track.collection.id);
   }
 
-  if (requestedBy) {
-    embed.addField('Requested by', `<@${requestedBy}>`);
+  if (requestedBy?.length) {
+    const mentions = requestedBy.map(id =>  `<@${id}>`).join(' ');
+    embed.addField('Requested by', mentions);
   }
 
   if (coverImage) {
