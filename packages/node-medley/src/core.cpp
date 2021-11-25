@@ -27,6 +27,9 @@ void Medley::Initialize(Object& exports) {
         InstanceAccessor<&Medley::getFadingCurve, &Medley::setFadingCurve>("fadingCurve"),
         InstanceAccessor<&Medley::getMinimumLeadingToFade, &Medley::setMinimumLeadingToFade>("minimumLeadingToFade"),
         InstanceAccessor<&Medley::getMaximumFadeOutDuration, &Medley::setMaximumFadeOutDuration>("maximumFadeOutDuration"),
+        //
+        StaticMethod<&Medley::static_getMetadata>("getMetadata"),
+        StaticMethod<&Medley::static_getCoverAndLyrics>("getCoverAndLyrics")
     };
 
     auto env = exports.Env();
@@ -617,6 +620,52 @@ Napi::Value Medley::updateAudioStream(const CallbackInfo& info) {
     }
 
     return Boolean::New(env, true);
+}
+
+Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        RangeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    juce::String trackFile = info[0].ToString().Utf8Value();
+    medley::Metadata metadata;
+
+    metadata.readFromFile(trackFile);
+
+    auto result = Object::New(env);
+
+    result.Set("title", metadata.getTitle().toRawUTF8());
+    result.Set("artist", metadata.getArtist().toRawUTF8());
+    result.Set("album", metadata.getAlbum().toRawUTF8());
+    result.Set("trackGain", metadata.getTrackGain());
+
+    return result;
+}
+
+Napi::Value Medley::static_getCoverAndLyrics(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    juce::String trackFile = info[0].ToString().Utf8Value();
+
+    medley::Metadata::CoverAndLyrics cal(trackFile, true, true);
+    auto cover = cal.getCover();
+    auto coverData = cover.getData();
+
+    auto result = Object::New(env);
+
+    result.Set("cover", Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)coverData.data(), coverData.size()));
+    result.Set("coverMimeType", Napi::String::New(env, cover.getMimeType().toStdString()));
+    result.Set("lyrics", Napi::String::New(env, cal.getLyrics().toStdString()));
+
+    return result;
 }
 
 

@@ -216,6 +216,9 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   requestAudioStream(options: RequestAudioStreamOptions): RequestAudioStreamResult;
 
   updateAudioStream(id: RequestAudioStreamResult['id'], options: Partial<Pick<RequestAudioStreamOptions, 'bufferring' | 'gain'>>): boolean;
+
+  static getMetadata(path: string): Metadata;
+  static getCoverAndLyrics(path: string): CoverAndLyrics;
 }
 
 export type AudioFormat = 'Int16LE' | 'Int16BE' | 'FloatLE' | 'FloatBE';
@@ -274,4 +277,10 @@ export type Metadata = {
   artist: string;
   album: string;
   trackGain: number;
+}
+
+export type CoverAndLyrics = {
+  cover: Buffer;
+  coverMimeType: string;
+  lyrics: string;
 }
