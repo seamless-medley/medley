@@ -1,5 +1,7 @@
 import chokidar from "chokidar";
-import _, { debounce, reject, shuffle } from "lodash";
+import fg from 'fast-glob';
+import { debounce, reject, shuffle, without } from "lodash";
+import normalizePath from "normalize-path";
 import { Track } from "../track";
 import { TrackCollection, TrackCollectionOptions } from "./base";
 
@@ -13,7 +15,7 @@ export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<
 
   constructor(id: string, options: TrackCollectionOptions<T> = {}) {
     super(id, {
-      newTracksMapper: shuffle,
+      tracksMapper: shuffle,
       ...options
     });
   }
@@ -36,7 +38,6 @@ export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<
   private storeNewTracks = debounce(() => {
     const newTracks = this.fetchNewPaths();
     this.add(newTracks);
-    this.emit('store', newTracks);
   }, 2000);
 
   private handleTracksRemoval = debounce(() => {
@@ -59,15 +60,23 @@ export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<
       this.handleTracksRemoval();
     });
 
-  watch(paths: string): this {
-    this.watcher.add(paths);
-    this.watchingPaths.push(paths);
+  watch(pattern: string): this {
+    fg(normalizePath(pattern), { absolute: true, onlyFiles: true })
+      .then(files => this.add(files))
+      .then(() => {
+        this.watcher.add(pattern);
+        this.watchingPaths.push(pattern);
+      })
+      .then(() => {
+        this.emit('ready')
+      });
+
     return this;
   }
 
-  unwatch(paths: string) {
-    this.watcher.unwatch(paths);
-    this.watchingPaths = _.without(this.watchingPaths, paths);
+  unwatch(pattern: string) {
+    this.watcher.unwatch(pattern);
+    this.watchingPaths = without(this.watchingPaths, pattern);
   }
 
   get watched() {

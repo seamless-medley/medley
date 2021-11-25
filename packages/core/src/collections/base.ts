@@ -1,10 +1,14 @@
-import EventEmitter from "events";
 import { createHash } from 'crypto';
-import _, { castArray, partition, reject, sample, shuffle, uniqBy } from "lodash";
+import EventEmitter from "events";
+import { castArray, chain, chunk, find, findIndex, partition, reject, sample, shuffle, sortBy, uniqBy } from "lodash";
+import normalize from 'normalize-path';
+import os from "os";
+import { wait } from '..';
 import { Track } from "../track";
 
 export type TrackCollectionOptions<T extends Track<any>> = {
-  newTracksMapper?: (tracks: T[]) => T[] | Promise<T[]>;
+  // TODO: Option to initialize the collection with the specified list of files
+  tracksMapper?: (tracks: T[]) => T[] | Promise<T[]>;
 }
 
 export type TrackPeek<T extends Track<any>> = {
@@ -33,7 +37,7 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
   }
 
   protected async createTrack(path: string): Promise<T> {
-    const id = createHash('md5').update(path).digest('base64');
+    const id = createHash('md5').update(normalize(path)).digest('base64');
 
     return {
       id,
@@ -67,23 +71,34 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
     return -1;
   }
 
-  async add(path: string | string[]): Promise<T[]> {
-    const tracks = await Promise.all(
-      _(path).castArray()
+  async add(paths: string | string[]): Promise<void> {
+    const immediateTracks = await Promise.all(chain(paths)
+      .castArray()
+      .filter(p => /\.(mp3|flac|wav|ogg|aiff)$/i.test(p))
       .uniq().map(p => this.createTrack(p))
       .value()
     );
 
-    const { newTracksMapper } = this.options;
-    const newTracks = newTracksMapper ? await newTracksMapper(tracks) : tracks;
+    await this.addTracks(immediateTracks);
+  }
 
-    for (const track of newTracks) {
-      this.trackIdMap.set(track.id, track);
+  private async addTracks(tracks: T[]): Promise<T[]> {
+    const { tracksMapper } = this.options;
+
+    const fresh = reject(tracks, it => this.trackIdMap.has(it.id));
+    const newTracks = tracksMapper ? await tracksMapper(fresh) : fresh;
+
+    if (newTracks.length) {
+      for (const track of newTracks) {
+        this.trackIdMap.set(track.id, track);
+      }
+
+      this.tracks = uniqBy(this.tracks.concat(newTracks), 'id');
+
+      return newTracks;
     }
 
-    this.tracks = uniqBy(this.tracks.concat(newTracks), 'path');
-
-    return newTracks;
+    return [];
   }
 
   removeBy(predicate: (track: T) => boolean) {
@@ -105,8 +120,12 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
     this.remove(toRemove);
   }
 
-  shuffle() {
-    this.tracks = shuffle(this.tracks);
+  async shuffle() {
+    await this.shuffleBy(shuffle);
+  }
+
+  async shuffleBy(fn: (tracks: T[]) => T[] | Promise<T[]>) {
+    this.tracks = await fn(this.tracks)
   }
 
   sort(...sortFn: ((track: T) => unknown)[]) {
@@ -114,15 +133,15 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
       sortFn = [track => track.path];
     }
 
-    this.tracks = _.sortBy(this.tracks, ...sortFn);
+    this.tracks = sortBy(this.tracks, ...sortFn);
   }
 
   indexOf(track: T): number {
-    return _.findIndex(this.tracks, t => t.id === track.id);
+    return findIndex(this.tracks, t => t.id === track.id);
   }
 
   find(path: string) {
-    return _.find(this.tracks, track => track.path === path);
+    return find(this.tracks, track => track.path === path);
   }
 
   fromId(id: string): T | undefined {

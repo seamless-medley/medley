@@ -374,13 +374,25 @@ function getArtists(metadata: BoomBoxMetadata): string[] {
   return uniq(artists).map(trim);
 }
 
-export const mapTracksMetadata = async (tracks: BoomBoxTrack[]) => Promise.all(tracks.map(async track => ({
+export const mapTrackMetadata = async (track: BoomBoxTrack): Promise<BoomBoxTrack> => ({
   ...track,
   metadata: {
     tags: (await getMusicMetadata(track.path))?.common,
     kind: TrackKind.Normal
   }
-})));
+});
+
+export const mapTracksMetadataConcurrently = async (tracks: BoomBoxTrack[]) => Promise.all(tracks.map(mapTrackMetadata));
+
+export const mapTracksMetadataSequentially = async (tracks: BoomBoxTrack[]) => {
+  const results: BoomBoxTrack[] = [];
+
+  for (const track of tracks) {
+    results.push(await mapTrackMetadata(track));
+  }
+
+  return tracks;
+};
 
 export function getTrackBanner(track: BoomBoxTrack) {
   const tags = track.metadata?.tags;

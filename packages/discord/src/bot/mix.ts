@@ -17,7 +17,8 @@ import { BoomBox,
   BoomBoxTrack,
   BoomBoxTrackPlay,
   Crate,
-  mapTracksMetadata,
+  mapTracksMetadataConcurrently,
+  mapTracksMetadataSequentially,
   Medley,
   Queue,
   RequestAudioStreamResult,
@@ -259,7 +260,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     return tracks;
   }
 
-  private newTracksMapper = flow(shuffle, mapTracksMetadata, this.indexNewTracks);
+  private tracksMapper = flow(shuffle, mapTracksMetadataConcurrently, this.indexNewTracks);
 
   // TODO: Manipulating collections directly might be a good option
   updateCollections(newCollections: Record<string, string>) {
@@ -287,7 +288,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
       const collection = WatchTrackCollection.initWithWatch<BoomBoxTrack>(
         id,
         newCollections[id],
-        { newTracksMapper: this.newTracksMapper }
+        { tracksMapper: this.tracksMapper }
       );
       this.collections.set(id, collection);
     }
