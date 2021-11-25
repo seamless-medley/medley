@@ -48,9 +48,10 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
       }
 
       for (const tag of ['artist', 'album', 'genre']) {
-        const val = (tags as any)[tag];
+        const val = ((tags as any)[tag]?.toString() || '') as string;
+
         if (!isEmpty(val)) {
-          embed.addField(capitalize(tag), `${val}`, true);
+          embed.addField(capitalize(tag), val, true);
         }
       }
 

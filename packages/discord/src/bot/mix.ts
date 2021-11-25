@@ -290,6 +290,9 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
         newCollections[id],
         { tracksMapper: this.tracksMapper }
       );
+
+      collection.once('ready', () => collection.shuffle());
+
       this.collections.set(id, collection);
     }
 
