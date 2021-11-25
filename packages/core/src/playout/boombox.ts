@@ -103,7 +103,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     super();
     //
     this.options = {
-      noDuplicatedArtist: options.noDuplicatedArtist || 3,
+      noDuplicatedArtist: options.noDuplicatedArtist || 50,
       duplicationSimilarity: options.duplicationSimilarity || 0.8,
       maxTrackHistory: options.maxTrackHistory || 20
     };
