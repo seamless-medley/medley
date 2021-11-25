@@ -1,7 +1,7 @@
-import { BoomBoxTrackPlay, isRequestTrack } from "@medley/core";
+import { BoomBoxTrackPlay, isRequestTrack, Metadata } from "@medley/core";
 import colorableDominant from 'colorable-dominant';
 import { Message, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, MessageOptions } from "discord.js";
-import { capitalize, first, isEmpty } from "lodash";
+import { capitalize, first, isEmpty, get } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from 'path';
 import splashy from 'splashy';
@@ -48,7 +48,10 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
       }
 
       for (const tag of ['artist', 'album', 'genre']) {
-        const val = ((tags as any)[tag]?.toString() || '') as string;
+        const val = get<Metadata, keyof Metadata, ''>(tags,
+          tag as keyof Metadata,
+          ''
+        ).toString();
 
         if (!isEmpty(val)) {
           embed.addField(capitalize(tag), val, true);
