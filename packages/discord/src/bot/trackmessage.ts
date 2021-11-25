@@ -39,9 +39,9 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
   let coverImage: MessageAttachment | undefined;
 
   if (metadata) {
-    const { tags } = metadata;
+    const { tags, coverAndLyrics } = metadata;
     if (tags) {
-      const { title, lyrics } = tags;
+      const { title } = tags;
 
       if (title) {
         embed.setDescription(title);
@@ -54,21 +54,21 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
           embed.addField(capitalize(tag), val, true);
         }
       }
+    }
 
-      const { picture: pictures } = tags;
-      if (pictures?.length) {
-        const picture = first(pictures);
-        if (picture) {
-          const { color } = colorableDominant(await splashy(picture.data).catch(() => []));
+    if (coverAndLyrics) {
+      const { cover, coverMimeType, lyrics } = coverAndLyrics;
+      if (cover.length) {
+        const { color } = colorableDominant(await splashy(cover).catch(() => []));
 
-          if (color) {
-            embed.setColor(color);
-          }
-
-          const ext = mime.extension(picture.format);
-          coverImage = new MessageAttachment(picture.data, `cover.${ext}`);
+        if (color) {
+          embed.setColor(color);
         }
+
+        const ext = mime.extension(coverMimeType);
+        coverImage = new MessageAttachment(cover, `cover.${ext}`);
       }
+
     }
   } else {
     embed.setDescription(parsePath(track.path).name);

@@ -35,13 +35,13 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   }
 
   let lyricsText: string | undefined = undefined;
-  let lyricsSource = 'N/A';
+  let source = 'N/A';
 
-  const lyrics = first(track.metadata?.tags?.lyrics);
+  const lyrics = track.metadata?.coverAndLyrics?.lyrics;
 
   if (lyrics) {
     lyricsText = lyricsToText(parseLyrics(lyrics), false).join('\n');
-    lyricsSource = 'metadata';
+    source = 'metadata';
 
   } else {
     const artist = track.metadata?.tags?.artist;
@@ -50,7 +50,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
     if (artist && title) {
       await interaction.deferReply();
       lyricsText = await lyricsSearcher(artist, title).catch(() => undefined);
-      lyricsSource = 'Google';
+      source = 'Google';
     }
   }
 
@@ -66,7 +66,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
         .setTitle('Lyrics')
         .setDescription(banner)
         .addField('Requested by', `${interaction.member}`, true)
-        .addField('Source', lyricsSource, true)
+        .addField('Source', source, true)
     ],
     files: [
       new MessageAttachment(Buffer.from(lyricsText), 'lyrics.txt')

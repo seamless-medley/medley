@@ -1,14 +1,13 @@
 import { parse as parsePath } from 'path';
 import _, { flatten, some, toLower, trim, uniq } from "lodash";
 import { EventEmitter } from "stream";
-import type { ICommonTagsResult } from "music-metadata";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
-import { DeckListener, Medley, PreQueueListener, Queue, TrackPlay } from "@medley/medley";
+import { DeckListener, Medley, PreQueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics } from "@medley/medley";
 import { Crate, CrateSequencer } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
-import { getMusicMetadata } from "../utils";
+import { getMusicMetadata, getMusicCoverAndLyrics } from "../utils";
 import { SweeperInserter } from "./sweeper";
 
 export enum TrackKind {
@@ -18,7 +17,8 @@ export enum TrackKind {
 }
 
 export type BoomBoxMetadata = {
-  tags?: ICommonTagsResult;
+  tags?: Metadata;
+  coverAndLyrics?: CoverAndLyrics;
   kind: TrackKind;
 };
 
@@ -160,7 +160,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
         return { kind: TrackKind.Normal };
       }
 
-      const boomBoxMetadata: BoomBoxMetadata = { tags: musicMetadata.common, kind: TrackKind.Normal };
+      const boomBoxMetadata: BoomBoxMetadata = { tags: musicMetadata, kind: TrackKind.Normal };
       const playedArtists = flatten(this.artistHistory).map(toLower);
       const currentArtists = getArtists(boomBoxMetadata).map(toLower);
       const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));
@@ -292,7 +292,25 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     done(false);
   }
 
-  private deckLoaded: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
+  private deckLoaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
+    // build cover and lyrics metadata
+    // the track might be a request track, which shadowed metadata object from the track in a collection
+    // So we need to find the actual track and set extra metadata there
+    const { collection } = trackPlay.track;
+    if (collection) {
+      const trackInCollection = collection.fromId(trackPlay.track.id);
+
+      if (trackInCollection) {
+        const { metadata } = trackInCollection;
+
+        if (metadata) {
+          if (metadata.kind !== TrackKind.Insertion) {
+            metadata.coverAndLyrics = await getMusicCoverAndLyrics(trackPlay.track.path);
+          }
+        }
+      }
+    }
+
     this.emit('trackLoaded', trackPlay);
   }
 
@@ -365,19 +383,13 @@ function getArtists(metadata: BoomBoxMetadata): string[] {
     return [];
   }
 
-  const { artist, artists = [] } = metadata.tags;
-
-  if (artist) {
-    artists.push(artist);
-  }
-
-  return uniq(artists).map(trim);
+  return uniq(metadata.tags.artist.split(/[/;]/)).map(trim);
 }
 
 export const mapTrackMetadata = async (track: BoomBoxTrack): Promise<BoomBoxTrack> => ({
   ...track,
   metadata: {
-    tags: (await getMusicMetadata(track.path))?.common,
+    tags: await getMusicMetadata(track.path),
     kind: TrackKind.Normal
   }
 });
