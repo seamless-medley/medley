@@ -2,8 +2,6 @@ import { createHash } from 'crypto';
 import EventEmitter from "events";
 import { castArray, chain, chunk, find, findIndex, partition, reject, sample, shuffle, sortBy, uniqBy } from "lodash";
 import normalize from 'normalize-path';
-import os from "os";
-import { wait } from '..';
 import { Track } from "../track";
 
 export type TrackCollectionOptions<T extends Track<any>> = {
