@@ -1,6 +1,7 @@
 #include "Metadata.h"
 #include <taglib/textidentificationframe.h>
 #include <taglib/xiphcomment.h>
+#include <taglib/attachedpictureframe.h>
 
 namespace {
 
@@ -87,22 +88,26 @@ medley::Metadata::Metadata()
 
 void medley::Metadata::readFromTrack(const ITrack::Ptr track)
 {
+    readFromFile(track->getFile());
+}
+
+void medley::Metadata::readFromFile(const File& file)
+{
     trackGain = 0.0f;
     title = "";
     artist = "";
     album = "";
 
-    auto trackFile = track->getFile();
-    auto filetype = utils::getFileTypeFromFileName(trackFile);
+    auto filetype = utils::getFileTypeFromFileName(file);
 
     switch (filetype) {
     case utils::FileType::MP3: {
-        readID3V2(track);
+        readID3V2(file);
         return;
     }
 
     case utils::FileType::FLAC: {
-        readXiph(track);
+        readXiph(file);
         return;
     }
 
@@ -110,15 +115,15 @@ void medley::Metadata::readFromTrack(const ITrack::Ptr track)
 
     }
 
-    title = track->getFile().getFileNameWithoutExtension();
+    title = file.getFileNameWithoutExtension();
 }
 
-bool medley::Metadata::readID3V2(const ITrack::Ptr track)
+bool medley::Metadata::readID3V2(const File& f)
 {
     #ifdef _WIN32
-    TagLib::MPEG::File file((const wchar_t*)track->getFile().getFullPathName().toWideCharPointer());
+    TagLib::MPEG::File file((const wchar_t*)f.getFullPathName().toWideCharPointer());
     #else
-    TagLib::MPEG::File file(track->getFile().getFullPathName().toRawUTF8());
+    TagLib::MPEG::File file(f.getFullPathName().toRawUTF8());
     #endif
 
     if (!file.hasID3v2Tag()) {
@@ -154,12 +159,12 @@ bool medley::Metadata::readID3V2(const ITrack::Ptr track)
     return true;
 }
 
-bool medley::Metadata::readXiph(const ITrack::Ptr track)
+bool medley::Metadata::readXiph(const File& f)
 {
     #ifdef _WIN32
-    TagLib::FLAC::File file((const wchar_t*)track->getFile().getFullPathName().getCharPointer());
+    TagLib::FLAC::File file((const wchar_t*)f.getFullPathName().getCharPointer());
     #else
-    TagLib::FLAC::File file(track->getFile().getFullPathName().toRawUTF8());
+    TagLib::FLAC::File file(f.getFullPathName().toRawUTF8());
     #endif
 
     if (!file.hasXiphComment()) {
@@ -200,4 +205,91 @@ void medley::Metadata::readTag(const TagLib::Tag& tag)
     title = tag.title().toCWString();
     artist = tag.artist().toCWString();
     album = tag.album().toCWString();
+}
+
+medley::Metadata::CoverAndLyrics::CoverAndLyrics(const File& file, bool readCover, bool readLyrics)
+{
+    read(file, readCover, readLyrics);
+}
+
+void medley::Metadata::CoverAndLyrics::readID3V2(const File& f, bool readCover, bool readLyrics)
+{
+#ifdef _WIN32
+    TagLib::MPEG::File file((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::MPEG::File file(f.getFullPathName().toRawUTF8());
+#endif
+
+    if (file.hasID3v2Tag()) {
+        auto& tag = *file.ID3v2Tag();
+
+        if (readCover) {
+            auto frameMap = tag.frameListMap();
+            const auto it = frameMap.find("APIC");
+            if ((it == frameMap.end()) || it->second.isEmpty()) {
+                return;
+            }
+
+            const auto frames = it->second;
+            for (const auto frame : frames) {
+                const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
+                if (apic && apic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
+                    cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
+                    break;
+                }
+            }
+        }
+
+        if (readLyrics) {
+            lyrics = readFirstUserTextIdentificationFrame(tag, L"LYRICS");
+        }
+    }
+}
+
+void medley::Metadata::CoverAndLyrics::readXiph(const File& f, bool readCover, bool readLyrics)
+{
+#ifdef _WIN32
+    TagLib::FLAC::File file((const wchar_t*)f.getFullPathName().getCharPointer());
+#else
+    TagLib::FLAC::File file(f.getFullPathName().toRawUTF8());
+#endif
+
+    if (readCover) {
+        auto pictures = file.pictureList();
+
+        if (pictures.isEmpty() && file.hasXiphComment()) {
+            pictures = file.xiphComment()->pictureList();
+        }
+
+        if (!pictures.isEmpty()) {
+            for (const auto picture : pictures) {
+                if (picture->type() == TagLib::FLAC::Picture::FrontCover) {
+                    cover = medley::Metadata::Cover(picture->data(), picture->mimeType());
+                    break;
+                }
+            }
+        }
+    }
+
+    if (readLyrics) {
+        auto tag = file.xiphComment();
+        readXiphCommentField(*tag, "LYRICS", &lyrics);
+    }
+}
+
+void medley::Metadata::CoverAndLyrics::read(const File& file, bool readCover, bool readLyrics)
+{
+    auto filetype = utils::getFileTypeFromFileName(file);
+
+    switch (filetype) {
+    case utils::FileType::MP3: {
+        readID3V2(file, readCover, readLyrics);
+        return;
+    }
+
+    case utils::FileType::FLAC: {
+        readXiph(file, readCover, readLyrics);
+        return;
+    }
+    }
 }
