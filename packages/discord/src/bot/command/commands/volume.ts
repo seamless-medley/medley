@@ -1,7 +1,7 @@
 import { decibelsToGain, gainToDecibels } from "@medley/core";
 import { CommandInteraction } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept } from "../utils";
+import { accept, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -27,8 +27,11 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ d
     return;
   }
 
-  dj.setGain(interaction.guildId, decibelsToGain(decibels));
-  accept(interaction, `OK: Volume set to ${decibels}dB`);
+  if (dj.setGain(interaction.guildId, decibelsToGain(decibels))) {
+    accept(interaction, `OK: Volume set to ${decibels}dB`);
+  } else {
+    warn(interaction, 'Not in a voice channel');
+  }
 }
 
 const descriptor: CommandDescriptor = {

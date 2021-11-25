@@ -125,7 +125,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
       componentType: 'BUTTON',
       filter: (i) => {
         i.deferUpdate();
-        return i.user.id === issuer;
+        return i.customId === 'cancel_request' && i.user.id === issuer;
       },
       time: 60_000
     })
