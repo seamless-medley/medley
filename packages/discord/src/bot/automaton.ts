@@ -18,6 +18,12 @@ import { MedleyMix } from "./mix";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
 export type MedleyAutomatonOptions = {
+  /**
+   * Default to 'medley'
+   *
+   * @default 'medley'
+   */
+  baseCommand?: string;
   clientId: string;
   botToken: string;
   // TODO: Use this
@@ -54,7 +60,7 @@ export class MedleyAutomaton {
     this.client.on('guildCreate', this.handleGuildCreate);
     this.client.on('guildDelete', this.handleGuildDelete);
     this.client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
-    this.client.on('interactionCreate', createInteractionHandler('medley', this));
+    this.client.on('interactionCreate', createInteractionHandler(this.baseCommand, this));
 
     this.dj.on('trackStarted', this.handleTrackStarted);
     this.dj.on('trackActive', this.handleTrackActive);
@@ -441,14 +447,14 @@ export class MedleyAutomaton {
     return results;
   }
 
-  static async registerCommands(botToken: string, clientId: string, guildId: string) {
+  static async registerCommands(baseCommand: string, botToken: string, clientId: string, guildId: string) {
     const client = new RestClient({ version: '9' })
       .setToken(botToken);
 
     await client.put(
       Routes.applicationGuildCommands(clientId, guildId),
       {
-        body: [createCommandDeclarations('medley')]
+        body: [createCommandDeclarations(baseCommand)]
       }
     );
 
@@ -456,6 +462,10 @@ export class MedleyAutomaton {
   }
 
   async registerCommands(guildId: string) {
-    return MedleyAutomaton.registerCommands(this.options.botToken, this.options.clientId, guildId);
+    return MedleyAutomaton.registerCommands(this.baseCommand || 'medley', this.options.botToken, this.options.clientId, guildId);
+  }
+
+  get baseCommand() {
+    return this.options.baseCommand || 'medley';
   }
 }
