@@ -315,7 +315,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 
   private deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
-    if (trackPlay.track.metadata?.kind === TrackKind.Insertion) {
+    const kind = trackPlay.track.metadata?.kind;
+
+    if (kind === undefined || kind === TrackKind.Insertion) {
       return;
     }
 
