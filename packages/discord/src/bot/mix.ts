@@ -17,6 +17,7 @@ import { BoomBox,
   BoomBoxTrack,
   BoomBoxTrackPlay,
   Crate,
+  decibelsToGain,
   mapTracksMetadataConcurrently,
   mapTracksMetadataSequentially,
   Medley,
@@ -37,8 +38,8 @@ import MiniSearch, { Query, SearchResult } from 'minisearch';
 
 export type MedleyMixOptions = {
   /**
-   * Initial audio gain, default to 0.15 (appx. -16 dbFS)
-   * @default 0.15
+   * Initial audio gain, default to -15dBFS (Appx 0.178)
+   * @default -15dBFS
    */
   initialGain?: number;
 }
@@ -135,7 +136,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
       return;
     }
 
-    const gain = this.options.initialGain || 0.15;
+    const gain = this.options.initialGain || decibelsToGain(-15);
 
     // Request audio stream
     const audioRequest = this.medley.requestAudioStream({

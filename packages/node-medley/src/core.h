@@ -4,6 +4,7 @@
 #include <Medley.h>
 #include <RingBuffer.h>
 #include <ITrack.h>
+#include <Fader.h>
 #include "audio/SecretRabbitCode.h"
 #include "track.h"
 #include "queue.h"
@@ -106,7 +107,7 @@ public:
     static Napi::Value static_getCoverAndLyrics(const Napi::CallbackInfo& info);
 
     struct AudioRequest {
-        AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter, float gain)
+        AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter, float preferredGain)
             :
             id(id),
             numChannels(numChannels),
@@ -116,13 +117,15 @@ public:
             converter(converter),
             buffer(numChannels, bufferSize),
             buffering(buffering),
-            gain(gain)
+            preferredGain(preferredGain)
         {
             if (inSampleRate != requestedSampleRate) {
                 for (auto i = 0; i < numChannels; i++) {
                     resamplers.push_back(std::make_unique<SecretRabbitCode>(inSampleRate, requestedSampleRate));
                 }
             }
+
+            fader.reset(preferredGain);
         }
 
         AudioRequest(const AudioRequest& other)
@@ -154,7 +157,11 @@ public:
         juce::MemoryBlock scratch;
         //
         float lastGain = 1.0f;
-        float gain = 1.0f;
+        float preferredGain = 1.0f;
+        //
+        Fader fader;
+        //
+        double currentTime = 0;
     };
 private:
     void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::TrackPlay& track);

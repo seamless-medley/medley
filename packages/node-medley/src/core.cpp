@@ -524,13 +524,17 @@ namespace {
                 std::this_thread::sleep_for(std::chrono::duration<double>(0.01));
             }
 
+            request->currentTime = Time::getMillisecondCounterHiRes();
+
             auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedSize / outputBytesPerSample / numChannels);
 
             juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
             request->buffer.read(tempBuffer, numSamples);
 
-            tempBuffer.applyGainRamp(0, numSamples, request->lastGain, request->gain);
-            request->lastGain = request->gain;
+            auto gain = request->fader.update(request->currentTime);
+
+            tempBuffer.applyGainRamp(0, numSamples, request->lastGain, gain);
+            request->lastGain = gain;
 
             juce::AudioBuffer<float>* sourceBuffer = &tempBuffer;
             std::unique_ptr<juce::AudioBuffer<float>> resampleBuffer;
@@ -611,12 +615,20 @@ Napi::Value Medley::updateAudioStream(const CallbackInfo& info) {
         return Boolean::New(env, false);
     }
 
+    auto& request = it->second;
+
     if (options.Has("gain")) {
-        it->second->gain = options.Get("gain").ToNumber().FloatValue();
+        auto newGain = options.Get("gain").ToNumber().FloatValue();
+        //
+        auto startTime = request->currentTime + 100;
+        auto endTime = startTime + 1000;
+        request->fader.start(startTime, endTime, request->preferredGain, newGain, 2.0f, newGain);
+
+        request->preferredGain = newGain;
     }
 
     if (options.Has("buffering")) {
-        it->second->buffering = options.Get("buffering").ToNumber().Uint32Value();
+        request->buffering = options.Get("buffering").ToNumber().Uint32Value();
     }
 
     return Boolean::New(env, true);
