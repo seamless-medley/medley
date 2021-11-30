@@ -32,11 +32,11 @@ const findRule = (from: string, to: string, rules: SweeperInsertionRule[]) => ru
 
 export class SweeperInserter {
   constructor(private boombox: BoomBox, public rules: SweeperInsertionRule[] = []) {
-    boombox.on('currentCrateChange', this.handler);
+    boombox.on('currentCollectionChange', this.handler);
   }
 
-  private handler: BoomBoxEvents['currentCrateChange'] = (oldCrate, newCrate) => {
-    const matched = findRule(oldCrate.source.id, newCrate.source.id, this.rules);
+  private handler: BoomBoxEvents['currentCollectionChange'] = (oldCollection, newCollection) => {
+    const matched = findRule(oldCollection.id, newCollection.id, this.rules);
 
     if (matched) {
       const insertion = matched.collection.shift();
