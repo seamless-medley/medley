@@ -141,6 +141,7 @@ export class MedleyAutomaton {
         console.log('Me Just joined or moved, collecting...');
 
         state.voiceChannelId = newState.channelId || undefined;
+        state.serverMuted = !!newState.serverMute;
 
         const { members } = newState.channel!;
 
@@ -149,10 +150,7 @@ export class MedleyAutomaton {
           .map((member, id) => id);
 
         this.audiencesOrServerMuteUpdated();
-
-        if (state.audiences.length < 1) {
-          console.log('No one is listening');
-        }
+        return;
       }
 
       if (oldState.serverMute != newState.serverMute) {
