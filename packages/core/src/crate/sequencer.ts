@@ -9,12 +9,30 @@ export interface CrateSequencerEvents {
   change: (crate: Crate<Track<any>>) => void;
 }
 
+export type TrackValidator = {
+  (path: string): Promise<boolean>;
+}
+
+export type TrackVerifier<M> = {
+  (path: string): Promise<TrackVerifierResult<M>>;
+}
+
+export type TrackVerifierResult<M> = {
+  shouldPlay: boolean;
+  metadata?: M;
+}
+
+export type CrateSequencerOptions<M> = {
+  trackValidator?: TrackValidator;
+  trackVerifier?: TrackVerifier<M>;
+}
+
 export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (EventEmitter as new () => TypedEventEmitter<CrateSequencerEvents>) {
   private _playCounter = 0;
   private _crateIndex = 0;
   private _lastCrate: Crate<T> | undefined;
 
-  constructor(private _crates: Crate<T>[] = []) {
+  constructor(private _crates: Crate<T>[], private options: CrateSequencerOptions<M> = {}) {
     super();
     this._lastCrate = this.current;
   }
@@ -31,7 +49,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     return isObjectLike(o);
   }
 
-  async nextTrack(validator?: (path: string) => Promise<M | boolean>): Promise<T | undefined> {
+  async nextTrack(): Promise<T | undefined> {
     if (this._crates.length < 1) {
       return undefined;
     }
@@ -47,8 +65,6 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
         }
 
         for (let i = 0; i < crate.source.length; i++) {
-          this._playCounter++;
-
           // Latching is active
           if (this.latchFor > 0) {
             this.latchCount++;
@@ -62,26 +78,30 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
             }
           }
 
-          if (this._playCounter > crate.max) {
+          if ((this._playCounter + 1) > crate.max) {
             // Stop searching for next track and flow to the next crate
             break;
           }
 
-          const track = crate.next();
+          const { trackValidator, trackVerifier } = this.options;
+
+          const track = await crate.next(trackValidator);
 
           if (track) {
-            const valid = validator ? await validator(track.path) : true;
+            const { shouldPlay, metadata } = trackVerifier ? await trackVerifier(track.path) : { shouldPlay: true, metadata: undefined };
 
-            if (valid) {
+            if (shouldPlay) {
+              this._playCounter++;
+
               track.crate = crate as unknown as Crate<Track<M>>;
 
-              if (this.isMetadata(valid)) {
-                track.metadata = valid;
+              if (this.isMetadata(metadata)) {
+                track.metadata = metadata;
               }
 
               return track;
             }
-            // track is not valid, go to next track
+            // track should be skipped, go to next track
           }
           // track is neither valid nor defined, go to next track
         }

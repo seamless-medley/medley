@@ -4,7 +4,7 @@ import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
 import { DeckListener, Medley, PreQueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics } from "@medley/medley";
-import { Crate, CrateSequencer } from "../crate";
+import { Crate, CrateSequencer, TrackValidator, TrackVerifier } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { getMusicMetadata, getMusicCoverAndLyrics } from "../utils";
@@ -120,7 +120,11 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.medley.on('finished', this.deckFinished);
     this.medley.on('mainDeckChanged', this.mainDeckChanged);
     //
-    this.sequencer = new CrateSequencer<BoomBoxTrack>(options.crates);
+    this.sequencer = new CrateSequencer<BoomBoxTrack>(options.crates, {
+      trackValidator: this.isTrackLoadable,
+      trackVerifier: this.verifyTrack
+    });
+
     this.sequencer.on('change', (crate: BoomBoxCrate) => this.emit('sequenceChange', crate));
   }
 
@@ -147,31 +151,29 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private requests: TrackCollection<RequestTrack<Requester>> = new TrackCollection('$_requests');
 
-  private isTrackLoadable = async (path: string) => this.medley.isTrackLoadable(path);
+  private isTrackLoadable: TrackValidator = async (path) => this.medley.isTrackLoadable(path);
 
-  private validateTrack = async (path: string): Promise<boolean | BoomBoxMetadata> => {
-    if (!await this.isTrackLoadable(path)) {
-      return false;
-    }
-
+  private verifyTrack: TrackVerifier<BoomBoxMetadata> = async (path) => {
     try {
       const musicMetadata = await getMusicMetadata(path);
-
-      if (!musicMetadata) {
-        return { kind: TrackKind.Normal };
-      }
-
       const boomBoxMetadata: BoomBoxMetadata = { tags: musicMetadata, kind: TrackKind.Normal };
       const playedArtists = flatten(this.artistHistory).map(toLower);
       const currentArtists = getArtists(boomBoxMetadata).map(toLower);
       const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));
-      return !dup ? boomBoxMetadata : false;
+
+      return {
+        shouldPlay: !dup,
+        metadata: !dup ? boomBoxMetadata : undefined
+      }
     }
     catch {
 
     }
 
-    return true;
+    return {
+      shouldPlay: true,
+      metadata: undefined
+    };
   }
 
   private _lastRequestId = 0;
@@ -264,7 +266,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
         return;
       }
 
-      const nextTrack = await this.sequencer.nextTrack(this.validateTrack);
+      const nextTrack = await this.sequencer.nextTrack();
 
       if (!nextTrack) {
         done(false);

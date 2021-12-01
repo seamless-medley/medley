@@ -6,10 +6,12 @@ export class Crate<T extends Track<any>> {
 
   }
 
-  next(): T | undefined {
+  async next(validator?: (path: string) => Promise<boolean>): Promise<T | undefined> {
     const item = this.source.shift();
 
-    if (item) {
+    const isValid = item && validator ? await validator(item.path) : true;
+
+    if (isValid && item) {
       this.source.push(item);
     }
 
