@@ -25,6 +25,7 @@ import { BoomBox,
   RequestAudioStreamResult,
   RequestTrack,
   SweeperInsertionRule,
+  TrackCollection,
   TrackKind,
   TrackPeek,
   WatchTrackCollection
@@ -33,7 +34,7 @@ import { BoomBox,
 import { BaseGuildVoiceChannel, Guild, User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
-import _, { flow, shuffle, castArray } from "lodash";
+import _, { flow, shuffle, castArray, difference, intersection } from "lodash";
 import MiniSearch, { Query, SearchResult } from 'minisearch';
 
 export type MedleyMixOptions = {
@@ -42,6 +43,8 @@ export type MedleyMixOptions = {
    * @default -15dBFS
    */
   initialGain?: number;
+
+  requestSweepers?: TrackCollection<BoomBoxTrack>;
 }
 
 export type SweeperConfig = {
@@ -85,7 +88,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   constructor(private options: MedleyMixOptions = {}) {
     super();
 
-    this.queue = new Queue();
+    const queue = this.queue = new Queue();
     this.medley = new Medley(this.queue);
 
     if (this.medley.getAudioDevice().type !== 'Null') {
@@ -93,22 +96,18 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     }
 
     // Create boombox
-    this.boombox = new BoomBox({
+    const boombox = this.boombox = new BoomBox({
       medley: this.medley,
       queue: this.queue,
       crates: []
     });
 
-    this.boombox.on('trackQueued', this.handleTrackQueued);
-    this.boombox.on('trackLoaded', this.handleTrackLoaded);
-    this.boombox.on('trackStarted', this.handleTrackStarted);
-    this.boombox.on('trackActive', this.handleTrackActive);
-    this.boombox.on('trackFinished', this.handleTrackFinished);
-
-    this.boombox.on('requestTrackFetched', (track: RequestTrack<void>) => {
-      // TODO: Sweeper
-      // console.log('Request track fetched', track);
-    });
+    boombox.on('trackQueued', this.handleTrackQueued);
+    boombox.on('trackLoaded', this.handleTrackLoaded);
+    boombox.on('trackStarted', this.handleTrackStarted);
+    boombox.on('trackActive', this.handleTrackActive);
+    boombox.on('trackFinished', this.handleTrackFinished);
+    boombox.on('requestTrackFetched', this.handleRequestTrack);
   }
 
   private handleTrackQueued = (track: BoomBoxTrack) => {
@@ -131,6 +130,24 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     this.emit('trackFinished', trackPlay);
   }
 
+  private handleRequestTrack = (track: RequestTrack<void>) => {
+    const { requestSweepers } = this.options;
+
+    if (requestSweepers) {
+
+      const currentKind = this.boombox.trackPlay?.track.metadata?.kind;
+
+      if (currentKind !== TrackKind.Request) {
+        const sweeper = requestSweepers.shift();
+
+        if (sweeper && this.medley.isTrackLoadable(sweeper)) {
+          this.queue.add(sweeper.path);
+          requestSweepers.push(sweeper);
+        }
+      }
+    }
+  }
+
   prepareFor(guildId: Guild['id']) {
     if (this.states.has(guildId)) {
       return;
@@ -142,8 +159,9 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     const audioRequest = this.medley.requestAudioStream({
       bufferSize: 480 * 50,
       buffering: 480 * 4, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
-      sampleRate: 48000, // discord voice only accept 48KHz sample rate
-      format: 'Int16LE', // It's discord voice again, 16 bit per sample
+      // discord voice only accept 48KHz sample rate, 16 bit per sample
+      sampleRate: 48000,
+      format: 'Int16LE',
       gain,
     });
 
@@ -238,6 +256,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   start() {
     // This will start playback if it was stopped or paused
     if (!this.medley.playing && this.queue.length === 0) {
+      // TODO: get from intro collection
       this.queue.add('D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3');
     }
 
@@ -268,13 +287,13 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     const existingIds = [...this.collections.keys()];
     const newIds = _.keys(newCollections);
 
-    const tobeRemovedIds = _.difference(existingIds, newIds);
-    const tobeAdded = _.difference(newIds, existingIds);
-    const remainingIds = _.intersection(existingIds, newIds);
+    const tobeRemovedIds = difference(existingIds, newIds);
+    const tobeAdded = difference(newIds, existingIds);
+    const remainingIds = intersection(existingIds, newIds);
 
     const invalidatedIds = remainingIds.filter((id) => {
       const watched = _(this.collections.get(id)?.watched || []).sort().uniq().value();
-      const tobeWatched = _.castArray(newCollections[id]);
+      const tobeWatched = castArray(newCollections[id]);
 
       return !_.isEqual(tobeWatched, watched);
     });
@@ -309,7 +328,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   private sweepers: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
 
   updateSweeperRules(...configs: SweeperConfig[]) {
-    // TODO: Detect config removal and remove them from sweepersCollections
+    const oldPaths = this.boombox.sweeperInsertionRules.map(r => r.collection.id);
 
     this.boombox.sweeperInsertionRules = configs.map<SweeperInsertionRule>(({ from, to, path }) => {
       if (!this.sweepers.has(path)) {
@@ -322,6 +341,13 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
         collection: this.sweepers.get(path)!
       }
     });
+
+    const newPaths = this.boombox.sweeperInsertionRules.map(r => r.collection.id);
+    const removedPaths = difference(oldPaths, newPaths);
+
+    for (const path of removedPaths) {
+      this.sweepers.delete(path);
+    }
   }
 
   findTrackById(id: BoomBoxTrack['id']) {
