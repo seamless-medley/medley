@@ -468,4 +468,8 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   sortRequests() {
     this.boombox.sortRequests();
   }
+
+  setCrateIndex(newIndex: number) {
+    this.boombox.setCrateIndex(newIndex);
+  }
 }

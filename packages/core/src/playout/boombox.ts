@@ -388,6 +388,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   set crates(value: BoomBoxCrate[]) {
     this.sequencer.crates = value;
   }
+
+  setCrateIndex(newIndex: number) {
+    this.sequencer.setCrateIndex(newIndex);
+  }
 }
 
 function getArtists(metadata: BoomBoxMetadata): string[] {

@@ -120,8 +120,13 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     return (index % this._crates.length) || 0;
   }
 
-  private setCreateIndex(newIndex: number) {
+  setCrateIndex(newIndex: number) {
+    const oldIndex = this._crateIndex;
     this._crateIndex = this.ensureCrateIndex(newIndex);
+
+    if (oldIndex !== newIndex) {
+      this._playCounter = 0;
+    }
   }
 
   next() {
@@ -131,7 +136,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
       throw new Error('There is no crate');
     }
 
-    this.setCreateIndex(this._crateIndex + 1);
+    this.setCrateIndex(this._crateIndex + 1);
   }
 
   setCurrentCrate(crate: Crate<T> | number) {
@@ -165,7 +170,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
       }
     }
 
-    this.setCreateIndex(newIndex);
+    this.setCrateIndex(newIndex);
   }
 
   private latchFor: number = 0;
