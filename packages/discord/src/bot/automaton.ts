@@ -7,9 +7,10 @@ import {
 } from "@medley/core";
 import { Routes } from "discord-api-types/v9";
 import {
+  BaseGuildTextChannel,
   BaseGuildVoiceChannel, Client, Guild,
   Intents, MessageOptions,
-  MessagePayload, Snowflake, VoiceState
+  MessagePayload, Snowflake, TextChannel, VoiceState
 } from "discord.js";
 
 import _, { without } from "lodash";
@@ -32,6 +33,7 @@ export type MedleyAutomatonOptions = {
 
 type AutomatonGuildState = {
   voiceChannelId?: BaseGuildVoiceChannel['id'];
+  textChannelId?: BaseGuildTextChannel['id'];
   trackMessages: TrackMessage[];
   audiences: Snowflake[];
   serverMuted: boolean;
@@ -432,11 +434,12 @@ export class MedleyAutomaton {
         const state = this._guildStates.get(id);
 
         if (state) {
-          const { voiceChannelId, audiences } = state;
+          const { voiceChannelId, textChannelId, audiences } = state;
 
           if (voiceChannelId && audiences.length) {
-            // TODO: Configurable channel
-            return guild.systemChannel?.send(options).catch(() => undefined)
+            const channel = textChannelId ? guild.channels.cache.get(textChannelId) : undefined;
+            const textChannel = channel?.isText() ? channel : undefined;
+            return (textChannel || guild.systemChannel)?.send(options).catch(() => undefined);
           }
         }
       })

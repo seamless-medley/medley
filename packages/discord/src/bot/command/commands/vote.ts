@@ -14,6 +14,7 @@ const declaration: SubCommandLikeOption = {
 type Nominatee = TrackPeek<RequestTrack<string>> & {
   banner: string;
   votes: number,
+  // TODO: voters
   emoji: string;
 }
 
@@ -88,7 +89,11 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     const handleCollect = ({ emoji, count }: MessageReaction) => {
       if (emoji.name) {
         const nominatee = emojiToNominateeMap.get(emoji.name);
+
+        // TODO: If no nominatee for this emoji, completely remove this reaction (if has MANAGE MESSAGE permission)
+
         if (nominatee) {
+
           nominatee.votes = count - 1;
           updateMessage();
         }
@@ -126,6 +131,8 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     for (const emoji of take(collectibleEmojis, peekings.length)) {
       await message.react(emoji!);
     }
+
+    // TODO: End vote button
 
     collector.on('collect', handleCollect);
     collector.on('remove', handleCollect);

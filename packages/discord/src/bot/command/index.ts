@@ -6,6 +6,7 @@ import volume from "./commands/volume";
 import lyrics from "./commands/lyrics";
 import request from "./commands/request";
 import vote from './commands/vote';
+import message from './commands/message';
 
 import { Command, CommandError, CommandType, InteractionHandler, SubCommandLikeOption } from "./type";
 import { deny } from "./utils";
@@ -17,7 +18,8 @@ const descriptors = {
   volume,
   lyrics,
   request,
-  vote
+  vote,
+  message
 }
 
 export const createCommandDeclarations = (name: string = 'medley', description: string = 'Medley'): Command => {

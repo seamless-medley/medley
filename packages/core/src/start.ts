@@ -43,7 +43,7 @@ const boombox = new BoomBox({
 // const nullDevice = medley.getAvailableDevices().filter(d => d.type == 'Null')[0];
 // medley.setAudioDevice({ type: nullDevice.type, device: nullDevice.defaultDevice });
 
-const sweepers = WatchTrackCollection.initWithWatch<Track<BoomBoxMetadata>>('drops', 'D:\\vittee\\Desktop\\test-transition\\drops');
+const sweepers = WatchTrackCollection.initWithWatch<BoomBoxTrack>('drops', 'D:\\vittee\\Desktop\\test-transition\\drops');
 
 boombox.sweeperInsertionRules = [
   { // Upbeat
