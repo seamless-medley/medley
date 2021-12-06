@@ -37,12 +37,20 @@ import type TypedEventEmitter from 'typed-emitter';
 import _, { flow, shuffle, castArray, difference, intersection } from "lodash";
 import MiniSearch, { Query, SearchResult } from 'minisearch';
 
+export enum PlayState {
+  Idle = 'idle',
+  Playing = 'playing',
+  Paused = 'paused'
+}
+
 export type MedleyMixOptions = {
   /**
    * Initial audio gain, default to -15dBFS (Appx 0.178)
    * @default -15dBFS
    */
   initialGain?: number;
+
+  intros?: TrackCollection<BoomBoxTrack>;
 
   requestSweepers?: TrackCollection<BoomBoxTrack>;
 }
@@ -74,6 +82,10 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   private collections: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
   private boombox: BoomBox<User['id']>;
 
+  private initialGain: number;
+  private intros?: TrackCollection<BoomBoxTrack>;
+  private requestSweepers?: TrackCollection<BoomBoxTrack>;
+
   private miniSearch = new MiniSearch<BoomBoxTrack>({
     fields: ['artist', 'title'],
     extractField: (track, field) => {
@@ -85,10 +97,10 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     }
   });
 
-  constructor(private options: MedleyMixOptions = {}) {
+  constructor(options: MedleyMixOptions = {}) {
     super();
 
-    const queue = this.queue = new Queue();
+    this.queue = new Queue();
     this.medley = new Medley(this.queue);
 
     if (this.medley.getAudioDevice().type !== 'Null') {
@@ -96,7 +108,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     }
 
     // Create boombox
-    const boombox = this.boombox = new BoomBox({
+    const boombox = new BoomBox({
       medley: this.medley,
       queue: this.queue,
       crates: []
@@ -108,6 +120,11 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     boombox.on('trackActive', this.handleTrackActive);
     boombox.on('trackFinished', this.handleTrackFinished);
     boombox.on('requestTrackFetched', this.handleRequestTrack);
+
+    this.boombox = boombox;
+    this.initialGain = options.initialGain || decibelsToGain(-15);
+    this.intros = options.intros;
+    this.requestSweepers = options.requestSweepers;
   }
 
   private handleTrackQueued = (track: BoomBoxTrack) => {
@@ -131,7 +148,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   }
 
   private handleRequestTrack = (track: RequestTrack<void>) => {
-    const { requestSweepers } = this.options;
+    const { requestSweepers } = this;
 
     if (requestSweepers) {
 
@@ -153,7 +170,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
       return;
     }
 
-    const gain = this.options.initialGain || decibelsToGain(-15);
+    const gain = this.initialGain;
 
     // Request audio stream
     const audioRequest = this.medley.requestAudioStream({
@@ -217,6 +234,12 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     return this.medley.paused;
   }
 
+  get playState(): PlayState {
+    if (this.paused) return PlayState.Paused;
+    if (this.playing) return PlayState.Playing;
+    return PlayState.Idle;
+  }
+
   get trackPlay() {
     return this.boombox.trackPlay;
   }
@@ -254,10 +277,14 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   }
 
   start() {
-    // This will start playback if it was stopped or paused
-    if (!this.medley.playing && this.queue.length === 0) {
-      // TODO: get from intro collection
-      this.queue.add('D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3');
+    if (this.playState === PlayState.Idle && this.queue.length === 0) {
+      if (this.intros) {
+        const intro = this.intros.shift();
+        if (intro) {
+          this.queue.add(intro);
+          this.intros.push(intro);
+        }
+      }
     }
 
     if (!this.medley.playing) {
@@ -269,7 +296,6 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
 
   pause() {
     if (!this.medley.paused) {
-      console.log('Pause');
       this.medley.togglePause();
     }
   }
