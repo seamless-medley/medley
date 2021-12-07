@@ -30,7 +30,7 @@ public:
 
         }
 
-        Cover(TagLib::ByteVector& data, TagLib::String mimeType)
+        Cover(TagLib::ByteVector data, TagLib::String mimeType)
             :
             data(data),
             mimeType(mimeType.toCWString())

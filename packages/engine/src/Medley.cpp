@@ -344,7 +344,7 @@ inline String Medley::getDeckName(Deck& deck) {
 }
 
 void Medley::deckStarted(Deck& sender, TrackPlay& trackPlay) {
-    sender.log("Started");    
+    sender.log("Started");
 
     auto markedAsMain = false;
 
@@ -619,7 +619,7 @@ void Medley::setAudioDeviceByIndex(int index) {
 }
 
 Deck* Medley::getMainDeck() const
-{  
+{
     for (auto deck : decks) {
         if (deck->isMain()) {
             return deck;
