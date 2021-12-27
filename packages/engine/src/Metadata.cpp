@@ -249,7 +249,7 @@ void medley::Metadata::CoverAndLyrics::readID3V2(const File& f, bool readCover, 
 void medley::Metadata::CoverAndLyrics::readXiph(const File& f, bool readCover, bool readLyrics)
 {
 #ifdef _WIN32
-    TagLib::FLAC::File file((const wchar_t*)f.getFullPathName().getCharPointer());
+    TagLib::FLAC::File file((const wchar_t*)f.getFullPathName().toWideCharPointer());
 #else
     TagLib::FLAC::File file(f.getFullPathName().toRawUTF8());
 #endif

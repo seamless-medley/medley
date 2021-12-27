@@ -40,11 +40,11 @@ public:
 
         const TagLib::ByteVector& getData() const { return data; }
 
-        const String& getMimeType() const { return mimeType; }
+        const juce::String& getMimeType() const { return mimeType; }
 
     private:
         TagLib::ByteVector data;
-        String mimeType;
+        juce::String mimeType;
     };
 
     class CoverAndLyrics
@@ -53,14 +53,14 @@ public:
         CoverAndLyrics(const File& file, bool readCover, bool readLyrics);
 
         const Cover& getCover() const { return cover; }
-        const String& getLyrics() const { return lyrics; }
+        const juce::String& getLyrics() const { return lyrics; }
     private:
         void read(const File& file, bool readCover, bool readLyrics);
         void readID3V2(const File& f, bool readCover, bool readLyrics);
         void readXiph(const File& f, bool readCover, bool readLyrics);
 
         Cover cover;
-        String lyrics;
+        juce::String lyrics;
     };
 
     Metadata();
@@ -68,9 +68,9 @@ public:
     void readFromFile(const File& file);
 
     FileType getFileType() const { return type; }
-    const String& getTitle() const { return title; }
-    const String& getArtist() const { return artist; }
-    const String& getAlbum() const { return album; }
+    const juce::String& getTitle() const { return title; }
+    const juce::String& getArtist() const { return artist; }
+    const juce::String& getAlbum() const { return album; }
     float getTrackGain() const { return trackGain; }
     double getCueIn() const { return cueIn; }
     double getCueOut() const { return cueOut; }
@@ -82,9 +82,9 @@ private:
     void readTag(const TagLib::Tag& tag);
 
     FileType type = FileType::Unknown;
-    String title;
-    String artist;
-    String album;
+    juce::String title;
+    juce::String artist;
+    juce::String album;
     float trackGain = 0.0f;
     double cueIn = -1.0;
     double cueOut = -1.0;

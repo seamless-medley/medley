@@ -316,8 +316,7 @@ export class MedleyAutomaton {
     }
   }
 
-  private handleTrackActive = async (trackPlay: BoomBoxTrackPlay) => _.delay(() => this.updateTrackMessage(
-    trackPlay,
+  private handleTrackActive = async (trackPlay: BoomBoxTrackPlay) => _.delay(() => this.updateTrackMessage(trackPlay,
     async () => true,
     {
       showSkip: true,
@@ -325,8 +324,7 @@ export class MedleyAutomaton {
     }
   ), 1000);
 
-  private handleTrackFinished = async (trackPlay: BoomBoxTrackPlay) => this.updateTrackMessage(
-    trackPlay,
+  private handleTrackFinished = async (trackPlay: BoomBoxTrackPlay) => this.updateTrackMessage(trackPlay,
     async msg => msg.status < TrackMessageStatus.Played,
     {
       status: TrackMessageStatus.Played,
