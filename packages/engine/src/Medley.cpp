@@ -573,7 +573,7 @@ void Medley::doTransition(Deck* deck, double position) {
                     }
                 }
 
-                pTransition->fader.start(transitionStartPos, transitionEndPos, 1.0f, 0.0f, fadingFactor);
+                pTransition->fader.start(transitionStartPos, transitionEndPos + 0.01, 1.0f, 0.0f, fadingFactor);
                 nextDeck->setVolume(decksTransition[nextDeck->index].fader.getFrom());
                 nextDeck->start();
             }
