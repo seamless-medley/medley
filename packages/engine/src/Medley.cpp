@@ -383,6 +383,7 @@ void Medley::deckUnloaded(Deck& sender, ITrack::Ptr& track) {
 
     if (&sender == transitingFromDeck) {
         decksTransition[sender.index].fader.reset();
+        decksTransition[sender.index].fader.resetTime();
 
         if (nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
             sender.log("Stopped before transition would happen, try starting next deck");
@@ -568,7 +569,17 @@ void Medley::doTransition(Deck* deck, double position) {
             }
 
             // Fade in next
-            auto newVolume = (leadingDuration > minimumLeadingToFade) ? decksTransition[nextDeck->index].fader.update(position) : 1.0f;
+            auto newVolume = 1.0f;
+
+            if (leadingDuration > minimumLeadingToFade) {
+                if (position >= decksTransition[nextDeck->index].fader.getTimeStart()) {
+                    newVolume = decksTransition[nextDeck->index].fader.update(position);
+                }
+                else {
+                    newVolume = decksTransition[nextDeck->index].fader.getFrom();
+                }
+            };
+
             if (newVolume != nextDeck->getVolume()) {
                 //nextDeck->log(String::formatted("Fading in: %.2f", newVolume));
                 nextDeck->setVolume(newVolume);

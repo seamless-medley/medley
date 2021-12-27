@@ -191,6 +191,7 @@ private:
             : MixerAudioSource(), medley(medley)
         {
             currentTime = Time::getMillisecondCounterHiRes();
+            fader.alwaysResetTime(true);
         }
 
         bool togglePause();

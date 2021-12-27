@@ -102,9 +102,10 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     }
 
     if (track != nullptr) {
-        unloadTrackInternal();
-        reader = newReader;
+        unloadTrackInternal();        
     }
+
+    auto reader = newReader;
 
     m_metadata.readFromTrack(track);
 
@@ -200,6 +201,8 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     setReplayGain(m_metadata.getTrackGain());
     log(String::formatted("Gain correction: %.2fdB", Decibels::gainToDecibels(gainCorrection)));
+
+    this->reader = reader;
 
     this->track = track;
     isTrackLoading = false;
