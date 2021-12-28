@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import { Readable } from 'stream';
 import type { RequestAudioStreamOptions, RequestAudioStreamResult } from './index.d';
 
-const medley = require('bindings')({ module_root: process.cwd(), bindings: 'medley' });
+const medley = require('node-gyp-build')(process.env.DEMO ? process.cwd() : __dirname);
 
 inherits(medley.Medley, EventEmitter);
 

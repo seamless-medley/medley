@@ -1,5 +1,6 @@
 #pragma once
 
+#include <thread>
 #include <napi.h>
 #include <Medley.h>
 #include <RingBuffer.h>

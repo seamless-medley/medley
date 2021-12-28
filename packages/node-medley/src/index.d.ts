@@ -204,7 +204,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
 
   getAudioDevice(): { type: string, device: string };
 
-  isTrackLoadable(track: TrackDescriptor): boolean;
+  isTrackLoadable(track: TrackDescriptor<any>): boolean;
 
   getMetadata(index: DeckIndex): Metadata;
 

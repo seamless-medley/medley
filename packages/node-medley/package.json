@@ -1,6 +1,6 @@
 {
-  "name": "@medley/medley",
-  "version": "0.1.0",
+  "name": "@medley-fusion/medley",
+  "version": "0.0.0",
   "description": "",
   "author": {
     "name": "Wittawas Nakkasem",
@@ -10,15 +10,33 @@
   "main": "src/index.ts",
   "types": "src/index.d.ts",
   "dependencies": {
-    "bindings": "^1.5.0",
-    "node-addon-api": "3.0.2"
+    "node-addon-api": "3.0.2",
+    "node-gyp-build": "^4.3.0"
   },
   "gypfile": true,
   "scripts": {
-    "demo": "tsnd test/demo.ts"
+    "install": "node-gyp-build",
+    "clean": "rimraf build out dist",
+    "build": "npm-run-all clean --parallel build:*",
+    "build:ts": "tsc",
+    "build:native": "prebuildify --napi --strip",
+    "pack": "npm-run-all pack:prepare --parallel pack:js pack:prebuilds pack:package pack:readme",
+    "pack:prepare": "rimraf dist && mkdirp dist",
+    "pack:js": "copyfiles -u 1 out/*.js src/index.d.ts dist",
+    "pack:prebuilds": "copyfiles prebuilds/**/* dist",
+    "pack:package": "tsnd scripts/package.ts",
+    "pack:readme": "copyfiles README.md dist",
+    "demo": "cross-env DEMO=1 tsnd test/demo.ts"
   },
   "devDependencies": {
+    "@types/mkdirp": "^1.0.2",
     "@types/node": "^14.17.15",
+    "copyfiles": "^2.4.1",
+    "cross-env": "^7.0.3",
+    "mkdirp": "^1.0.4",
+    "npm-run-all": "^4.1.5",
+    "prebuildify": "^5.0.0",
+    "rimraf": "^3.0.2",
     "ts-node-dev": "^1.1.8",
     "typescript": "^4.4.4"
   }
