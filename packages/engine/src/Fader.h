@@ -25,6 +25,8 @@ public:
     float update(double time);
     void stop();
     void reset(float toGain = -1.0f);
+    void resetTime();
+    void alwaysResetTime(bool v);
 private:
     float normalGain;
     float gain;
@@ -38,6 +40,8 @@ private:
     float resetTo = -1.0f;
 
     bool fadeOut = false;
+    bool started = false;
+    bool shouldResetTime = false;
 
     OnDone callback;
 };
