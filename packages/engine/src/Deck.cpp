@@ -20,8 +20,8 @@ using namespace medley::utils;
 
 Deck::Deck(uint8_t index, const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
-    index(index),
     formatMgr(formatMgr),
+    index(index),
     loadingThread(loadingThread),
     readAheadThread(readAheadThread),
     name(name),
@@ -43,7 +43,9 @@ String Deck::tagName() const
 }
 
 void Deck::log(const String& s) {
+#ifdef DEBUG
     Logger::writeToLog(tagName() + " " + s);
+#endif
 }
 
 double Deck::getDuration() const
@@ -102,7 +104,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     }
 
     if (track != nullptr) {
-        unloadTrackInternal();        
+        unloadTrackInternal();
     }
 
     auto reader = newReader;
@@ -266,7 +268,7 @@ void Deck::unloadTrackInternal()
 
 int64 Deck::findBoring(AudioFormatReader* reader, int64 startSample, int64 endSample) {
     auto currentSample = startSample;
-    auto duration = (endSample - startSample) / (float)reader->sampleRate;
+    // auto duration = (endSample - startSample) / (float)reader->sampleRate;
 
     auto blockSize = (int)(reader->sampleRate * 0.3);
 

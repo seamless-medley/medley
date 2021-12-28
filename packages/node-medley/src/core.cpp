@@ -456,7 +456,7 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
     {
         auto jsValue = options.Get("buffering");
         if (jsValue.IsNumber()) {
-            auto value = jsValue.ToNumber().Uint32Value();
+            auto value = jsValue.ToNumber().Int32Value();
             if (value >= 0) {
                 buffering = value;
             }

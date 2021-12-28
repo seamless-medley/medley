@@ -106,13 +106,13 @@ public:
         AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter)
             :
             id(id),
+            buffering(buffering),
             numChannels(numChannels),
             inSampleRate(inSampleRate),
             requestedSampleRate(requestedSampleRate),
             outputBytesPerSample(outputBytesPerSample),
-            converter(converter),
             buffer(numChannels, bufferSize),
-            buffering(buffering)
+            converter(converter)
         {
             if (inSampleRate != requestedSampleRate) {
                 for (auto i = 0; i < numChannels; i++) {
@@ -125,12 +125,12 @@ public:
             :
             id(other.id),
             numChannels(other.numChannels),
-            inSampleRate(inSampleRate),
-            requestedSampleRate(requestedSampleRate),
-            outputBytesPerSample(outputBytesPerSample),
-            converter(other.converter),
+            inSampleRate(other.inSampleRate),
+            requestedSampleRate(other.requestedSampleRate),
+            outputBytesPerSample(other.outputBytesPerSample),
             buffer(other.buffer),
-            resamplers(resamplers)
+            converter(other.converter),
+            resamplers(other.resamplers)
         {
 
         }
@@ -142,8 +142,8 @@ public:
         int requestedSampleRate;
         uint8_t outputBytesPerSample;
         //
-        std::shared_ptr<juce::AudioData::Converter> converter;
         RingBuffer<float> buffer;
+        std::shared_ptr<juce::AudioData::Converter> converter;
         //
         std::vector<std::shared_ptr<SecretRabbitCode>> resamplers;
         //

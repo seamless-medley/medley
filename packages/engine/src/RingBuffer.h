@@ -46,7 +46,7 @@ public:
 
         auto channels = jmin(source.getNumChannels(), numChannels);
 
-        for (int i = 0; i < numChannels; i++) {
+        for (int i = 0; i < channels; i++) {
             auto src = source.getReadPointer(i, startSample);
             auto dest = audioData.getWritePointer(i);
 
@@ -69,7 +69,7 @@ public:
 
         auto r = fifo.read(numToDo);
 
-        for (int i = 0; i < numChannels; i++) {
+        for (int i = 0; i < channels; i++) {
             if (r.blockSize1 > 0) {
                 dest.copyFrom(i, 0, audioData, i, r.startIndex1, r.blockSize1);
             }
@@ -82,7 +82,7 @@ public:
         return r.blockSize1 + r.blockSize2;
     }
 
-    int getNumReady() const { return fifo.getNumReady(); }
+    uint32_t getNumReady() const { return (uint32_t)fifo.getNumReady(); }
 
 private:
     int numChannels;

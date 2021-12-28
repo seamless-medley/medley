@@ -201,7 +201,7 @@ void Medley::fadeOutMainDeck()
 
 void Medley::changeListenerCallback(ChangeBroadcaster* source)
 {
-    if (auto deviceMgr = dynamic_cast<AudioDeviceManager*>(source)) {
+    if (dynamic_cast<AudioDeviceManager*>(source) != nullptr) {
         ScopedLock sl(callbackLock);
 
         listeners.call([](Callback& cb) {
@@ -619,7 +619,7 @@ void Medley::setAudioDeviceByIndex(int index) {
 }
 
 Deck* Medley::getMainDeck() const
-{  
+{
     for (auto deck : decks) {
         if (deck->isMain()) {
             return deck;
