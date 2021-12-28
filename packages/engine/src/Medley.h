@@ -156,6 +156,10 @@ public:
 
     bool isTrackLoadable(const ITrack::Ptr track);
 
+    void setReplayGainBoost(float decibels);
+
+    float getReplayGainBoost() const { return decks[0]->getReplayGainBoost(); }
+
 private:
     void loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone done = [](bool) {});
 

@@ -80,11 +80,13 @@ public:
     void stop();
 
     float getVolume() const { return volume; }
-
+    
     void setReplayGainBoost(float decibels) {
         replayGainBoost = decibels;
         setReplayGain(replayGain);
     }
+
+    inline float getReplayGainBoost() const { return replayGainBoost; }
 
     double getSampleRate() const { return sampleRate; }
 

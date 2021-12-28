@@ -696,6 +696,13 @@ bool Medley::isTrackLoadable(const ITrack::Ptr track) {
     return utils::isTrackLoadable(formatMgr, track);
 }
 
+void medley::Medley::setReplayGainBoost(float decibels)
+{
+    for (auto deck : decks) {
+        deck->setReplayGainBoost(decibels);
+    }
+}
+
 void Medley::Mixer::setPause(bool p, bool fade) {
     if (!fade) {
         paused = p;

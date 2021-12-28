@@ -86,6 +86,10 @@ public:
 
     void setMaximumFadeOutDuration(const CallbackInfo& info, const Napi::Value& value);
 
+    Napi::Value getReplayGainBoost(const CallbackInfo& info);
+
+    void setReplayGainBoost(const CallbackInfo& info, const Napi::Value& value);
+
     Napi::Value getAvailableDevices(const CallbackInfo& info);
 
     Napi::Value setAudioDevice(const CallbackInfo& info);

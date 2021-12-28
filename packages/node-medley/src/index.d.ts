@@ -166,6 +166,15 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   set minimumLeadingToFade(value: number);
 
   /**
+   * Gain (in dB) to boost for tracks with ReplayGain, default to 9.0dB
+   * If the track has no ReplayGain metadata, this value is ignored.
+   *
+   * @default 9.0
+   */
+  get replayGainBoost(): number;
+  set replayGainBoost(decibels: number);
+
+  /**
    * Start the engine, also clear the `paused` state.
    */
   play(): void;

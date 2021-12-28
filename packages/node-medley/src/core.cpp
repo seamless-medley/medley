@@ -26,6 +26,7 @@ void Medley::Initialize(Object& exports) {
         InstanceAccessor<&Medley::getFadingCurve, &Medley::setFadingCurve>("fadingCurve"),
         InstanceAccessor<&Medley::getMinimumLeadingToFade, &Medley::setMinimumLeadingToFade>("minimumLeadingToFade"),
         InstanceAccessor<&Medley::getMaximumFadeOutDuration, &Medley::setMaximumFadeOutDuration>("maximumFadeOutDuration"),
+        InstanceAccessor<&Medley::getReplayGainBoost, &Medley::setReplayGainBoost>("replayGainBoost"),
     };
 
     auto env = exports.Env();
@@ -336,6 +337,14 @@ Napi::Value Medley::getMaximumFadeOutDuration(const CallbackInfo& info) {
 
 void Medley::setMaximumFadeOutDuration(const CallbackInfo& info, const Napi::Value& value) {
     engine->setMaximumFadeOutDuration(value.ToNumber().DoubleValue());
+}
+
+Napi::Value Medley::getReplayGainBoost(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getReplayGainBoost());
+}
+
+void Medley::setReplayGainBoost(const CallbackInfo& info, const Napi::Value& value) {
+    engine->setReplayGainBoost(value.ToNumber().FloatValue());
 }
 
 Napi::Value Medley::getMetadata(const CallbackInfo& info) {
