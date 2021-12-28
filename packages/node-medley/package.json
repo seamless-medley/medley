@@ -26,7 +26,7 @@
     "pack:prebuilds": "copyfiles prebuilds/**/* dist",
     "pack:package": "tsnd scripts/package.ts",
     "pack:readme": "copyfiles README.md dist",
-    "demo": "cross-env DEMO=1 tsnd test/demo.ts"
+    "demo": "cross-env MEDLEY_DEMO=1 tsnd test/demo.ts"
   },
   "devDependencies": {
     "@types/mkdirp": "^1.0.2",
