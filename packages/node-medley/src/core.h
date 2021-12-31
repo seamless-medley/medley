@@ -89,6 +89,10 @@ public:
 
     void setMaximumFadeOutDuration(const CallbackInfo& info, const Napi::Value& value);
 
+    Napi::Value getReplayGainBoost(const CallbackInfo& info);
+
+    void setReplayGainBoost(const CallbackInfo& info, const Napi::Value& value);
+
     Napi::Value getAvailableDevices(const CallbackInfo& info);
 
     Napi::Value setAudioDevice(const CallbackInfo& info);
@@ -115,8 +119,8 @@ public:
             inSampleRate(inSampleRate),
             requestedSampleRate(requestedSampleRate),
             outputBytesPerSample(outputBytesPerSample),
-            converter(converter),
             buffer(numChannels, bufferSize),
+            converter(converter),
             buffering(buffering),
             preferredGain(preferredGain)
         {
@@ -133,12 +137,12 @@ public:
             :
             id(other.id),
             numChannels(other.numChannels),
-            inSampleRate(inSampleRate),
-            requestedSampleRate(requestedSampleRate),
-            outputBytesPerSample(outputBytesPerSample),
-            converter(other.converter),
+            inSampleRate(other.inSampleRate),
+            requestedSampleRate(other.requestedSampleRate),
+            outputBytesPerSample(other.outputBytesPerSample),
             buffer(other.buffer),
-            resamplers(resamplers)
+            converter(other.converter),
+            resamplers(other.resamplers)
         {
 
         }
@@ -150,8 +154,8 @@ public:
         int requestedSampleRate;
         uint8_t outputBytesPerSample;
         //
-        std::shared_ptr<juce::AudioData::Converter> converter;
         RingBuffer<float> buffer;
+        std::shared_ptr<juce::AudioData::Converter> converter;
         //
         std::vector<std::shared_ptr<SecretRabbitCode>> resamplers;
         //

@@ -201,7 +201,7 @@ void Medley::fadeOutMainDeck()
 
 void Medley::changeListenerCallback(ChangeBroadcaster* source)
 {
-    if (auto deviceMgr = dynamic_cast<AudioDeviceManager*>(source)) {
+    if (dynamic_cast<AudioDeviceManager*>(source) != nullptr) {
         ScopedLock sl(callbackLock);
 
         listeners.call([](Callback& cb) {
@@ -390,6 +390,7 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
 
     if (&sender == transitingFromDeck) {
         decksTransition[sender.index].fader.reset();
+        decksTransition[sender.index].fader.resetTime();
 
         if (nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
             sender.log("Stopped before transition would happen, try starting next deck");
@@ -579,7 +580,17 @@ void Medley::doTransition(Deck* deck, double position) {
             }
 
             // Fade in next
-            auto newVolume = (leadingDuration > minimumLeadingToFade) ? decksTransition[nextDeck->index].fader.update(position) : 1.0f;
+            auto newVolume = 1.0f;
+
+            if (leadingDuration > minimumLeadingToFade) {
+                if (position >= decksTransition[nextDeck->index].fader.getTimeStart()) {
+                    newVolume = decksTransition[nextDeck->index].fader.update(position);
+                }
+                else {
+                    newVolume = decksTransition[nextDeck->index].fader.getFrom();
+                }
+            };
+
             if (newVolume != nextDeck->getVolume()) {
                 //nextDeck->log(String::formatted("Fading in: %.2f", newVolume));
                 nextDeck->setVolume(newVolume);
@@ -694,6 +705,13 @@ void Medley::updateFadingFactor() {
 
 bool Medley::isTrackLoadable(const ITrack::Ptr track) {
     return utils::isTrackLoadable(formatMgr, track);
+}
+
+void medley::Medley::setReplayGainBoost(float decibels)
+{
+    for (auto deck : decks) {
+        deck->setReplayGainBoost(decibels);
+    }
 }
 
 void Medley::Mixer::setPause(bool p, bool fade) {

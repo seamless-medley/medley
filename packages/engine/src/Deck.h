@@ -35,7 +35,7 @@ public:
 
     const juce::String& getName() const { return name; }
 
-    inline const int getIndex() const { return index; }
+    inline int getIndex() const { return index; }
 
     double getDuration() const;
 
@@ -87,6 +87,8 @@ public:
         replayGainBoost = decibels;
         setReplayGain(replayGain);
     }
+
+    inline float getReplayGainBoost() const { return replayGainBoost; }
 
     double getSampleRate() const { return sampleRate; }
 

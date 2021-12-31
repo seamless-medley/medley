@@ -27,6 +27,7 @@ void Medley::Initialize(Object& exports) {
         InstanceAccessor<&Medley::getFadingCurve, &Medley::setFadingCurve>("fadingCurve"),
         InstanceAccessor<&Medley::getMinimumLeadingToFade, &Medley::setMinimumLeadingToFade>("minimumLeadingToFade"),
         InstanceAccessor<&Medley::getMaximumFadeOutDuration, &Medley::setMaximumFadeOutDuration>("maximumFadeOutDuration"),
+        InstanceAccessor<&Medley::getReplayGainBoost, &Medley::setReplayGainBoost>("replayGainBoost"),
         //
         StaticMethod<&Medley::static_getMetadata>("getMetadata"),
         StaticMethod<&Medley::static_getCoverAndLyrics>("getCoverAndLyrics")
@@ -351,6 +352,14 @@ void Medley::setMaximumFadeOutDuration(const CallbackInfo& info, const Napi::Val
     engine->setMaximumFadeOutDuration(value.ToNumber().DoubleValue());
 }
 
+Napi::Value Medley::getReplayGainBoost(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getReplayGainBoost());
+}
+
+void Medley::setReplayGainBoost(const CallbackInfo& info, const Napi::Value& value) {
+    engine->setReplayGainBoost(value.ToNumber().FloatValue());
+}
+
 Napi::Value Medley::getMetadata(const CallbackInfo& info) {
     auto env = info.Env();
 
@@ -460,7 +469,7 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
     {
         auto jsValue = options.Get("buffering");
         if (jsValue.IsNumber()) {
-            auto value = jsValue.ToNumber().Uint32Value();
+            auto value = jsValue.ToNumber().Int32Value();
             if (value >= 0) {
                 buffering = value;
             }

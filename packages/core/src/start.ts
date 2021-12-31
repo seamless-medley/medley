@@ -1,4 +1,4 @@
-import { Medley, Queue } from "@medley/medley";
+import { Medley, Queue } from "@seamless-medley/medley";
 import { every } from "lodash";
 import { join as joinPath } from "path";
 import { BoomBoxTrack, Track } from ".";

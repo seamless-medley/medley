@@ -20,10 +20,10 @@ using namespace medley::utils;
 
 Deck::Deck(uint8_t index, const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
-    index(index),
     formatMgr(formatMgr),
     loadingThread(loadingThread),
     readAheadThread(readAheadThread),
+    index(index),
     name(name),
     loader(*this),
     scanner(*this),
@@ -43,7 +43,9 @@ String Deck::tagName() const
 }
 
 void Deck::log(const String& s) {
+#ifdef DEBUG
     Logger::writeToLog(tagName() + " " + s);
+#endif
 }
 
 double Deck::getDuration() const
@@ -103,8 +105,9 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     if (track != nullptr) {
         unloadTrackInternal();
-        reader = newReader;
     }
+
+    auto reader = newReader;
 
     m_metadata.readFromTrack(track);
 
@@ -201,6 +204,8 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     setReplayGain(m_metadata.getTrackGain());
     log(String::formatted("Gain correction: %.2fdB", Decibels::gainToDecibels(gainCorrection)));
 
+    this->reader = reader;
+
     this->track = track;
     isTrackLoading = false;
 
@@ -268,7 +273,7 @@ void Deck::unloadTrackInternal()
 
 int64 Deck::findBoring(AudioFormatReader* reader, int64 startSample, int64 endSample) {
     auto currentSample = startSample;
-    auto duration = (endSample - startSample) / (float)reader->sampleRate;
+    // auto duration = (endSample - startSample) / (float)reader->sampleRate;
 
     auto blockSize = (int)(reader->sampleRate * 0.3);
 
