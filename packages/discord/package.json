@@ -10,14 +10,13 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "npm-run-all dev:*",
-    "dev:pre": "copyfiles --up 4 ../node-medley/build/Release/medley.node build/Release/",
     "dev:bot": "tsnd src/bot/main.ts",
     "sample": "ts-node src/bot/sample_main.ts"
   },
   "dependencies": {
     "@discordjs/rest": "^0.1.0-canary.0",
     "@discordjs/voice": "^0.7.2",
-    "@medley/core": "file:../core",
+    "@seamless-medley/core": "file:../core",
     "colorable-dominant": "^1.1.4",
     "dayjs": "^1.10.7",
     "discord-api-types": "^0.24.0",

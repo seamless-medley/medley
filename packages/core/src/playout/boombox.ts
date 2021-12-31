@@ -3,7 +3,7 @@ import _, { flatten, some, toLower, trim, uniq } from "lodash";
 import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
-import { DeckListener, Medley, PreQueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics } from "@medley/medley";
+import { DeckListener, Medley, PreQueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, TrackValidator, TrackVerifier } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";

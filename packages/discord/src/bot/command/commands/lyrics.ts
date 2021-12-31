@@ -1,4 +1,4 @@
-import { BoomBoxTrack, getTrackBanner, lyricsToText, parseLyrics } from "@medley/core";
+import { BoomBoxTrack, getTrackBanner, lyricsToText, parseLyrics } from "@seamless-medley/core";
 import { ButtonInteraction, Message, MessageAttachment, MessageEmbed } from "discord.js";
 import { first, findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";

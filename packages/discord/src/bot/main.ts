@@ -1,4 +1,4 @@
-import { BoomBoxTrack, TrackCollection, WatchTrackCollection } from "@medley/core";
+import { BoomBoxTrack, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
 import _ from "lodash";
 import { MedleyAutomaton } from "./automaton";
 import { MedleyMix } from "./mix";
@@ -68,6 +68,8 @@ dj.updateSweeperRules(
 dj.setCrateIndex(_.random(0, sequence.length));
 
 const automaton = new MedleyAutomaton(dj, {
+  botToken: 'OTA4MzkxMTYyMTM2NjUzOTQ0.YY1DMg.8MJ5Z7wvfK5unmfsQjSAinbR7V8',
+  clientId: '908391162136653944'
 });
 
 automaton.login();

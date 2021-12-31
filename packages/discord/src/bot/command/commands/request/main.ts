@@ -1,4 +1,4 @@
-import { BoomBoxTrack } from "@medley/core";
+import { BoomBoxTrack } from "@seamless-medley/core";
 import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSelectMenu, MessageSelectOptionData } from "discord.js";
 import _ from "lodash";
 import { parse as parsePath } from 'path';

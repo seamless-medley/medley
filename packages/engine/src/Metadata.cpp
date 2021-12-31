@@ -162,7 +162,7 @@ bool medley::Metadata::readID3V2(const File& f)
 bool medley::Metadata::readXiph(const File& f)
 {
     #ifdef _WIN32
-    TagLib::FLAC::File file((const wchar_t*)f.getFullPathName().getCharPointer());
+    TagLib::FLAC::File file((const wchar_t*)f.getFullPathName().toWideCharPointer());
     #else
     TagLib::FLAC::File file(f.getFullPathName().toRawUTF8());
     #endif

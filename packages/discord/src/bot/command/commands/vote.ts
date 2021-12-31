@@ -1,4 +1,4 @@
-import { getTrackBanner, RequestTrack, TrackPeek } from "@medley/core";
+import { getTrackBanner, RequestTrack, TrackPeek } from "@seamless-medley/core";
 import { CommandInteraction, Message, MessageEmbed, MessageReaction, User } from "discord.js";
 import { chain, keyBy, sampleSize, take } from "lodash";
 import * as emojis from "../../emojis";

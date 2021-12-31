@@ -1,4 +1,4 @@
-import { isRequestTrack } from "@medley/core";
+import { isRequestTrack } from "@seamless-medley/core";
 import { ButtonInteraction, CommandInteraction, Permissions } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";

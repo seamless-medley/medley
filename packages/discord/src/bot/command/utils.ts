@@ -1,4 +1,4 @@
-import { getTrackBanner, RequestTrack, TrackPeek } from "@medley/core";
+import { getTrackBanner, RequestTrack, TrackPeek } from "@seamless-medley/core";
 import { APIMessage } from "discord-api-types";
 import { BaseCommandInteraction, InteractionReplyOptions, Message, MessageComponentInteraction, MessagePayload, PermissionResolvable, Permissions, User } from "discord.js";
 import { castArray, maxBy, padStart } from "lodash";

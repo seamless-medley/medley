@@ -1,4 +1,4 @@
-import { Medley, Metadata, CoverAndLyrics } from "@medley/medley";
+import { Medley, Metadata, CoverAndLyrics } from "@seamless-medley/medley";
 
 export const getMusicMetadata = (path: string) => new Promise<Metadata>(resolve => resolve(Medley.getMetadata(path)));
 

@@ -29,7 +29,7 @@ import { BoomBox,
   TrackKind,
   TrackPeek,
   WatchTrackCollection
-} from "@medley/core";
+} from "@seamless-medley/core";
 
 import { BaseGuildVoiceChannel, Guild, User } from "discord.js";
 import EventEmitter from "events";
@@ -132,18 +132,22 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   }
 
   private handleTrackLoaded = (trackPlay: BoomBoxTrackPlay) => {
+    console.log('Firing trackLoaded', trackPlay.uuid, trackPlay.track.path);
     this.emit('trackLoaded', trackPlay);
   }
 
   private handleTrackStarted = (trackPlay: BoomBoxTrackPlay, lastTrack?: BoomBoxTrackPlay) => {
+    console.log('Firing trackStarted', trackPlay.uuid, trackPlay.track.path);
     this.emit('trackStarted', trackPlay, lastTrack);
   }
 
   private handleTrackActive = (trackPlay: BoomBoxTrackPlay) => {
+    console.log('Firing trackActive', trackPlay.uuid, trackPlay.track.path);
     this.emit('trackActive', trackPlay);
   }
 
   private handleTrackFinished = (trackPlay: BoomBoxTrackPlay) => {
+    console.log('Firing trackFinished', trackPlay.uuid, trackPlay.track.path);
     this.emit('trackFinished', trackPlay);
   }
 

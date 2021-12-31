@@ -4,7 +4,7 @@ import { REST as RestClient } from "@discordjs/rest";
 import {
   BoomBoxTrack,
   BoomBoxTrackPlay, getTrackBanner, TrackKind
-} from "@medley/core";
+} from "@seamless-medley/core";
 import { Routes } from "discord-api-types/v9";
 import {
   BaseGuildTextChannel,

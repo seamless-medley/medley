@@ -1,4 +1,4 @@
-import { getTrackBanner } from "@medley/core";
+import { getTrackBanner } from "@seamless-medley/core";
 import { SelectMenuInteraction } from "discord.js";
 import { MedleyAutomaton } from "../../../automaton";
 import { HighlightTextType, makeHighlightedMessage, makeRequestPreview } from "../../utils";

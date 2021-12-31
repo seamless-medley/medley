@@ -411,11 +411,11 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
     nextDeck->markAsMain(nextTrackLoaded);
 
     {
-        ScopedLock sl(callbackLock);
-
         listeners.call([&](Callback& cb) {
+            ScopedLock sl(callbackLock);
             cb.deckUnloaded(sender, trackPlay);
-            if (nextTrackLoaded) {
+
+            if (nextTrackLoaded && nextDeck->isMain()) {                
                 cb.mainDeckChanged(*nextDeck, nextDeck->getTrackPlay());
             }
         });

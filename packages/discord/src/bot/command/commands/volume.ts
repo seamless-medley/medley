@@ -1,4 +1,4 @@
-import { decibelsToGain, gainToDecibels } from "@medley/core";
+import { decibelsToGain, gainToDecibels } from "@seamless-medley/core";
 import { CommandInteraction } from "discord.js";
 import { round } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
