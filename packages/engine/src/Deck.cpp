@@ -21,9 +21,9 @@ using namespace medley::utils;
 Deck::Deck(uint8_t index, const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
     formatMgr(formatMgr),
-    index(index),
     loadingThread(loadingThread),
     readAheadThread(readAheadThread),
+    index(index),
     name(name),
     loader(*this),
     scanner(*this),
