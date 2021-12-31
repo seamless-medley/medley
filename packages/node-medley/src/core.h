@@ -119,9 +119,9 @@ public:
             inSampleRate(inSampleRate),
             requestedSampleRate(requestedSampleRate),
             outputBytesPerSample(outputBytesPerSample),
+            buffering(buffering),
             buffer(numChannels, bufferSize),
             converter(converter),
-            buffering(buffering),
             preferredGain(preferredGain)
         {
             if (inSampleRate != requestedSampleRate) {
