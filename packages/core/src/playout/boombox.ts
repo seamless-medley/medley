@@ -3,7 +3,7 @@ import { EventEmitter } from "stream";
 import type { ICommonTagsResult } from "music-metadata";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
-import { DeckListener, Medley, PreQueueListener, Queue } from "@medley/medley";
+import { DeckListener, Medley, PreQueueListener, Queue } from "@seamless-medley/medley";
 import { Crate, CrateSequencer } from "../crate";
 import { Track } from "../track";
 import { TrackCollection } from "../collections";

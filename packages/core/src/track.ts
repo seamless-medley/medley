@@ -1,4 +1,4 @@
-import { TrackInfo } from "@medley/medley";
+import { TrackInfo } from "@seamless-medley/medley";
 import { Crate } from "./crate";
 import { TrackCollection } from "./collections";
 
