@@ -84,7 +84,7 @@ export interface AudioLevels {
 }
 
 type NormalEvent = 'audioDeviceChanged';
-type DeckEvent = 'loaded' | 'unloaded' | 'started' | 'finished';
+type DeckEvent = 'loaded' | 'unloaded' | 'started' | 'finished' | 'mainDeckChanged';
 
 export declare enum DeckIndex {
   A = 0,
@@ -92,8 +92,13 @@ export declare enum DeckIndex {
   C = 2
 }
 
+export type TrackPlay<T extends TrackInfo> = {
+  uuid: string;
+  track: T;
+}
+
 export type Listener<T = void> = () => T;
-export type DeckListener<T extends TrackInfo> = (deckIndex: DeckIndex, track: T) => void;
+export type DeckListener<T extends TrackInfo> = (deckIndex: DeckIndex, trackPlay: TrackPlay<T>) => void;
 export type PreQueueListener = (done: PreQueueCallback) => void;
 export type PreQueueCallback = (result: boolean) => void;
 
@@ -218,6 +223,11 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   getMetadata(index: DeckIndex): Metadata;
 
   requestAudioStream(options: RequestAudioStreamOptions): RequestAudioStreamResult;
+
+  updateAudioStream(id: RequestAudioStreamResult['id'], options: Partial<Pick<RequestAudioStreamOptions, 'bufferring' | 'gain'>>): boolean;
+
+  static getMetadata(path: string): Metadata;
+  static getCoverAndLyrics(path: string): CoverAndLyrics;
 }
 
 export type AudioFormat = 'Int16LE' | 'Int16BE' | 'FloatLE' | 'FloatBE';
@@ -245,6 +255,13 @@ export type RequestAudioStreamOptions = {
   buffering?: number;
 
   format: AudioFormat;
+
+  /**
+   * Output gain, a floating point number range from 0-1
+   *
+   * @default 1.0 (0dBFS)
+   */
+  gain?: number;
 }
 
 export type RequestAudioStreamResult = {
@@ -269,4 +286,10 @@ export type Metadata = {
   artist: string;
   album: string;
   trackGain: number;
+}
+
+export type CoverAndLyrics = {
+  cover: Buffer;
+  coverMimeType: string;
+  lyrics: string;
 }

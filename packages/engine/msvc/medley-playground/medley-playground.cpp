@@ -7,9 +7,6 @@
 #include "Medley.h"
 
 #include <juce_opengl/juce_opengl.h>
-#include <taglib/attachedpictureframe.h>
-#include <taglib/xiphcomment.h>
-#include <taglib/flacpicture.h>
 
 using namespace juce;
 using namespace medley;
@@ -458,21 +455,21 @@ private:
 
         }
 
-        void deckStarted(Deck& sender, ITrack::Ptr& track) override {
+        void deckStarted(Deck& sender, TrackPlay& track) override {
 
         }
 
-        void deckFinished(Deck& sender, ITrack::Ptr& track) override {
+        void deckFinished(Deck& sender, TrackPlay& track) override {
 
         }
 
-        void deckLoaded(Deck& sender, ITrack::Ptr& track) override {
+        void deckLoaded(Deck& sender, TrackPlay& track) override {
             thread.addTimeSliceClient(this);
             thumbnailLoader.load();
             thread.addTimeSliceClient(&thumbnailLoader);
         }
 
-        void deckUnloaded(Deck& sender, ITrack::Ptr& track) override {
+        void deckUnloaded(Deck& sender, TrackPlay& track) override {
             ScopedLock sl(coverImageLock);
             coverImage = Image();
             thread.addTimeSliceClient(&thumbnailCleaner);
@@ -602,73 +599,15 @@ private:
             }
         }
 
-        void readID3V2(juce::File trackFile) {
-            TagLib::MPEG::File file((const wchar_t*)trackFile.getFullPathName().toWideCharPointer());
-
-            if (file.hasID3v2Tag()) {
-
-                auto& tag = *file.ID3v2Tag();
-                auto frameMap = tag.frameListMap();
-                const auto it = frameMap.find("APIC");
-                if ((it == frameMap.end()) || it->second.isEmpty()) {
-                    return;
-                }
-
-                const auto frames = it->second;
-                for (const auto frame : frames) {
-                    const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
-                    if (apic && apic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
-                        setCover(apic->picture());
-                        return;
-                    }
-                }
-            }
-
-            {
-                ScopedLock sl(coverImageLock);
-                coverImage = Image();
-            }
-        }
-
-        void readXiph(juce::File trackFile) {
-            TagLib::FLAC::File file((const wchar_t*)trackFile.getFullPathName().getCharPointer());
-
-            auto pictures = file.pictureList();
-
-            if (pictures.isEmpty() && file.hasXiphComment()) {
-                pictures = file.xiphComment()->pictureList();
-            }
-
-            if (!pictures.isEmpty()) {
-                for (const auto picture : pictures) {
-                    if (picture->type() == TagLib::FLAC::Picture::FrontCover) {
-                        setCover(picture->data());
-                        return;
-                    }
-                }
-            }
-
-            {
-                ScopedLock sl(coverImageLock);
-                coverImage = Image();
-            }
-        }
-
         int useTimeSlice() {
             if (auto track = deck.getTrack()) {
                 auto trackFile = track->getFile();
-                auto filetype = utils::getFileTypeFromFileName(trackFile);
 
-                switch (filetype) {
-                case utils::FileType::MP3: {
-                    readID3V2(trackFile);
-                    break;
-                }
+                Metadata::CoverAndLyrics cal(trackFile, true, false);
+                auto cover = cal.getCover().getData();
 
-                case utils::FileType::FLAC: {
-                    readXiph(trackFile);
-                    break;
-                }
+                if (!cover.isEmpty()) {
+                    setCover(cover);
                 }
             }
 
@@ -1283,11 +1222,11 @@ private:
 
         }
 
-        void deckStarted(Deck& sender, ITrack::Ptr& track) override {
+        void deckStarted(Deck& sender, TrackPlay& track) override {
 
         }
 
-        void deckFinished(Deck& sender, ITrack::Ptr& track) override {
+        void deckFinished(Deck& sender, TrackPlay& track) override {
 
         }
 
@@ -1300,6 +1239,10 @@ private:
             done(true);
         }
 
+        void mainDeckChanged(Deck& sender, TrackPlay& track) override {
+
+        }
+
         void updatePauseButton() {
             btnPause.setButtonText(medley.isPaused() ? "Paused" : "Pause");
         }
@@ -1309,11 +1252,11 @@ private:
             updatePauseButton();
         }
 
-        void deckLoaded(Deck& sender, ITrack::Ptr& track) override {
+        void deckLoaded(Deck& sender, TrackPlay& track) override {
 
         }
 
-        void deckUnloaded(Deck& sender, ITrack::Ptr& track) override {
+        void deckUnloaded(Deck& sender, TrackPlay& track) override {
 
         }
 

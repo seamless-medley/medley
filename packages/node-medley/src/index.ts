@@ -19,7 +19,7 @@ Medley.prototype.requestAudioStream = function(options: RequestAudioStreamOption
     objectMode: false,
 
     read: async (size: number) => {
-      const buffer = await this['*$rac$consume'](streamId, size) as Buffer;
+      const buffer = await this['*$rac$consume'](streamId, options.buffering || size) as Buffer;
       stream.push(buffer);
     }
   });

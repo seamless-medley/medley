@@ -4,7 +4,7 @@ import { join as joinPath } from "path";
 import { BoomBoxTrack, Track } from ".";
 import { TrackCollection, WatchTrackCollection } from "./collections";
 import { Crate } from "./crate";
-import { BoomBox, BoomBoxMetadata } from "./playout";
+import { TrackKind, BoomBox, BoomBoxMetadata } from "./playout";
 
 process.on('uncaughtException', (e) => {
   console.log('Uncaught exception', e);
@@ -43,7 +43,7 @@ const boombox = new BoomBox({
 // const nullDevice = medley.getAvailableDevices().filter(d => d.type == 'Null')[0];
 // medley.setAudioDevice({ type: nullDevice.type, device: nullDevice.defaultDevice });
 
-const sweepers = WatchTrackCollection.initWithWatch<Track<BoomBoxMetadata>>('drops', 'D:\\vittee\\Desktop\\test-transition\\drops');
+const sweepers = WatchTrackCollection.initWithWatch<BoomBoxTrack>('drops', 'D:\\vittee\\Desktop\\test-transition\\drops');
 
 boombox.sweeperInsertionRules = [
   { // Upbeat
@@ -70,9 +70,9 @@ boombox.on('trackQueued', track => {
 
 let skipTimer: NodeJS.Timeout;
 
-boombox.on('trackStarted', track => {
-  if (track.metadata?.rotation !== 'insertion') {
-    console.log('Playing:', `${track.metadata?.tags?.artist} - ${track.metadata?.tags?.title}`);
+boombox.on('trackStarted', trackPlay => {
+  if (trackPlay.track.metadata?.kind !== TrackKind.Insertion) {
+    console.log('Playing:', `${trackPlay.track.metadata?.tags?.artist} - ${trackPlay.track.metadata?.tags?.title}`);
     // const lyrics = first(track.metadata?.tags?.lyrics);
     // if (lyrics) {
     //   console.log(lyricsToText(parseLyrics(lyrics), false));
@@ -90,8 +90,8 @@ boombox.on('trackStarted', track => {
 });
 
 boombox.on('requestTrackFetched', track => {
-  const currentRotation = boombox.track?.metadata?.rotation || 'normal';
-  if (currentRotation !== 'request') {
+  const currentKind = boombox.trackPlay?.track.metadata?.kind || TrackKind.Normal;
+  if (currentKind !== TrackKind.Request) {
     const sweeper = sweepers.shift();
     if (sweeper) {
       queue.add(sweeper.path);

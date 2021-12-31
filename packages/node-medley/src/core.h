@@ -5,6 +5,7 @@
 #include <Medley.h>
 #include <RingBuffer.h>
 #include <ITrack.h>
+#include <Fader.h>
 #include "audio/SecretRabbitCode.h"
 #include "track.h"
 #include "queue.h"
@@ -28,13 +29,15 @@ public:
 
     void deckPosition(medley::Deck& sender, double position) override;
 
-    void deckStarted(medley::Deck& sender, medley::ITrack::Ptr& track) override;
+    void deckStarted(medley::Deck& sender, medley::TrackPlay& track) override;
 
-    void deckFinished(medley::Deck& sender, medley::ITrack::Ptr& track) override;
+    void deckFinished(medley::Deck& sender, medley::TrackPlay& track) override;
 
-    void deckLoaded(medley::Deck& sender, medley::ITrack::Ptr& track) override;
+    void deckLoaded(medley::Deck& sender, medley::TrackPlay& track) override;
 
-    void deckUnloaded(medley::Deck& sender, medley::ITrack::Ptr& track) override;
+    void deckUnloaded(medley::Deck& sender, medley::TrackPlay& track) override;
+
+    void mainDeckChanged(medley::Deck& sender, medley::TrackPlay& track) override;
 
     void audioDeviceChanged() override;
 
@@ -102,23 +105,32 @@ public:
 
     Napi::Value racConsume(const CallbackInfo& info);
 
+    Napi::Value updateAudioStream(const CallbackInfo& info);
+
+    static Napi::Value static_getMetadata(const Napi::CallbackInfo& info);
+
+    static Napi::Value static_getCoverAndLyrics(const Napi::CallbackInfo& info);
+
     struct AudioRequest {
-        AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter)
+        AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter, float preferredGain)
             :
             id(id),
-            buffering(buffering),
             numChannels(numChannels),
             inSampleRate(inSampleRate),
             requestedSampleRate(requestedSampleRate),
             outputBytesPerSample(outputBytesPerSample),
             buffer(numChannels, bufferSize),
-            converter(converter)
+            converter(converter),
+            buffering(buffering),
+            preferredGain(preferredGain)
         {
             if (inSampleRate != requestedSampleRate) {
                 for (auto i = 0; i < numChannels; i++) {
                     resamplers.push_back(std::make_unique<SecretRabbitCode>(inSampleRate, requestedSampleRate));
                 }
             }
+
+            fader.reset(preferredGain);
         }
 
         AudioRequest(const AudioRequest& other)
@@ -148,9 +160,16 @@ public:
         std::vector<std::shared_ptr<SecretRabbitCode>> resamplers;
         //
         juce::MemoryBlock scratch;
+        //
+        float lastGain = 1.0f;
+        float preferredGain = 1.0f;
+        //
+        Fader fader;
+        //
+        double currentTime = 0;
     };
 private:
-    void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::ITrack::Ptr& track);
+    void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::TrackPlay& track);
 
     enum class AudioRequestFormat : uint8_t {
         Int16LE, Int16BE, FloatLE, FloatBE

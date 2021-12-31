@@ -1,16 +1,15 @@
-import { curry, every, without } from "lodash";
+import { curry, without } from "lodash";
 import { TrackCollection } from "../collections";
-import { BoomBox, BoomBoxEvents, BoomBoxTrack } from "./boombox";
+import { BoomBox, BoomBoxEvents, BoomBoxTrack, TrackKind } from "./boombox";
 
 export type SweeperInsertionRule = {
-  from?: string[]
-  to?: string[],
+  from?: string[];
+  to?: string[];
   collection: TrackCollection<BoomBoxTrack>;
 };
 
 const isIn = (value: string, list: string[] | undefined) => !list || list.includes(value);
 
-// const validateRule = (predicates: [string, string[] | undefined][]) => every(predicates, ([id, list]) => isIn(id, list));
 const validateRule = (predicates: [string, string[] | undefined][]) => {
   const [from, to] = predicates;
   const [fromId, fromList] = from;
@@ -33,17 +32,23 @@ const findRule = (from: string, to: string, rules: SweeperInsertionRule[]) => ru
 
 export class SweeperInserter {
   constructor(private boombox: BoomBox, public rules: SweeperInsertionRule[] = []) {
-    boombox.on('currentCrateChange', this.handler);
+    boombox.on('currentCollectionChange', this.handler);
   }
 
-  private handler: BoomBoxEvents['currentCrateChange'] = (oldCrate, newCrate) => {
-    const matched = findRule(oldCrate.source.id, newCrate.source.id, this.rules);
+  private handler: BoomBoxEvents['currentCollectionChange'] = (oldCollection, newCollection) => {
+    const matched = findRule(oldCollection.id, newCollection.id, this.rules);
 
     if (matched) {
-      console.log('SWEEPER', matched);
-
       const insertion = matched.collection.shift();
       if (insertion) {
+        // ensure track kind
+        if (!insertion.metadata?.kind) {
+          insertion.metadata = {
+            ...insertion.metadata,
+            kind: TrackKind.Insertion
+          }
+        }
+
         this.boombox.queue.add(insertion);
         matched.collection.push(insertion);
       }

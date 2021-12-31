@@ -28,6 +28,8 @@ public:
         virtual void audioDeviceChanged() = 0;
 
         virtual void preQueueNext(PreCueNextDone done = [](bool) { }) = 0;
+
+        virtual void mainDeckChanged(Deck& sender, TrackPlay& track) = 0;
     };
 
     class AudioCallback {
@@ -167,13 +169,13 @@ private:
 
     void deckTrackScanned(Deck& sender) override;
 
-    void deckStarted(Deck& sender, ITrack::Ptr& track) override;
+    void deckStarted(Deck& sender, TrackPlay& track) override;
 
-    void deckFinished(Deck& sender, ITrack::Ptr& track) override;
+    void deckFinished(Deck& sender, TrackPlay& track) override;
 
-    void deckLoaded(Deck& sender, ITrack::Ptr& track) override;
+    void deckLoaded(Deck& sender, TrackPlay& track) override;
 
-    void deckUnloaded(Deck& sender, ITrack::Ptr& track) override;
+    void deckUnloaded(Deck& sender, TrackPlay& track) override;
 
     void deckPosition(Deck& sender, double position) override;
 

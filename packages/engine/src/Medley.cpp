@@ -343,40 +343,47 @@ inline String Medley::getDeckName(Deck& deck) {
     return deck.getName();
 }
 
-void Medley::deckStarted(Deck& sender, ITrack::Ptr& track) {
+void Medley::deckStarted(Deck& sender, TrackPlay& trackPlay) {
     sender.log("Started");
+
+    auto markedAsMain = false;
 
     auto prevDeck = getPreviousDeck(&sender);
     if (decksTransition[prevDeck->index].state == DeckTransitionState::Idle) {
         sender.markAsMain(true);
+        markedAsMain = true;
     }
 
     ScopedLock sl(callbackLock);
     listeners.call([&](Callback& cb) {
-        cb.deckStarted(sender, track);
+        cb.deckStarted(sender, trackPlay);
+
+        if (markedAsMain) {
+            cb.mainDeckChanged(sender, trackPlay);
+        }
     });
 }
 
-void Medley::deckFinished(Deck& sender, ITrack::Ptr& track) {
+void Medley::deckFinished(Deck& sender, TrackPlay& trackPlay) {
     decksTransition[sender.index].state = DeckTransitionState::Idle;
 
     ScopedLock sl(callbackLock);
     listeners.call([&](Callback& cb) {
-        cb.deckFinished(sender, track);
+        cb.deckFinished(sender, trackPlay);
     });
 }
 
-void Medley::deckLoaded(Deck& sender, ITrack::Ptr& track)
+void Medley::deckLoaded(Deck& sender, TrackPlay& trackPlay)
 {
     decksTransition[sender.index].state = DeckTransitionState::Idle;
 
     ScopedLock sl(callbackLock);
     listeners.call([&](Callback& cb) {
-        cb.deckLoaded(sender, track);
+        cb.deckLoaded(sender, trackPlay);
     });
 }
 
-void Medley::deckUnloaded(Deck& sender, ITrack::Ptr& track) {
+void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
     sender.log("Unloaded");
 
     auto nextDeck = getNextDeck(&sender);
@@ -399,14 +406,18 @@ void Medley::deckUnloaded(Deck& sender, ITrack::Ptr& track) {
         forceFadingOut--;
     }
 
+    auto nextTrackLoaded = nextDeck->isTrackLoaded();
     sender.markAsMain(false);
-    nextDeck->markAsMain(nextDeck->isTrackLoaded());
+    nextDeck->markAsMain(nextTrackLoaded);
 
     {
-        ScopedLock sl(callbackLock);
-
         listeners.call([&](Callback& cb) {
-            cb.deckUnloaded(sender, track);
+            ScopedLock sl(callbackLock);
+            cb.deckUnloaded(sender, trackPlay);
+
+            if (nextTrackLoaded && nextDeck->isMain()) {                
+                cb.mainDeckChanged(*nextDeck, nextDeck->getTrackPlay());
+            }
         });
     }
 
@@ -563,7 +574,7 @@ void Medley::doTransition(Deck* deck, double position) {
                     }
                 }
 
-                pTransition->fader.start(transitionStartPos, transitionEndPos, 1.0f, 0.0f, fadingFactor);
+                pTransition->fader.start(transitionStartPos, transitionEndPos + 0.01, 1.0f, 0.0f, fadingFactor);
                 nextDeck->setVolume(decksTransition[nextDeck->index].fader.getFrom());
                 nextDeck->start();
             }

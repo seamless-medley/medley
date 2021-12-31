@@ -15,6 +15,7 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::getMetadata>("getMetadata"),
         InstanceMethod<&Medley::requestAudioCallback>("*$rac"),
         InstanceMethod<&Medley::racConsume>("*$rac$consume"),
+        InstanceMethod<&Medley::updateAudioStream>("updateAudioStream"),
         //
         InstanceAccessor<&Medley::level>("level"),
         InstanceAccessor<&Medley::reduction>("reduction"),
@@ -27,6 +28,9 @@ void Medley::Initialize(Object& exports) {
         InstanceAccessor<&Medley::getMinimumLeadingToFade, &Medley::setMinimumLeadingToFade>("minimumLeadingToFade"),
         InstanceAccessor<&Medley::getMaximumFadeOutDuration, &Medley::setMaximumFadeOutDuration>("maximumFadeOutDuration"),
         InstanceAccessor<&Medley::getReplayGainBoost, &Medley::setReplayGainBoost>("replayGainBoost"),
+        //
+        StaticMethod<&Medley::static_getMetadata>("getMetadata"),
+        StaticMethod<&Medley::static_getCoverAndLyrics>("getCoverAndLyrics")
     };
 
     auto env = exports.Env();
@@ -168,20 +172,24 @@ void Medley::deckPosition(medley::Deck& sender, double position) {
 
 }
 
-void Medley::deckStarted(medley::Deck& sender, medley::ITrack::Ptr& track) {
+void Medley::deckStarted(medley::Deck& sender, medley::TrackPlay& track) {
     emitDeckEvent("started", sender, track);
 }
 
-void Medley::deckFinished(medley::Deck& sender, medley::ITrack::Ptr& track) {
+void Medley::deckFinished(medley::Deck& sender, medley::TrackPlay& track) {
     emitDeckEvent("finished", sender, track);
 }
 
-void Medley::deckLoaded(medley::Deck& sender, medley::ITrack::Ptr& track) {
+void Medley::deckLoaded(medley::Deck& sender, medley::TrackPlay& track) {
     emitDeckEvent("loaded", sender, track);
 }
 
-void Medley::deckUnloaded(medley::Deck& sender, medley::ITrack::Ptr& track) {
+void Medley::deckUnloaded(medley::Deck& sender, medley::TrackPlay& track) {
     emitDeckEvent("unloaded", sender, track);
+}
+
+void Medley::mainDeckChanged(medley::Deck& sender, medley::TrackPlay& track) {
+    emitDeckEvent("mainDeckChanged", sender, track);
 }
 
 void Medley::audioDeviceChanged() {
@@ -208,12 +216,17 @@ void Medley::preQueueNext(PreCueNextDone done) {
     });
 }
 
-void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley::ITrack::Ptr& track) {
+void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley::TrackPlay& trackPlay) {
     auto index = deck.getIndex();
 
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function emitFn) {
         try {
-            auto obj = static_cast<Track*>(track.get())->getObjectRef().Value();
+            auto uuid = trackPlay.getUuid().toDashedString();
+            auto track = static_cast<Track*>(trackPlay.getTrack().get())->getObjectRef().Value();
+
+            auto obj = Napi::Object::New(env);
+            obj.Set("uuid", Napi::String::New(env, uuid.toStdString()));
+            obj.Set("track", track);
 
             emitFn.Call(self.Value(), {
                 Napi::String::New(env, name),
@@ -463,6 +476,9 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
         }
     }
 
+    auto gainJS = options.Has("gain") ? options.Get("gain") : env.Undefined();
+    auto gain = (!gainJS.IsNull() && !gainJS.IsUndefined()) ? gainJS.ToNumber().FloatValue() : 1.0f;
+
     auto request = std::make_shared<AudioRequest>(
         audioRequestId,
         bufferSize,
@@ -471,7 +487,8 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
         sampleRate,
         outSampleRate,
         bytesPerSample,
-        audioConverters[audioFormat]
+        audioConverters[audioFormat],
+        gain
     );
     audioRequests.emplace(audioRequestId, request);
 
@@ -516,10 +533,17 @@ namespace {
                 std::this_thread::sleep_for(std::chrono::duration<double>(0.01));
             }
 
+            request->currentTime = Time::getMillisecondCounterHiRes();
+
             auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedSize / outputBytesPerSample / numChannels);
 
             juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
             request->buffer.read(tempBuffer, numSamples);
+
+            auto gain = request->fader.update(request->currentTime);
+
+            tempBuffer.applyGainRamp(0, numSamples, request->lastGain, gain);
+            request->lastGain = gain;
 
             juce::AudioBuffer<float>* sourceBuffer = &tempBuffer;
             std::unique_ptr<juce::AudioBuffer<float>> resampleBuffer;
@@ -582,6 +606,87 @@ Napi::Value Medley::racConsume(const CallbackInfo& info) {
     consumer->Queue();
 
     return deferred.Promise();
+}
+
+Napi::Value Medley::updateAudioStream(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto streamId = static_cast<uint32_t>(info[0].As<Number>().Int32Value());
+    auto options = info[1].ToObject();
+
+    auto it = audioRequests.find(streamId);
+    if (it == audioRequests.end()) {
+        return Boolean::New(env, false);
+    }
+
+    auto& request = it->second;
+
+    if (options.Has("gain")) {
+        auto newGain = options.Get("gain").ToNumber().FloatValue();
+        //
+        auto startTime = request->currentTime + 100;
+        auto endTime = startTime + 1000;
+        request->fader.start(startTime, endTime, request->preferredGain, newGain, 2.0f, newGain);
+
+        request->preferredGain = newGain;
+    }
+
+    if (options.Has("buffering")) {
+        request->buffering = options.Get("buffering").ToNumber().Uint32Value();
+    }
+
+    return Boolean::New(env, true);
+}
+
+Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        RangeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    juce::String trackFile = info[0].ToString().Utf8Value();
+    medley::Metadata metadata;
+
+    metadata.readFromFile(trackFile);
+
+    auto result = Object::New(env);
+
+    result.Set("title", metadata.getTitle().toRawUTF8());
+    result.Set("artist", metadata.getArtist().toRawUTF8());
+    result.Set("album", metadata.getAlbum().toRawUTF8());
+    result.Set("trackGain", metadata.getTrackGain());
+
+    return result;
+}
+
+Napi::Value Medley::static_getCoverAndLyrics(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    juce::String trackFile = info[0].ToString().Utf8Value();
+
+    medley::Metadata::CoverAndLyrics cal(trackFile, true, true);
+    auto cover = cal.getCover();
+    auto coverData = cover.getData();
+
+    auto result = Object::New(env);
+
+    result.Set("cover", Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)coverData.data(), coverData.size()));
+    result.Set("coverMimeType", Napi::String::New(env, cover.getMimeType().toStdString()));
+    result.Set("lyrics", Napi::String::New(env, cal.getLyrics().toStdString()));
+
+    return result;
 }
 
 
