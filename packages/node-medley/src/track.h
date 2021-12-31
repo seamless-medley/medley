@@ -31,7 +31,7 @@ public:
         return ref != other.ref;
     }
 
-    File getFile() {
+    File getFile() override {
         return file;
     }
 
