@@ -11,10 +11,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@seamless-medley/medley": "^0.1.1",
+    "@seamless-medley/medley": "workspace:../node-medley",
     "chokidar": "^3.5.1",
     "fast-glob": "^3.2.7",
     "lodash": "^4.17.21",
+    "normalize-path": "^3.0.0",
     "string-similarity": "^4.0.4"
   },
   "devDependencies": {

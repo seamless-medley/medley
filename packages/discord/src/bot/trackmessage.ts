@@ -1,10 +1,8 @@
 import { BoomBoxTrackPlay, isRequestTrack, Metadata } from "@seamless-medley/core";
-import colorableDominant from 'colorable-dominant';
 import { Message, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, MessageOptions } from "discord.js";
-import { capitalize, first, isEmpty, get } from "lodash";
+import { capitalize, isEmpty, get } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from 'path';
-import splashy from 'splashy';
 
 export enum TrackMessageStatus {
   Playing,
@@ -62,11 +60,7 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
     if (coverAndLyrics) {
       const { cover, coverMimeType, lyrics } = coverAndLyrics;
       if (cover.length) {
-        const { color } = colorableDominant(await splashy(cover).catch(() => []));
-
-        if (color) {
-          embed.setColor(color);
-        }
+        embed.setColor('RANDOM');
 
         const ext = mime.extension(coverMimeType);
         coverImage = new MessageAttachment(cover, `cover.${ext}`);
