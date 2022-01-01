@@ -10,34 +10,34 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "npm-run-all dev:*",
+    "dev:pre": "copyfiles --up 4 ../node-medley/build/Release/medley.node build/Release/",
     "dev:bot": "tsnd src/bot/main.ts",
-    "sample": "ts-node src/bot/sample_main.ts"
+    "sample": "cross-env MEDLEY_DEMO=1 ts-node src/bot/sample_main.ts"
   },
   "dependencies": {
     "@discordjs/rest": "^0.1.0-canary.0",
     "@discordjs/voice": "^0.7.2",
-    "@seamless-medley/core": "file:../core",
+    "@seamless-medley/core": "workspace:*",
     "colorable-dominant": "^1.1.4",
     "dayjs": "^1.10.7",
-    "discord-api-types": "^0.24.0",
     "discord.js": "^13.3.1",
     "libsodium-wrappers": "^0.7.9",
     "lodash": "^4.17.21",
     "lyrics-searcher": "^1.0.58",
     "mime-types": "^2.1.34",
     "minisearch": "^3.1.0",
-    "opusscript": "^0.0.8",
-    "splashy": "^5.1.0"
+    "opusscript": "^0.0.8"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.176",
     "@types/mime-types": "^2.1.1",
-    "@types/node": "^16.11.7",
-    "@types/splashy": "^5.0.0",
+    "@types/node": "^16.11.17",
     "copyfiles": "^2.4.1",
+    "cross-env": "^7.0.3",
+    "discord-api-types": "^0.26.0",
     "npm-run-all": "^4.1.5",
-    "ts-node-dev": "^1.1.8",
+    "ts-node": "^9.1.1",
     "typed-emitter": "^1.4.0",
-    "typescript": "^4.4.4"
+    "typescript": "^4.5.4"
   }
 }
