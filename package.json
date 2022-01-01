@@ -13,4 +13,7 @@
     "@types/node": "^14.14.25",
     "lerna": "^3.22.1"
   }
+  "workspaces": [
+    "packages/*"
+  ]
 }
