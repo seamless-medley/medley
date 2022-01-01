@@ -4,11 +4,12 @@ import { MedleyAutomaton } from "../../../automaton";
 import { HighlightTextType, makeHighlightedMessage, makeRequestPreview } from "../../utils";
 
 export const handleSelectMenu = async (automaton: MedleyAutomaton, interaction: SelectMenuInteraction) => {
-  const { values } = interaction;
-  if (values.length) {
+  const { values, member } = interaction;
+
+  if (values.length && member) {
     const trackId = values[0];
     if (trackId) {
-      const ok = await automaton.dj.request(trackId, interaction.member.user.id);
+      const ok = await automaton.dj.request(trackId, member.user.id);
 
       if (ok === false || ok.index < 0) {
         await interaction.update({

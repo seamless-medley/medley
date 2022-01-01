@@ -16,7 +16,13 @@ const declaration: SubCommandLikeOption = {
 }
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automation) => async (interaction) => {
-  const state = automation.getGuildState(interaction.guildId);
+  const { guildId } = interaction;
+
+  if (!guildId) {
+    return;
+  }
+
+  const state = automation.getGuildState(guildId);
   if (state) {
     const channel = interaction.options.getChannel('channel');
 

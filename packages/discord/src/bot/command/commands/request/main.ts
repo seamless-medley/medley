@@ -108,7 +108,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
         return;
       }
 
-      collector.removeAllListeners();
+      collector.stop();
       await handleSelectMenu(automaton, i);
     });
 
@@ -131,7 +131,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
     })
     .then(() => {
       canceled = true;
-      collector.removeAllListeners();
+      collector.stop();
 
       if (selector.deletable) {
         selector.delete();

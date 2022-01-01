@@ -22,8 +22,13 @@ const guildVoteMessage: Map<string, Message> = new Map();
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
   const { dj } = automaton;
+  const { guildId } = interaction;
 
-  const exisingVote = guildVoteMessage.get(interaction.guildId);
+  if (!guildId) {
+    return;
+  }
+
+  const exisingVote = guildVoteMessage.get(guildId);
   if (exisingVote) {
     warn(interaction, 'Vote is currently ongoing');
     return;
@@ -78,7 +83,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   if (message instanceof Message) {
     const msg = message;
 
-    guildVoteMessage.set(interaction.guildId, msg);
+    guildVoteMessage.set(guildId, msg);
 
     function updateMessage() {
       msg.edit({
@@ -138,7 +143,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     collector.on('remove', handleCollect);
     collector.on('end', async (collected) => {
       automaton.dj.off('requestTrackAdded', handleNewRequest);
-      guildVoteMessage.delete(interaction.guildId);
+      guildVoteMessage.delete(guildId);
 
       const peeks = dj.peekRequests(0, nominatees.length);
       const requestsKeyed = keyBy(peeks, n => n.track.rid);

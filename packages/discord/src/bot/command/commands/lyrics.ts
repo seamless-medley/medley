@@ -12,7 +12,13 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
     return;
   }
 
-  const state = automaton.getGuildState(interaction.guildId);
+  const { guildId } = interaction;
+
+  if (!guildId) {
+    return;
+  }
+
+  const state = automaton.getGuildState(guildId);
   const trackMsg = state ? findLast(state.trackMessages, m => m.trackPlay.track.id === trackId) : undefined;
 
   if (!trackMsg) {
