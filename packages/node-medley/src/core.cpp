@@ -201,15 +201,15 @@ void Medley::audioDeviceChanged() {
 /**
  * Called from Medley
  */
-void Medley::preQueueNext(PreCueNextDone done) {
-    // Emit preQueueNext event to JS, propagate the result back to Medley via `done` function
+void Medley::enqueueNext(EnqueueNextDone done) {
+    // Emit enqueueNext event to JS, propagate the result back to Medley via `done` function
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function emitFn) {
         try {
             auto callback = Napi::Function::New(env, [done](const CallbackInfo &cbInfo) {
                 done(cbInfo.Length() > 0 ? cbInfo[0].ToBoolean() : false);
             });
 
-            emitFn.Call(self.Value(), { Napi::String::New(env, "preQueueNext"), callback });
+            emitFn.Call(self.Value(), { Napi::String::New(env, "enqueueNext"), callback });
         } catch (...) {
             done(Napi::Boolean::New(env, false));
         }

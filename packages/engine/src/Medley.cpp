@@ -246,9 +246,9 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
             // Queue is empty, request to fill it with some tracks
             ScopedLock sl(callbackLock);
             listeners.call([&](Callback& listener) {
-                listener.preQueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _onLoadingDone = onLoadingDone](bool preQueueResult) {
-                    if (preQueueResult && _pQueue->count() > 0) {
-                        // preQueue succeeded, try to load again
+                listener.enqueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _onLoadingDone = onLoadingDone](bool enqueueResult) {
+                    if (enqueueResult && _pQueue->count() > 0) {
+                        // enqueue succeeded, try to load again
                         loadNextTrack(cd, p, _onLoadingDone);
                     }
                     else {
@@ -272,9 +272,9 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
     {
         ScopedLock sl(callbackLock);
         listeners.call([&](Callback& listener) {
-            listener.preQueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _onLoadingDone = onLoadingDone](bool preQueueResult) {
-                if (preQueueResult && _pQueue->count() > 0) {
-                    // preQueue succeeded, try to load again
+            listener.enqueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _onLoadingDone = onLoadingDone](bool enqueueResult) {
+                if (enqueueResult && _pQueue->count() > 0) {
+                    // enqueue succeeded, try to load again
                     loadNextTrack(cd, p, _onLoadingDone);
                 }
                 else {
@@ -457,8 +457,8 @@ void Medley::deckPosition(Deck& sender, double position) {
         return;
     }
 
-    auto preQueuePoint = sender.getTransitionPreCuePosition();
-    auto cuePoint = sender.getTransitionCuePosition();
+    auto enqueuePos = sender.getTransitionEnqueuePosition();
+    auto cuePos = sender.getTransitionCuePosition();
     auto transitionStartPos = sender.getTransitionStartPosition();
     auto transitionEndPos = sender.getTransitionEndPosition();
 
@@ -470,26 +470,33 @@ void Medley::deckPosition(Deck& sender, double position) {
 
         if (pTransition->state == DeckTransitionState::Idle) {
             // Idle
-
-            if (position > preQueuePoint) {
-                // We're passing the queue point while idling, call preQueueNext to ensure that there is enough track enqueued
-                pTransition->state = DeckTransitionState::CueNext;
-
+            if (position > enqueuePos) {
                 if (queue.count() == 0)
                 {
+                    pTransition->state = DeckTransitionState::Enqueue;
                     ScopedLock sl(callbackLock);
 
-                    listeners.call([](Callback& cb) {
-                        cb.preQueueNext();
+
+                    listeners.call([=](Callback& cb) {
+                        cb.enqueueNext([=](bool done) {
+
+                            if (done) {
+                                pTransition->state = DeckTransitionState::CueNext;
+                            }
+                            else {
+                                pTransition->state = DeckTransitionState::Idle; // Move back to the previous state, this will cause a retry
+                            }
+                        });
                     });
+                }
+                else {
+                    pTransition->state = DeckTransitionState::CueNext;
                 }
             }
         }
 
-        if (pTransition->state <= DeckTransitionState::CueNext) {
-            // Idle, CueNext
-
-            if (position > cuePoint) {
+        if (pTransition->state == DeckTransitionState::CueNext) {
+            if (position > cuePos) {
                 pTransition->state = DeckTransitionState::NextIsLoading;
 
                 auto currentDeck = &sender;

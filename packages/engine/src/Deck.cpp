@@ -118,7 +118,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     auto embededLastAudible = m_metadata.getLastAudible();
     if (embededLastAudible > 0) {
-        lastAudibleSamplePosition = m_metadata.getLastAudible() * reader->sampleRate;
+        lastAudibleSamplePosition = (int64)(m_metadata.getLastAudible() * reader->sampleRate);
     }
 
     if (lastAudibleSamplePosition > 0 && lastAudibleSamplePosition < totalSourceSamplesToPlay) {
@@ -493,10 +493,10 @@ void Deck::calculateTransition()
         transitionCuePosition = jmax(0.0, transitionStartPosition - jmax(kLeadingScanningDuration, maximumFadeOutDuration) / 2.0);
     }
 
-    transitionPreCuePosition = jmax(0.0, transitionCuePosition - 1.0);
+    transitionEnqueuePosition = jmax(0.0, transitionCuePosition - 1.0);
 
-    if (transitionPreCuePosition == transitionCuePosition) {
-        transitionCuePosition = jmin(transitionPreCuePosition + 1, transitionEndPosition);
+    if (transitionEnqueuePosition == transitionCuePosition) {
+        transitionCuePosition = jmin(transitionEnqueuePosition + 1, transitionEndPosition);
     }
 }
 
@@ -713,7 +713,7 @@ double Deck::getEndPosition() const
 void Deck::fadeOut(bool force)
 {
     if (!fading || force) {
-        transitionCuePosition = transitionStartPosition = getPosition();
+        transitionEnqueuePosition = transitionCuePosition = transitionStartPosition = getPosition();
         transitionEndPosition = jmin(transitionStartPosition + jmin(3.0, maximumFadeOutDuration), getEndPosition());
         fading = true;
     }

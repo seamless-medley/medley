@@ -23,11 +23,11 @@ class Medley : public Deck::Callback, juce::ChangeListener {
 public:
     class Callback : public Deck::Callback {
     public:
-        typedef std::function<void(bool)> PreCueNextDone;
+        typedef std::function<void(bool)> EnqueueNextDone;
 
         virtual void audioDeviceChanged() = 0;
 
-        virtual void preQueueNext(PreCueNextDone done = [](bool) { }) = 0;
+        virtual void enqueueNext(EnqueueNextDone done = [](bool) { }) = 0;
 
         virtual void mainDeckChanged(Deck& sender, TrackPlay& track) = 0;
     };
@@ -287,6 +287,7 @@ private:
 
     enum class DeckTransitionState {
         Idle,
+        Enqueue,
         CueNext,
         NextIsLoading,
         NextIsReady,

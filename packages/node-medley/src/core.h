@@ -41,7 +41,7 @@ public:
 
     void audioDeviceChanged() override;
 
-    void preQueueNext(Engine::Callback::PreCueNextDone done) override;
+    void enqueueNext(Engine::Callback::EnqueueNextDone done) override;
 
     void audioData(const AudioSourceChannelInfo& info) override;
 
@@ -115,11 +115,11 @@ public:
         AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter, float preferredGain)
             :
             id(id),
+            buffering(buffering),
             numChannels(numChannels),
             inSampleRate(inSampleRate),
             requestedSampleRate(requestedSampleRate),
             outputBytesPerSample(outputBytesPerSample),
-            buffering(buffering),
             buffer(numChannels, bufferSize),
             converter(converter),
             preferredGain(preferredGain)

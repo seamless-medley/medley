@@ -1235,7 +1235,7 @@ private:
             updateDevice();
         }
 
-        void preQueueNext(PreCueNextDone done) override {
+        void enqueueNext(EnqueueNextDone done) override {
             done(true);
         }
 

@@ -3,7 +3,7 @@ import _, { flatten, some, toLower, trim, uniq } from "lodash";
 import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
-import { DeckListener, Medley, PreQueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics } from "@seamless-medley/medley";
+import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, TrackValidator, TrackVerifier } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
@@ -114,7 +114,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.medley = options.medley;
     this.queue = options.queue;
     //
-    this.medley.on('preQueueNext', this.preQueue);
+    this.medley.on('enqueueNext', this.enqueue);
     this.medley.on('loaded', this.deckLoaded);
     this.medley.on('started', this.deckStarted);
     this.medley.on('finished', this.deckFinished);
@@ -251,7 +251,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     return this.requests.peek(from, n);
   }
 
-  private preQueue: PreQueueListener = async (done) => {
+  private enqueue: EnqueueListener = async (done) => {
     if (this.queue.length > 0) {
       done(true);
     }

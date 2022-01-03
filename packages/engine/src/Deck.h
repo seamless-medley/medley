@@ -94,7 +94,7 @@ public:
 
     double getSourceSampleRate() const { return sourceSampleRate; }
 
-    double getTransitionPreCuePosition() const { return transitionPreCuePosition; }
+    double getTransitionEnqueuePosition() const { return transitionEnqueuePosition; }
 
     double getTransitionCuePosition() const { return transitionCuePosition; }
 
@@ -267,7 +267,7 @@ private:
     int64 trailingSamplePosition = 0;
     double trailingDuration = 0.0;
 
-    double transitionPreCuePosition = 0.0;
+    double transitionEnqueuePosition = 0.0;
     double transitionCuePosition = 0.0;
     double transitionStartPosition = 0.0;
     double transitionEndPosition = 0.0;

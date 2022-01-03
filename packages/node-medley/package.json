@@ -1,7 +1,7 @@
 {
   "name": "@seamless-medley/medley",
   "description": "Audio engine for Node.js, with built-in \"radio like\" gapless/seamless playback",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": {
     "name": "Wittawas Nakkasem",
     "email": "vittee@hotmail.com"
@@ -27,7 +27,7 @@
   "scripts": {
     "install": "node-gyp-build",
     "clean": "rimraf build out dist",
-    "compile": "node-gyp build",
+    "compile": "node-gyp configure && node-gyp build",
     "build": "npm-run-all clean --parallel build:*",
     "build:ts": "tsc",
     "build:native": "prebuildify --napi --strip",

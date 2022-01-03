@@ -99,8 +99,8 @@ export type TrackPlay<T extends TrackInfo> = {
 
 export type Listener<T = void> = () => T;
 export type DeckListener<T extends TrackInfo> = (deckIndex: DeckIndex, trackPlay: TrackPlay<T>) => void;
-export type PreQueueListener = (done: PreQueueCallback) => void;
-export type PreQueueCallback = (result: boolean) => void;
+export type EnqueueCallback = (result: boolean) => void;
+export type EnqueueListener = (done: EnqueueCallback) => void;
 
 export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitter {
   constructor(queue: Queue<T>);
@@ -109,9 +109,9 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   once(event: DeckEvent, listener: DeckListener<T>): this;
   off(event: DeckEvent, listener: DeckListener<T>): this;
 
-  on(event: 'preQueueNext', listener: PreQueueListener): this;
-  once(event: 'preQueueNext', listener: PreQueueListener): this;
-  off(event: 'preQueueNext', listener: PreQueueListener): this;
+  on(event: 'enqueueNext', listener: EnqueueListener): this;
+  once(event: 'enqueueNext', listener: EnqueueListener): this;
+  off(event: 'enqueueNext', listener: EnqueueListener): this;
 
   on(event: NormalEvent, listener: Listener): this;
   once(event: NormalEvent, listener: Listener): this;
