@@ -128,6 +128,11 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     });
 
     this.sequencer.on('change', (crate: BoomBoxCrate) => this.emit('sequenceChange', crate));
+    this.sequencer.on('rescue', (scanned, ignored) => {
+      const n = Math.min(ignored, scanned);
+      console.log('Rescue, clearing artist history', n, this.artistHistory);
+      this.artistHistory = this.artistHistory.slice(n);
+    });
   }
 
   private sweeperInserter: SweeperInserter = new SweeperInserter(this, []);
@@ -271,6 +276,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       const nextTrack = await this.sequencer.nextTrack();
 
       if (!nextTrack) {
+        console.log('No next track');
         done(false);
         return;
       }

@@ -7,6 +7,7 @@ import { Crate } from "./base";
 
 export interface CrateSequencerEvents {
   change: (crate: Crate<Track<any>>) => void;
+  rescue: (scanned: number, ignore: number) => void;
 }
 
 export type TrackValidator = {
@@ -54,6 +55,8 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
       return undefined;
     }
 
+    let scanned = 0;
+    let ignored = 0;
     let count = this._crates.length;
     while (count-- > 0) {
       const crate = this.current;
@@ -64,6 +67,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
           this.emit('change', crate as unknown as Crate<Track<any>>);
         }
 
+        scanned += crate.source.length;
         for (let i = 0; i < crate.source.length; i++) {
           // Latching is active
           if (this.latchFor > 0) {
@@ -104,6 +108,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
             // track should be skipped, go to next track
           }
           // track is neither valid nor defined, go to next track
+          ignored++;
         }
         // no more track
       }
@@ -113,6 +118,11 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     }
 
     // no valid track in any crates
+    if (ignored === scanned && scanned > 0) {
+      // Rescue, tracks were found but none was allowed to play
+      this.emit('rescue', scanned, ignored);
+    }
+
     return undefined;
   }
 
