@@ -101,9 +101,9 @@ public:
 
     Napi::Value getMetadata(const CallbackInfo& info);
 
-    Napi::Value requestAudioCallback(const CallbackInfo& info);
+    Napi::Value requestAudioStream(const CallbackInfo& info);
 
-    Napi::Value racConsume(const CallbackInfo& info);
+    Napi::Value reqAudioConsume(const CallbackInfo& info);
 
     Napi::Value updateAudioStream(const CallbackInfo& info);
 
@@ -169,11 +169,14 @@ public:
         double currentTime = 0;
     };
 private:
-    void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::TrackPlay& track);
 
     enum class AudioRequestFormat : uint8_t {
         Int16LE, Int16BE, FloatLE, FloatBE
     };
+
+    void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::TrackPlay& track);
+
+    bool registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, double outSampleRate, uint32_t bufferSize, uint32_t buffering, float gain, std::shared_ptr<AudioRequest>& request);
 
     static uint32_t audioRequestId;
 

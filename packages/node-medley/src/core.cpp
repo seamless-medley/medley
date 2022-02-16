@@ -13,8 +13,9 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::seekFractional>("seekFractional"),
         InstanceMethod<&Medley::isTrackLoadable>("isTrackLoadable"),
         InstanceMethod<&Medley::getMetadata>("getMetadata"),
-        InstanceMethod<&Medley::requestAudioCallback>("*$rac"),
-        InstanceMethod<&Medley::racConsume>("*$rac$consume"),
+        //
+        InstanceMethod<&Medley::requestAudioStream>("*$reqAudio"),
+        InstanceMethod<&Medley::reqAudioConsume>("*$reqAudio$consume"),
         InstanceMethod<&Medley::updateAudioStream>("updateAudioStream"),
         //
         InstanceAccessor<&Medley::level>("level"),
@@ -393,7 +394,7 @@ Napi::Value Medley::getMetadata(const CallbackInfo& info) {
     return result;
 }
 
-Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
+Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {
     auto env = info.Env();
 
     if (info.Length() < 1) {
@@ -413,6 +414,63 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
     }
 
     auto audioFormat = static_cast<AudioRequestFormat>(formatIndex);
+
+    auto device = engine->getCurrentAudioDevice();
+    auto numChannels = device->getOutputChannelNames().size();
+    auto sampleRate = device->getCurrentSampleRate();
+
+    auto requestedSampleRate = options.Has("sampleRate") ? options.Get("sampleRate") : env.Undefined();
+    auto outSampleRate = (!requestedSampleRate.IsNull() && !requestedSampleRate.IsUndefined()) ? requestedSampleRate.ToNumber().DoubleValue() : sampleRate;
+
+    uint32_t bufferSize = 0;
+    {
+        auto jsValue = options.Get("bufferSize");
+        if (jsValue.IsNumber()) {
+            auto value = jsValue.ToNumber().Uint32Value();
+            if (value > 0) {
+                bufferSize = value;
+            }
+        }
+    }
+
+    uint32_t buffering = 0;
+    {
+        auto jsValue = options.Get("buffering");
+        if (jsValue.IsNumber()) {
+            auto value = jsValue.ToNumber().Int32Value();
+            if (value >= 0) {
+                buffering = value;
+            }
+        }
+    }
+
+    auto gainJS = options.Has("gain") ? options.Get("gain") : env.Undefined();
+    auto gain = (!gainJS.IsNull() && !gainJS.IsUndefined()) ? gainJS.ToNumber().FloatValue() : 1.0f;
+
+    std::shared_ptr<AudioRequest> request;
+
+    registerAudioRequest(
+        audioRequestId,
+        audioFormat,
+        outSampleRate,
+        bufferSize,
+        buffering,
+        gain,
+        request
+    );
+
+    auto result = Object::New(env);
+    //
+    result.Set("id", audioRequestId++);
+    result.Set("channels", numChannels);
+    result.Set("bitPerSample", request->outputBytesPerSample * 8);
+    result.Set("originalSampleRate", sampleRate);
+    result.Set("sampleRate", outSampleRate);
+    //
+    return result;
+}
+
+bool Medley::registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, double outSampleRate, uint32_t bufferSize, uint32_t buffering, float gain, std::shared_ptr<AudioRequest>& request) {
     auto audioConveter = audioConverters.find(audioFormat);
     if (audioConveter == audioConverters.end()) {
         switch (audioFormat) {
@@ -430,7 +488,7 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
                 break;
 
             default:
-                return env.Undefined();
+                return false;
         }
     }
 
@@ -449,58 +507,30 @@ Napi::Value Medley::requestAudioCallback(const CallbackInfo& info) {
 
     auto device = engine->getCurrentAudioDevice();
     auto numChannels = device->getOutputChannelNames().size();
-    auto sampleRate = device->getCurrentSampleRate();
+    auto deviceSampleRate = device->getCurrentSampleRate();
 
-    auto requestedSampleRate = options.Has("sampleRate") ? options.Get("sampleRate") : env.Undefined();
-    auto outSampleRate = (!requestedSampleRate.IsNull() && !requestedSampleRate.IsUndefined()) ? requestedSampleRate.ToNumber().DoubleValue() : sampleRate;
-
-    uint32_t bufferSize = (uint32_t)(outSampleRate * 0.25f);
-    {
-        auto jsValue = options.Get("bufferSize");
-        if (jsValue.IsNumber()) {
-            auto value = jsValue.ToNumber().Uint32Value();
-            if (value > 0) {
-                bufferSize = value;
-            }
-        }
+    if (bufferSize == 0) {
+        bufferSize = (uint32_t)(outSampleRate * 0.25f);
     }
 
-    uint32_t buffering = (uint32_t)(outSampleRate * 0.01f);
-    {
-        auto jsValue = options.Get("buffering");
-        if (jsValue.IsNumber()) {
-            auto value = jsValue.ToNumber().Int32Value();
-            if (value >= 0) {
-                buffering = value;
-            }
-        }
+    if (buffering == 0) {
+        buffering = (uint32_t)(outSampleRate * 0.01f);
     }
 
-    auto gainJS = options.Has("gain") ? options.Get("gain") : env.Undefined();
-    auto gain = (!gainJS.IsNull() && !gainJS.IsUndefined()) ? gainJS.ToNumber().FloatValue() : 1.0f;
-
-    auto request = std::make_shared<AudioRequest>(
-        audioRequestId,
+    request = std::make_shared<AudioRequest>(
+        id,
         bufferSize,
         buffering,
         numChannels,
-        sampleRate,
+        deviceSampleRate,
         outSampleRate,
         bytesPerSample,
         audioConverters[audioFormat],
         gain
     );
-    audioRequests.emplace(audioRequestId, request);
 
-    auto result = Object::New(env);
-    //
-    result.Set("id", audioRequestId++);
-    result.Set("channels", numChannels);
-    result.Set("bitPerSample", bytesPerSample * 8);
-    result.Set("originalSampleRate", sampleRate);
-    result.Set("sampleRate", outSampleRate);
-    //
-    return result;
+    audioRequests.emplace(id, request);
+    return true;
 }
 
 void Medley::audioData(const AudioSourceChannelInfo& info) {
@@ -510,22 +540,24 @@ void Medley::audioData(const AudioSourceChannelInfo& info) {
 }
 
 namespace {
-    class AudioConsumer : public AsyncWorker {
+    class AudioRequestProcessor : public AsyncWorker {
     public:
-        AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)
-            :
-            AsyncWorker(Napi::Function::New(deferred.Env(), [deferred](const CallbackInfo &cbInfo) {
-                deferred.Resolve(cbInfo[0]);
-                return cbInfo.Env().Undefined();
-            })),
-            request(request),
-            requestedSize(requestedSize)
+        AudioRequestProcessor(std::shared_ptr<Medley::AudioRequest> request, const Napi::Env& env)
+            : AsyncWorker(env),
+            request(request)
         {
 
         }
 
-        void Execute() override
+        AudioRequestProcessor(std::shared_ptr<Medley::AudioRequest> request, const Napi::Function& callback)
+            : AsyncWorker(callback),
+            request(request)
         {
+
+        }
+
+    protected:
+        void Process(uint64_t requestedNumSamples) {
             auto outputBytesPerSample = request->outputBytesPerSample;
             auto numChannels = request->numChannels;
 
@@ -535,7 +567,7 @@ namespace {
 
             request->currentTime = Time::getMillisecondCounterHiRes();
 
-            auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedSize / outputBytesPerSample / numChannels);
+            auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedNumSamples);
 
             juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
             request->buffer.read(tempBuffer, numSamples);
@@ -579,18 +611,38 @@ namespace {
             }
         }
 
+        std::shared_ptr<Medley::AudioRequest> request;
+        uint64_t bytesReady = 0;
+    };
+
+    class AudioConsumer : public AudioRequestProcessor {
+    public:
+        AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)
+            :
+            AudioRequestProcessor(request, Napi::Function::New(deferred.Env(), [deferred](const CallbackInfo &cbInfo) {
+                deferred.Resolve(cbInfo[0]); // cbInfo[0] is the buffer returned from GetResult()
+                return cbInfo.Env().Undefined();
+            })),
+            requestedSize(requestedSize)
+        {
+
+        }
+
+        void Execute() override
+        {
+            Process(requestedSize / request->outputBytesPerSample / request->numChannels);
+        }
+
         std::vector<napi_value> GetResult(Napi::Env env) override {
             auto result = Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)request->scratch.getData(), bytesReady);
             return { result };
         }
     private:
-        std::shared_ptr<Medley::AudioRequest> request;
         uint64_t requestedSize;
-        uint64_t bytesReady = 0;
     };
 }
 
-Napi::Value Medley::racConsume(const CallbackInfo& info) {
+Napi::Value Medley::reqAudioConsume(const CallbackInfo& info) {
     auto env = info.Env();
 
     auto streamId = static_cast<uint32_t>(info[0].As<Number>().Int32Value());

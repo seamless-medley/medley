@@ -222,9 +222,11 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
 
   getMetadata(index: DeckIndex): Metadata;
 
-  requestAudioStream(options: RequestAudioStreamOptions): RequestAudioStreamResult;
+  async requestAudioStream(options?: RequestAudioOptions): Promise<RequestAudioStreamResult>;
 
-  updateAudioStream(id: RequestAudioStreamResult['id'], options: Partial<Pick<RequestAudioStreamOptions, 'buffering' | 'gain'>>): boolean;
+  requestAudioCallback(options: RequestAudioCallbackOptions): RequestAudioResult;
+
+  updateAudioStream(id: RequestAudioResult['id'], options: Partial<Pick<RequestAudioOptions, 'buffering' | 'gain'>>): boolean;
 
   static getMetadata(path: string): Metadata;
   static getCoverAndLyrics(path: string): CoverAndLyrics;
@@ -232,11 +234,10 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
 
 export type AudioFormat = 'Int16LE' | 'Int16BE' | 'FloatLE' | 'FloatBE';
 
-export type RequestAudioStreamOptions = {
+export type RequestAudioOptions = {
   sampleRate?: number;
   /**
-   * Maximun frames the buffer can hold, increase this value helps reduce stuttering in some situations
-   * Default value is 32768
+   * Maximun frames the internal buffer can hold, increase this value helps reduce stuttering in some situations
    *
    * @default 250ms (sampleRate * 0.25)
    */
@@ -254,6 +255,11 @@ export type RequestAudioStreamOptions = {
    */
   buffering?: number;
 
+  /**
+   * Number of frames to pre-fill into the stream
+   */
+  preFill?: number;
+
   format: AudioFormat;
 
   /**
@@ -264,13 +270,20 @@ export type RequestAudioStreamOptions = {
   gain?: number;
 }
 
-export type RequestAudioStreamResult = {
-  readonly stream: Readable;
+export type RequestAudioCallbackOptions = RequestAudioOptions & {
+  callback: (buffer: Buffer) => Promise<any> | any;
+}
+
+export type RequestAudioResult = {
   readonly id: number;
   readonly channels: number;
   readonly originalSampleRate: number;
   readonly sampleRate: number;
   readonly bitPerSample: number;
+}
+
+export type RequestAudioStreamResult = RequestAudioResult & {
+  readonly stream: Readable;
 }
 
 export type AudioDeviceTypeInfo = {
