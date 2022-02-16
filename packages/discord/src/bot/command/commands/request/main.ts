@@ -95,7 +95,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
   });
 
   if (selector instanceof Message) {
-    let canceled = false;
+    let done = false;
 
     const collector = selector.createMessageComponentCollector({ componentType: 'SELECT_MENU', time: 30_000 });
 
@@ -108,12 +108,13 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
         return;
       }
 
+      done = true;
       collector.stop();
       await handleSelectMenu(automaton, i);
     });
 
     collector.on('end', () => {
-      if (!canceled && selector.editable) {
+      if (!done && selector.editable) {
         selector.edit({
           content: makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
           components: []
@@ -130,13 +131,13 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
       time: 60_000
     })
     .then(() => {
-      canceled = true;
+      done = true;
       collector.stop();
 
       if (selector.deletable) {
         selector.delete();
       }
     })
-    .catch(() => void 0);
+    .catch(() => void undefined);
   }
 }
