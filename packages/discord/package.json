@@ -1,5 +1,5 @@
 {
-  "name": "@medley/discord",
+  "name": "@seamless-medley/discord",
   "version": "0.1.0",
   "description": "Discord Music Bot built on top of Medley",
   "author": {
@@ -17,7 +17,7 @@
   "dependencies": {
     "@discordjs/rest": "^0.1.0-canary.0",
     "@discordjs/voice": "^0.7.2",
-    "@seamless-medley/core": "workspace:*",
+    "@seamless-medley/core": "workspace:../core",
     "colorable-dominant": "^1.1.5",
     "dayjs": "^1.10.7",
     "discord.js": "^13.3.1",
