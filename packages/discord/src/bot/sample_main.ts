@@ -1,7 +1,7 @@
 import { BoomBoxTrack, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
 import _ from "lodash";
 import { MedleyAutomaton } from "./automaton";
-import { Station } from "./mix";
+import { Station } from "./station";
 
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);

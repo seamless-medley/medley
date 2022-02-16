@@ -15,7 +15,7 @@ import {
 
 import _, { without } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
-import { Station } from "./mix";
+import { Station } from "./station";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
 export type MedleyAutomatonOptions = {
