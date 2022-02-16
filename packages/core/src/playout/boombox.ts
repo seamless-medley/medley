@@ -48,6 +48,7 @@ export interface BoomBoxEvents {
   currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
   trackQueued: (track: BoomBoxTrack) => void;
   trackLoaded: (trackPlay: BoomBoxTrackPlay) => void;
+  trackUnloaded: (trackPlay: BoomBoxTrackPlay) => void;
   trackStarted: (trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => void;
   trackActive: (trackPlay: BoomBoxTrackPlay) => void;
   trackFinished: (trackPlay: BoomBoxTrackPlay) => void;
@@ -116,6 +117,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     //
     this.medley.on('enqueueNext', this.enqueue);
     this.medley.on('loaded', this.deckLoaded);
+    this.medley.on('unloaded', this.deckUnloaded);
     this.medley.on('started', this.deckStarted);
     this.medley.on('finished', this.deckFinished);
     this.medley.on('mainDeckChanged', this.mainDeckChanged);
@@ -304,24 +306,22 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private deckLoaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
     // build cover and lyrics metadata
-    // the track might be a request track, which shadowed metadata object from the track in a collection
-    // So we need to find the actual track and set extra metadata there
-    const { collection } = trackPlay.track;
-    if (collection) {
-      const trackInCollection = collection.fromId(trackPlay.track.id);
+    const { metadata } = trackPlay.track;
 
-      if (trackInCollection) {
-        const { metadata } = trackInCollection;
-
-        if (metadata) {
-          if (metadata.kind !== TrackKind.Insertion) {
-            metadata.coverAndLyrics = await getMusicCoverAndLyrics(trackPlay.track.path);
-          }
-        }
-      }
+    if (metadata && metadata.kind !== TrackKind.Insertion) {
+      metadata.coverAndLyrics = await getMusicCoverAndLyrics(trackPlay.track.path);
     }
 
     this.emit('trackLoaded', trackPlay);
+  }
+
+  private deckUnloaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
+    // clean up memory holding the cover and lyrics
+    if (trackPlay.track?.metadata) {
+      trackPlay.track.metadata.coverAndLyrics = undefined;
+    }
+
+    this.emit('trackUnloaded', trackPlay);
   }
 
   private deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
