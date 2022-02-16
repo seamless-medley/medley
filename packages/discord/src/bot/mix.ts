@@ -169,7 +169,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     }
   }
 
-  prepareFor(guildId: Guild['id']) {
+  async prepareFor(guildId: Guild['id']) {
     if (this.states.has(guildId)) {
       return;
     }
@@ -177,9 +177,10 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     const gain = this.initialGain;
 
     // Request audio stream
-    const audioRequest = this.medley.requestAudioStream({
-      bufferSize: 480 * 50,
+    const audioRequest = await this.medley.requestAudioStream({
+      bufferSize: 48000 * 0.5,
       buffering: 480 * 4, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
+      preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
       // discord voice only accept 48KHz sample rate, 16 bit per sample
       sampleRate: 48000,
       format: 'Int16LE',
@@ -255,7 +256,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
   async join(channel: BaseGuildVoiceChannel) {
     const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
 
-    this.prepareFor(guildId);
+    await this.prepareFor(guildId);
     const state = this.states.get(guildId)!;
 
     let voiceConnection: VoiceConnection | undefined = joinVoiceChannel({
