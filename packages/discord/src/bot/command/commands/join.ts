@@ -51,7 +51,8 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ s
     });
   }
   catch (e) {
-    deny(interaction, 'Could not join');
+    console.error(e);
+    deny(interaction, 'Could not join, something went wrong');
   }
 }
 
