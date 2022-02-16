@@ -1,5 +1,6 @@
 import { CommandInteraction } from "discord.js";
-import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { reply } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -8,6 +9,7 @@ const declaration: SubCommandLikeOption = {
   options: [
     {
       type: OptionType.Channel,
+      channel_types: [ChannelType.GuildText],
       name: 'channel',
       description: 'Channel to send message to',
       required: true
@@ -31,6 +33,11 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     }
 
     state.textChannelId = channel.id;
+
+    reply(interaction, {
+      content: `OK, Messages will be posted in ${channel.toString()}`,
+      ephemeral: true
+    });
   }
 }
 
