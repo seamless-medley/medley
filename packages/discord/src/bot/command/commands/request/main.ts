@@ -25,7 +25,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
 
   const [artist, title, query] = options;
 
-  const results = automaton.dj.search({
+  const results = automaton.station.search({
     artist,
     title,
     query

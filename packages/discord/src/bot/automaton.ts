@@ -15,7 +15,7 @@ import {
 
 import _, { without } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
-import { MedleyMix } from "./mix";
+import { Station } from "./mix";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
 export type MedleyAutomatonOptions = {
@@ -44,7 +44,7 @@ export class MedleyAutomaton {
 
   private _guildStates: Map<Guild['id'], AutomatonGuildState> = new Map();
 
-  constructor(readonly dj: MedleyMix, private options: MedleyAutomatonOptions) {
+  constructor(readonly station: Station, private options: MedleyAutomatonOptions) {
     this.client = new Client({
       intents: [
         Intents.FLAGS.GUILDS,
@@ -64,9 +64,9 @@ export class MedleyAutomaton {
     this.client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
     this.client.on('interactionCreate', createInteractionHandler(this.baseCommand, this));
 
-    this.dj.on('trackStarted', this.handleTrackStarted);
-    this.dj.on('trackActive', this.handleTrackActive);
-    this.dj.on('trackFinished', this.handleTrackFinished);
+    this.station.on('trackStarted', this.handleTrackStarted);
+    this.station.on('trackActive', this.handleTrackActive);
+    this.station.on('trackFinished', this.handleTrackFinished);
   }
 
   login() {
@@ -232,7 +232,7 @@ export class MedleyAutomaton {
 
       if (!state.serverMuted && state.audiences.length > 0) {
         // has some audience
-        this.dj.start();
+        this.station.start();
         this.showActivity();
         return;
       }
@@ -240,7 +240,7 @@ export class MedleyAutomaton {
 
     // no audience, pause
     this.hideActivity();
-    this.dj.pause();
+    this.station.pause();
   }
 
   private showActivity() {
@@ -250,7 +250,7 @@ export class MedleyAutomaton {
       return;
     }
 
-    const { trackPlay } = this.dj;
+    const { trackPlay } = this.station;
     const banner = trackPlay ? getTrackBanner(trackPlay.track) : 'Medley';
 
     user.setActivity(banner, { type: 'LISTENING' });
@@ -403,8 +403,8 @@ export class MedleyAutomaton {
   }
 
   skipCurrentSong() {
-    if (!this.dj.paused && this.dj.playing) {
-      const { trackPlay } = this.dj;
+    if (!this.station.paused && this.station.playing) {
+      const { trackPlay } = this.station;
 
       if (trackPlay) {
         this.updateTrackMessage(
@@ -419,7 +419,7 @@ export class MedleyAutomaton {
         );
       }
 
-      this.dj.skip();
+      this.station.skip();
     }
   }
 

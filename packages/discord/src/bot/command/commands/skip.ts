@@ -21,7 +21,7 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
     Permissions.FLAGS.MOVE_MEMBERS
   ]);
 
-  const { trackPlay } = automaton.dj;
+  const { trackPlay } = automaton.station;
 
   if (trackPlay && isRequestTrack(trackPlay.track)) {
     const { requestedBy } = trackPlay.track;
@@ -33,7 +33,7 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
     }
   }
 
-  if (automaton.dj.paused || !automaton.dj.playing) {
+  if (automaton.station.paused || !automaton.station.playing) {
     await deny(interaction, 'Not currently playing', `@${interaction.user.id}`);
     return;
   }
@@ -43,7 +43,7 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
 }
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, playUuid: string) => {
-  if (automaton.dj.trackPlay?.uuid !== playUuid) {
+  if (automaton.station.trackPlay?.uuid !== playUuid) {
     deny(interaction, 'Could not skip this track', undefined, true);
     return;
   }

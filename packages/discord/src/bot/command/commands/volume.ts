@@ -22,14 +22,14 @@ const declaration: SubCommandLikeOption = {
 
 const g2d = (g: number) => round(gainToDecibels(g));
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ dj }) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ station }) => async (interaction) => {
   const { guildId } = interaction;
 
   if (!guildId) {
     return;
   }
 
-  const oldGain = dj.getGain(guildId);
+  const oldGain = station.getGain(guildId);
   const decibels = interaction.options.getNumber('db');
 
   if (decibels === null) {
@@ -37,7 +37,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ d
     return;
   }
 
-  if (dj.setGain(guildId, decibelsToGain(decibels))) {
+  if (station.setGain(guildId, decibelsToGain(decibels))) {
     accept(interaction, `OK: Fading volume from ${g2d(oldGain)}dB to ${round(decibels, 2)}dB`);
   } else {
     warn(interaction, 'Not in a voice channel');

@@ -21,7 +21,7 @@ type Nominatee = TrackPeek<RequestTrack<string>> & {
 const guildVoteMessage: Map<string, Message> = new Map();
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
-  const { dj } = automaton;
+  const { station } = automaton;
   const { guildId } = interaction;
 
   if (!guildId) {
@@ -34,8 +34,8 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     return;
   }
 
-  const count = Math.min(emojis.distinguishable.length, dj.requestsCount, 20);
-  const peekings = dj.peekRequests(0, count);
+  const count = Math.min(emojis.distinguishable.length, station.requestsCount, 20);
+  const peekings = station.peekRequests(0, count);
 
   if (peekings.length <= 1) {
     warn(interaction, 'Nothing to vote')
@@ -55,7 +55,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     nominatees.map(n => [n.emoji, n])
   );
 
-  dj.requestsEnabled = false;
+  station.requestsEnabled = false;
 
   const createMessageContent = () =>
     chain(nominatees)
@@ -126,7 +126,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       await msg.react(emoji);
     }
 
-    automaton.dj.on('requestTrackAdded', handleNewRequest);
+    automaton.station.on('requestTrackAdded', handleNewRequest);
 
     const collector = message.createReactionCollector({
       dispose: true,
@@ -142,10 +142,10 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     collector.on('collect', handleCollect);
     collector.on('remove', handleCollect);
     collector.on('end', async (collected) => {
-      automaton.dj.off('requestTrackAdded', handleNewRequest);
+      automaton.station.off('requestTrackAdded', handleNewRequest);
       guildVoteMessage.delete(guildId);
 
-      const peeks = dj.peekRequests(0, nominatees.length);
+      const peeks = station.peekRequests(0, nominatees.length);
       const requestsKeyed = keyBy(peeks, n => n.track.rid);
 
       let contributors: string[] = [];
@@ -172,7 +172,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
         }
       }
 
-      automaton.dj.sortRequests();
+      automaton.station.sortRequests();
 
       const preview = await makeRequestPreview(automaton, 0, undefined, nominatees.length) || [];
       const contributorMentions = chain(contributors)
@@ -198,7 +198,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
       await msg.delete();
 
-      dj.requestsEnabled = true;
+      station.requestsEnabled = true;
     })
   }
 }

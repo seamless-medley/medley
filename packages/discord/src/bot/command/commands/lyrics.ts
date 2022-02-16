@@ -6,7 +6,7 @@ import { deny, reply, warn } from "../utils";
 import lyricsSearcher from "lyrics-searcher";
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, trackId: BoomBoxTrack['id']) => {
-  const track = automaton.dj.findTrackById(trackId);
+  const track = automaton.station.findTrackById(trackId);
   if (!track) {
     deny(interaction, 'Invalid track identifier', undefined, true);
     return;

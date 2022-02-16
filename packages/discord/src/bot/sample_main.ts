@@ -1,21 +1,27 @@
-import { BoomBoxTrack, WatchTrackCollection } from "@seamless-medley/core";
+import { BoomBoxTrack, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
 import _ from "lodash";
 import { MedleyAutomaton } from "./automaton";
-import { MedleyMix } from "./mix";
+import { Station } from "./mix";
 
 process.on('uncaughtException', (e) => {
-  console.error('Exception', e);
+  console.error('Exception', e, e.stack);
 });
 
 process.on('unhandledRejection', (e) => {
   console.error('Rejection', e);
-})
+});
 
-const dj = new MedleyMix({
+const station = new Station({
+  intros: (() => {
+    const collection = new TrackCollection('$_intro');
+    collection.add('D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3');
+    return collection;
+  })(),
+
   requestSweepers: WatchTrackCollection.initWithWatch<BoomBoxTrack>('$_req_sweepers', 'D:\\vittee\\Desktop\\test-transition\\drops\\your')
 });
 
-dj.updateCollections({
+station.updateCollections({
   'bright': 'D:\\vittee\\Google Drive\\musics\\bright\\**\\*',
   'brokenhearted': 'D:\\vittee\\Google Drive\\musics\\brokenhearted\\**\\*',
   'chill': 'D:\\vittee\\Google Drive\\musics\\chill\\**\\*',
@@ -47,9 +53,9 @@ const sequence: [string, number][] = [
   ['chill', 2]
 ]
 
-dj.updateSequence(sequence);
+station.updateSequence(sequence);
 
-dj.updateSweeperRules(
+station.updateSweeperRules(
   { // Upbeat
     to: ['upbeat', 'bright'],
     path: 'D:\\vittee\\Desktop\\test-transition\\drops\\up'
@@ -68,9 +74,9 @@ dj.updateSweeperRules(
   }
 );
 
-dj.setCrateIndex(_.random(0, sequence.length));
+station.setCrateIndex(_.random(0, sequence.length));
 
-const automaton = new MedleyAutomaton(dj, {
+const automaton = new MedleyAutomaton(station, {
 });
 
 automaton.login();

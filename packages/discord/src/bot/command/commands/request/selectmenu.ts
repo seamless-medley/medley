@@ -9,7 +9,7 @@ export const handleSelectMenu = async (automaton: MedleyAutomaton, interaction: 
   if (values.length && member) {
     const trackId = values[0];
     if (trackId) {
-      const ok = await automaton.dj.request(trackId, member.user.id);
+      const ok = await automaton.station.request(trackId, member.user.id);
 
       if (ok === false || ok.index < 0) {
         await interaction.update({

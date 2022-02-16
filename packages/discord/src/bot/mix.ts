@@ -43,7 +43,7 @@ export enum PlayState {
   Paused = 'paused'
 }
 
-export type MedleyMixOptions = {
+export type StationOptions = {
   /**
    * Initial audio gain, default to -15dBFS (Appx 0.178)
    * @default -15dBFS
@@ -61,11 +61,11 @@ export type SweeperConfig = {
   path: string;
 }
 
-export interface MedleyMixEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
+export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
   requestTrackAdded: (track: TrackPeek<RequestTrack<User['id']>>) => void;
 }
 
-type MixState = {
+type StationState = {
   audioRequest: RequestAudioStreamResult;
   audioResource: AudioResource;
   audioPlayer: AudioPlayer;
@@ -73,11 +73,10 @@ type MixState = {
   gain: number;
 }
 
-// This is the DJ
-export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<MedleyMixEvents>) {
+export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
   readonly queue: Queue<BoomBoxTrack>;
   readonly medley: Medley<BoomBoxTrack>;
-  private states: Map<Guild['id'], MixState> = new Map();
+  private states: Map<Guild['id'], StationState> = new Map();
 
   private collections: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
   private boombox: BoomBox<User['id']>;
@@ -97,7 +96,7 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
     }
   });
 
-  constructor(options: MedleyMixOptions = {}) {
+  constructor(options: StationOptions = {}) {
     super();
 
     this.queue = new Queue();
@@ -191,6 +190,8 @@ export class MedleyMix extends (EventEmitter as new () => TypedEventEmitter<Medl
       encoder.setFEC(true);
       encoder.setPLP(0);
     }
+
+    // TODO: Implement our own AudioPlayer
 
     // Create discord voice AudioPlayer
     const audioPlayer = createAudioPlayer({

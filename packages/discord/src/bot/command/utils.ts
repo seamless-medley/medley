@@ -55,7 +55,7 @@ const previewTrack = ({ index, track }: TrackPeek<RequestTrack<User['id']>>, pad
 };
 
 export async function makeRequestPreview(automaton: MedleyAutomaton, index: number = 0, focus?: number, n: number = 5) {
-  const peeking = automaton.dj.peekRequests(index, n);
+  const peeking = automaton.station.peekRequests(index, n);
 
   if (peeking.length <= 0) {
     return;
@@ -66,7 +66,7 @@ export async function makeRequestPreview(automaton: MedleyAutomaton, index: numb
   const lines: string[] = [];
 
   if (peeking[0].index > 1) {
-    const first = automaton.dj.peekRequests(0, 1);
+    const first = automaton.station.peekRequests(0, 1);
     if (first.length) {
       lines.push(previewTrack(first[0], padding, focus));
       lines.push(padStart('...', padding));

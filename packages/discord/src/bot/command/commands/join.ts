@@ -17,7 +17,7 @@ const declaration: SubCommandLikeOption = {
   ]
 }
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ dj, client }) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ station, client }) => async (interaction) => {
   permissionGuard(interaction.memberPermissions, [
     Permissions.FLAGS.MANAGE_CHANNELS,
     Permissions.FLAGS.MANAGE_GUILD
@@ -38,7 +38,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ d
   await reply(interaction, `Joining ${channelToJoin}`);
 
   try {
-    await dj.join(channelToJoin);
+    await station.join(channelToJoin);
 
     reply(interaction, {
       content: null,
