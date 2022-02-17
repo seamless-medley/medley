@@ -182,6 +182,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       gain,
     });
 
+    // TODO: Use medley.requestAudioCallback with our own encoding pipeline
+
     // Create discord voice AudioResource
     const audioResource = createAudioResource(audioRequest.stream, { inputType: StreamType.Raw });
     const { encoder } = audioResource;
@@ -190,8 +192,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       encoder.setFEC(true);
       encoder.setPLP(0);
     }
-
-    // TODO: Implement our own AudioPlayer
 
     // Create discord voice AudioPlayer
     const audioPlayer = createAudioPlayer({
