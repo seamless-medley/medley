@@ -2,12 +2,10 @@ import {
   AudioPlayer,
   AudioResource,
   createAudioPlayer,
-  createAudioResource,
   DiscordGatewayAdapterCreator,
   entersState,
   joinVoiceChannel,
   NoSubscriberBehavior,
-  StreamType,
   VoiceConnection,
   VoiceConnectionStatus
 } from "@discordjs/voice";
@@ -36,6 +34,7 @@ import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
 import _, { flow, shuffle, castArray, difference, intersection } from "lodash";
 import MiniSearch, { Query, SearchResult } from 'minisearch';
+import { createExciter } from "./exciter";
 
 export enum PlayState {
   Idle = 'idle',
@@ -171,7 +170,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
     const gain = this.initialGain;
 
-    // Request audio stream
+    // Request audio stream from Medley engine
     const audioRequest = await this.medley.requestAudioStream({
       bufferSize: 48000 * 0.5,
       buffering: 480 * 4, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
@@ -182,17 +181,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       gain,
     });
 
-    // TODO: Use medley.requestAudioCallback with our own encoding pipeline
-
-    // Create discord voice AudioResource
-    const audioResource = createAudioResource(audioRequest.stream, { inputType: StreamType.Raw });
-    const { encoder } = audioResource;
-    if (encoder) {
-      encoder.setBitrate(128_000);
-      encoder.setFEC(true);
-      encoder.setPLP(0);
-    }
-
     // Create discord voice AudioPlayer
     const audioPlayer = createAudioPlayer({
       behaviors: {
@@ -201,11 +189,13 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     });
 
-    audioPlayer.play(audioResource);
+    const exciter = createExciter(audioRequest);
+
+    audioPlayer.play(exciter);
 
     this.states.set(guildId, {
       audioRequest,
-      audioResource,
+      audioResource: exciter,
       audioPlayer,
       gain
     });
