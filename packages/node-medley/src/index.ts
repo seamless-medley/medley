@@ -1,7 +1,7 @@
 import { inherits } from 'util';
 import { EventEmitter } from 'events';
 import { Readable } from 'stream';
-import type { RequestAudioCallbackOptions, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult } from './index.d';
+import type { AudioFormat, RequestAudioCallbackOptions, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult } from './index.d';
 
 const medley = require('node-gyp-build')(process.env.MEDLEY_DEMO ? process.cwd() : __dirname);
 
@@ -10,13 +10,29 @@ inherits(medley.Medley, EventEmitter);
 export const Medley = medley.Medley;
 export const Queue = medley.Queue;
 
+const formatToBytesPerSample = (format: AudioFormat) => {
+  switch (format) {
+    case 'FloatBE':
+    case 'FloatLE':
+      return 4;
+
+    case 'Int16BE':
+    case 'Int16LE':
+      return 2;
+
+    default:
+      return 0;
+  }
+}
+
 Medley.prototype.requestAudioStream = async function(options: RequestAudioOptions = { format: 'FloatLE' }): Promise<RequestAudioStreamResult> {
   const result = this['*$reqAudio'](options) as RequestAudioResult;
   const streamId = result.id;
 
   const buffers: Buffer[] = [];
 
-  const totalSamples = () => buffers.reduce((a, b) => a + b.length, 0) / 4 / 2;
+  const bytesPerSample = formatToBytesPerSample(options.format);
+  const totalSamples = () => buffers.reduce((a, b) => a + b.length, 0) / bytesPerSample / 2;
 
   const consume = async (size: number) => {
     return await this['*$reqAudio$consume'](streamId, options.buffering || size) as Buffer;
@@ -32,7 +48,7 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
   });
 
   if (options.preFill) {
-    const consumingSize = (options.buffering || (options.sampleRate || 44100) * 0.01) * 4 * 2;
+    const consumingSize = (options.buffering || (options.sampleRate || 44100) * 0.01) * bytesPerSample * 2;
     while (totalSamples() < options.preFill) {
       buffers.push(await consume(consumingSize));
     }
@@ -55,9 +71,11 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
 Medley.prototype.requestAudioCallback = function(options: RequestAudioCallbackOptions): RequestAudioResult {
   const result = this['*$reqAudio'](options) as RequestAudioResult;
   const streamId = result.id;
+  const bytesPerSample = formatToBytesPerSample(options.format);
 
   const doConsume = async () => {
-    const buffer = await this['*$reqAudio$consume'](streamId, options.buffering || (result.sampleRate * 0.01)) as Buffer;
+    const consumingSize = (options.buffering || (options.sampleRate || 44100) * 0.01) * bytesPerSample * 2;
+    const buffer = await this['*$reqAudio$consume'](streamId, consumingSize) as Buffer;
     await options.callback(buffer);
     doConsume();
   }
