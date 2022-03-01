@@ -85,7 +85,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private boombox: BoomBox<User['id']>;
 
-  private collections: MusicCollections;
+  readonly collections: MusicCollections;
   private sequences: SequenceConfig[] = [];
 
   readonly initialGain: number;
@@ -275,6 +275,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     const removedPaths = difference(oldPaths, newPaths);
 
     for (const path of removedPaths) {
+      this.sweepers.get(path)?.unwatchAll();
       this.sweepers.delete(path);
     }
   }
