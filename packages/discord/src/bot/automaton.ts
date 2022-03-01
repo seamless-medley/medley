@@ -56,15 +56,22 @@ type GuildState = {
 export type JoinResult = 'no_station' | 'not_joined' | 'joined';
 
 export class MedleyAutomaton {
+  botToken: string;
+  clientId: string;
+
+  readonly baseCommand: string;
+
   readonly client: Client;
 
   private _guildStates: Map<Guild['id'], GuildState> = new Map();
 
   constructor(
     private stations: IReadonlyCollection<Station>,
-    private options: MedleyAutomatonOptions
+    options: MedleyAutomatonOptions
   ) {
-    this.options = options;
+    this.botToken = options.botToken;
+    this.clientId = options.clientId;
+    this.baseCommand = options.baseCommand || 'medley';
 
     this.client = new Client({
       intents: [
@@ -93,7 +100,7 @@ export class MedleyAutomaton {
   }
 
   login() {
-    this.client.login(this.options.botToken);
+    this.client.login(this.botToken);
   }
 
   private ensureGuildState(guildId: Guild['id']) {
@@ -228,15 +235,19 @@ export class MedleyAutomaton {
 
     const state = this.ensureGuildState(guildId);
 
-    let { stationLink } = state;
+    let { stationLink, selectedStation } = state;
 
+    // Auto-tuning
     if (!stationLink && this.stations.size === 1) {
-      const mainStation = this.stations.first();
+      if (!selectedStation) {
+        selectedStation = this.stations.first();
 
-      if (mainStation) {
-        this.setGuildStation(guildId, mainStation);
-        stationLink = await this.internal_tune(guildId);
+        if (selectedStation) {
+          this.setGuildStation(guildId, selectedStation);
+        }
       }
+
+      stationLink = await this.internal_tune(guildId);
     }
 
     if (!stationLink) {
@@ -636,11 +647,7 @@ export class MedleyAutomaton {
   }
 
   async registerCommands(guildId: string) {
-    return MedleyAutomaton.registerCommands(this.baseCommand || 'medley', this.options.botToken, this.options.clientId, guildId);
-  }
-
-  get baseCommand() {
-    return this.options.baseCommand || 'medley';
+    return MedleyAutomaton.registerCommands(this.baseCommand || 'medley', this.botToken, this.clientId, guildId);
   }
 }
 
