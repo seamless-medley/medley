@@ -1,7 +1,7 @@
-import { TrackCollection } from "@seamless-medley/core";
+import { decibelsToGain, TrackCollection } from "@seamless-medley/core";
 import _ from "lodash";
 import { MedleyAutomaton } from "./automaton";
-import { SequenceConfig, Station } from "./station";
+import { SequenceConfig, Station, SweeperConfig } from "./station";
 import { Collection } from "./utils/collection";
 
 process.on('uncaughtException', (e) => {
@@ -16,6 +16,7 @@ const storedConfigs = {
   stations: [
     {
       id: 'default',
+      initialGain: decibelsToGain(-15),
       intros: [
         'D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3',
       ],
@@ -55,6 +56,31 @@ const storedConfigs = {
         { crateId: 'guid9', collections: [ { id: 'lovesong' }], limit: [2] },
         { crateId: 'guid10', collections: [ { id: 'chill' }], limit: [2, 4] }
       ] as SequenceConfig[],
+
+      sweeperRules: [
+        { // Upbeat
+          to: ['upbeat', 'bright'],
+          path: 'D:\\vittee\\Desktop\\test-transition\\drops\\up'
+        },
+        { // Easy mood
+          to: ['lovesong', 'bright', 'chill'],
+          path: 'D:\\vittee\\Desktop\\test-transition\\drops\\easy'
+        },
+        { // Sad mood
+          to: ['lonely', 'brokenhearted', 'hurt'],
+          path: 'D:\\vittee\\Desktop\\test-transition\\drops\\blue'
+        },
+        { // Fresh
+          to: ['new-released'],
+          path: 'D:\\vittee\\Desktop\\test-transition\\drops\\fresh'
+        }
+      ] as SweeperConfig[],
+
+      requestSweepers: [
+        'D:\\vittee\\Desktop\\test-transition\\drops\\your\\Music Radio Creative - Playing All Your Requests.mp3',
+        'D:\\vittee\\Desktop\\test-transition\\drops\\your\\Music Radio Creative - Playing Your Favourite Artists.mp3',
+        'D:\\vittee\\Desktop\\test-transition\\drops\\your\\Music Radio Creative - Simply Made for You.mp3'
+      ]
     }
   ],
   automatons: [
