@@ -5,6 +5,7 @@ import { capitalize, isEmpty, get } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from 'path';
 import splashy from 'splashy';
+import { MusicCollectionDescriptor } from "./station/music_collections";
 
 export enum TrackMessageStatus {
   Playing,
@@ -60,7 +61,7 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
     }
 
     if (coverAndLyrics) {
-      const { cover, coverMimeType, lyrics } = coverAndLyrics;
+      const { cover, coverMimeType } = coverAndLyrics;
       if (cover.length) {
         const { color } = colorableDominant(await splashy(cover).catch(() => []));
 
@@ -77,8 +78,11 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
     embed.setDescription(parsePath(track.path).name);
   }
 
-  if (track.collection) {
-    embed.addField('Collection', track.collection.id);
+  if (track.collection.metadata) {
+    const { description } = track.collection.metadata as MusicCollectionDescriptor;
+    if (description) {
+      embed.addField('Collection', description);
+    }
   }
 
   if (requestedBy?.length) {
