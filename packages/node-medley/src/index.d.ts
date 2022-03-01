@@ -228,6 +228,8 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
 
   updateAudioStream(id: RequestAudioResult['id'], options: Partial<Pick<RequestAudioOptions, 'buffering' | 'gain'>>): boolean;
 
+  deleteAudioStream(id: number): void;
+
   static getMetadata(path: string): Metadata;
   static getCoverAndLyrics(path: string): CoverAndLyrics;
 }

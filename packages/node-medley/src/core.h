@@ -107,6 +107,8 @@ public:
 
     Napi::Value updateAudioStream(const CallbackInfo& info);
 
+    Napi::Value reqAudioDispose(const CallbackInfo& info);
+
     static Napi::Value static_getMetadata(const Napi::CallbackInfo& info);
 
     static Napi::Value static_getCoverAndLyrics(const Napi::CallbackInfo& info);

@@ -17,6 +17,7 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::requestAudioStream>("*$reqAudio"),
         InstanceMethod<&Medley::reqAudioConsume>("*$reqAudio$consume"),
         InstanceMethod<&Medley::updateAudioStream>("updateAudioStream"),
+        InstanceMethod<&Medley::reqAudioDispose>("*$reqAudio$dispose"),
         //
         InstanceAccessor<&Medley::level>("level"),
         InstanceAccessor<&Medley::reduction>("reduction"),
@@ -693,6 +694,20 @@ Napi::Value Medley::updateAudioStream(const CallbackInfo& info) {
     }
 
     return Boolean::New(env, true);
+}
+
+Napi::Value Medley::reqAudioDispose(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    auto streamId = static_cast<uint32_t>(info[0].As<Number>().Int32Value());
+
+    auto it = audioRequests.find(streamId);
+    if (it != audioRequests.end()) {
+        audioRequests.erase(it);
+        return Boolean::From(env, true);
+    }
+
+    return Boolean::From(env, false);
 }
 
 Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {

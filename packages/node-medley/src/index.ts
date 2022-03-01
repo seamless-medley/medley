@@ -25,6 +25,8 @@ const formatToBytesPerSample = (format: AudioFormat) => {
   }
 }
 
+const audioStreamResults = new Map<number, RequestAudioStreamResult>();
+
 Medley.prototype.requestAudioStream = async function(options: RequestAudioOptions = { format: 'FloatLE' }): Promise<RequestAudioStreamResult> {
   const result = this['*$reqAudio'](options) as RequestAudioResult;
   const streamId = result.id;
@@ -62,10 +64,26 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
     stream.emit('finished');
   });
 
-  return {
+  const streamResult: RequestAudioStreamResult = {
     stream,
     ...result
-  };
+  }
+
+  audioStreamResults.set(streamId, streamResult);
+
+  return streamResult;
+}
+
+Medley.prototype.deleteAudioStream = function(id: number) {
+  const result = audioStreamResults.get(id);
+  if (!result) {
+    return;
+  }
+
+  this['*$reqAudio$dispose'](id);
+
+  result.stream.destroy();
+  audioStreamResults.delete(id);
 }
 
 Medley.prototype.requestAudioCallback = function(options: RequestAudioCallbackOptions): RequestAudioResult {
