@@ -409,7 +409,7 @@ function getArtists(metadata: BoomBoxMetadata): string[] {
     return [];
   }
 
-  return uniq(metadata.tags.artist.split(/[/;]/)).map(trim);
+  return uniq(metadata.tags.artist.split(/[/;,]/)).map(trim);
 }
 
 export const mapTrackMetadata = async (track: BoomBoxTrack): Promise<BoomBoxTrack> => ({
