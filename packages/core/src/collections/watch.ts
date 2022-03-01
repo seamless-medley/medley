@@ -1,14 +1,15 @@
 import chokidar from "chokidar";
 import fg from 'fast-glob';
-import { debounce, reject, shuffle, without } from "lodash";
+import mm from 'minimatch';
+import { debounce, shuffle } from "lodash";
 import normalizePath from "normalize-path";
 import { Track } from "../track";
 import { TrackCollection, TrackCollectionOptions } from "./base";
 
 // A track collection capable of watching for changes in file system directory
-export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<T> {
-  static initWithWatch<T extends Track<any>>(id: string, paths: string, options: TrackCollectionOptions<T> = {}): WatchTrackCollection<T> {
-    const inst = new WatchTrackCollection<T>(id, options);
+export class WatchTrackCollection<T extends Track<any>, M = never> extends TrackCollection<T, M> {
+  static initWithWatch<T extends Track<any>, M = never>(id: string, paths: string, options: TrackCollectionOptions<T> = {}): WatchTrackCollection<T, M> {
+    const inst = new WatchTrackCollection<T, M>(id, options);
     inst.watch(paths);
     return inst;
   }
@@ -24,10 +25,10 @@ export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<
 
   }
 
-  private watchingPaths: string[] = [];
+  private watchingPatterns = new Set<string>();
 
   private newPaths: string[] = [];
-  private removedPaths: string[] = [];
+  private removedIds = new Set<string>();
 
   private fetchNewPaths() {
     const result = this.newPaths;
@@ -35,15 +36,11 @@ export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<
     return result;
   }
 
-  private storeNewTracks = debounce(() => {
-    const newTracks = this.fetchNewPaths();
-    this.add(newTracks);
-  }, 2000);
+  private storeNewTracks = debounce(() => this.add(this.fetchNewPaths()), 2000);
 
   private handleTracksRemoval = debounce(() => {
-    this.tracks = reject(this.tracks, t => this.removedPaths.includes(t.path));
-    this.removedPaths = [];
-    this.emit('remove', this.removedPaths);
+    this.removeBy(({ id }) => this.removedIds.has(id));
+    this.removedIds.clear();
   }, 2000);
 
   protected watcher = chokidar.watch([])
@@ -56,7 +53,7 @@ export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<
       this.storeNewTracks();
     })
     .on('unlink', (path) => {
-      this.removedPaths.push(path);
+      this.removedIds.add(this.computePathId(path));
       this.handleTracksRemoval();
     });
 
@@ -65,10 +62,10 @@ export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<
       .then(files => this.add(files))
       .then(() => {
         this.watcher.add(pattern);
-        this.watchingPaths.push(pattern);
+        this.watchingPatterns.add(pattern);
       })
       .then(() => {
-        this.emit('ready')
+        this.becomeReady();
       });
 
     return this;
@@ -76,10 +73,17 @@ export class WatchTrackCollection<T extends Track<any>> extends TrackCollection<
 
   unwatch(pattern: string) {
     this.watcher.unwatch(pattern);
-    this.watchingPaths = without(this.watchingPaths, pattern);
+    this.watchingPatterns.delete(pattern);
+    this.removeBy(({ path }) => mm(path, pattern));
+  }
+
+  unwatchAll() {
+    for (const pattern of this.watchingPatterns) {
+      this.unwatch(pattern);
+    }
   }
 
   get watched() {
-    return this.watchingPaths;
+    return Array.from(this.watchingPatterns);
   }
 }
