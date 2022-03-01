@@ -33,7 +33,12 @@ const sequences: [string, number][] = [
 
 const queue = new Queue<BoomBoxTrack>(['D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3']);
 const medley = new Medley(queue);
-const crates = sequences.map(([id, max], index) => new Crate(`${index}:${id}-${max}`, collections.get(id)!, max));
+const crates = sequences.map(([id, max], index) => new Crate({
+  id: `${index}:${id}-${max}`,
+  sources: collections.get(id)!,
+  limit: max
+}));
+
 const boombox = new BoomBox({
   medley,
   queue,
