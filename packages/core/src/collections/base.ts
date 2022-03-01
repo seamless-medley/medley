@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import EventEmitter from "events";
-import { castArray, chain, chunk, find, findIndex, partition, reject, sample, shuffle, sortBy, uniqBy } from "lodash";
-import normalize from 'normalize-path';
+import { castArray, chain, find, findIndex, partition, reject, sample, shuffle, sortBy, uniqBy } from "lodash";
+import normalizePath from 'normalize-path';
 import { Track } from "../track";
 
 export type TrackCollectionOptions<T extends Track<any>> = {
@@ -14,11 +14,15 @@ export type TrackPeek<T extends Track<any>> = {
   track: T;
 }
 
-export class TrackCollection<T extends Track<any>> extends EventEmitter {
+export class TrackCollection<T extends Track<any>, M = never> extends EventEmitter {
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];
   protected trackIdMap: Map<string, T> = new Map();
+
+  metadata?: M;
+
+  tracksMapper: TrackCollectionOptions<T>['tracksMapper'];
 
   constructor(readonly id: string, protected options: TrackCollectionOptions<T> = {}) {
     super();
@@ -30,15 +34,19 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
   }
 
   protected becomeReady() {
-    this._ready = true;
-    this.emit('ready');
+    if (!this._ready) {
+      this._ready = true;
+      this.emit('ready');
+    }
   }
 
-  protected async createTrack(path: string): Promise<T> {
-    const id = createHash('md5').update(normalize(path)).digest('base64');
+  protected computePathId(path: string): string {
+    return createHash('md5').update(normalizePath(path)).digest('base64');
+  }
 
+  protected createTrack(path: string): T {
     return {
-      id,
+      id: this.computePathId(path),
       path,
       collection: this
     } as unknown as T;
@@ -69,7 +77,7 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
     return -1;
   }
 
-  async add(paths: string | string[]): Promise<void> {
+  async add(paths: string | string[]): Promise<T[]> {
     const immediateTracks = await Promise.all(chain(paths)
       .castArray()
       .filter(p => /\.(mp3|flac|wav|ogg|aiff)$/i.test(p))
@@ -77,7 +85,7 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
       .value()
     );
 
-    await this.addTracks(immediateTracks);
+    return this.addTracks(immediateTracks);
   }
 
   private async addTracks(tracks: T[]): Promise<T[]> {
@@ -93,29 +101,35 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
 
       this.tracks = uniqBy(this.tracks.concat(newTracks), 'id');
 
+      this.emit('trackAdd', newTracks);
+
       return newTracks;
     }
 
     return [];
   }
 
-  removeBy(predicate: (track: T) => boolean) {
-    const [removed, rejected] = partition(this.tracks, predicate);
-    this.tracks = rejected;
+  removeBy(predicate: (track: T) => boolean): T[] {
+    const [removed, remaining] = partition(this.tracks, predicate);
+    this.tracks = remaining;
 
     for (const { id } of removed) {
       this.trackIdMap.delete(id);
     }
+
+    this.emit('trackRemove', removed);
+
+    return removed;
   }
 
-  remove(item: string | string[]) {
-    const toRemove = castArray(item);
-    this.removeBy(track => toRemove.includes(track.path));
+  remove(item: string | string[]): T[] {
+    const toRemove = castArray(item).map(path => this.computePathId(path));
+    return this.removeBy(track => toRemove.includes(track.id));
   }
 
-  removeTrack(track: T |T[]) {
+  removeTrack(track: T |T[]): T[] {
     const toRemove = castArray(track).map(track => track.path);
-    this.remove(toRemove);
+    return this.remove(toRemove);
   }
 
   async shuffle() {
@@ -168,6 +182,6 @@ export class TrackCollection<T extends Track<any>> extends EventEmitter {
     return this.tracks.slice(left, right + 1).map((track, i) => ({
       index: left + i,
       track
-    }))
+    }));
   }
 }
