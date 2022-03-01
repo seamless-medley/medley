@@ -1,26 +1,13 @@
-import {
-  AudioPlayer,
-  AudioResource,
-  createAudioPlayer,
-  DiscordGatewayAdapterCreator,
-  entersState,
-  joinVoiceChannel,
-  NoSubscriberBehavior,
-  VoiceConnection,
-  VoiceConnectionStatus
-} from "@discordjs/voice";
-
 import { BoomBox,
+  BoomBoxCrate,
   BoomBoxEvents,
   BoomBoxTrack,
   BoomBoxTrackPlay,
   Crate,
+  CrateSourceWithWeight,
   decibelsToGain,
-  mapTracksMetadataConcurrently,
-  mapTracksMetadataSequentially,
   Medley,
   Queue,
-  RequestAudioStreamResult,
   RequestTrack,
   SweeperInsertionRule,
   TrackCollection,
@@ -29,12 +16,12 @@ import { BoomBox,
   WatchTrackCollection
 } from "@seamless-medley/core";
 
-import { BaseGuildVoiceChannel, Guild, User } from "discord.js";
+import { User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
-import _, { flow, shuffle, castArray, difference, intersection } from "lodash";
-import MiniSearch, { Query, SearchResult } from 'minisearch';
+import _, { difference, isArray } from "lodash";
 import { createExciter } from "./exciter";
+import { MusicCollectionDescriptor, MusicCollections } from "./music_collections";
 
 export enum PlayState {
   Idle = 'idle',
@@ -42,14 +29,40 @@ export enum PlayState {
   Paused = 'paused'
 }
 
+export type SequenceLimit = number | [max: number] | [min: number, max: number];
+
+function sequenceLimit(limit: SequenceLimit): number | (() => number) {
+  if (isArray(limit)) {
+    return limit.length === 1
+      ? () => _.random(1, limit[0])
+      : () => _.random(limit[0], limit[1])
+
+  }
+
+  return limit;
+}
+
+export type SequenceConfig = {
+  crateId: string;
+  collections: { id: string; weight?: number }[];
+  limit: SequenceLimit;
+};
+
 export type StationOptions = {
+  id: string;
   /**
    * Initial audio gain, default to -15dBFS (Appx 0.178)
    * @default -15dBFS
    */
   initialGain?: number;
 
+  musicCollections: MusicCollectionDescriptor[];
+
+  sequences: SequenceConfig[];
+
   intros?: TrackCollection<BoomBoxTrack>;
+
+  sweeperRules?: SweeperRule[];
 
   requestSweepers?: TrackCollection<BoomBoxTrack>;
 }
@@ -60,42 +73,26 @@ export type SweeperConfig = {
   path: string;
 }
 
+export type SweeperRule = SweeperConfig;
 export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
   requestTrackAdded: (track: TrackPeek<RequestTrack<User['id']>>) => void;
 }
 
-type StationState = {
-  audioRequest: RequestAudioStreamResult;
-  audioResource: AudioResource;
-  audioPlayer: AudioPlayer;
-  voiceConnection?: VoiceConnection;
-  gain: number;
-}
-
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
+  readonly id: string;
   readonly queue: Queue<BoomBoxTrack>;
   readonly medley: Medley<BoomBoxTrack>;
-  private states: Map<Guild['id'], StationState> = new Map();
 
-  private collections: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
   private boombox: BoomBox<User['id']>;
 
-  private initialGain: number;
+  private collections: MusicCollections;
+  private sequences: SequenceConfig[] = [];
+
+  readonly initialGain: number;
   private intros?: TrackCollection<BoomBoxTrack>;
   private requestSweepers?: TrackCollection<BoomBoxTrack>;
 
-  private miniSearch = new MiniSearch<BoomBoxTrack>({
-    fields: ['artist', 'title'],
-    extractField: (track, field) => {
-      if (field === 'id') {
-        return track.id;
-      }
-
-      return _.get(track.metadata?.tags, field);
-    }
-  });
-
-  constructor(options: StationOptions = {}) {
+  constructor(options: StationOptions) {
     super();
 
     this.queue = new Queue();
@@ -119,10 +116,16 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     boombox.on('trackFinished', this.handleTrackFinished);
     boombox.on('requestTrackFetched', this.handleRequestTrack);
 
+    this.id = options.id;
+
     this.boombox = boombox;
+    this.collections = new MusicCollections(...(options.musicCollections || []));
     this.initialGain = options.initialGain || decibelsToGain(-15);
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
+
+    this.updateSequence(options.sequences);
+    this.updateSweeperRules(options.sweeperRules || []);
   }
 
   private handleTrackQueued = (track: BoomBoxTrack) => {
@@ -163,61 +166,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }
   }
 
-  async prepareFor(guildId: Guild['id']) {
-    if (this.states.has(guildId)) {
-      return;
-    }
-
-    const gain = this.initialGain;
-
-    // Request audio stream from Medley engine
-    const audioRequest = await this.medley.requestAudioStream({
-      bufferSize: 48000 * 0.5,
-      buffering: 480 * 4, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
-      preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
-      // discord voice only accept 48KHz sample rate, 16 bit per sample
-      sampleRate: 48000,
-      format: 'Int16LE',
-      gain,
-    });
-
-    // Create discord voice AudioPlayer
-    const audioPlayer = createAudioPlayer({
-      behaviors: {
-        noSubscriber: NoSubscriberBehavior.Play,
-        maxMissedFrames: 1000
-      }
-    });
-
-    const exciter = createExciter(audioRequest);
-
-    audioPlayer.play(exciter);
-
-    this.states.set(guildId, {
-      audioRequest,
-      audioResource: exciter,
-      audioPlayer,
-      gain
-    });
-  }
-
-  getGain(guildId: Guild['id']) {
-    const state = this.states.get(guildId);
-    return state ? state.gain : 0;
-  }
-
-  setGain(guildId: Guild['id'], val: number): boolean {
-    const state = this.states.get(guildId);
-    if (!state) {
-      return false;
-    }
-
-    state.gain = val;
-
-    this.medley.updateAudioStream(state.audioRequest.id, { gain: val });
-    return true;
-  }
-
   get playing() {
     return this.medley.playing;
   }
@@ -238,34 +186,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   skip() {
     this.medley.fadeOut();
-  }
-
-  async join(channel: BaseGuildVoiceChannel) {
-    const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
-
-    await this.prepareFor(guildId);
-    const state = this.states.get(guildId)!;
-
-    let voiceConnection: VoiceConnection | undefined = joinVoiceChannel({
-      channelId,
-      guildId,
-      adapterCreator: voiceAdapterCreator as DiscordGatewayAdapterCreator
-    });
-
-    try {
-      await entersState(voiceConnection, VoiceConnectionStatus.Ready, 30e3);
-      voiceConnection.subscribe(state.audioPlayer);
-    }
-    catch (e) {
-      voiceConnection?.destroy();
-      voiceConnection = undefined;
-
-      throw e;
-    }
-
-    if (voiceConnection) {
-      state.voiceConnection = voiceConnection;
-    }
   }
 
   start() {
@@ -292,60 +212,51 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }
   }
 
-  private indexNewTracks = async (awaitable: Promise<BoomBoxTrack[]>) => {
-    const tracks = await awaitable;
-    this.miniSearch.addAllAsync(tracks);
-    return tracks;
-  }
-
-  private tracksMapper = flow(shuffle, mapTracksMetadataConcurrently, this.indexNewTracks);
-
-  // TODO: Manipulating collections directly might be a good option
-  updateCollections(newCollections: Record<string, string>) {
-    const existingIds = [...this.collections.keys()];
-    const newIds = _.keys(newCollections);
-
-    const tobeRemovedIds = difference(existingIds, newIds);
-    const tobeAdded = difference(newIds, existingIds);
-    const remainingIds = intersection(existingIds, newIds);
-
-    const invalidatedIds = remainingIds.filter((id) => {
-      const watched = _(this.collections.get(id)?.watched || []).sort().uniq().value();
-      const tobeWatched = castArray(newCollections[id]);
-
-      return !_.isEqual(tobeWatched, watched);
+  async createExciter() {
+    const audioRequest = await this.medley.requestAudioStream({
+      bufferSize: 48000 * 0.5,
+      buffering: 480 * 4, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
+      preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
+      // discord voice only accept 48KHz sample rate, 16 bit per sample
+      sampleRate: 48000,
+      format: 'Int16LE',
+      gain: this.initialGain
     });
 
-    for (const id of tobeRemovedIds) {
-      this.collections.delete(id);
-    }
-
-
-    const todo =_.uniq(tobeAdded.concat(invalidatedIds));
-    for (const id of todo) {
-      const collection = WatchTrackCollection.initWithWatch<BoomBoxTrack>(
-        id,
-        newCollections[id],
-        { tracksMapper: this.tracksMapper }
-      );
-
-      collection.once('ready', () => collection.shuffle());
-
-      this.collections.set(id, collection);
-    }
-
-    this.boombox.crates = _.reject(this.boombox.crates, crate => tobeRemovedIds.includes(crate.source.id));
+    return createExciter(audioRequest);
   }
 
-  updateSequence(sequences: [string, number][]) {
-    this.boombox.crates = sequences
-      .filter(([collectionId]) => this.collections.has(collectionId))
-      .map(([collectionId, max], index) => new Crate(`${index}:${collectionId}-${max}`, this.collections.get(collectionId)!, max));
+  updateCollections(newCollections: MusicCollectionDescriptor[]) {
+    this.collections.update(newCollections);
+    this.createCrates();
+  }
+
+  updateSequence(sequences: SequenceConfig[]) {
+    this.sequences = [...sequences];
+    this.createCrates();
+  }
+
+  private createCrates() {
+    this.boombox.crates = this.sequences.map(
+      ({ crateId, collections, limit }, index) => {
+        const validCollections = collections.filter(col => this.collections.has(col.id));
+
+        if (validCollections.length === 0) {
+          return;
+        }
+
+        return new Crate({
+          id: crateId,
+          sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.collections.get(id)!, weight })),
+          limit: sequenceLimit(limit)
+        });
+      })
+      .filter((c): c is BoomBoxCrate => c !== undefined);
   }
 
   private sweepers: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
 
-  updateSweeperRules(...configs: SweeperConfig[]) {
+  updateSweeperRules(configs: SweeperConfig[]) {
     const oldPaths = this.boombox.sweeperInsertionRules.map(r => r.collection.id);
 
     this.boombox.sweeperInsertionRules = configs.map<SweeperInsertionRule>(({ from, to, path }) => {
@@ -369,85 +280,15 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 
   findTrackById(id: BoomBoxTrack['id']) {
-    for (const collection of this.collections.values()) {
-      const track = collection.fromId(id);
-      if (track) {
-        return track;
-      }
-    }
-  }
-
-  autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string) {
-    const nt = narrowTerm?.toLowerCase();
-
-    if (!q && field === 'title' && narrowBy === 'artist' && narrowTerm) {
-      // Start showing title suggestion for a known artist
-      const tracks = this.search({
-        artist: narrowTerm,
-        title: null,
-        query: null
-      });
-
-      return _(tracks).map(t => t.metadata?.tags?.title).filter(_.isString).uniq().value();
-    }
-
-    const narrow = (narrowBy && nt)
-      ? (result: SearchResult): boolean => {
-        const track = this.findTrackById(result.id);
-        const narrowing = (track?.metadata?.tags as any || {})[narrowBy] as string | undefined;
-        const match = narrowing?.toLowerCase().includes(nt) || false;
-        return match;
-      }
-      : undefined;
-
-    return this.miniSearch.autoSuggest(
-      q,
-      {
-        fields: field ? castArray(field) : undefined,
-        prefix: true,
-        fuzzy: 0.5,
-        filter: narrow
-      }
-    ).map(s => s.suggestion);
+    return this.collections.findTrackById(id);
   }
 
   search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): BoomBoxTrack[] {
-    const { artist, title, query } = q;
+    return this.collections.search(q, limit);
+  }
 
-    const queries: Query[] = [];
-
-    if (artist || title) {
-      const fields: string[] = [];
-      const values: string[] = [];
-
-      if (artist) {
-        fields.push('artist');
-        values.push(artist);
-      }
-
-      if (title) {
-        fields.push('title');
-        values.push(title);
-      }
-
-      queries.push({
-        fields,
-        queries: values,
-        combineWith: 'AND'
-      })
-    }
-
-    if (query) {
-      queries.push(query)
-    }
-
-    const chain = _(this.miniSearch.search({ queries, combineWith: 'OR' }, { prefix: true, fuzzy: 0.2 }))
-      .sortBy(s => -s.score)
-      .map(t => this.findTrackById(t.id))
-      .filter((t): t is BoomBoxTrack => t !== undefined)
-      .uniqBy(t => t.id)
-
-    return (limit ? chain.take(limit) : chain).value();
+  autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string) {
+    return this.collections.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
   async request(trackId: BoomBoxTrack['id'], requestedBy: User['id']) {
