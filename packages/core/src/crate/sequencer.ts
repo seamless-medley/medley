@@ -43,7 +43,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
   }
 
   private isCrate(o: any): o is Crate<T> {
-    return isObjectLike(o) && (o.source instanceof TrackCollection);
+    return isObjectLike(o) && ((o as Crate<any>).sources[0] instanceof TrackCollection);
   }
 
   private isMetadata(o: any): o is M {
@@ -67,8 +67,8 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
           this.emit('change', crate as unknown as Crate<Track<any>>);
         }
 
-        scanned += crate.source.length;
-        for (let i = 0; i < crate.source.length; i++) {
+        scanned += crate.sources.length;
+        for (let i = 0; i < crate.sources.length; i++) {
           // Latching is active
           if (this.latchFor > 0) {
             this.latchCount++;
@@ -95,6 +95,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
             const { shouldPlay, metadata } = trackVerifier ? await trackVerifier(track.path) : { shouldPlay: true, metadata: undefined };
 
             if (shouldPlay) {
+              console.log(`[${this._playCounter}] From crate ${crate.id} => ${track.path}`);
               this._playCounter++;
 
               track.crate = crate as unknown as Crate<Track<M>>;
@@ -167,17 +168,14 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
 
   set crates(newCrates: Crate<T>[]) {
     const oldCurrent = this.current;
-    const saved = oldCurrent ? { id: oldCurrent.source.id, max: oldCurrent.max } : undefined;
+    const savedId = oldCurrent?.id;
 
     this._crates = newCrates;
 
     let newIndex = this.ensureCrateIndex(this._crateIndex);
 
-    if (saved) {
-      let found = this._crates.findIndex(crate => crate.source.id === saved.id && crate.max === saved.max);
-      if (found === -1) {
-        found = this._crates.findIndex(crate => crate.source.id === saved.id);
-      }
+    if (savedId) {
+      let found = this._crates.findIndex(crate => crate.id === savedId);
 
       if (found !== -1) {
         newIndex = found;
