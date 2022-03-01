@@ -1,7 +1,8 @@
-import { BoomBoxTrack, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
+import { TrackCollection } from "@seamless-medley/core";
 import _ from "lodash";
 import { MedleyAutomaton } from "./automaton";
-import { Station } from "./station";
+import { SequenceConfig, Station } from "./station";
+import { Collection } from "./utils/collection";
 
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);
@@ -11,72 +12,113 @@ process.on('unhandledRejection', (e) => {
   console.error('Rejection', e);
 });
 
-const station = new Station({
-  intros: (() => {
-    const collection = new TrackCollection('$_intro');
-    collection.add('D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3');
-    return collection;
-  })(),
+const storedConfigs = {
+  stations: [
+    {
+      id: 'default',
+      intros: [
+        'D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3',
+      ],
+      musicCollections: [
+        { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
+        { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
+        { id: 'chill', description:'Chill', path: 'D:\\vittee\\Google Drive\\musics\\chill' },
+        { id: 'groovy', description:'Groovy', path: 'D:\\vittee\\Google Drive\\musics\\groovy' },
+        { id: 'hurt', description:'Hurt', path: 'D:\\vittee\\Google Drive\\musics\\hurt' },
+        { id: 'lonely', description:'Lonely', path: 'D:\\vittee\\Google Drive\\musics\\lonely' },
+        { id: 'lovesong', description:'Love Song', path: 'D:\\vittee\\Google Drive\\musics\\lovesong' },
+        { id: 'upbeat', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
+        { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released' }
+      ],
+      sequences: [
+        { crateId: 'guid1', collections: [ { id: 'new-released' }], limit: [0, 2] },
+        { crateId: 'guid2', collections: [ { id: 'bright' }], limit: [2] },
+        { crateId: 'guid3', collections: [ { id: 'groovy' }], limit: 1 },
+        { crateId: 'guid4', collections: [ { id: 'chill' }], limit: [2, 3] },
+        { crateId: 'guid5', collections: [ { id: 'lovesong' }], limit: [2, 3] },
+        { crateId: 'guid6',
+          collections: [
+            { id: 'lonely', weight: 1 },
+            { id: 'brokenhearted', weight: 0.5 }
+          ],
+          limit: [2]
+        },
+        { crateId: 'guid7',
+          collections: [
+            { id: 'hurt', weight: 0.3 },
+            { id: 'brokenhearted', weight: 0.6 },
+            { id: 'lonely', weight: 0.1 },
+          ],
+          limit: [3, 5]
+        },
+        { crateId: 'guid8', collections: [ { id: 'lonely' }], limit: 1 },
+        { crateId: 'guid9', collections: [ { id: 'lovesong' }], limit: [2] },
+        { crateId: 'guid10', collections: [ { id: 'chill' }], limit: [2, 4] }
+      ] as SequenceConfig[],
+    }
+  ],
+  automatons: [
+    {
+      botToken: '',
+      clientId: '',
+      tuning: {
+        guilds: {
+          'guild_id1': 'station_id1',
+          'guild_id2': 'station_id2'
+        }
+      }
+    }
+  ]
+};
 
-  requestSweepers: WatchTrackCollection.initWithWatch<BoomBoxTrack>('$_req_sweepers', 'D:\\vittee\\Desktop\\test-transition\\drops\\your')
-});
+////////////////////////////////////////////////////////////////////////////////////
 
-station.updateCollections({
-  'bright': 'D:\\vittee\\Google Drive\\musics\\bright\\**\\*',
-  'brokenhearted': 'D:\\vittee\\Google Drive\\musics\\brokenhearted\\**\\*',
-  'chill': 'D:\\vittee\\Google Drive\\musics\\chill\\**\\*',
-  'groovy': 'D:\\vittee\\Google Drive\\musics\\groovy\\**\\*',
-  'hurt': 'D:\\vittee\\Google Drive\\musics\\hurt\\**\\*',
-  'lonely': 'D:\\vittee\\Google Drive\\musics\\lonely\\**\\*',
-  'lovesong': 'D:\\vittee\\Google Drive\\musics\\lovesong\\**\\*',
-  'upbeat': 'D:\\vittee\\Google Drive\\musics\\upbeat\\**\\*',
-  'new-released': 'D:\\vittee\\Google Drive\\musics\\new-released\\**\\*'
-});
 
-const sequence: [string, number][] = [
-  ['new-released', 1],
-  ['bright', 1],
-  ['groovy', 1],
-  ['chill', 2],
-  ['lovesong', 2],
-  ['lonely', 1],
-  ['brokenhearted', 1],
-  ['hurt', 1],
-  ['brokenhearted', 1],
-  ['lonely', 1],
-  ['lovesong', 2],
-  ['chill', 2],
-  ['new-released', 1],
-  ['bright', 1],
-  ['upbeat', 1],
-  ['groovy', 1],
-  ['chill', 2]
-]
+const stations = new Collection<Station>();
+for (const { id, musicCollections, sequences, intros } of storedConfigs.stations) {
+  const introsCollection = new TrackCollection('$_intro');
+  introsCollection.add(intros);
 
-station.updateSequence(sequence);
+  const station = new Station({
+    id,
+    intros: introsCollection,
+    musicCollections,
+    sequences
+  });
 
-station.updateSweeperRules(
-  { // Upbeat
-    to: ['upbeat', 'bright'],
-    path: 'D:\\vittee\\Desktop\\test-transition\\drops\\up'
-  },
-  { // Easy mood
-    to: ['lovesong', 'bright', 'chill'],
-    path: 'D:\\vittee\\Desktop\\test-transition\\drops\\easy'
-  },
-  { // Sad mood
-    to: ['lonely', 'brokenhearted', 'hurt'],
-    path: 'D:\\vittee\\Desktop\\test-transition\\drops\\blue'
-  },
-  { // Fresh
-    to: ['new-released'],
-    path: 'D:\\vittee\\Desktop\\test-transition\\drops\\fresh'
-  }
-);
+  station.updateSweeperRules([
+    { // Upbeat
+      to: ['upbeat', 'bright'],
+      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\up'
+    },
+    { // Easy mood
+      to: ['lovesong', 'bright', 'chill'],
+      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\easy'
+    },
+    { // Sad mood
+      to: ['lonely', 'brokenhearted', 'hurt'],
+      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\blue'
+    },
+    { // Fresh
+      to: ['new-released'],
+      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\fresh'
+    }
+  ]);
 
-station.setCrateIndex(_.random(0, sequence.length));
+  station.crateIndex = _.random(0, sequences.length);
 
-const automaton = new MedleyAutomaton(station, {
-});
+  stations.add(station);
+}
 
-automaton.login();
+const automatons: MedleyAutomaton[] = [];
+for (const { botToken, clientId } of storedConfigs.automatons) {
+
+  const automaton = new MedleyAutomaton(stations, {
+    botToken,
+    clientId
+  });
+
+  automaton.login();
+
+  automatons.push(automaton);
+}
