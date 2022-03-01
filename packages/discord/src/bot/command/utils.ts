@@ -1,8 +1,9 @@
 import { getTrackBanner, RequestTrack, TrackPeek } from "@seamless-medley/core";
 import { APIMessage } from "discord-api-types";
-import { BaseCommandInteraction, InteractionReplyOptions, Message, MessageComponentInteraction, MessagePayload, PermissionResolvable, Permissions, User } from "discord.js";
+import { BaseCommandInteraction, Interaction, InteractionReplyOptions, Message, MessageComponentInteraction, MessagePayload, PermissionResolvable, Permissions, User } from "discord.js";
 import { castArray, maxBy, padStart } from "lodash";
 import { MedleyAutomaton } from "../automaton";
+import { Station } from "../station";
 import { CommandError } from "./type";
 
 export enum HighlightTextType {
@@ -49,13 +50,42 @@ export function permissionGuard(permissions: Permissions | null, perm: Permissio
   }
 }
 
+export function isReplyable(interaction: Interaction): interaction is ReplyableInteraction {
+  return interaction.isApplicationCommand() || interaction.isMessageComponent();
+}
+
+export function guildIdGuard(interaction: Interaction): string {
+
+  const { guildId } = interaction;
+
+  if (!guildId) {
+    throw new CommandError('Not in a guild');
+  }
+
+  return guildId;
+}
+
+export function guildStationGuard(automaton: MedleyAutomaton, interaction: Interaction): { guildId: string, station: Station } {
+  const guildId = guildIdGuard(interaction);
+  const station = automaton.getTunedStation(guildId);
+
+  if (!station) {
+    throw new CommandError('No station linked');
+  }
+
+  return {
+    guildId,
+    station
+  }
+}
+
 const previewTrack = ({ index, track }: TrackPeek<RequestTrack<User['id']>>, padding: number, focus: number | undefined) => {
   const label = padStart(`${focus === index ? '+ ' : ''}${index + 1}`, padding);
   return `${label}: ${getTrackBanner(track)} [${track.priority || 0}]`;
 };
 
-export async function makeRequestPreview(automaton: MedleyAutomaton, index: number = 0, focus?: number, n: number = 5) {
-  const peeking = automaton.station.peekRequests(index, n);
+export async function makeRequestPreview(station: Station, index: number = 0, focus?: number, n: number = 5) {
+  const peeking = station.peekRequests(index, n);
 
   if (peeking.length <= 0) {
     return;
@@ -66,7 +96,7 @@ export async function makeRequestPreview(automaton: MedleyAutomaton, index: numb
   const lines: string[] = [];
 
   if (peeking[0].index > 1) {
-    const first = automaton.station.peekRequests(0, 1);
+    const first = station.peekRequests(0, 1);
     if (first.length) {
       lines.push(previewTrack(first[0], padding, focus));
       lines.push(padStart('...', padding));

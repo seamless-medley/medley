@@ -1,16 +1,18 @@
 import { BoomBoxTrack } from "@seamless-medley/core";
 import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSelectMenu, MessageSelectOptionData } from "discord.js";
-import _ from "lodash";
+import _, { truncate } from "lodash";
 import { parse as parsePath } from 'path';
 import { InteractionHandlerFactory } from "../../type";
-import { HighlightTextType, makeHighlightedMessage, makeRequestPreview, reply } from "../../utils";
+import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview, reply } from "../../utils";
 import { handleSelectMenu } from "./selectmenu";
 
 export const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
+  const { station } = guildStationGuard(automaton, interaction);
+
   const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f));
 
   if (options.every(_.isNull)) {
-    const preview = await makeRequestPreview(automaton);
+    const preview = await makeRequestPreview(station);
 
     if (preview) {
       interaction.reply(preview.join('\n'))
@@ -25,7 +27,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
 
   const [artist, title, query] = options;
 
-  const results = automaton.station.search({
+  const results = station.search({
     artist,
     title,
     query
@@ -56,8 +58,8 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
   const issuer = interaction.user.id;
 
   const selections = results.map<MessageSelectOptionData & { collection: BoomBoxTrack['collection'] }>(track => ({
-    label: track.metadata?.tags?.title || parsePath(track.path).name,
-    description: track.metadata?.tags?.title ? (track.metadata?.tags?.artist || 'Unknown Artist') : undefined,
+    label: truncate(track.metadata?.tags?.title || parsePath(track.path).name),
+    description: track.metadata?.tags?.title ? truncate(track.metadata?.tags?.artist || 'Unknown Artist') : undefined,
     value: track.id,
     collection: track.collection
   }));

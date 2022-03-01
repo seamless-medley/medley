@@ -1,20 +1,17 @@
 import { BoomBoxTrack, getTrackBanner, lyricsToText, parseLyrics } from "@seamless-medley/core";
 import { ButtonInteraction, Message, MessageAttachment, MessageEmbed } from "discord.js";
-import { first, findLast } from "lodash";
+import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
-import { deny, reply, warn } from "../utils";
+import { deny, guildStationGuard, reply, warn } from "../utils";
 import lyricsSearcher from "lyrics-searcher";
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, trackId: BoomBoxTrack['id']) => {
-  const track = automaton.station.findTrackById(trackId);
+  const { guildId, station } = guildStationGuard(automaton, interaction);
+
+  const track = station.findTrackById(trackId);
+
   if (!track) {
     deny(interaction, 'Invalid track identifier', undefined, true);
-    return;
-  }
-
-  const { guildId } = interaction;
-
-  if (!guildId) {
     return;
   }
 

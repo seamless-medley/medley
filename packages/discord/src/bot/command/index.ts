@@ -8,8 +8,12 @@ import request from "./commands/request";
 import vote from './commands/vote';
 import message from './commands/message';
 
+// TODO: New command "history" for showing recent songs
+// TODO: New command "unrequest" for deleting the requested song
+// TODO: New command "tune" for tuning into (selection) a station
+
 import { Command, CommandError, CommandType, InteractionHandler, SubCommandLikeOption } from "./type";
-import { deny } from "./utils";
+import { deny, isReplyable } from "./utils";
 import { MedleyAutomaton } from "../automaton";
 
 const descriptors = {
@@ -94,12 +98,14 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
     }
     catch (e) {
       if (e instanceof CommandError) {
-        if (interaction.isApplicationCommand() || interaction.isMessageComponent()) {
+        if (isReplyable(interaction)) {
           deny(interaction, `Command Error: ${e.message}`, undefined, true);
         }
-      } else {
-        console.error('Interaction Error', e);
+
+        return;
       }
+
+      console.error('Interaction Error', e);
     }
   }
 }

@@ -3,7 +3,7 @@ import { CommandInteraction, Message, MessageEmbed, MessageReaction, User } from
 import { chain, keyBy, sampleSize, take } from "lodash";
 import * as emojis from "../../emojis";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { makeRequestPreview, warn } from "../utils";
+import { deny, guildIdGuard, guildStationGuard, makeRequestPreview, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -21,12 +21,7 @@ type Nominatee = TrackPeek<RequestTrack<string>> & {
 const guildVoteMessage: Map<string, Message> = new Map();
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
-  const { station } = automaton;
-  const { guildId } = interaction;
-
-  if (!guildId) {
-    return;
-  }
+  const { guildId, station } = guildStationGuard(automaton, interaction);
 
   const exisingVote = guildVoteMessage.get(guildId);
   if (exisingVote) {
@@ -126,7 +121,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       await msg.react(emoji);
     }
 
-    automaton.station.on('requestTrackAdded', handleNewRequest);
+    station.on('requestTrackAdded', handleNewRequest);
 
     const collector = message.createReactionCollector({
       dispose: true,
@@ -142,7 +137,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     collector.on('collect', handleCollect);
     collector.on('remove', handleCollect);
     collector.on('end', async (collected) => {
-      automaton.station.off('requestTrackAdded', handleNewRequest);
+      station.off('requestTrackAdded', handleNewRequest);
       guildVoteMessage.delete(guildId);
 
       const peeks = station.peekRequests(0, nominatees.length);
@@ -172,9 +167,9 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
         }
       }
 
-      automaton.station.sortRequests();
+      station.sortRequests();
 
-      const preview = await makeRequestPreview(automaton, 0, undefined, nominatees.length) || [];
+      const preview = await makeRequestPreview(station, 0, undefined, nominatees.length) || [];
       const contributorMentions = chain(contributors)
         .uniq()
         .without(automaton.client.user!.id)

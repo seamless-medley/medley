@@ -1,15 +1,18 @@
 import { getTrackBanner } from "@seamless-medley/core";
 import { SelectMenuInteraction } from "discord.js";
 import { MedleyAutomaton } from "../../../automaton";
-import { HighlightTextType, makeHighlightedMessage, makeRequestPreview } from "../../utils";
+import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview } from "../../utils";
 
 export const handleSelectMenu = async (automaton: MedleyAutomaton, interaction: SelectMenuInteraction) => {
+  const { station } = guildStationGuard(automaton, interaction);
+
   const { values, member } = interaction;
 
   if (values.length && member) {
-    const trackId = values[0];
+    const [trackId] = values;
+
     if (trackId) {
-      const ok = await automaton.station.request(trackId, member.user.id);
+      const ok = await station.request(trackId, member.user.id);
 
       if (ok === false || ok.index < 0) {
         await interaction.update({
@@ -19,7 +22,7 @@ export const handleSelectMenu = async (automaton: MedleyAutomaton, interaction: 
         return;
       }
 
-      const preview = await makeRequestPreview(automaton, ok.index, ok.index);
+      const preview = await makeRequestPreview(station, ok.index, ok.index);
       await interaction.update({
         content: `Request accepted: \`${getTrackBanner(ok.track)}\``,
         components: []

@@ -1,6 +1,6 @@
 import { CommandInteraction } from "discord.js";
 import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { reply } from "../utils";
+import { guildIdGuard, reply } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -18,13 +18,10 @@ const declaration: SubCommandLikeOption = {
 }
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automation) => async (interaction) => {
-  const { guildId } = interaction;
-
-  if (!guildId) {
-    return;
-  }
+  const guildId = guildIdGuard(interaction);
 
   const state = automation.getGuildState(guildId);
+
   if (state) {
     const channel = interaction.options.getChannel('channel');
 

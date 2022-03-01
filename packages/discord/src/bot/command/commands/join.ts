@@ -17,7 +17,7 @@ const declaration: SubCommandLikeOption = {
   ]
 }
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ station, client }) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
   permissionGuard(interaction.memberPermissions, [
     Permissions.FLAGS.MANAGE_CHANNELS,
     Permissions.FLAGS.MANAGE_GUILD
@@ -29,7 +29,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ s
     return;
   }
 
-  const channelToJoin = client.channels.cache.get(channel.id);
+  const channelToJoin = automaton.client.channels.cache.get(channel.id);
 
   if (!channelToJoin?.isVoice()) {
     return;
@@ -38,17 +38,27 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ s
   await reply(interaction, `Joining ${channelToJoin}`);
 
   try {
-    await station.join(channelToJoin);
+    const result = await automaton.join(channelToJoin);
 
-    reply(interaction, {
-      content: null,
-      embeds: [
-        new MessageEmbed()
-          .setColor('RANDOM')
-          .setTitle('Joined')
-          .addField('channel', channel?.toString())
-      ]
-    });
+    if (result === 'joined') {
+      reply(interaction, {
+        content: null,
+        embeds: [
+          new MessageEmbed()
+            .setColor('RANDOM')
+            .setTitle('Joined')
+            .addField('channel', channel?.toString())
+        ]
+      });
+
+      return;
+    }
+
+    // TODO: Handle no_station, show options for tuning
+    deny(
+      interaction,
+      result === 'no_station' ? 'No station was tuned' : ''
+    )
   }
   catch (e) {
     console.error(e);

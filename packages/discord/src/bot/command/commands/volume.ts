@@ -2,7 +2,7 @@ import { decibelsToGain, gainToDecibels } from "@seamless-medley/core";
 import { CommandInteraction } from "discord.js";
 import { round } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept, warn } from "../utils";
+import { accept, guildIdGuard, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -22,14 +22,10 @@ const declaration: SubCommandLikeOption = {
 
 const g2d = (g: number) => round(gainToDecibels(g));
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ station }) => async (interaction) => {
-  const { guildId } = interaction;
+const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
+  const guildId = guildIdGuard(interaction);
 
-  if (!guildId) {
-    return;
-  }
-
-  const oldGain = station.getGain(guildId);
+  const oldGain = automaton.getGain(guildId);
   const decibels = interaction.options.getNumber('db');
 
   if (decibels === null) {
@@ -37,7 +33,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = ({ s
     return;
   }
 
-  if (station.setGain(guildId, decibelsToGain(decibels))) {
+  if (automaton.setGain(guildId, decibelsToGain(decibels))) {
     accept(interaction, `OK: Fading volume from ${g2d(oldGain)}dB to ${round(decibels, 2)}dB`);
   } else {
     warn(interaction, 'Not in a voice channel');
