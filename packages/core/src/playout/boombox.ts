@@ -395,8 +395,12 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.sequencer.crates = value;
   }
 
-  setCrateIndex(newIndex: number) {
-    this.sequencer.setCrateIndex(newIndex);
+  get crateIndex() {
+    return this.sequencer.crateIndex;
+  }
+
+  set crateIndex(newIndex: number) {
+    this.sequencer.crateIndex = newIndex;
   }
 }
 
