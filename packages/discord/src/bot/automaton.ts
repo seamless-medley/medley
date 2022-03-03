@@ -437,7 +437,6 @@ export class MedleyAutomaton {
       return;
     }
 
-    // this.showActivity();
     const trackMsg = await createTrackMessage(trackPlay);
     const sentMessages = await this.sendForStation(station, trackMessageToMessageOptions({
       ...trackMsg,

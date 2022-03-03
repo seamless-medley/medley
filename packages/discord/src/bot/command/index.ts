@@ -10,9 +10,7 @@ import message from './commands/message';
 import history from './commands/history';
 import tune from './commands/tune';
 
-// TODO: New command "history" for showing recent songs
 // TODO: New command "unrequest" for deleting the requested song
-// TODO: New command "tune" for tuning into (selection) a station
 
 import { Command, CommandError, CommandType, InteractionHandler, SubCommandLikeOption } from "./type";
 import { deny, isReplyable } from "./utils";
