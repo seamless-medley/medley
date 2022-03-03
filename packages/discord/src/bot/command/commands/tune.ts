@@ -30,7 +30,7 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
         embeds: [
           new MessageEmbed()
             .setColor('RANDOM')
-            .setTitle('Tuned')
+            .setTitle('Tuned In')
             .addField('Station', ok.name)
         ]
       });
