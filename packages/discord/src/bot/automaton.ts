@@ -65,7 +65,7 @@ export class MedleyAutomaton {
   private _guildStates: Map<Guild['id'], GuildState> = new Map();
 
   constructor(
-    private stations: IReadonlyCollection<Station>,
+    readonly stations: IReadonlyCollection<Station>,
     options: MedleyAutomatonOptions
   ) {
     this.botToken = options.botToken;
@@ -155,14 +155,10 @@ export class MedleyAutomaton {
       return stationLink;
     }
 
-    if (currentStation) {
-      this.detune(guildId);
-    }
-
     const exciter = await selectedStation.createExciter();
 
-    // Create discord voice AudioPlayer
-    const audioPlayer = createAudioPlayer({
+    // Create discord voice AudioPlayer if neccessary
+    const audioPlayer = stationLink?.audioPlayer ?? createAudioPlayer({
       behaviors: {
         noSubscriber: NoSubscriberBehavior.Play,
         maxMissedFrames: 1000
@@ -171,12 +167,27 @@ export class MedleyAutomaton {
 
     audioPlayer.play(exciter);
 
-    const newLink = {
+    const newLink: StationLink = {
       station: selectedStation,
       audioPlayer,
       audioResource: exciter,
       audioRequest: exciter.metadata,
+      voiceConnection: stationLink?.voiceConnection
     };
+
+    if (newLink.voiceConnection) {
+      const { channelId } = newLink.voiceConnection.joinConfig;
+      if (channelId) {
+        const channel = this.client.guilds.cache.get(guildId)?.channels.cache.get(channelId);
+        if (channel?.isVoice()) {
+          this.updateStationAudiences(selectedStation, channel);
+        }
+      }
+    }
+
+    if (currentStation) {
+      this.detune(guildId);
+    }
 
     state.stationLink = newLink;
     state.gain = selectedStation.initialGain;
@@ -184,13 +195,13 @@ export class MedleyAutomaton {
     return newLink;
   }
 
-  async tune(guildId: Guild['id'], station?: Station): Promise<boolean> {
+  async tune(guildId: Guild['id'], station?: Station): Promise<Station | false> {
     if (station) {
       this.setGuildStation(guildId, station);
     }
 
     const link = await this.internal_tune(guildId);
-    return link !== undefined;
+    return link?.station ?? false;
   }
 
   private async detune(guildId: Guild['id']) {
@@ -297,8 +308,12 @@ export class MedleyAutomaton {
         .map(member => member.id)
     );
   }
+
   private handleVoiceStateUpdate = async (oldState: VoiceState, newState: VoiceState) => {
-    const state = this.ensureGuildState(newState.guild.id);
+    const guildId = newState.guild.id;
+    const state = this.ensureGuildState(guildId);
+
+    const station = this.getTunedStation(guildId);
 
     const channelChange = detectVoiceChannelChange(oldState, newState);
     if (channelChange === 'invalid' || !newState.member) {
