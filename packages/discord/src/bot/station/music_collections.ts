@@ -9,9 +9,13 @@ export type MusicCollectionDescriptor = {
   id: string;
   path: string;
   description?: string;
-};
+}
 
-export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBoxTrack, MusicCollectionDescriptor>> {
+export type MusicCollectionMetadata = MusicCollectionDescriptor & {
+  station: Station;
+}
+
+export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBoxTrack, MusicCollectionMetadata>> {
   private miniSearch = new MiniSearch<BoomBoxTrack>({
     fields: ['artist', 'title'],
     extractField: (track, field) => {
@@ -62,14 +66,17 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
     const { id } = descriptor;
     const path = normalizePath(descriptor.path);
 
-    const newCollection = WatchTrackCollection.initWithWatch<BoomBoxTrack, MusicCollectionDescriptor>(
+    const newCollection = WatchTrackCollection.initWithWatch<BoomBoxTrack, MusicCollectionMetadata>(
       id, `${path}/**/*`,
       {
         tracksMapper: this.tracksMapper
       }
     );
 
-    newCollection.metadata = descriptor;
+    newCollection.metadata = {
+      ...descriptor,
+      station: this.station
+    };
 
     const existing = this.get(id);
 
@@ -101,7 +108,7 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
     return super.has(id);
   }
 
-  get(id: string): WatchTrackCollection<BoomBoxTrack, MusicCollectionDescriptor> | undefined {
+  get(id: string): WatchTrackCollection<BoomBoxTrack, MusicCollectionMetadata> | undefined {
     return super.get(id);
   }
 

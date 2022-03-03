@@ -5,7 +5,7 @@ import { capitalize, isEmpty, get } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from 'path';
 import splashy from 'splashy';
-import { MusicCollectionDescriptor } from "./station/music_collections";
+import { MusicCollectionMetadata } from "./station/music_collections";
 
 export enum TrackMessageStatus {
   Playing,
@@ -79,10 +79,10 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
   }
 
   if (track.collection.metadata) {
-    const { description } = track.collection.metadata as MusicCollectionDescriptor;
-    if (description) {
-      embed.addField('Collection', description);
-    }
+    const { description, station } = track.collection.metadata as MusicCollectionMetadata;
+
+    embed.addField('Collection', description ?? track.collection.id);
+    embed.addField('Station', station.name);
   }
 
   if (requestedBy?.length) {
