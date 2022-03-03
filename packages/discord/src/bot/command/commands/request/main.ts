@@ -59,8 +59,8 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
   const issuer = interaction.user.id;
 
   const selections = results.map<MessageSelectOptionData & { collection: BoomBoxTrack['collection'] }>(track => ({
-    label: truncate(track.metadata?.tags?.title || parsePath(track.path).name),
-    description: track.metadata?.tags?.title ? truncate(track.metadata?.tags?.artist || 'Unknown Artist') : undefined,
+    label: truncate(track.metadata?.tags?.title || parsePath(track.path).name, { length: 100 }),
+    description: track.metadata?.tags?.title ? truncate(track.metadata?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined,
     value: track.id,
     collection: track.collection
   }));
