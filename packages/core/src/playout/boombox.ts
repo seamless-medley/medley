@@ -68,6 +68,7 @@ type BoomBoxOptions = {
 
   /**
    * Number of maximum track history
+   * @default 20
    */
   maxTrackHistory?: number;
 
@@ -97,9 +98,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   readonly medley: Medley<BoomBoxTrack>;
   readonly queue: Queue<BoomBoxTrack>;
 
-  artistHistory: string[][];
+  private artistHistory: string[][];
 
-  trackHistory: TrackRecord[] = [];
+  readonly trackHistory: TrackRecord[] = [];
 
   constructor(options: BoomBoxOptions) {
     super();
@@ -110,7 +111,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       maxTrackHistory: options.maxTrackHistory || 20
     };
     //
-    this.artistHistory = options.artistHistory || [];
+    this.artistHistory = [...options.artistHistory || []];
     //
     this.medley = options.medley;
     this.queue = options.queue;
