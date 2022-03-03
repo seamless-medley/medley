@@ -7,6 +7,7 @@ import lyrics from "./commands/lyrics";
 import request from "./commands/request";
 import vote from './commands/vote';
 import message from './commands/message';
+import history from './commands/history';
 
 // TODO: New command "history" for showing recent songs
 // TODO: New command "unrequest" for deleting the requested song
@@ -23,7 +24,8 @@ const descriptors = {
   lyrics,
   request,
   vote,
-  message
+  message,
+  history,
 }
 
 export const createCommandDeclarations = (name: string = 'medley', description: string = 'Medley'): Command => {

@@ -185,6 +185,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.boombox.trackPlay;
   }
 
+  get trackHistory() {
+    return this.boombox.trackHistory;
+  }
+
   skip() {
     this.medley.fadeOut();
   }
