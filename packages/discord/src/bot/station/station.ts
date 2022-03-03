@@ -4,7 +4,6 @@ import { BoomBox,
   BoomBoxTrack,
   BoomBoxTrackPlay,
   Crate,
-  CrateSourceWithWeight,
   decibelsToGain,
   Medley,
   Queue,
@@ -16,7 +15,7 @@ import { BoomBox,
   WatchTrackCollection
 } from "@seamless-medley/core";
 
-import { User } from "discord.js";
+import { Guild, User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
 import _, { difference, isArray } from "lodash";
@@ -119,7 +118,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.id = options.id;
 
     this.boombox = boombox;
-    this.collections = new MusicCollections(...(options.musicCollections || []));
+    this.collections = new MusicCollections(this, ...(options.musicCollections || []));
     this.initialGain = options.initialGain || decibelsToGain(-15);
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;

@@ -3,6 +3,7 @@ import { BoomBoxTrack, mapTracksMetadataConcurrently, WatchTrackCollection } fro
 import { BaseCollection } from "../utils/collection";
 import _, { castArray, difference, flow, get, shuffle } from 'lodash';
 import normalizePath from 'normalize-path';
+import { Station } from './station';
 
 export type MusicCollectionDescriptor = {
   id: string;
@@ -32,7 +33,7 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
 
   private collectionPaths = new Map<string, string>();
 
-  constructor(...collections: MusicCollectionDescriptor[]) {
+  constructor(readonly station: Station, ...collections: MusicCollectionDescriptor[]) {
     super();
 
     for (const descriptor of collections) {
