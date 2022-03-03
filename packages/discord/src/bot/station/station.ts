@@ -49,6 +49,10 @@ export type SequenceConfig = {
 
 export type StationOptions = {
   id: string;
+
+  name: string;
+
+  description?: string;
   /**
    * Initial audio gain, default to -15dBFS (Appx 0.178)
    * @default -15dBFS
@@ -79,6 +83,9 @@ export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trac
 
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
   readonly id: string;
+  readonly name: string;
+  readonly description?: string;
+
   readonly queue: Queue<BoomBoxTrack>;
   readonly medley: Medley<BoomBoxTrack>;
 
@@ -118,6 +125,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     boombox.on('requestTrackFetched', this.handleRequestTrack);
 
     this.id = options.id;
+    this.name = options.name;
+    this.description = options.description;
 
     this.boombox = boombox;
     this.collections = new MusicCollections(this, ...(options.musicCollections || []));
