@@ -2,7 +2,7 @@ import { isRequestTrack } from "@seamless-medley/core";
 import { ButtonInteraction, CommandInteraction, Permissions } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept, deny, guildIdGuard, guildStationGuard, permissionGuard, reply } from "../utils";
+import { accept, deny, guildStationGuard, permissionGuard, reply } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -41,8 +41,8 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
     return;
   }
 
+  await accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
   automaton.skipCurrentSong(guildId);
-  accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
 }
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, playUuid: string) => {
