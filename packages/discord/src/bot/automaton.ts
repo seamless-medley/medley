@@ -46,7 +46,6 @@ type GuildState = {
   voiceChannelId?: BaseGuildVoiceChannel['id'];
   textChannelId?: BaseGuildTextChannel['id'];
   trackMessages: TrackMessage[];
-  audiences: Set<User['id']>;
   serverMuted: boolean;
   selectedStation?: Station;
   stationLink?: StationLink;
@@ -109,7 +108,6 @@ export class MedleyAutomaton {
         guildId,
         voiceChannelId: undefined,
         trackMessages: [],
-        audiences: new Set(),
         serverMuted: false,
         gain: 1.0
       });
@@ -205,6 +203,7 @@ export class MedleyAutomaton {
     const { station, audioRequest } = link;
 
     station.medley.deleteAudioStream(audioRequest.id);
+    station.removeAudiencesForGuild(guildId);
   }
 
   getGain(guildId: Guild['id']) {
@@ -290,6 +289,14 @@ export class MedleyAutomaton {
     // TODO: Try to join last voice channel
   }
 
+  private updateStationAudiences(station: Station, channel: VoiceBasedChannel) {
+    station.updateAudiences(
+      channel.guildId,
+      channel.members
+        .filter(member => !member.user.bot && !channel.guild.voiceStates.cache.get(member.id)?.deaf)
+        .map(member => member.id)
+    );
+  }
   private handleVoiceStateUpdate = async (oldState: VoiceState, newState: VoiceState) => {
     const state = this.ensureGuildState(newState.guild.id);
 
@@ -303,9 +310,8 @@ export class MedleyAutomaton {
     if (isMe) {
       if (channelChange === 'leave') {
         console.log('Me Leaving');
-        state.audiences.clear();
+        station?.removeAudiencesForGuild(newState.guild.id);
         state.voiceChannelId = undefined;
-        this.updateStationsPlayState();
         return;
       }
 
@@ -315,21 +321,27 @@ export class MedleyAutomaton {
         state.voiceChannelId = newState.channelId || undefined;
         state.serverMuted = !!newState.serverMute;
 
-        state.audiences.clear();
+        if (station) {
+          if (state.serverMuted) {
+            station.removeAudiencesForGuild(guildId);
+          } else {
+            this.updateStationAudiences(station, newState.channel!);
+          }
+        }
 
-        const { members } = newState.channel!;
-
-        members
-          .filter((member, id) => !member.user.bot && !newState.guild.voiceStates.cache.get(id)?.deaf)
-          .forEach((member, id) => state.audiences.add(id));
-
-        this.updateStationsPlayState();
         return;
       }
 
       if (oldState.serverMute != newState.serverMute) {
         state.serverMuted = !!newState.serverMute;
-        this.updateStationsPlayState();
+
+        if (station) {
+          if (state.serverMuted) {
+            station.removeAudiencesForGuild(guildId);
+          } else {
+            this.updateStationAudiences(station, newState.channel!);
+          }
+        }
       }
 
       return;
@@ -354,27 +366,23 @@ export class MedleyAutomaton {
       }
 
       console.log(newState.member.displayName, 'is leaving');
-      state.audiences.delete(newState.member.id);
-      this.updateStationsPlayState();
+      station?.removeAudiences(guildId, newState.member.id);
       return;
     }
 
     if (channelChange === 'join' || channelChange === 'move') {
       if (newState.channelId === state.voiceChannelId) {
-        console.log(newState.member.displayName, 'is joining or moving to my channel', 'deaf?', newState.deaf);
         if (!newState.deaf) {
-          state.audiences.add(newState.member.id);
-          this.updateStationsPlayState();
+          // User has joined or moved into
+          station?.addAudiences(guildId, newState.member.id);
         }
 
         return;
       }
 
       if (oldState.channelId === state.voiceChannelId) {
-        console.log(newState.member.displayName, 'is moving away from my channel');
-        state.audiences.delete(newState.member.id);
-        this.updateStationsPlayState();
-
+        // User has moved away
+        station?.removeAudiences(guildId, newState.member.id);
         return;
       }
 
@@ -385,57 +393,9 @@ export class MedleyAutomaton {
     // No channel change
     if (oldState.deaf !== newState.deaf && newState.channelId === state.voiceChannelId) {
       if (!newState.deaf) {
-        state.audiences.add(newState.member.id);
+        station?.addAudiences(guildId, newState.member.id);
       } else {
-        state.audiences.delete(newState.member.id);
-      }
-
-      this.updateStationsPlayState();
-    }
-  }
-
-  private updateStationsPlayState() {
-    console.log('Audiences updated');
-
-    // Collect audiences by station
-    // Although, a user can only join a single channel at a time, but... just in case
-    const counters = new Map<Station, Set<User['id']>>();
-
-    for (const [guildId, state] of this._guildStates) {
-      if (!state.voiceChannelId) {
-        state.audiences.clear();
-      }
-
-      const { stationLink } = state;
-
-      if (stationLink) {
-        const { station } = stationLink;
-
-        const audiences = !state.serverMuted ? state.audiences : undefined;
-
-        if (!counters.has(station)) {
-          counters.set(station, new Set(audiences));
-          continue;
-        }
-
-        if (audiences) {
-          const existingAudiences = counters.get(station)!;
-          for (const audience of state.audiences) {
-            existingAudiences.add(audience);
-          }
-        }
-      }
-    }
-
-    for (const [station, audiences] of counters) {
-      if (station.playState !== PlayState.Playing && audiences.size > 0) {
-        station.start();
-        continue;
-      }
-
-      if (station.playState === PlayState.Playing && audiences.size === 0) {
-        station.pause();
-        continue;
+        station?.removeAudiences(guildId, newState.member.id);
       }
     }
   }

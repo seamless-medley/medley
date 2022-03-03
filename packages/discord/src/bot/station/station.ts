@@ -91,6 +91,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   private intros?: TrackCollection<BoomBoxTrack>;
   private requestSweepers?: TrackCollection<BoomBoxTrack>;
 
+  private audiences: Map<Guild['id'], Set<User['id']>> = new Map();
+
   constructor(options: StationOptions) {
     super();
 
@@ -334,5 +336,73 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   set crateIndex(newIndex: number) {
     this.boombox.crateIndex = newIndex;
+  }
+
+  addAudiences(guildId: Guild['id'], userId: User['id']) {
+    if (!this.audiences.has(guildId)) {
+      this.audiences.set(guildId, new Set());
+    }
+
+    this.audiences.get(guildId)!.add(userId);
+    this.playIfHasAudiences();
+  }
+
+  removeAudiences(guildId: Guild['id'], userId: User['id']) {
+    this.getAudiences(guildId)?.delete(userId);
+    this.pauseIfNoAudiences();
+  }
+
+  removeAudiencesForGuild(guildId: Guild['id']) {
+    this.audiences.delete(guildId);
+    this.pauseIfNoAudiences();
+  }
+
+  updateAudiences(guildId: Guild['id'], userIds: User['id'][]) {
+    this.audiences.set(guildId, new Set(userIds));
+    this.playIfHasAudiences();
+  }
+
+  private playIfHasAudiences() {
+    if (this.playState !== PlayState.Playing && this.hasAudiences) {
+      console.log(this.id, 'Start')
+      this.start();
+    }
+  }
+
+  private pauseIfNoAudiences() {
+    if (this.playState === PlayState.Playing && !this.hasAudiences) {
+      console.log(this.id, 'Pause')
+      this.pause();
+    }
+  }
+
+  getAudiences(guildId: Guild['id']) {
+    return this.audiences.get(guildId);
+  }
+
+  get totalAudiences() {
+    const audiences = new Set<User['id']>();
+
+    for (const ids of this.audiences.values()) {
+      for (const id of ids) {
+        audiences.add(id);
+      }
+    }
+
+    return audiences.size;
+  }
+
+  get hasAudiences() {
+    for (const ids of this.audiences.values()) {
+      if (ids.size > 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  get guildIds() {
+    return Array.from(this.audiences.keys());
   }
 }
