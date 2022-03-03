@@ -438,9 +438,8 @@ export class MedleyAutomaton {
     }
 
     // this.showActivity();
-
     const trackMsg = await createTrackMessage(trackPlay);
-    const sentMessages = await this.sendAll(trackMessageToMessageOptions({
+    const sentMessages = await this.sendForStation(station, trackMessageToMessageOptions({
       ...trackMsg,
       buttons: {
         lyric: trackMsg.buttons.lyric,
@@ -590,24 +589,28 @@ export class MedleyAutomaton {
   }
 
   /**
-   * Send to all guilds
+   * Send to all guilds for a station
    */
-  private async sendAll(options: string | MessagePayload | MessageOptions) {
-    const results = await Promise.all(
-      this.client.guilds.cache.mapValues(async (guild, id) => {
-        const state = this._guildStates.get(id);
+  private async sendForStation(station: Station, options: string | MessagePayload | MessageOptions) {
+    const results: [string, Promise<Message<boolean> | undefined> | undefined][] = [];
 
-        if (state) {
-          const { voiceChannelId, textChannelId, audiences } = state;
+    for (const guildId of station.guildIds) {
+      const state = this._guildStates.get(guildId);
 
-          if (voiceChannelId && audiences.size) {
-            const channel = textChannelId ? guild.channels.cache.get(textChannelId) : undefined;
-            const textChannel = channel?.isText() ? channel : undefined;
-            return (textChannel || guild.systemChannel)?.send(options).catch(() => undefined);
-          }
+      if (state) {
+        const guild = this.client.guilds.cache.get(guildId);
+        const { voiceChannelId, textChannelId } = state;
+
+        if (guild && voiceChannelId) {
+          const channel = textChannelId ? guild.channels.cache.get(textChannelId) : undefined;
+          const textChannel = channel?.isText() ? channel : undefined;
+
+          const d = (textChannel || guild.systemChannel)?.send(options).catch(() => undefined);
+
+          results.push([guildId, d]);
         }
-      })
-    );
+      }
+    }
 
     return results;
   }
