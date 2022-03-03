@@ -10,13 +10,13 @@ import { Routes } from "discord-api-types/v9";
 import {
   BaseGuildTextChannel,
   BaseGuildVoiceChannel, Client, Guild,
-  Intents, MessageOptions,
-  MessagePayload, Snowflake, User, VoiceState
+  Intents, Message, MessageOptions,
+  MessagePayload, Snowflake, User, VoiceBasedChannel, VoiceState
 } from "discord.js";
 
 import { delay } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
-import { PlayState, Station } from "./station";
+import { Station } from "./station";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 import { IReadonlyCollection } from "./utils/collection";
 
@@ -52,7 +52,12 @@ type GuildState = {
   gain: number;
 }
 
-export type JoinResult = 'no_station' | 'not_joined' | 'joined';
+export type JoinResult = {
+  status: 'no_station' | 'not_joined';
+} | {
+  status: 'joined';
+  station: Station;
+}
 
 export class MedleyAutomaton {
   botToken: string;
@@ -261,7 +266,7 @@ export class MedleyAutomaton {
     }
 
     if (!stationLink) {
-      return 'no_station';
+      return { status: 'no_station' };
     }
 
     const voiceConnection = joinVoiceChannel({
@@ -271,7 +276,7 @@ export class MedleyAutomaton {
     }) as VoiceConnection | undefined;
 
     if (!voiceConnection) {
-      return 'not_joined';
+      return { status: 'not_joined' };
     }
 
     try {
@@ -285,7 +290,7 @@ export class MedleyAutomaton {
     }
 
     stationLink.voiceConnection = voiceConnection;
-    return 'joined';
+    return { status: 'joined', station: stationLink.station };
   }
 
   private handleClientReady = async (client: Client) => {
