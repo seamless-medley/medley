@@ -48,11 +48,11 @@ type Handlers = {
 }
 
 export const createInteractionHandler = (baseName: string, automaton: MedleyAutomaton) => {
-  const handlers: Map<string, Handlers> = new Map(_.map(descriptors, (desc, name) => [name.toLowerCase(), {
+  const handlers = new Map<string, Handlers>(_.map(descriptors, (desc, name) => [name.toLowerCase(), {
     command: desc.createCommandHandler?.(automaton),
     button: desc.createButtonHandler?.(automaton),
     autocomplete: desc.createAutocompleteHandler?.(automaton)
-  }] as const));
+  }]));
 
   return async (interaction: Interaction) => {
     if (interaction.user.bot) {
@@ -72,7 +72,7 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
 
         const handler = handlers.get(groupOrCommand);
 
-        return handler?.command?.(interaction);
+        return await handler?.command?.(interaction);
       }
 
       if (interaction.isButton()) {
@@ -82,7 +82,7 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
 
         const handler = handlers.get(tag);
 
-        return handler?.button?.(interaction, ...params);
+        return await handler?.button?.(interaction, ...params);
       }
 
       if (interaction.isAutocomplete()) {
