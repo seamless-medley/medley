@@ -804,7 +804,7 @@ int Medley::Mixer::useTimeSlice()
     return 5;
 }
 
-void medley::Medley::Mixer::fadeOut(double durationMs, Fader::OnDone callback)
+void Medley::Mixer::fadeOut(double durationMs, Fader::OnDone callback)
 {
     fader.start(currentTime, currentTime + durationMs, gain, 0.0f, 2.0f, -1.0f, callback);
 }

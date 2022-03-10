@@ -308,10 +308,10 @@ private:
     deck_transition_t decksTransition[numDecks]{};
 
     double fadingCurve = 60;
-    float fadingFactor;
+    float fadingFactor{};
 
     double minimumLeadingToFade = 2.5;
-    double maximumFadeOutDuration;
+    double maximumFadeOutDuration{};
 
     int forceFadingOut = 0;
 
