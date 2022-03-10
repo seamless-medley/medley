@@ -71,16 +71,10 @@ void Deck::loadTrack(const ITrack::Ptr track, OnLoadingDone doneCallback)
         return;
     }
 
-    if (!isTrackLoadable(formatMgr, track)) {
-        log("Could not find appropriate format reader for " + track->getFile().getFullPathName());
-        isTrackLoading = false;
-        doneCallback(false);
-        return;
-    }
-
     isTrackLoading = true;
     loader.load(track, doneCallback);
     loadingThread.addTimeSliceClient(&loader);
+
     if (!loadingThread.isThreadRunning()) {
         loadingThread.startThread();
     }
@@ -829,6 +823,7 @@ int Deck::Loader::useTimeSlice()
         auto ret = deck.loadTrackInternal(track);
         track = nullptr;
         callback(ret);
+        return 10;
     }
 
     return -1;

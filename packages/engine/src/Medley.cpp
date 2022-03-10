@@ -224,7 +224,7 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
     }
 
     auto const pQueue = &queue;
-    Deck::OnLoadingDone deckLoadingHandler = [&, _onLoadingDone = onLoadingDone, p = play, _pQueue = pQueue, _nextDeck = nextDeck](bool loadingResult) {
+    const Deck::OnLoadingDone deckLoadingHandler = [this, _onLoadingDone = onLoadingDone, p = play, cd = currentDeck, _nextDeck = nextDeck](bool loadingResult) {
         if (loadingResult) {
             _onLoadingDone(true);
 
@@ -235,34 +235,12 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
             return;
         }
 
-        // Fetch next track from queue
-        if (_pQueue->count() > 0) {
-            auto track = _pQueue->fetchNextTrack();
-            _nextDeck->loadTrack(track, deckLoadingHandler);
-            return;
-        }
-
-        {
-            // Queue is empty, request to fill it with some tracks
-            ScopedLock sl(callbackLock);
-            listeners.call([&](Callback& listener) {
-                listener.enqueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _onLoadingDone = onLoadingDone](bool enqueueResult) {
-                    if (enqueueResult && _pQueue->count() > 0) {
-                        // enqueue succeeded, try to load again
-                        loadNextTrack(cd, p, _onLoadingDone);
-                    }
-                    else {
-                        _onLoadingDone(false);
-                    }
-                });
-            });
-        }
+        loadNextTrack(cd, p, _onLoadingDone);
     };
 
     // Fetch next track from queue
     if (queue.count() > 0) {
-        auto track = queue.fetchNextTrack();
-        if (track) {
+        if (auto track = queue.fetchNextTrack()) {
             nextDeck->loadTrack(track, deckLoadingHandler);
             return;
         }
