@@ -228,8 +228,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   async createExciter() {
     const audioRequest = await this.medley.requestAudioStream({
-      bufferSize: 48000 * 0.5,
-      buffering: 480 * 4, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
+      bufferSize: 48000 * 5.0,
+      buffering: 960, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
       preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
       // discord voice only accept 48KHz sample rate, 16 bit per sample
       sampleRate: 48000,
