@@ -1,9 +1,10 @@
 import MiniSearch, { Query, SearchResult } from 'minisearch';
-import { BoomBoxTrack, mapTracksMetadataConcurrently, WatchTrackCollection } from "@seamless-medley/core";
+import { BoomBoxTrack, Metadata, TrackKind, WatchTrackCollection } from "@seamless-medley/core";
 import { BaseCollection } from "../utils/collection";
-import _, { castArray, difference, flow, get, shuffle } from 'lodash';
+import _, { castArray, difference, get } from 'lodash';
 import normalizePath from 'normalize-path';
 import { Station } from './station';
+import { MetadataHelper } from '@seamless-medley/core';
 
 export type MusicCollectionDescriptor = {
   id: string;
@@ -15,6 +16,7 @@ export type MusicCollectionMetadata = MusicCollectionDescriptor & {
   station: Station;
 }
 
+// TODO: Collection readiness, all tracks should be indexed first
 export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBoxTrack, MusicCollectionMetadata>> {
   private miniSearch = new MiniSearch<BoomBoxTrack>({
     fields: ['artist', 'title'],
@@ -26,14 +28,6 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
       return get(track.metadata?.tags, field);
     }
   });
-
-  private indexNewTracks = async (awaitable: Promise<BoomBoxTrack[]>) => {
-    const tracks = await awaitable;
-    this.miniSearch.addAllAsync(tracks);
-    return tracks;
-  }
-
-  private tracksMapper = flow(shuffle, mapTracksMetadataConcurrently, this.indexNewTracks);
 
   private collectionPaths = new Map<string, string>();
 
@@ -67,11 +61,29 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
     const path = normalizePath(descriptor.path);
 
     const newCollection = WatchTrackCollection.initWithWatch<BoomBoxTrack, MusicCollectionMetadata>(
-      id, `${path}/**/*`,
-      {
-        tracksMapper: this.tracksMapper
-      }
+      id, `${path}/**/*`
     );
+
+    newCollection.on('tracksAdd', (tracks: BoomBoxTrack[]) => {
+      // TODO: Chunking, add deley between chunk, also deley between track
+      for (const track of tracks) {
+        if (!track.metadata) {
+          // TODO: Add support for Metadata caching
+          helper.metadata(track.path)
+            .then((tags: Metadata) => {
+              track.metadata = {
+                tags,
+                kind: TrackKind.Normal
+              };
+
+              this.miniSearch.add(track);
+            })
+            .catch((e) => {
+              console.log('Error', e)
+            });
+        }
+      }
+    });
 
     newCollection.metadata = {
       ...descriptor,
@@ -81,7 +93,7 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
     const existing = this.get(id);
 
     if (!existing) {
-      newCollection.on('trackRemove', this.handleTrackRemoval);
+      newCollection.on('tracksRemove', this.handleTrackRemoval);
     } else {
       const existingPath = this.collectionPaths.get(id)!;
 
@@ -90,7 +102,7 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
         // Unwatch old path
         existing.unwatchAll();
         // Detach event handler
-        existing.off('trackRemove', this.handleTrackRemoval);
+        existing.off('tracksRemove', this.handleTrackRemoval);
       }
     }
 
@@ -209,3 +221,5 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
     ).map(s => s.suggestion);
   }
 }
+
+const helper = new MetadataHelper();

@@ -19,6 +19,7 @@ import { Guild, User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
 import _, { difference, isArray } from "lodash";
+import normalizePath from 'normalize-path';
 import { createExciter } from "./exciter";
 import { MusicCollectionDescriptor, MusicCollections } from "./music_collections";
 
@@ -275,7 +276,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
     this.boombox.sweeperInsertionRules = configs.map<SweeperInsertionRule>(({ from, to, path }) => {
       if (!this.sweepers.has(path)) {
-        this.sweepers.set(path, WatchTrackCollection.initWithWatch<BoomBoxTrack>(path, path));
+        this.sweepers.set(path, WatchTrackCollection.initWithWatch<BoomBoxTrack>(path, `${normalizePath(path)}/**/*`));
       }
 
       return {
