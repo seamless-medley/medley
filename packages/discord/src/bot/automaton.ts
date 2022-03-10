@@ -618,14 +618,20 @@ export class MedleyAutomaton {
     const client = new RestClient({ version: '9' })
       .setToken(botToken);
 
-    await client.put(
-      Routes.applicationGuildCommands(clientId, guildId),
-      {
-        body: [createCommandDeclarations(baseCommand)]
-      }
-    );
+    try {
+      await client.put(
+        Routes.applicationGuildCommands(clientId, guildId),
+        {
+          body: [createCommandDeclarations(baseCommand)]
+        }
+      );
 
-    console.log('Registered');
+      console.log('Registered');
+    }
+    catch (e) {
+      console.error(e);
+    }
+
   }
 
   async registerCommands(guildId: string) {

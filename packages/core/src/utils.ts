@@ -38,3 +38,9 @@ export function weightedSample<T>(list: T[], weights: number[]) {
 
   return sample(list);
 }
+
+export const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+export const breath = () => delay(0);
+
+export const nextTick = () => new Promise<void>(resolve => process.nextTick(resolve));

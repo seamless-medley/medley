@@ -69,6 +69,11 @@ export type StationOptions = {
   sweeperRules?: SweeperRule[];
 
   requestSweepers?: TrackCollection<BoomBoxTrack>;
+
+  // BoomBox
+  // TODO: maxTrackHistory
+  // TODO: noDuplicatedArtist
+  // TODO: duplicationSimilarity
 }
 
 export type SweeperConfig = {

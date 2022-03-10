@@ -141,7 +141,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
   }
 }
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => createStationSelector(automaton, interaction);
+const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => (interaction) => createStationSelector(automaton, interaction);
 
 const descriptor: CommandDescriptor = {
   declaration,
