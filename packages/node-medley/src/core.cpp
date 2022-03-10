@@ -563,7 +563,7 @@ namespace {
             auto numChannels = request->numChannels;
 
             while (request->buffer.getNumReady() < request->buffering) {
-                std::this_thread::sleep_for(std::chrono::duration<double>(0.01));
+                std::this_thread::sleep_for(std::chrono::duration<double>(0.005));
             }
 
             request->currentTime = Time::getMillisecondCounterHiRes();
