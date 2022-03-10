@@ -1,9 +1,8 @@
-import { BoomBoxTrack, getTrackBanner, lyricsToText, parseLyrics } from "@seamless-medley/core";
+import { BoomBoxTrack, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics } from "@seamless-medley/core";
 import { ButtonInteraction, Message, MessageAttachment, MessageEmbed } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
 import { deny, guildStationGuard, reply, warn } from "../utils";
-import lyricsSearcher from "lyrics-searcher";
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, trackId: BoomBoxTrack['id']) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
@@ -52,7 +51,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
 
     if (artist && title) {
       await interaction.deferReply();
-      lyricsText = await lyricsSearcher(artist, title).catch(() => undefined);
+      lyricsText = await MetadataHelper.searchLyrics(artist, title).catch(() => undefined);
       source = 'Google';
     }
   }

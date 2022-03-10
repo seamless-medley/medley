@@ -1,9 +1,4 @@
-import { Medley, Metadata, CoverAndLyrics } from "@seamless-medley/medley";
 import { random, sample, sum } from "lodash";
-
-export const getMusicMetadata = (path: string) => new Promise<Metadata>(resolve => resolve(Medley.getMetadata(path)));
-
-export const getMusicCoverAndLyrics = (path: string) => new Promise<CoverAndLyrics>(resolve => resolve(Medley.getCoverAndLyrics(path)));
 
 export const decibelsToGain = (decibels: number): number => decibels > -100 ? Math.pow(10, decibels * 0.05) : 0;
 

@@ -7,8 +7,8 @@ import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, Cove
 import { Crate, CrateSequencer, TrackValidator, TrackVerifier } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
-import { getMusicMetadata, getMusicCoverAndLyrics } from "../utils";
 import { SweeperInserter } from "./sweeper";
+import { MetadataHelper } from './metadata';
 
 export enum TrackKind {
   Normal,
@@ -313,10 +313,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private deckLoaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
     // build cover and lyrics metadata
-    const { metadata } = trackPlay.track;
+    const { track } = trackPlay;
+    const { metadata } = track;
 
     if (metadata && metadata.kind !== TrackKind.Insertion) {
-      metadata.coverAndLyrics = await getMusicCoverAndLyrics(trackPlay.track.path);
+      if (!metadata.coverAndLyrics) {
+        metadata.coverAndLyrics = await MetadataHelper.coverAndLyrics(trackPlay.track.path);
+      }
     }
 
     this.emit('trackLoaded', trackPlay);
@@ -412,26 +415,6 @@ function getArtists(metadata: BoomBoxMetadata): string[] {
 
   return uniq(metadata.tags.artist.split(/[/;,]/)).map(trim);
 }
-
-export const mapTrackMetadata = async (track: BoomBoxTrack): Promise<BoomBoxTrack> => ({
-  ...track,
-  metadata: {
-    tags: await getMusicMetadata(track.path),
-    kind: TrackKind.Normal
-  }
-});
-
-export const mapTracksMetadataConcurrently = async (tracks: BoomBoxTrack[]) => Promise.all(tracks.map(mapTrackMetadata));
-
-export const mapTracksMetadataSequentially = async (tracks: BoomBoxTrack[]) => {
-  const results: BoomBoxTrack[] = [];
-
-  for (const track of tracks) {
-    results.push(await mapTrackMetadata(track));
-  }
-
-  return tracks;
-};
 
 export function getTrackBanner(track: BoomBoxTrack) {
   const tags = track.metadata?.tags;
