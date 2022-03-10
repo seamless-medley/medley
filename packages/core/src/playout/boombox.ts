@@ -36,6 +36,7 @@ export type RequestTrack<Requester> = BoomBoxTrack & {
   priority?: number;
   requestedBy: Requester[];
   lastRequestTime?: Date;
+  original: BoomBoxTrack; // Store the original track as a RequestTrack is likely to be a shallow
 };
 
 export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
@@ -161,10 +162,14 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private isTrackLoadable: TrackValidator = async (path) => this.medley.isTrackLoadable(path);
 
-  private verifyTrack: TrackVerifier<BoomBoxMetadata> = async (path) => {
+  private verifyTrack: TrackVerifier<BoomBoxMetadata> = async (track) => {
     try {
-      const musicMetadata = await getMusicMetadata(path);
-      const boomBoxMetadata: BoomBoxMetadata = { tags: musicMetadata, kind: TrackKind.Normal };
+      const musicMetadata = track.metadata ?? { tags: await MetadataHelper.metadata(track.path) };
+
+      const boomBoxMetadata: BoomBoxMetadata = {
+        kind: TrackKind.Normal,
+        ...musicMetadata
+      }
       const playedArtists = flatten(this.artistHistory).map(toLower);
       const currentArtists = getArtists(boomBoxMetadata).map(toLower);
       const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));
@@ -205,8 +210,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       }
     }
 
+    // This is a shallow copy
     const requested: RequestTrack<Requester> = {
       ...track,
+      original: track,
       rid: ++this._lastRequestId,
       priority: 0,
       requestedBy: requestedBy ? [requestedBy]: [],
@@ -320,6 +327,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       if (!metadata.coverAndLyrics) {
         metadata.coverAndLyrics = await MetadataHelper.coverAndLyrics(trackPlay.track.path);
       }
+
+      if (isRequestTrack(track) && !track.original.metadata?.coverAndLyrics) {
+        track.original.metadata = {
+          ...metadata,
+          kind: TrackKind.Normal
+        };
+      }
     }
 
     this.emit('trackLoaded', trackPlay);
@@ -329,6 +343,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     // clean up memory holding the cover and lyrics
     if (trackPlay.track?.metadata) {
       trackPlay.track.metadata.coverAndLyrics = undefined;
+
+      if (isRequestTrack(trackPlay.track) && trackPlay.track.original.metadata?.coverAndLyrics) {
+        trackPlay.track.original.metadata.coverAndLyrics = undefined;
+      }
     }
 
     this.emit('trackUnloaded', trackPlay);

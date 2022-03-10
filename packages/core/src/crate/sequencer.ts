@@ -15,7 +15,7 @@ export type TrackValidator = {
 }
 
 export type TrackVerifier<M> = {
-  (path: string): Promise<TrackVerifierResult<M>>;
+  (track: Track<M>): Promise<TrackVerifierResult<M>>;
 }
 
 export type TrackVerifierResult<M> = {
@@ -92,7 +92,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
           const track = await crate.next(trackValidator);
 
           if (track) {
-            const { shouldPlay, metadata } = trackVerifier ? await trackVerifier(track.path) : { shouldPlay: true, metadata: undefined };
+            const { shouldPlay, metadata } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, metadata: undefined };
 
             if (shouldPlay) {
               console.log(`[${this._playCounter}] From crate ${crate.id} => ${track.path}`);
