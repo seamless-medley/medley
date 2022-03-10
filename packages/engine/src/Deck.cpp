@@ -29,6 +29,7 @@ Deck::Deck(uint8_t index, const String& name, AudioFormatManager& formatMgr, Tim
     scanner(*this),
     playhead(*this)
 {
+    readAheadThread.setPriority(8);
     readAheadThread.addTimeSliceClient(&playhead);
 }
 
@@ -707,7 +708,10 @@ double Deck::getEndPosition() const
 void Deck::fadeOut(bool force)
 {
     if (!fading || force) {
-        transitionEnqueuePosition = transitionCuePosition = transitionStartPosition = getPosition();
+        transitionEnqueuePosition = getPosition();
+        transitionCuePosition = transitionEnqueuePosition;
+        transitionStartPosition = transitionCuePosition + 0.25;
+        //
         transitionEndPosition = jmin(transitionStartPosition + jmin(3.0, maximumFadeOutDuration), getEndPosition());
         fading = true;
     }
