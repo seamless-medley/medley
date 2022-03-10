@@ -12,13 +12,17 @@
   "license": "ISC",
   "dependencies": {
     "@seamless-medley/medley": "workspace:../node-medley",
+    "@types/workerpool": "^6.1.0",
     "chokidar": "^3.5.1",
     "fast-glob": "^3.2.7",
     "lodash": "^4.17.21",
+    "lyrics-searcher": "^1.0.58",
     "normalize-path": "^3.0.0",
-    "string-similarity": "^4.0.4"
+    "string-similarity": "^4.0.4",
+    "workerpool": "^6.2.0"
   },
   "devDependencies": {
+    "@types/glob-parent": "^5.1.1",
     "@types/lodash": "^4.14.176",
     "@types/node": "^14.18.3",
     "@types/normalize-path": "^3.0.0",

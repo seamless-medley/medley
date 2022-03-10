@@ -20,11 +20,9 @@
     "@discordjs/voice": "^0.7.2",
     "@seamless-medley/core": "workspace:../core",
     "colorable-dominant": "^1.1.5",
-    "dayjs": "^1.10.7",
     "discord.js": "^13.3.1",
     "libsodium-wrappers": "^0.7.9",
     "lodash": "^4.17.21",
-    "lyrics-searcher": "^1.0.58",
     "mime-types": "^2.1.34",
     "minisearch": "^3.1.0",
     "opusscript": "^0.0.8"
