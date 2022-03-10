@@ -1,19 +1,19 @@
 import { createHash } from 'crypto';
 import EventEmitter from "events";
-import { castArray, chain, find, findIndex, partition, reject, sample, shuffle, sortBy, uniqBy } from "lodash";
+import _, { castArray, chain, find, findIndex, identity, partition, reject, sample, shuffle, sortBy, uniqBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { Track } from "../track";
 
 export type TrackCollectionOptions<T extends Track<any>> = {
   // TODO: Option to initialize the collection with the specified list of files
-  tracksMapper?: (tracks: T[]) => T[] | Promise<T[]>;
+
+  tracksMapper?: (tracks: T[]) => Promise<T[]>;
 }
 
 export type TrackPeek<T extends Track<any>> = {
   index: number;
   track: T;
 }
-
 export class TrackCollection<T extends Track<any>, M = never> extends EventEmitter {
   protected _ready: boolean = false;
 
@@ -21,8 +21,6 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
   protected trackIdMap: Map<string, T> = new Map();
 
   metadata?: M;
-
-  tracksMapper: TrackCollectionOptions<T>['tracksMapper'];
 
   constructor(readonly id: string, protected options: TrackCollectionOptions<T> = {}) {
     super();
@@ -85,28 +83,25 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
       .value()
     );
 
-    return this.addTracks(immediateTracks);
+    await this.addTracks(immediateTracks);
+    return immediateTracks;
   }
 
-  private async addTracks(tracks: T[]): Promise<T[]> {
+  private async addTracks(tracks: T[]) {
     const { tracksMapper } = this.options;
 
     const fresh = reject(tracks, it => this.trackIdMap.has(it.id));
-    const newTracks = tracksMapper ? await tracksMapper(fresh) : fresh;
+    const mapped = await tracksMapper?.(fresh) ?? fresh;
 
-    if (newTracks.length) {
-      for (const track of newTracks) {
+    if (mapped.length) {
+      this.tracks = this.tracks.concat(mapped);
+
+      for (const track of mapped) {
         this.trackIdMap.set(track.id, track);
       }
 
-      this.tracks = uniqBy(this.tracks.concat(newTracks), 'id');
-
-      this.emit('trackAdd', newTracks);
-
-      return newTracks;
+      this.emit('tracksAdd', mapped);
     }
-
-    return [];
   }
 
   removeBy(predicate: (track: T) => boolean): T[] {
@@ -117,7 +112,7 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
       this.trackIdMap.delete(id);
     }
 
-    this.emit('trackRemove', removed);
+    this.emit('tracksRemove', removed);
 
     return removed;
   }

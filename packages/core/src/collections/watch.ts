@@ -4,6 +4,7 @@ import mm from 'minimatch';
 import { debounce, shuffle } from "lodash";
 import normalizePath from "normalize-path";
 import { Track } from "../track";
+import globParent from 'glob-parent';
 import { TrackCollection, TrackCollectionOptions } from "./base";
 
 // A track collection capable of watching for changes in file system directory
@@ -16,7 +17,7 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
 
   constructor(id: string, options: TrackCollectionOptions<T> = {}) {
     super(id, {
-      tracksMapper: shuffle,
+      tracksMapper: async (tracks) => shuffle(tracks),
       ...options
     });
   }
@@ -58,11 +59,15 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
     });
 
   watch(pattern: string): this {
-    fg(normalizePath(pattern), { absolute: true, onlyFiles: true })
+    const normalized = normalizePath(pattern);
+
+    fg(normalized, { absolute: true, onlyFiles: true })
       .then(files => this.add(files))
       .then(() => {
-        this.watcher.add(pattern);
-        this.watchingPatterns.add(pattern);
+        const parent = globParent(normalized);
+
+        this.watcher.add(parent);
+        this.watchingPatterns.add(parent);
       })
       .then(() => {
         this.becomeReady();
