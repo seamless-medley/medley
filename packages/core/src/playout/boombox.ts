@@ -164,6 +164,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private verifyTrack: TrackVerifier<BoomBoxMetadata> = async (track) => {
     try {
+      // TODO: Support for metadata caching
       const musicMetadata = track.metadata ?? { tags: await MetadataHelper.metadata(track.path) };
 
       const boomBoxMetadata: BoomBoxMetadata = {
