@@ -1,11 +1,15 @@
-import chokidar from "chokidar";
 import fg from 'fast-glob';
 import mm from 'minimatch';
-import { debounce, shuffle } from "lodash";
+import { debounce, shuffle, stubFalse } from "lodash";
 import normalizePath from "normalize-path";
 import { Track } from "../track";
 import globParent from 'glob-parent';
 import { TrackCollection, TrackCollectionOptions } from "./base";
+import { FSWatcher } from "fs";
+import watch from "node-watch";
+import { stat } from "fs/promises";
+
+type WatchCallback<F = typeof watch> = F extends (pathName: any, options: any, callback: infer CB) => any ? CB : never;
 
 // A track collection capable of watching for changes in file system directory
 export class WatchTrackCollection<T extends Track<any>, M = never> extends TrackCollection<T, M> {
@@ -26,7 +30,7 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
 
   }
 
-  private watchingPatterns = new Set<string>();
+  private watchingPatterns = new Map<string, FSWatcher>();
 
   private newPaths: string[] = [];
   private removedIds = new Set<string>();
@@ -44,46 +48,49 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
     this.removedIds.clear();
   }, 2000);
 
-  protected watcher = chokidar.watch([])
-    .on('ready', () => {
-      this.storeNewTracks.flush();
-      this.becomeReady();
-    })
-    .on('add', (path) => {
-      this.newPaths.push(path);
-      this.storeNewTracks();
-    })
-    .on('unlink', (path) => {
+  private watchHandler: WatchCallback = async (event, path) => {
+    const isFile = (await stat(path).then(s => s.isFile()).catch(stubFalse));
+
+    if (event === 'update') {
+      if (isFile) {
+        this.newPaths.push(path);
+        this.storeNewTracks();
+      }
+    } else if (event === 'remove') {
       this.removedIds.add(this.computePathId(path));
       this.handleTracksRemoval();
-    });
+    }
+  }
 
   watch(pattern: string): this {
     const normalized = normalizePath(pattern);
 
-    fg(normalized, { absolute: true, onlyFiles: true })
+    scan(normalized)
       .then(files => this.add(files))
       .then(() => {
-        const parent = globParent(normalized);
-
-        this.watcher.add(parent);
-        this.watchingPatterns.add(parent);
+        const recursively = { recursive: true };
+        const watcher = watch(globParent(normalized), recursively, this.watchHandler);
+        this.watchingPatterns.set(normalized, watcher);
       })
-      .then(() => {
-        this.becomeReady();
-      });
+      .then(() => this.becomeReady());
 
     return this;
   }
 
   unwatch(pattern: string) {
-    this.watcher.unwatch(pattern);
-    this.watchingPatterns.delete(pattern);
-    this.removeBy(({ path }) => mm(path, pattern));
+    const normalized = normalizePath(pattern);
+
+    const watcher = this.watchingPatterns.get(pattern);
+    if (watcher) {
+      watcher.close();
+    }
+
+    this.watchingPatterns.delete(normalized);
+    this.removeBy(({ path }) => mm(path, normalized));
   }
 
   unwatchAll() {
-    for (const pattern of this.watchingPatterns) {
+    for (const [pattern] of this.watchingPatterns) {
       this.unwatch(pattern);
     }
   }
@@ -92,3 +99,5 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
     return Array.from(this.watchingPatterns);
   }
 }
+
+const scan = (pattern: string) => fg(pattern, { absolute: true, onlyFiles: true });

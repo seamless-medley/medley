@@ -13,11 +13,11 @@
   "dependencies": {
     "@seamless-medley/medley": "workspace:../node-medley",
     "@types/workerpool": "^6.1.0",
-    "chokidar": "^3.5.1",
     "fast-glob": "^3.2.7",
     "lodash": "^4.17.21",
     "lyrics-searcher": "^1.0.58",
     "minisearch": "^3.1.0",
+    "node-watch": "^0.7.3",
     "normalize-path": "^3.0.0",
     "string-similarity": "^4.0.4",
     "workerpool": "^6.2.0"
