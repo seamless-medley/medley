@@ -1,6 +1,6 @@
 type IDOf<T> = T extends { id: infer ID } ? ID : any;
 
-export interface IReadonlyCollection<T extends { id: ID }, ID = IDOf<T>> extends Iterable<T> {
+export interface IReadonlyLibrary<T extends { id: ID }, ID = IDOf<T>> extends Iterable<T> {
   get size(): number;
 
   has(id: ID): boolean;
@@ -12,7 +12,7 @@ export interface IReadonlyCollection<T extends { id: ID }, ID = IDOf<T>> extends
   first(): T | undefined;
 }
 
-export class BaseCollection<T extends { id: ID }, ID = IDOf<T>> implements Iterable<T> {
+export class BaseLibrary<T extends { id: ID }, ID = IDOf<T>> implements Iterable<T> {
   protected elements = new Map<ID, T>();
 
   constructor(...elements: T[]) {
@@ -64,7 +64,7 @@ export class BaseCollection<T extends { id: ID }, ID = IDOf<T>> implements Itera
   }
 }
 
-export class Collection<T extends { id: ID }, ID = IDOf<T>> extends BaseCollection<T, ID> implements IReadonlyCollection<T, ID> {
+export class Library<T extends { id: ID }, ID = IDOf<T>> extends BaseLibrary<T, ID> implements IReadonlyLibrary<T, ID> {
   get size() {
     return super.size;
   }

@@ -1,6 +1,6 @@
 import MiniSearch, { Query, SearchResult } from 'minisearch';
 import { BoomBoxTrack, breath, Metadata, TrackKind, WatchTrackCollection } from "@seamless-medley/core";
-import { BaseCollection } from "../utils/collection";
+import { BaseLibrary } from "../utils/library";
 import _, { castArray, difference, get } from 'lodash';
 import normalizePath from 'normalize-path';
 import { MetadataHelper } from '@seamless-medley/core';
@@ -16,7 +16,7 @@ export type MusicLibraryMetadata<O> = MusicLibraryDescriptor & {
 }
 
 // TODO: Collection readiness, all tracks should be indexed first
-export class MusicLibrary<O> extends BaseCollection<WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>>> {
+export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>>> {
   private miniSearch = new MiniSearch<BoomBoxTrack>({
     fields: ['artist', 'title'],
     extractField: (track, field) => {

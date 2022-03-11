@@ -18,7 +18,7 @@ import { delay } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { Station } from "./station";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
-import { IReadonlyCollection } from "./utils/collection";
+import { IReadonlyLibrary } from "./utils/library";
 
 export type MedleyAutomatonOptions = {
   /**
@@ -70,7 +70,7 @@ export class MedleyAutomaton {
   private _guildStates: Map<Guild['id'], GuildState> = new Map();
 
   constructor(
-    readonly stations: IReadonlyCollection<Station>,
+    readonly stations: IReadonlyLibrary<Station>,
     options: MedleyAutomatonOptions
   ) {
     this.botToken = options.botToken;
