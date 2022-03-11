@@ -21,7 +21,7 @@ import type TypedEventEmitter from 'typed-emitter';
 import _, { difference, isArray } from "lodash";
 import normalizePath from 'normalize-path';
 import { createExciter } from "./exciter";
-import { MusicLibraryDescriptor, MusicLibrary } from "./music_collections";
+import { MusicLibraryDescriptor, MusicLibrary } from "./music_library";
 
 export enum PlayState {
   Idle = 'idle',

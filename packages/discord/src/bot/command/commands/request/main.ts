@@ -3,7 +3,7 @@ import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSe
 import _, { truncate } from "lodash";
 import { parse as parsePath } from 'path';
 import { Station } from "../../../station";
-import { MusicLibraryMetadata } from "../../../station/music_collections";
+import { MusicLibraryMetadata } from "../../../station/music_library";
 import { InteractionHandlerFactory } from "../../type";
 import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview, reply } from "../../utils";
 import { handleSelectMenu } from "./selectmenu";
