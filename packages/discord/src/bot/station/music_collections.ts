@@ -3,7 +3,6 @@ import { BoomBoxTrack, breath, Metadata, TrackKind, WatchTrackCollection } from 
 import { BaseCollection } from "../utils/collection";
 import _, { castArray, difference, get } from 'lodash';
 import normalizePath from 'normalize-path';
-import { Station } from './station';
 import { MetadataHelper } from '@seamless-medley/core';
 
 export type MusicCollectionDescriptor = {
@@ -12,12 +11,12 @@ export type MusicCollectionDescriptor = {
   description?: string;
 }
 
-export type MusicCollectionMetadata = MusicCollectionDescriptor & {
-  station: Station;
+export type MusicCollectionMetadata<O> = MusicCollectionDescriptor & {
+  owner: O;
 }
 
 // TODO: Collection readiness, all tracks should be indexed first
-export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBoxTrack, MusicCollectionMetadata>> {
+export class MusicCollections<O> extends BaseCollection<WatchTrackCollection<BoomBoxTrack, MusicCollectionMetadata<O>>> {
   private miniSearch = new MiniSearch<BoomBoxTrack>({
     fields: ['artist', 'title'],
     extractField: (track, field) => {
@@ -31,7 +30,7 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
 
   private collectionPaths = new Map<string, string>();
 
-  constructor(readonly station: Station, ...collections: MusicCollectionDescriptor[]) {
+  constructor(readonly owner: O, ...collections: MusicCollectionDescriptor[]) {
     super();
 
     for (const descriptor of collections) {
@@ -60,7 +59,7 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
     const { id } = descriptor;
     const path = normalizePath(descriptor.path);
 
-    const newCollection = WatchTrackCollection.initWithWatch<BoomBoxTrack, MusicCollectionMetadata>(
+    const newCollection = WatchTrackCollection.initWithWatch<BoomBoxTrack, MusicCollectionMetadata<O>>(
       id, `${path}/**/*`
     );
 
@@ -88,7 +87,7 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
 
     newCollection.metadata = {
       ...descriptor,
-      station: this.station
+      owner: this.owner
     };
 
     const existing = this.get(id);
@@ -121,7 +120,7 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
     return super.has(id);
   }
 
-  get(id: string): WatchTrackCollection<BoomBoxTrack, MusicCollectionMetadata> | undefined {
+  get(id: string): WatchTrackCollection<BoomBoxTrack, MusicCollectionMetadata<O>> | undefined {
     return super.get(id);
   }
 
