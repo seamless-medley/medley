@@ -1,9 +1,11 @@
-import MiniSearch, { Query, SearchResult } from 'minisearch';
-import { BoomBoxTrack, breath, Metadata, TrackKind, WatchTrackCollection } from "@seamless-medley/core";
-import { BaseLibrary } from "../utils/library";
+import { Metadata } from '@seamless-medley/medley';
 import _, { castArray, difference, get } from 'lodash';
+import MiniSearch, { Query, SearchResult } from 'minisearch';
 import normalizePath from 'normalize-path';
-import { MetadataHelper } from '@seamless-medley/core';
+import { WatchTrackCollection } from '../collections';
+import { BoomBoxTrack, MetadataHelper, TrackKind } from '../playout';
+import { breath } from '../utils';
+import { BaseLibrary } from './library';
 
 export type MusicLibraryDescriptor = {
   id: string;

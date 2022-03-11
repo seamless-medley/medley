@@ -1,4 +1,4 @@
-import { BoomBoxTrackPlay, isRequestTrack, Metadata } from "@seamless-medley/core";
+import { BoomBoxTrackPlay, isRequestTrack, Metadata, MusicLibraryMetadata } from "@seamless-medley/core";
 import colorableDominant from 'colorable-dominant';
 import { Message, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, MessageOptions } from "discord.js";
 import { capitalize, isEmpty, get } from "lodash";
@@ -6,7 +6,6 @@ import mime from 'mime-types';
 import { parse as parsePath } from 'path';
 import splashy from 'splashy';
 import { Station } from "./station";
-import { MusicLibraryMetadata } from "./station/music_library";
 
 export enum TrackMessageStatus {
   Playing,

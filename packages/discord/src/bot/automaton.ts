@@ -1,24 +1,38 @@
 /// <reference path="../types.d.ts" />
 
 import { REST as RestClient } from "@discordjs/rest";
-import { AudioPlayer, AudioResource, createAudioPlayer, DiscordGatewayAdapterCreator, entersState, joinVoiceChannel, NoSubscriberBehavior, VoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
-import {
-  BoomBoxTrack,
-  BoomBoxTrackPlay, RequestAudioStreamResult, TrackKind
-} from "@seamless-medley/core";
 import { Routes } from "discord-api-types/v9";
+
+import {
+  AudioPlayer,
+  AudioResource,
+  createAudioPlayer,
+  DiscordGatewayAdapterCreator,
+  entersState,
+  joinVoiceChannel,
+  NoSubscriberBehavior,
+  VoiceConnection,
+  VoiceConnectionStatus
+} from "@discordjs/voice";
+
 import {
   BaseGuildTextChannel,
   BaseGuildVoiceChannel, Client, Guild,
   Intents, Message, MessageOptions,
-  MessagePayload, Snowflake, User, VoiceBasedChannel, VoiceState
+  MessagePayload, Snowflake, VoiceBasedChannel, VoiceState
 } from "discord.js";
+
+import {
+  BoomBoxTrack,
+  BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind
+} from "@seamless-medley/core";
+
 
 import { delay } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { Station } from "./station";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
-import { IReadonlyLibrary } from "./utils/library";
+
 
 export type MedleyAutomatonOptions = {
   /**

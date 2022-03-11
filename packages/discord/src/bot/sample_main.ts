@@ -1,8 +1,7 @@
-import { decibelsToGain, TrackCollection } from "@seamless-medley/core";
+import { decibelsToGain, Library, TrackCollection } from "@seamless-medley/core";
 import _ from "lodash";
 import { MedleyAutomaton } from "./automaton";
 import { SequenceConfig, Station, SweeperConfig } from "./station";
-import { Collection } from "./utils/collection";
 
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);

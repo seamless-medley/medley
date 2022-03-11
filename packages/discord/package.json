@@ -24,7 +24,6 @@
     "libsodium-wrappers": "^0.7.9",
     "lodash": "^4.17.21",
     "mime-types": "^2.1.34",
-    "minisearch": "^3.1.0",
     "opusscript": "^0.0.8"
     "splashy": "5.1.0"
   },
