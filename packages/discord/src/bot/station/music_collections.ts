@@ -1,5 +1,5 @@
 import MiniSearch, { Query, SearchResult } from 'minisearch';
-import { BoomBoxTrack, Metadata, TrackKind, WatchTrackCollection } from "@seamless-medley/core";
+import { BoomBoxTrack, breath, Metadata, TrackKind, WatchTrackCollection } from "@seamless-medley/core";
 import { BaseCollection } from "../utils/collection";
 import _, { castArray, difference, get } from 'lodash';
 import normalizePath from 'normalize-path';
@@ -64,12 +64,12 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
       id, `${path}/**/*`
     );
 
-    newCollection.on('tracksAdd', (tracks: BoomBoxTrack[]) => {
+    newCollection.on('tracksAdd', async (tracks: BoomBoxTrack[]) => {
       // TODO: Chunking, add deley between chunk, also deley between track
       for (const track of tracks) {
         if (!track.metadata) {
           // TODO: Add support for Metadata caching
-          helper.metadata(track.path)
+          await helper.metadata(track.path)
             .then((tags: Metadata) => {
               track.metadata = {
                 tags,
@@ -78,6 +78,7 @@ export class MusicCollections extends BaseCollection<WatchTrackCollection<BoomBo
 
               this.miniSearch.add(track);
             })
+            .then(breath)
             .catch((e) => {
               console.log('Error', e)
             });
