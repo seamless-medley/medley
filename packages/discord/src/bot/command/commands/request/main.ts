@@ -2,7 +2,8 @@ import { BoomBoxTrack } from "@seamless-medley/core";
 import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSelectMenu, MessageSelectOptionData } from "discord.js";
 import _, { truncate } from "lodash";
 import { parse as parsePath } from 'path';
-import { MusicCollectionMetadata } from "../../../station/music_collections";
+import { Station } from "../../../station";
+import { MusicLibraryMetadata } from "../../../station/music_collections";
 import { InteractionHandlerFactory } from "../../type";
 import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview, reply } from "../../utils";
 import { handleSelectMenu } from "./selectmenu";
@@ -71,7 +72,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
     .pickBy(group => group.length > 1)
     .forEach(group => {
       for (const sel of group) {
-        const { description } = sel.collection.metadata as unknown as MusicCollectionMetadata;
+        const { description } = sel.collection.metadata as unknown as MusicLibraryMetadata<Station>;
         sel.description += ` (from \'${description ?? sel.collection.id}\' collection)`
       }
     });

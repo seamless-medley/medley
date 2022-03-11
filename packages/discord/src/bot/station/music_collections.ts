@@ -5,18 +5,18 @@ import _, { castArray, difference, get } from 'lodash';
 import normalizePath from 'normalize-path';
 import { MetadataHelper } from '@seamless-medley/core';
 
-export type MusicCollectionDescriptor = {
+export type MusicLibraryDescriptor = {
   id: string;
   path: string;
   description?: string;
 }
 
-export type MusicCollectionMetadata<O> = MusicCollectionDescriptor & {
+export type MusicLibraryMetadata<O> = MusicLibraryDescriptor & {
   owner: O;
 }
 
 // TODO: Collection readiness, all tracks should be indexed first
-export class MusicCollections<O> extends BaseCollection<WatchTrackCollection<BoomBoxTrack, MusicCollectionMetadata<O>>> {
+export class MusicLibrary<O> extends BaseCollection<WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>>> {
   private miniSearch = new MiniSearch<BoomBoxTrack>({
     fields: ['artist', 'title'],
     extractField: (track, field) => {
@@ -30,7 +30,7 @@ export class MusicCollections<O> extends BaseCollection<WatchTrackCollection<Boo
 
   private collectionPaths = new Map<string, string>();
 
-  constructor(readonly owner: O, ...collections: MusicCollectionDescriptor[]) {
+  constructor(readonly owner: O, ...collections: MusicLibraryDescriptor[]) {
     super();
 
     for (const descriptor of collections) {
@@ -55,11 +55,11 @@ export class MusicCollections<O> extends BaseCollection<WatchTrackCollection<Boo
     super.remove(...collections);
   }
 
-  addCollection(descriptor: MusicCollectionDescriptor) {
+  addCollection(descriptor: MusicLibraryDescriptor) {
     const { id } = descriptor;
     const path = normalizePath(descriptor.path);
 
-    const newCollection = WatchTrackCollection.initWithWatch<BoomBoxTrack, MusicCollectionMetadata<O>>(
+    const newCollection = WatchTrackCollection.initWithWatch<BoomBoxTrack, MusicLibraryMetadata<O>>(
       id, `${path}/**/*`
     );
 
@@ -120,11 +120,11 @@ export class MusicCollections<O> extends BaseCollection<WatchTrackCollection<Boo
     return super.has(id);
   }
 
-  get(id: string): WatchTrackCollection<BoomBoxTrack, MusicCollectionMetadata<O>> | undefined {
+  get(id: string): WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>> | undefined {
     return super.get(id);
   }
 
-  update(descriptors: MusicCollectionDescriptor[]): string[] {
+  update(descriptors: MusicLibraryDescriptor[]): string[] {
     const removingIds = difference(
       [...this.elements.keys()],
       descriptors.map(desc => desc.id)

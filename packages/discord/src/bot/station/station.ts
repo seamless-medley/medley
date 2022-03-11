@@ -21,7 +21,7 @@ import type TypedEventEmitter from 'typed-emitter';
 import _, { difference, isArray } from "lodash";
 import normalizePath from 'normalize-path';
 import { createExciter } from "./exciter";
-import { MusicCollectionDescriptor, MusicCollections } from "./music_collections";
+import { MusicLibraryDescriptor, MusicLibrary } from "./music_collections";
 
 export enum PlayState {
   Idle = 'idle',
@@ -60,7 +60,7 @@ export type StationOptions = {
    */
   initialGain?: number;
 
-  musicCollections: MusicCollectionDescriptor[];
+  musicCollections: MusicLibraryDescriptor[];
 
   sequences: SequenceConfig[];
 
@@ -97,7 +97,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private boombox: BoomBox<User['id']>;
 
-  readonly collections: MusicCollections;
+  readonly library: MusicLibrary<Station>;
   private sequences: SequenceConfig[] = [];
 
   readonly initialGain: number;
@@ -135,7 +135,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.description = options.description;
 
     this.boombox = boombox;
-    this.collections = new MusicCollections(this, ...(options.musicCollections || []));
+    this.library = new MusicLibrary(this, ...(options.musicCollections || []));
     this.initialGain = options.initialGain || decibelsToGain(-15);
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
@@ -246,8 +246,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return createExciter(audioRequest);
   }
 
-  updateCollections(newCollections: MusicCollectionDescriptor[]) {
-    this.collections.update(newCollections);
+  updateCollections(newCollections: MusicLibraryDescriptor[]) {
+    this.library.update(newCollections);
     this.createCrates();
   }
 
@@ -259,7 +259,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   private createCrates() {
     this.boombox.crates = this.sequences.map(
       ({ crateId, collections, limit }, index) => {
-        const validCollections = collections.filter(col => this.collections.has(col.id));
+        const validCollections = collections.filter(col => this.library.has(col.id));
 
         if (validCollections.length === 0) {
           return;
@@ -267,7 +267,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
         return new Crate({
           id: crateId,
-          sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.collections.get(id)!, weight })),
+          sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.library.get(id)!, weight })),
           limit: sequenceLimit(limit)
         });
       })
@@ -301,15 +301,15 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 
   findTrackById(id: BoomBoxTrack['id']) {
-    return this.collections.findTrackById(id);
+    return this.library.findTrackById(id);
   }
 
   search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): BoomBoxTrack[] {
-    return this.collections.search(q, limit);
+    return this.library.search(q, limit);
   }
 
   autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string) {
-    return this.collections.autoSuggest(q, field, narrowBy, narrowTerm);
+    return this.library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
   async request(trackId: BoomBoxTrack['id'], requestedBy: User['id']) {
