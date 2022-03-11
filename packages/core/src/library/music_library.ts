@@ -66,7 +66,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     );
 
     newCollection.on('tracksAdd', async (tracks: BoomBoxTrack[]) => {
-      // TODO: Chunking, add deley between chunk, also deley between track
       for (const track of tracks) {
         if (!track.metadata) {
           // TODO: Add support for Metadata caching
