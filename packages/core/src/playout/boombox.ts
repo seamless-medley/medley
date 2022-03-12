@@ -9,6 +9,7 @@ import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
 import { MetadataHelper } from './metadata';
+import { MetadataCache } from './metadata/cache';
 
 export enum TrackKind {
   Normal,
@@ -62,6 +63,8 @@ type BoomBoxOptions = {
   queue: Queue<BoomBoxTrack>;
   crates: BoomBoxCrate[];
 
+  metadataCache?: MetadataCache;
+
   /**
    * Initalize artist history
    */
@@ -94,10 +97,11 @@ type BoomBoxOptions = {
 export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
   readonly sequencer: CrateSequencer<BoomBoxTrack>;
 
-  private options: Required<Omit<BoomBoxOptions, 'medley' | 'queue' | 'crates' | 'artistHistory'>>;
+  private options: Required<Pick<BoomBoxOptions, 'maxTrackHistory' | 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
 
   readonly medley: Medley<BoomBoxTrack>;
   readonly queue: Queue<BoomBoxTrack>;
+  readonly metadataCache?: MetadataCache;
 
   private artistHistory: string[][];
 
@@ -116,6 +120,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     //
     this.medley = options.medley;
     this.queue = options.queue;
+    this.metadataCache = options.metadataCache;
     //
     this.medley.on('enqueueNext', this.enqueue);
     this.medley.on('loaded', this.deckLoaded);
@@ -164,12 +169,12 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private verifyTrack: TrackVerifier<BoomBoxMetadata> = async (track) => {
     try {
-      // TODO: Support for metadata caching
-      const musicMetadata = track.metadata?.tags ?? { tags: await MetadataHelper.metadata(track.path) };
+      const musicMetadata = track.metadata?.tags ?? await MetadataHelper.fetchMetadata(track, this.metadataCache);
 
       const boomBoxMetadata: BoomBoxMetadata = {
         kind: TrackKind.Normal,
-        ...musicMetadata
+        ...track.metadata,
+        tags: musicMetadata
       }
       const playedArtists = flatten(this.artistHistory).map(toLower);
       const currentArtists = getArtists(boomBoxMetadata).map(toLower);

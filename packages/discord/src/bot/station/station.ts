@@ -23,6 +23,7 @@ import type TypedEventEmitter from 'typed-emitter';
 import _, { difference, isArray } from "lodash";
 import normalizePath from 'normalize-path';
 import { createExciter } from "./exciter";
+import { MetadataCache } from "@seamless-medley/core/src/playout/metadata/cache";
 
 export enum PlayState {
   Idle = 'idle',
@@ -72,6 +73,7 @@ export type StationOptions = {
   requestSweepers?: TrackCollection<BoomBoxTrack>;
 
   // BoomBox
+  metadataCache?: MetadataCache;
   // TODO: maxTrackHistory
   // TODO: noDuplicatedArtist
   // TODO: duplicationSimilarity
@@ -121,7 +123,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     const boombox = new BoomBox({
       medley: this.medley,
       queue: this.queue,
-      crates: []
+      crates: [],
+      metadataCache: options.metadataCache
     });
 
     boombox.on('trackQueued', this.handleTrackQueued);
@@ -136,7 +139,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.description = options.description;
 
     this.boombox = boombox;
-    this.library = new MusicLibrary(this, ...(options.musicCollections || []));
+    this.library = new MusicLibrary(this, options.metadataCache, ...(options.musicCollections || []));
     this.initialGain = options.initialGain || decibelsToGain(-15);
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;

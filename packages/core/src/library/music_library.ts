@@ -4,6 +4,7 @@ import MiniSearch, { Query, SearchResult } from 'minisearch';
 import normalizePath from 'normalize-path';
 import { WatchTrackCollection } from '../collections';
 import { BoomBoxTrack, MetadataHelper, TrackKind } from '../playout';
+import { MetadataCache } from '../playout/metadata/cache';
 import { breath } from '../utils';
 import { BaseLibrary } from './library';
 
@@ -32,7 +33,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
   private collectionPaths = new Map<string, string>();
 
-  constructor(readonly owner: O, ...collections: MusicLibraryDescriptor[]) {
+  constructor(readonly owner: O, readonly metadataCache: MetadataCache | undefined, ...collections: MusicLibraryDescriptor[]) {
     super();
 
     for (const descriptor of collections) {
@@ -69,7 +70,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       for (const track of tracks) {
         if (!track.metadata) {
           // TODO: Add support for Metadata caching
-          await helper.metadata(track.path)
+          await helper.fetchMetadata(track, this.metadataCache, true)
             .then((tags: Metadata) => {
               track.metadata = {
                 tags,

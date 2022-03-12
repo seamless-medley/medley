@@ -1,5 +1,7 @@
 import workerpool, { WorkerPool, WorkerPoolOptions } from 'workerpool';
 import type { CoverAndLyrics, Metadata } from '@seamless-medley/medley';
+import { MetadataCache } from './cache';
+import { Track } from '../../track';
 
 let instance: MetadataHelper;
 
@@ -34,6 +36,19 @@ export class MetadataHelper {
     }
   }
 
+  async fetchMetadata(track: Track<any>, cache: MetadataCache | undefined, noRefresh = false) {
+    const cached = await cache?.get(track.id, noRefresh);
+    if (cached) {
+      // console.log('[fetchMetadata], From cache', cached);
+      return cached;
+    }
+
+    const fresh = await this.metadata(track.path);
+    cache?.persist(track, fresh);
+
+    return fresh;
+  }
+
   async searchLyrics(artist: string, title: string) {
     return this.pool.exec('searchLyrics', [artist, title]);
   }
@@ -52,6 +67,10 @@ export class MetadataHelper {
 
   static coverAndLyrics(path: string) {
     return this.getDefaultInstance().coverAndLyrics(path);
+  }
+
+  static fetchMetadata(track: Track<any>, cache: MetadataCache | undefined) {
+    return this.getDefaultInstance().fetchMetadata(track, cache);
   }
 
   static searchLyrics(artist: string, title: string) {
