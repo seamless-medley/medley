@@ -1,30 +1,65 @@
 import workerpool, { WorkerPool } from 'workerpool';
+import type KeyvSqlite from '@keyv/sqlite';
+import type KeyvRedis from '@keyv/redis';
+
 
 import type { Metadata } from '@seamless-medley/medley';
 import type { BoomBoxTrack } from '../boombox';
 
+export type MetadataCacheSqliteStore = {
+  type: 'sqlite';
+  path: string;
+} & Omit<KeyvSqlite.Options, 'uri'>
+
+export type MetadataCacheRedisStore = {
+  type: 'redis';
+} & KeyvRedis.Options;
+
+export type MetadataCacheStore = MetadataCacheSqliteStore | MetadataCacheRedisStore;
+
+export type MetadataCacheOptions = {
+  namespace?: string;
+  /**
+   * TTL in milliseconds, default to 1 day
+   * @default 86400e3 (1 day)
+   */
+  ttl?: number;
+
+  store: MetadataCacheStore
+}
+
 interface Proxied {
-  isInitialized(): Promise<boolean>;
-  init(): Promise<void>;
   get(id: string): Promise<Metadata>;
   set(id: string, data: Metadata): Promise<void>;
   del(id: string): Promise<void>;
 }
 
-// TODO: TTL
 export class MetadataCache {
-
   private pool: WorkerPool;
 
-  // TODO: Configuration
   constructor() {
     this.pool = workerpool.pool(__dirname + '/cacheWorker.js', {
 
     });
+
+    this.poolHack();
   }
 
-  async init() {
-    await this.proxied();
+  private poolHack() {
+    const pool = (this.pool as any);
+    const workers = pool.workers as any[];
+
+    for (let i = 0; i < workerpool.cpus; i++) {
+      const worker = pool._createWorkerHandler();
+      workers.push(worker);
+    }
+  }
+
+  async init(options: MetadataCacheOptions) {
+    const pool = (this.pool as any);
+    for (const worker of pool.workers as any[]) {
+      await worker.exec('configure', [options]);
+    }
   }
 
   private async proxied(): Promise<Proxied> {

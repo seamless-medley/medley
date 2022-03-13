@@ -83,9 +83,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
                 await breath();
               }
             })
-            .catch((e) => {
-              console.log('Error', e)
-            });
+            .catch(noop);
         }
       }
     });

@@ -4,42 +4,52 @@ const { worker } = require('workerpool');
 const Keyv = require("keyv");
 const KeyvRedis = require('@keyv/redis');
 const KeyvSqlite = require('@keyv/sqlite');
-const { stubFalse } = require('lodash');
-
-/** @type {Keyv.Store} */
-let store;
+const { stubFalse, noop } = require('lodash');
 
 /** @type {Keyv} */
 let container;
 
-// TODO: change to configure
-function init() {
-  store = new KeyvSqlite({
-    uri: 'sqlite://metadata.db' // TODO: Configurable
-    // TODO: Table name
-  });
-
-  container = new Keyv({
-    // TODO: Namespace
-    store
-  })
-}
-
-const isInitialized = () => !!container;
-
-function acquire() {
-  if (!isInitialized()) {
-    init();
+/** @param {import('./cache').MetadataCacheStore} config */
+function createStore(config) {
+  if (config.type === 'sqlite') {
+    return new KeyvSqlite({
+      ...config,
+      uri: `sqlite://${config.path}`
+    })
   }
 
-  return container;
+  if (config.type === 'redis') {
+    return new KeyvRedis(config);
+  }
 }
 
+/**
+ * @param {import('./cache').MetadataCacheOptions} options
+ */
+function configure(options) {
+  container = new Keyv({
+    namespace: options.namespace || 'medley',
+    ttl: options.ttl || (60 * 60 * 24 * 1000),
+    store: createStore(options.store),
+    adapter: options.store.type
+  });
+}
 
-const get = (key) => acquire().get(key);
+/**
+ * @param {string} key
+ */
+function get(key) {
+  return container?.get(key);
+}
 
-const set = async (key, value) => {
-  acquire();
+/**
+ * @param {string} key
+ * @param {any} value
+ */
+async function set(key, value) {
+  if (!container) {
+    return false;
+  }
 
   for (let i = 0; i < 10; i++) {
     const ok = await container.set(key, value).catch(stubFalse);
@@ -51,12 +61,19 @@ const set = async (key, value) => {
   return false;
 }
 
-const del = (key) => acquire().delete(key);
+/**
+ * @param {string} key
+ */
+function del(key) {
+  container?.delete(key);
+}
 
 worker({
-  isInitialized,
-  init,
+  configure,
   get,
   set,
   del
 });
+
+process.on('uncaughtException', noop);
+process.on('unhandledRejection', noop);
