@@ -8,8 +8,7 @@ import { Crate, CrateSequencer, TrackValidator, TrackVerifier } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
-import { MetadataHelper } from './metadata';
-import { MetadataCache } from './metadata/cache';
+import { MetadataHelper, MetadataCache } from './metadata';
 
 export enum TrackKind {
   Normal,
