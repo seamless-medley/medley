@@ -95,7 +95,6 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
             const { shouldPlay, metadata } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, metadata: undefined };
 
             if (shouldPlay) {
-              console.log(`[${this._playCounter}] From crate ${crate.id} => ${track.path}`);
               this._playCounter++;
 
               track.crate = crate as unknown as Crate<Track<M>>;

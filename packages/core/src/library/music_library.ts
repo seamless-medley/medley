@@ -67,7 +67,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     );
 
     newCollection.on('tracksAdd', async (tracks: BoomBoxTrack[]) => {
-      console.log('collection', id, 'tracksAdd', tracks.length);
       for (const track of tracks) {
         if (!track.metadata) {
           await helper.fetchMetadata(track, this.metadataCache)

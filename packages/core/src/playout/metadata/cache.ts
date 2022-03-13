@@ -20,8 +20,8 @@ export type MetadataCacheStore = MetadataCacheSqliteStore | MetadataCacheRedisSt
 export type MetadataCacheOptions = {
   namespace?: string;
   /**
-   * TTL in milliseconds, default to 1 day
-   * @default 86400e3 (1 day)
+   * TTL in milliseconds, default to 24 hours
+   * @default 86400e3 (24 hours)
    */
   ttl?: number;
 
