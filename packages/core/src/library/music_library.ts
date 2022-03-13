@@ -151,7 +151,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     }
   }
 
-  async buildCache(): Promise<number> {
+  async buildCache(progressCallback?: (progress: number, outOf: number) => any): Promise<number> {
     return new Promise((resolve) => {
       const cache = this.metadataCache;
       if (!cache) {
@@ -159,7 +159,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         return;
       }
 
-      console.log('Building cache')
+      progressCallback?.(-1, -1);
 
       let allTracks: BoomBoxTrack[] = [];
 
@@ -167,9 +167,13 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         allTracks = allTracks.concat(collection.all());
       }
 
+      const total = allTracks.length;
+      progressCallback?.(0, total);
+
       const process = (tracks: BoomBoxTrack[]) => {
         if (tracks.length <= 0) {
-          resolve(allTracks.length);
+          progressCallback?.(total, total);
+          resolve(total);
           return;
         }
 
@@ -181,6 +185,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
           cache.persist(track, metadata).catch(noop);
         }
 
+        progressCallback?.(total - remainings.length, total);
         setTimeout(() => process(remainings), 0);
       }
 
