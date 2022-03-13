@@ -67,48 +67,50 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
           this.emit('change', crate as unknown as Crate<Track<any>>);
         }
 
-        scanned += crate.sources.length;
-        for (let i = 0; i < crate.sources.length; i++) {
-          // Latching is active
-          if (this.latchFor > 0) {
-            this.latchCount++;
+        for (const source of crate.sources) {
+          scanned += source.length;
+          for (let i = 0; i < source.length; i++) {
+            // Latching is active
+            if (this.latchFor > 0) {
+              this.latchCount++;
 
-            if (this.latchCount > this.latchFor) {
-              this.latchCount = 0;
-              this.latchFor = 0;
+              if (this.latchCount > this.latchFor) {
+                this.latchCount = 0;
+                this.latchFor = 0;
 
+                // Stop searching for next track and flow to the next crate
+                break;
+              }
+            }
+
+            if ((this._playCounter + 1) > crate.max) {
               // Stop searching for next track and flow to the next crate
               break;
             }
-          }
 
-          if ((this._playCounter + 1) > crate.max) {
-            // Stop searching for next track and flow to the next crate
-            break;
-          }
+            const { trackValidator, trackVerifier } = this.options;
 
-          const { trackValidator, trackVerifier } = this.options;
+            const track = await crate.next(trackValidator);
 
-          const track = await crate.next(trackValidator);
+            if (track) {
+              const { shouldPlay, metadata } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, metadata: undefined };
 
-          if (track) {
-            const { shouldPlay, metadata } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, metadata: undefined };
+              if (shouldPlay) {
+                this._playCounter++;
 
-            if (shouldPlay) {
-              this._playCounter++;
+                track.crate = crate as unknown as Crate<Track<M>>;
 
-              track.crate = crate as unknown as Crate<Track<M>>;
+                if (this.isMetadata(metadata)) {
+                  track.metadata = metadata;
+                }
 
-              if (this.isMetadata(metadata)) {
-                track.metadata = metadata;
+                return track;
               }
-
-              return track;
+              // track should be skipped, go to next track
             }
-            // track should be skipped, go to next track
+            // track is neither valid nor defined, go to next track
+            ignored++;
           }
-          // track is neither valid nor defined, go to next track
-          ignored++;
         }
         // no more track
       }
