@@ -49,26 +49,28 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
   }, 2000);
 
   private watchHandler: WatchCallback = async (event, path) => {
-    const isFile = (await stat(path).then(s => s.isFile()).catch(stubFalse));
-
     if (event === 'update') {
+      const isFile = (await stat(path).then(s => s.isFile()).catch(stubFalse));
       if (isFile) {
         this.newPaths.push(path);
         this.storeNewTracks();
       }
-    } else if (event === 'remove') {
+      return;
+    }
+
+    if (event === 'remove') {
       this.removedIds.add(this.computePathId(path));
       this.handleTracksRemoval();
+      return;
     }
   }
 
   watch(pattern: string): this {
-    const normalized = normalizePath(pattern);
-
-    scan(normalized)
-      .then(files => this.add(files))
+    this.scan(pattern)
       .then(() => {
+        const normalized = normalizePath(pattern);
         const recursively = { recursive: true };
+        //
         const watcher = watch(globParent(normalized), recursively, this.watchHandler);
         this.watchingPatterns.set(normalized, watcher);
       })
@@ -98,6 +100,17 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
   get watched() {
     return Array.from(this.watchingPatterns);
   }
+
+  private async scan(pattern: string) {
+    const normalized = normalizePath(pattern);
+    return glob(normalized).then(files => this.add(files))
+  }
+
+  async rescan() {
+    for (const [pattern] of this.watched) {
+      await this.scan(pattern);
+    }
+  }
 }
 
-const scan = (pattern: string) => fg(pattern, { absolute: true, onlyFiles: true });
+const glob = (pattern: string) => fg(pattern, { absolute: true, onlyFiles: true });

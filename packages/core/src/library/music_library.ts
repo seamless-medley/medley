@@ -67,6 +67,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     );
 
     newCollection.on('tracksAdd', async (tracks: BoomBoxTrack[]) => {
+      console.log('collection', id, 'tracksAdd', tracks.length);
       for (const track of tracks) {
         if (!track.metadata) {
           await helper.fetchMetadata(track, this.metadataCache)
@@ -150,6 +151,43 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         return track;
       }
     }
+  }
+
+  async buildCache(): Promise<number> {
+    return new Promise((resolve) => {
+      const cache = this.metadataCache;
+      if (!cache) {
+        resolve(0);
+        return;
+      }
+
+      console.log('Building cache')
+
+      let allTracks: BoomBoxTrack[] = [];
+
+      for (const collection of this) {
+        allTracks = allTracks.concat(collection.all());
+      }
+
+      const process = (tracks: BoomBoxTrack[]) => {
+        if (tracks.length <= 0) {
+          resolve(allTracks.length);
+          return;
+        }
+
+        const [track, ...remainings] = tracks;
+
+        const metadata = track.metadata?.tags;
+
+        if (metadata) {
+          cache.persist(track, metadata).catch(noop);
+        }
+
+        setTimeout(() => process(remainings), 0);
+      }
+
+      process(allTracks);
+    });
   }
 
   search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): BoomBoxTrack[] {

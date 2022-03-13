@@ -147,6 +147,10 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     return findIndex(this.tracks, t => t.id === track.id);
   }
 
+  at(index: number): T {
+    return this.tracks[index];
+  }
+
   find(path: string) {
     return find(this.tracks, track => track.path === path);
   }
@@ -178,5 +182,13 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
       index: left + i,
       track
     }));
+  }
+
+  [Symbol.iterator](): Iterator<T, any, undefined> {
+    return this.tracks.values();
+  }
+
+  all() {
+    return [...this.tracks];
   }
 }
