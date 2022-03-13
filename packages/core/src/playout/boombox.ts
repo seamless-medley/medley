@@ -169,13 +169,14 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private verifyTrack: TrackVerifier<BoomBoxMetadata> = async (track) => {
     try {
-      const musicMetadata = track.metadata?.tags ?? await MetadataHelper.fetchMetadata(track, this.metadataCache);
+      const musicMetadata = track.metadata?.tags ?? (await MetadataHelper.fetchMetadata(track, this.metadataCache, true)).metadata;
 
       const boomBoxMetadata: BoomBoxMetadata = {
         kind: TrackKind.Normal,
         ...track.metadata,
         tags: musicMetadata
       }
+
       const playedArtists = flatten(this.artistHistory).map(toLower);
       const currentArtists = getArtists(boomBoxMetadata).map(toLower);
       const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));

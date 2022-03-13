@@ -12,6 +12,11 @@ type WorkerCoverAndLyrics = Omit<CoverAndLyrics, 'cover'> & {
   }
 }
 
+export type FetchResult = {
+  hit: boolean;
+  metadata: Metadata;
+}
+
 export class MetadataHelper {
   private pool: WorkerPool;
 
@@ -36,17 +41,16 @@ export class MetadataHelper {
     }
   }
 
-  async fetchMetadata(track: Track<any>, cache: MetadataCache | undefined, noRefresh = false) {
-    const cached = await cache?.get(track.id, noRefresh);
+  async fetchMetadata(track: Track<any>, cache: MetadataCache | undefined, refresh = false): Promise<FetchResult> {
+    const cached = await cache?.get(track.id, refresh);
     if (cached) {
-      // console.log('[fetchMetadata], From cache', cached);
-      return cached;
+      return { hit: true, metadata: cached };
     }
 
     const fresh = await this.metadata(track.path);
     cache?.persist(track, fresh);
 
-    return fresh;
+    return { hit: false, metadata: fresh };
   }
 
   async searchLyrics(artist: string, title: string) {
@@ -69,8 +73,8 @@ export class MetadataHelper {
     return this.getDefaultInstance().coverAndLyrics(path);
   }
 
-  static fetchMetadata(track: Track<any>, cache: MetadataCache | undefined) {
-    return this.getDefaultInstance().fetchMetadata(track, cache);
+  static fetchMetadata(track: Track<any>, cache: MetadataCache | undefined, refresh = false) {
+    return this.getDefaultInstance().fetchMetadata(track, cache, refresh);
   }
 
   static searchLyrics(artist: string, title: string) {

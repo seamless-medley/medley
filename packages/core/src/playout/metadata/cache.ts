@@ -1,68 +1,58 @@
-import workerpool from 'workerpool';
+import workerpool, { WorkerPool } from 'workerpool';
 
 import type { Metadata } from '@seamless-medley/medley';
 import type { BoomBoxTrack } from '../boombox';
 
+interface Proxied {
+  isInitialized(): Promise<boolean>;
+  init(): Promise<void>;
+  get(id: string): Promise<Metadata>;
+  set(id: string, data: Metadata): Promise<void>;
+  del(id: string): Promise<void>;
+}
+
 // TODO: TTL
 export class MetadataCache {
-  private pool = workerpool.pool(__dirname + '/cacheWorker.js', {
-    minWorkers: workerpool.cpus,
-    maxWorkers: workerpool.cpus
-  });
 
-  // TODO: Use proxy
+  private pool: WorkerPool;
+
+  // TODO: Configuration
+  constructor() {
+    this.pool = workerpool.pool(__dirname + '/cacheWorker.js', {
+
+    });
+  }
 
   async init() {
-    const initalized = await this._isInitialized();
-
-    if (!initalized) {
-      await this._init();
-    }
+    await this.proxied();
   }
 
-  private async _isInitialized() {
-    return this.pool.exec<() => boolean>('isInitialized', []);
+  private async proxied(): Promise<Proxied> {
+    return (await this.pool.proxy()) as unknown as Proxied;
   }
 
-  private async _init() {
-    await this.pool.exec('init', []);
-  }
+  async get(id: string, refresh = false) {
+    const proxy = await this.proxied();
 
-  private async _get(id: string): Promise<Metadata> {
-    return this.pool.exec<MetadataCache['_get']>('get', [id]);
-  }
+    const metadata = await proxy.get(id);
 
-  private async _set(id: string, data: Metadata): Promise<void> {
-    await this.pool.exec<MetadataCache['_set']>('set', [id, data]);
-    return;
-  }
-
-  private async _delete(id: string): Promise<void> {
-    await this.pool.exec<MetadataCache['_delete']>('del', [id]);
-  }
-
-  async get(id: string, noRefresh = false) {
-    await this.init();
-
-    const metadata = await this._get(id);
-
-    if (metadata && !noRefresh) {
-      this._set(id, metadata);
+    if (metadata && refresh) {
+      proxy.set(id, metadata);
     }
 
     return metadata;
   }
 
   async persist(track: BoomBoxTrack, metadata?: Metadata) {
-    await this.init();
+    const proxy = await this.proxied();
 
     const toBePersisted = metadata ?? track.metadata?.tags;
 
     if (!toBePersisted) {
-      await this._delete(track.id);
+      await proxy.del(track.id);
       return;
     }
 
-    await this._set(track.id, toBePersisted);
+    await proxy.set(track.id, toBePersisted);
   }
 }

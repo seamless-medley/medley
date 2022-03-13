@@ -1,5 +1,5 @@
 import { Metadata } from '@seamless-medley/medley';
-import _, { castArray, difference, get } from 'lodash';
+import _, { castArray, difference, get, noop } from 'lodash';
 import MiniSearch, { Query, SearchResult } from 'minisearch';
 import normalizePath from 'normalize-path';
 import { WatchTrackCollection } from '../collections';
@@ -69,17 +69,19 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     newCollection.on('tracksAdd', async (tracks: BoomBoxTrack[]) => {
       for (const track of tracks) {
         if (!track.metadata) {
-          // TODO: Add support for Metadata caching
-          await helper.fetchMetadata(track, this.metadataCache, true)
-            .then((tags: Metadata) => {
+          await helper.fetchMetadata(track, this.metadataCache)
+            .then(async ({ hit, metadata: tags }) => {
               track.metadata = {
                 tags,
                 kind: TrackKind.Normal
               };
 
               this.miniSearch.add(track);
+
+              if (!hit) {
+                await breath();
+              }
             })
-            .then(breath)
             .catch((e) => {
               console.log('Error', e)
             });

@@ -51,12 +51,16 @@ export class BaseLibrary<T extends { id: ID }, ID = IDOf<T>> implements Iterable
     return this.elements.size;
   }
 
-  protected all() {
+  protected all(): T[] {
     return Array.from(this.elements.values());
   }
 
-  protected first() {
+  protected first(): T | undefined {
     return this.elements.values().next().value as T | undefined;
+  }
+
+  protected last(): T | undefined {
+    return this.all().pop();
   }
 
   keys() {
@@ -91,5 +95,9 @@ export class Library<T extends { id: ID }, ID = IDOf<T>> extends BaseLibrary<T, 
 
   first(): T | undefined {
     return super.first();
+  }
+
+  last(): T | undefined {
+    return super.last()
   }
 }

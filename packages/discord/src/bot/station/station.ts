@@ -5,6 +5,7 @@ import { BoomBox,
   BoomBoxTrackPlay,
   Crate,
   decibelsToGain,
+  Library,
   Medley,
   MusicLibrary,
   MusicLibraryDescriptor,
@@ -428,4 +429,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   get guildIds() {
     return Array.from(this.audiences.keys());
   }
+}
+
+export class Stations extends Library<Station> {
+
 }
