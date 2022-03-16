@@ -96,7 +96,7 @@ export type SequenceConfig = {
   crateId: string;
   collections: { id: string; weight?: number }[];
   limit: SequenceLimit;
-};
+}
 
 export type StationOptions = {
   id: string;

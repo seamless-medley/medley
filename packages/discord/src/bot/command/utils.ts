@@ -82,7 +82,7 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: Inter
 const previewTrack = ({ index, track }: TrackPeek<RequestTrack<User['id']>>, padding: number, focus: number | undefined) => {
   const label = padStart(`${focus === index ? '+ ' : ''}${index + 1}`, padding);
   return `${label}: ${getTrackBanner(track)} [${track.priority || 0}]`;
-};
+}
 
 export async function makeRequestPreview(station: Station, index: number = 0, focus?: number, n: number = 5) {
   const peeking = station.peekRequests(index, n);

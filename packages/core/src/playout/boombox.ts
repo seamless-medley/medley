@@ -20,7 +20,7 @@ export type BoomBoxMetadata = {
   tags?: Metadata;
   coverAndLyrics?: CoverAndLyrics;
   kind: TrackKind;
-};
+}
 
 export type BoomBoxTrack = Track<BoomBoxMetadata>;
 export type BoomBoxTrackPlay = TrackPlay<BoomBoxTrack>;
@@ -37,7 +37,7 @@ export type RequestTrack<Requester> = BoomBoxTrack & {
   requestedBy: Requester[];
   lastRequestTime?: Date;
   original: BoomBoxTrack; // Store the original track as a RequestTrack is likely to be a shallow
-};
+}
 
 export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
   return o && !!o.requestedBy;

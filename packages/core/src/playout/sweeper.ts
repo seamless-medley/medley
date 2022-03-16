@@ -6,7 +6,7 @@ export type SweeperInsertionRule = {
   from?: string[];
   to?: string[];
   collection: TrackCollection<BoomBoxTrack>;
-};
+}
 
 const isIn = (value: string, list: string[] | undefined) => !list || list.includes(value);
 
@@ -20,13 +20,13 @@ const validateRule = (predicates: [string, string[] | undefined][]) => {
   }
 
   return isIn(fromId, fromList) && isIn(toId, without(toList));
-};
+}
 
 const matchRule = curry((from: string, to: string, rule: SweeperInsertionRule) => validateRule([
     [from, rule.from],
     [to, rule.to]
   ])
-);
+)
 
 const findRule = (from: string, to: string, rules: SweeperInsertionRule[]) => rules.find(matchRule(from, to));
 

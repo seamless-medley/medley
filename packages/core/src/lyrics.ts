@@ -4,7 +4,7 @@ export type LyricLine = {
   time: number;
   text: string;
   // far?: boolean; // TODO: calculate far flag from BPM and gap between lines
-};
+}
 
 export type Timeline = LyricLine[];
 

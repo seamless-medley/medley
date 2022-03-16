@@ -5,8 +5,6 @@ import normalizePath from 'normalize-path';
 import { Track } from "../track";
 
 export type TrackCollectionOptions<T extends Track<any>> = {
-  // TODO: Option to initialize the collection with the specified list of files
-
   tracksMapper?: (tracks: T[]) => Promise<T[]>;
 }
 
