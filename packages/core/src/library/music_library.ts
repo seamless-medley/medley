@@ -33,7 +33,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
   private collectionPaths = new Map<string, string>();
 
-  constructor(readonly owner: O, readonly metadataCache: MetadataCache | undefined, ...collections: MusicLibraryDescriptor[]) {
+  constructor(readonly owner: O, readonly metadataCache: MetadataCache | undefined, collections: MusicLibraryDescriptor[]) {
     super();
 
     for (const descriptor of collections) {

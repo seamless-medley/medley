@@ -139,8 +139,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.name = options.name;
     this.description = options.description;
 
+    this.library = new MusicLibrary(this, options.metadataCache, (options.musicCollections || []));
     this.boombox = boombox;
-    this.library = new MusicLibrary(this, options.metadataCache, ...(options.musicCollections || []));
     this.initialGain = options.initialGain || decibelsToGain(-15);
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
