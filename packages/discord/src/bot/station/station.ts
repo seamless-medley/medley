@@ -3,6 +3,7 @@ import { BoomBox,
   BoomBoxEvents,
   BoomBoxTrack,
   BoomBoxTrackPlay,
+  Chance,
   Crate,
   decibelsToGain,
   Library,
@@ -21,7 +22,7 @@ import { BoomBox,
 import { Guild, User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
-import _, { difference, isArray } from "lodash";
+import _, { difference, random, sample, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createExciter } from "./exciter";
 import { MetadataCache } from "@seamless-medley/core/src/playout/metadata/cache";
@@ -32,17 +33,63 @@ export enum PlayState {
   Paused = 'paused'
 }
 
-export type SequenceLimit = number | [max: number] | [min: number, max: number];
+export type LimitByMax = {
+  by: 'max';
+  max: number;
+}
+
+export type LimitByRange = {
+  by: 'range';
+  range: [number, number];
+}
+
+export type LimitBySample = {
+  by: 'sample';
+  list: number[];
+}
+
+export type LimitByChance = {
+  by: 'chance';
+  chance: [n: number, denum: number];
+  value: number | [min: number, max: number];
+}
+
+export type SequenceLimit = number | LimitByMax | LimitByRange | LimitBySample | LimitByChance;
 
 function sequenceLimit(limit: SequenceLimit): number | (() => number) {
-  if (isArray(limit)) {
-    return limit.length === 1
-      ? () => _.random(1, limit[0])
-      : () => _.random(limit[0], limit[1])
-
+  if (typeof limit === 'number') {
+    return limit;
   }
 
-  return limit;
+  const { by } = limit;
+
+  if (by === 'max') {
+    return () => random(1, limit.max);
+  }
+
+  if (by === 'range') {
+    const [min, max] = sortBy(limit.range);
+    return () => random(min, max);
+  }
+
+  if (by === 'sample') {
+    return () => sample(limit.list) ?? 0;
+  }
+
+  if (by === 'chance') {
+    const chance = new Chance(limit.chance);
+    const lim = limit.value;
+
+    return () => {
+      if (!chance.next()) {
+        return 0;
+      }
+
+      return Array.isArray(lim) ? random(...lim, false) : lim;
+    }
+  }
+
+  return 0;
 }
 
 export type SequenceConfig = {
