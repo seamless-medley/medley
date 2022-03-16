@@ -1,4 +1,4 @@
-import { random, sample, sum } from "lodash";
+import { random, sample, shuffle, sortBy, sum } from "lodash";
 
 export const decibelsToGain = (decibels: number): number => decibels > -100 ? Math.pow(10, decibels * 0.05) : 0;
 
@@ -39,8 +39,30 @@ export function weightedSample<T>(list: T[], weights: number[]) {
   return sample(list);
 }
 
-export const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+export const waitFor = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
-export const breath = () => delay(0);
+export const breath = () => waitFor(0);
 
 export const nextTick = () => new Promise<void>(resolve => process.nextTick(resolve));
+
+export class Chance {
+  private all: boolean[];
+
+  private index: number = 0;
+
+  constructor(n: [n: number, denum: number]) {
+    const [ones, total] = sortBy(n);
+    this.all = shuffle(Array(total - ones).fill(false).concat(Array(ones).fill(true)));
+  }
+
+  next() {
+    const v = this.all[this.index++];
+
+    if (this.index >= this.all.length) {
+      this.index = 0;
+      this.all = shuffle(this.all);
+    }
+
+    return v;
+  }
+}
