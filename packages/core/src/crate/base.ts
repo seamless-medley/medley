@@ -1,4 +1,4 @@
-import { isFunction } from "lodash";
+import { isFunction, sumBy } from "lodash";
 import { weightedSample } from "..";
 import { TrackCollection } from "../collections/base";
 import { Track } from "../track";
@@ -27,9 +27,17 @@ export class Crate<T extends Track<any>, M = never> {
     this.limit = options.limit;
   }
 
+  private _max = 0;
+
   get max() {
+    return this._max;
+  }
+
+  updateMax() {
     const { limit } = this;
-    return isFunction(limit) ? limit() : limit;
+    const result = isFunction(limit) ? limit() : limit;
+
+    this._max = isFinite(result) ? result : sumBy(this.sources, s => s.length);
   }
 
   async next(validator?: (path: string) => Promise<boolean>): Promise<T | undefined> {

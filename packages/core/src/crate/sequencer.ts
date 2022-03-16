@@ -35,7 +35,6 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
 
   constructor(private _crates: Crate<T>[], private options: CrateSequencerOptions<M> = {}) {
     super();
-    this._lastCrate = this.current;
   }
 
   get current(): Crate<T> | undefined {
@@ -64,6 +63,9 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
       if (this.isCrate(crate)) {
         if (this._lastCrate !== crate) {
           this._lastCrate = crate;
+
+          crate.updateMax();
+
           this.emit('change', crate as unknown as Crate<Track<any>>);
         }
 
@@ -85,6 +87,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
 
             if ((this._playCounter + 1) > crate.max) {
               // Stop searching for next track and flow to the next crate
+              this._lastCrate = undefined;
               break;
             }
 
