@@ -1,3 +1,5 @@
+import EventEmitter from "events";
+
 type IDOf<T> = T extends { id: infer ID } ? ID : any;
 
 export interface IReadonlyLibrary<T extends { id: ID }, ID = IDOf<T>> extends Iterable<T> {
@@ -12,10 +14,11 @@ export interface IReadonlyLibrary<T extends { id: ID }, ID = IDOf<T>> extends It
   first(): T | undefined;
 }
 
-export class BaseLibrary<T extends { id: ID }, ID = IDOf<T>> implements Iterable<T> {
+export class BaseLibrary<T extends { id: ID }, ID = IDOf<T>> extends EventEmitter implements Iterable<T> {
   protected elements = new Map<ID, T>();
 
   constructor(...elements: T[]) {
+    super();
     this.add(...elements);
   }
 

@@ -1,4 +1,3 @@
-import { Metadata } from '@seamless-medley/medley';
 import _, { castArray, difference, get, noop } from 'lodash';
 import MiniSearch, { Query, SearchResult } from 'minisearch';
 import normalizePath from 'normalize-path';
@@ -12,13 +11,13 @@ export type MusicLibraryDescriptor = {
   id: string;
   path: string;
   description?: string;
+  auxiliary?: boolean;
 }
 
 export type MusicLibraryMetadata<O> = MusicLibraryDescriptor & {
   owner: O;
 }
 
-// TODO: Collection readiness, all tracks should be indexed first
 export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>>> {
   private miniSearch = new MiniSearch<BoomBoxTrack>({
     fields: ['artist', 'title'],
@@ -35,10 +34,33 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
   constructor(readonly owner: O, readonly metadataCache: MetadataCache | undefined, collections: MusicLibraryDescriptor[]) {
     super();
+    this.loadCollections(collections);
+  }
 
-    for (const descriptor of collections) {
-      this.addCollection(descriptor);
-    }
+  private async loadCollections(collections: MusicLibraryDescriptor[]) {
+    return Promise.all(
+      collections
+        .filter(desc => !desc.auxiliary)
+        .map(desc => this.addCollection(desc))
+      )
+      .then(async () => {
+        const aux = collections.filter(desc => desc.auxiliary);
+        let count: number;
+
+        const setCount = (newCount: number) => {
+          count = newCount;
+
+          if (count <= 0) {
+            this.emit('ready');
+          }
+        }
+
+        setCount(aux.length);
+
+        for (const descriptor of aux) {
+          await this.addCollection(descriptor, () => setCount(count - 1)).then(breath)
+        }
+      })
   }
 
   private handleTrackRemoval = (tracks: BoomBoxTrack[]) => {
@@ -58,60 +80,74 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     super.remove(...collections);
   }
 
-  addCollection(descriptor: MusicLibraryDescriptor) {
-    const { id } = descriptor;
-    const path = normalizePath(descriptor.path);
-
-    const newCollection = WatchTrackCollection.initWithWatch<BoomBoxTrack, MusicLibraryMetadata<O>>(
-      id, `${path}/**/*`
-    );
-
-    newCollection.on('tracksAdd', async (tracks: BoomBoxTrack[]) => {
-      for (const track of tracks) {
-        if (!track.metadata) {
-          await helper.fetchMetadata(track, this.metadataCache)
-            .then(async ({ hit, metadata: tags }) => {
-              track.metadata = {
-                tags,
-                kind: TrackKind.Normal
-              };
-
-              this.miniSearch.add(track);
-
-              if (!hit) {
-                await breath();
-              }
-            })
-            .catch(noop);
-        }
-      }
-    });
-
-    newCollection.metadata = {
-      ...descriptor,
-      owner: this.owner
-    };
-
-    const existing = this.get(id);
-
-    if (!existing) {
-      newCollection.on('tracksRemove', this.handleTrackRemoval);
-    } else {
-      const existingPath = this.collectionPaths.get(id)!;
-
-      // same collection id, but different path
-      if (existingPath !== path) {
-        // Unwatch old path
-        existing.unwatchAll();
-        // Detach event handler
-        existing.off('tracksRemove', this.handleTrackRemoval);
-      }
+  private async indexTracks(collection: WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>>, tracks: BoomBoxTrack[], done: () => void) {
+    if (tracks.length <= 0) {
+      console.log('Done adding tracks', collection.id);
+      done();
+      return;
     }
 
-    this.add(newCollection);
-    this.collectionPaths.set(id, path);
+    const [track, ...remainings] = tracks;
 
-    newCollection.once('ready', () => newCollection.shuffle());
+    if (!track.metadata) {
+      await helper.fetchMetadata(track, this.metadataCache)
+        .then(async ({ hit, metadata: tags }) => {
+          track.metadata = {
+            tags,
+            kind: TrackKind.Normal
+          };
+
+          this.miniSearch.add(track);
+        })
+        .catch(noop);
+    }
+
+    setTimeout(() => this.indexTracks(collection, remainings, done), 0);
+  }
+
+  addCollection(descriptor: MusicLibraryDescriptor, onceReady?: () => void) {
+    return new Promise<void>((resolve) => {
+      const { id } = descriptor;
+      const path = normalizePath(descriptor.path);
+
+      const newCollection = WatchTrackCollection.initWithWatch<BoomBoxTrack, MusicLibraryMetadata<O>>(
+        id, `${path}/**/*`
+      );
+
+      newCollection.on('tracksAdd', tracks => {
+        this.indexTracks(newCollection, tracks, resolve);
+      });
+
+      newCollection.metadata = {
+        ...descriptor,
+        owner: this.owner
+      };
+
+      const existing = this.get(id);
+      if (!existing) {
+        newCollection.on('tracksRemove', this.handleTrackRemoval);
+      } else {
+        const existingPath = this.collectionPaths.get(id)!;
+
+        // same collection id, but different path
+        if (existingPath !== path) {
+          // Unwatch old path
+          existing.unwatchAll();
+          // Detach event handler
+          existing.off('tracksRemove', this.handleTrackRemoval);
+        }
+      }
+
+      this.add(newCollection);
+      this.collectionPaths.set(id, path);
+
+      newCollection.once('ready', () => {
+        newCollection.shuffle();
+        onceReady?.();
+      });
+
+      return newCollection;
+    });
   }
 
   get size(): number {
