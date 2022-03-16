@@ -135,6 +135,7 @@ export type SweeperConfig = {
 
 export type SweeperRule = SweeperConfig;
 export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
+  ready: () => void;
   requestTrackAdded: (track: TrackPeek<RequestTrack<User['id']>>) => void;
 }
 
@@ -187,6 +188,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.description = options.description;
 
     this.library = new MusicLibrary(this, options.metadataCache, (options.musicCollections || []));
+    this.library.once('ready', () => this.emit('ready'));
+
     this.boombox = boombox;
     this.initialGain = options.initialGain || decibelsToGain(-15);
     this.intros = options.intros;
