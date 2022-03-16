@@ -32,7 +32,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
     artist,
     title,
     query
-  }, 10);
+  }, 25);
 
   if (results.length < 1) {
     const escq = (s: string) => s.replace(/"/g, '\\"');
