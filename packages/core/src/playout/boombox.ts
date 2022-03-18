@@ -96,7 +96,7 @@ type BoomBoxOptions = {
 export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
   readonly sequencer: CrateSequencer<BoomBoxTrack>;
 
-  private options: Required<Pick<BoomBoxOptions, 'maxTrackHistory' | 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
+  readonly options: Required<Pick<BoomBoxOptions, 'maxTrackHistory' | 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
 
   readonly medley: Medley<BoomBoxTrack>;
   readonly queue: Queue<BoomBoxTrack>;
