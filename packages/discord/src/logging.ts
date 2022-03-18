@@ -1,4 +1,5 @@
 import { ISettingsParam, Logger } from "tslog";
+export { Logger } from "tslog";
 
 
 export function createLogger(options?: ISettingsParam, parrent?: Logger) {
