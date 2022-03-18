@@ -12,7 +12,10 @@ export type CrateOptions<T extends Track<any>, M = never> = {
   id: string;
   sources: CrateSourceWithWeight<T, M>[];
   limit: number | (() => number);
+  max?: number;
 }
+
+const isNotInfinity = (n: number) => (n !== Number.POSITIVE_INFINITY) && (n !== Number.NEGATIVE_INFINITY);
 
 export class Crate<T extends Track<any>, M = never> {
   readonly id: string;
@@ -20,14 +23,15 @@ export class Crate<T extends Track<any>, M = never> {
   readonly weights: number[];
   readonly limit: number | (() => number);
 
+  private _max: number;
+
   constructor(options: CrateOptions<T, M>) {
     this.id = options.id
     this.sources = options.sources.map(s => s.collection);
     this.weights = options.sources.map(s => s.weight);
     this.limit = options.limit;
+    this._max = options.max ?? 0;
   }
-
-  private _max = 0;
 
   get max() {
     return this._max;
@@ -37,7 +41,7 @@ export class Crate<T extends Track<any>, M = never> {
     const { limit } = this;
     const result = isFunction(limit) ? limit() : limit;
 
-    this._max = isFinite(result) ? result : sumBy(this.sources, s => s.length);
+    this._max = isNotInfinity(result) ? (result || 0)  : sumBy(this.sources, s => s.length);
   }
 
   async next(validator?: (path: string) => Promise<boolean>): Promise<T | undefined> {

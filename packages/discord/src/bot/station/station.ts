@@ -78,7 +78,7 @@ function sequenceLimit(limit: SequenceLimit): number | (() => number) {
 
   if (by === 'chance') {
     const chance = new Chance(limit.chance);
-    const lim = limit.value;
+    const lim = limit.value || 0;
 
     return () => {
       if (!chance.next()) {
