@@ -28,8 +28,7 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
   if (trackPlay && isRequestTrack(trackPlay.track)) {
     const { requestedBy } = trackPlay.track;
 
-    // TODO: Always allow this, if the interacting user is the owner
-    if (!requestedBy.includes(interaction.user.id)) {
+    if (!automaton.owners.includes(interaction.user.id) && !requestedBy.includes(interaction.user.id)) {
       const mentions = requestedBy.map(id =>  `<@${id}>`).join(' ');
       await reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by ${mentions}`);
       return;

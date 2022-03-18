@@ -47,7 +47,6 @@ export type MedleyAutomatonOptions = {
   baseCommand?: string;
   clientId: string;
   botToken: string;
-  // TODO: Use this
   owners?: Snowflake[];
 }
 
@@ -85,6 +84,8 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   botToken: string;
   clientId: string;
 
+  owners: Snowflake[] = [];
+
   readonly id: string;
 
   readonly baseCommand: string;
@@ -106,6 +107,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this.id = options.id;
     this.botToken = options.botToken;
     this.clientId = options.clientId;
+    this.owners = options.owners || [];
     this.baseCommand = options.baseCommand || 'medley';
 
     this.client = new Client({
