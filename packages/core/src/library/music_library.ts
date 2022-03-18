@@ -82,7 +82,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
   private async indexTracks(collection: WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>>, tracks: BoomBoxTrack[], done: () => void) {
     if (tracks.length <= 0) {
-      console.log('Done adding tracks', collection.id);
       done();
       return;
     }

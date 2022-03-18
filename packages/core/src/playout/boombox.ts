@@ -136,7 +136,6 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.sequencer.on('change', (crate: BoomBoxCrate) => this.emit('sequenceChange', crate));
     this.sequencer.on('rescue', (scanned, ignored) => {
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
-      console.log('Rescue, clearing artist history', n, this.artistHistory);
       this.artistHistory = this.artistHistory.slice(n);
     });
   }
@@ -290,7 +289,6 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       const nextTrack = await this.sequencer.nextTrack();
 
       if (!nextTrack) {
-        console.log('No next track');
         done(false);
         return;
       }

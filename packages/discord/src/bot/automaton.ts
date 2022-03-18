@@ -368,14 +368,14 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     if (isMe) {
       if (channelChange === 'leave') {
-        console.log('Me Leaving');
+        // Me Leaving
         station?.removeAudiencesForGuild(newState.guild.id);
         state.voiceChannelId = undefined;
         return;
       }
 
       if (newState.channelId !== state.voiceChannelId) {
-        console.log('Me Just joined or moved, collecting...');
+        // Me Just joined or moved, collecting...
 
         state.voiceChannelId = newState.channelId || undefined;
         state.serverMuted = !!newState.serverMute;
@@ -407,12 +407,12 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
 
     if (newState.member.user.bot) {
-      console.log('Ignoring bot user');
+      // Ignoring bot user
       return;
     }
 
     if (!state.voiceChannelId) {
-      console.log('Me not in a room, ignoring...');
+      // Me not in a room, ignoring...
       return;
     }
 
@@ -420,11 +420,11 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     if (channelChange === 'leave') {
       if (oldState.channelId !== state.voiceChannelId) {
-        console.log(newState.member.displayName, 'is not leaving my channel');
+        // is not leaving my channel
         return;
       }
 
-      console.log(newState.member.displayName, 'is leaving');
+      // is leaving
       station?.removeAudiences(guildId, newState.member.id);
       return;
     }
@@ -445,7 +445,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
         return;
       }
 
-      console.log(newState.member.displayName, 'is joining or moving to other channel');
+      // is joining or moving to other channel
       return;
     }
 
@@ -460,14 +460,14 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private handleGuildCreate = async (guild: Guild) => {
-    console.log('Invited into ', guild.name);
+    // Invited into ', guild.nam
 
     this.ensureGuildState(guild.id)
     this.registerCommands(guild.id);
   }
 
   private handleGuildDelete = async (guild: Guild) => {
-    console.log('Removed from guild', guild.name);
+    // Removed from guild', guild.nam
     this._guildStates.delete(guild.id);
   }
 
