@@ -161,12 +161,21 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   constructor(options: StationOptions) {
     super();
 
+    this.id = options.id;
+    this.name = options.name;
+    this.description = options.description;
     this.queue = new Queue();
     this.medley = new Medley(this.queue);
 
     if (this.medley.getAudioDevice().type !== 'Null') {
       this.medley.setAudioDevice({ type: 'Null', device: 'Null Device'});
     }
+
+    this.library = new MusicLibrary(this, options.metadataCache, (options.musicCollections || []));
+    this.library.once('ready', () => {
+      this.logger.info('Ready');
+      this.emit('ready');
+    });
 
     // Create boombox
     const boombox = new BoomBox({
@@ -182,13 +191,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     boombox.on('trackActive', this.handleTrackActive);
     boombox.on('trackFinished', this.handleTrackFinished);
     boombox.on('requestTrackFetched', this.handleRequestTrack);
-
-    this.id = options.id;
-    this.name = options.name;
-    this.description = options.description;
-
-    this.library = new MusicLibrary(this, options.metadataCache, (options.musicCollections || []));
-    this.library.once('ready', () => this.emit('ready'));
 
     this.boombox = boombox;
     this.initialGain = options.initialGain || decibelsToGain(-15);
@@ -325,10 +327,13 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
           return;
         }
 
+        const existing = this.boombox.crates.find(c => c.id === crateId);
+
         return new Crate({
           id: crateId,
           sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.library.get(id)!, weight })),
-          limit: sequenceLimit(limit)
+          limit: sequenceLimit(limit),
+          max: existing?.max
         });
       })
       .filter((c): c is BoomBoxCrate => c !== undefined);
