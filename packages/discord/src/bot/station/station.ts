@@ -123,9 +123,9 @@ export type StationOptions = {
 
   // BoomBox
   metadataCache?: MetadataCache;
-  // TODO: maxTrackHistory
-  // TODO: noDuplicatedArtist
-  // TODO: duplicationSimilarity
+  maxTrackHistory?: number;
+  noDuplicatedArtist?: number;
+  duplicationSimilarity?: number;
 }
 
 export type SweeperConfig = {
@@ -188,7 +188,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       medley: this.medley,
       queue: this.queue,
       crates: [],
-      metadataCache: options.metadataCache
+      metadataCache: options.metadataCache,
+      maxTrackHistory: options.maxTrackHistory,
+      noDuplicatedArtist: options.noDuplicatedArtist,
+      duplicationSimilarity: options.duplicationSimilarity
     });
 
     boombox.on('trackQueued', this.handleTrackQueued);
@@ -497,6 +500,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 }
 
-export class Stations extends Library<Station> {
+export class StationRegistry extends Library<Station> {
 
 }

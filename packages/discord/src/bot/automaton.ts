@@ -464,14 +464,14 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private handleGuildCreate = async (guild: Guild) => {
-    // Invited into ', guild.nam
+    // Invited into
 
     this.ensureGuildState(guild.id)
     this.registerCommands(guild.id);
   }
 
   private handleGuildDelete = async (guild: Guild) => {
-    // Removed from guild', guild.nam
+    // Removed from
     this._guildStates.delete(guild.id);
   }
 
