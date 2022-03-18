@@ -26,6 +26,7 @@ import _, { difference, random, sample, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createExciter } from "./exciter";
 import { MetadataCache } from "@seamless-medley/core/src/playout/metadata/cache";
+import { createLogger, Logger } from "../../logging";
 
 export enum PlayState {
   Idle = 'idle',
@@ -158,12 +159,17 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private audiences: Map<Guild['id'], Set<User['id']>> = new Map();
 
+  private logger: Logger;
+
   constructor(options: StationOptions) {
     super();
 
     this.id = options.id;
     this.name = options.name;
     this.description = options.description;
+
+    this.logger = createLogger({ name: `station/${this.id}`});
+
     this.queue = new Queue();
     this.medley = new Medley(this.queue);
 
@@ -277,7 +283,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }
 
     if (!this.medley.playing) {
-      console.log('Start playing');
+      this.logger.info('Start playing');
     }
 
     this.medley.play();
@@ -448,14 +454,14 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private playIfHasAudiences() {
     if (this.playState !== PlayState.Playing && this.hasAudiences) {
-      console.log(this.id, 'Start')
+      this.logger.info('Start');
       this.start();
     }
   }
 
   private pauseIfNoAudiences() {
     if (this.playState === PlayState.Playing && !this.hasAudiences) {
-      console.log(this.id, 'Pause')
+      this.logger.info('Pause');
       this.pause();
     }
   }

@@ -34,6 +34,7 @@ import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { Station } from "./station";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
+import { createLogger, Logger } from "../logging";
 import EventEmitter from "events";
 
 export type MedleyAutomatonOptions = {
@@ -85,11 +86,14 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   clientId: string;
 
   readonly id: string;
+
   readonly baseCommand: string;
 
   readonly client: Client;
 
   private _guildStates: Map<Guild['id'], GuildState> = new Map();
+
+  private logger: Logger;
 
   constructor(
     readonly stations: IReadonlyLibrary<Station>,
@@ -97,6 +101,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   ) {
     super();
 
+    this.logger = createLogger({ name: `automaton/${options.id}` });
 
     this.id = options.id;
     this.botToken = options.botToken;
@@ -113,7 +118,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     });
 
     this.client.on('error', (error) => {
-      console.log('Error', error);
+      this.logger.error('Automaton Error', error);
     });
 
     this.client.on('ready', this.handleClientReady);
@@ -330,8 +335,6 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private handleClientReady = async (client: Client) => {
-    console.log('Ready');
-
     const guilds = await client.guilds.fetch();
 
     await Promise.all(guilds.map((guild) => {
@@ -339,6 +342,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return this.registerCommands(guild.id);
     }));
 
+    this.logger.info('Ready');
     this.emit('ready');
 
     // TODO: Try to join last voice channel
@@ -664,10 +668,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
         }
       );
 
-      console.log('Registered');
+      this.logger.info('Registered commands with guild id:', guildId);
     }
     catch (e) {
-      console.error(e);
+      this.logger.error('Error registering command', e);
     }
   }
 }
