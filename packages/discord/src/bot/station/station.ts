@@ -311,6 +311,11 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.createCrates();
   }
 
+  async updateLibrary(collections: MusicLibraryDescriptor[]) {
+    await this.library.loadCollections(collections);
+    this.createCrates();
+  }
+
   private createCrates() {
     this.boombox.crates = this.sequences.map(
       ({ crateId, collections, limit }, index) => {

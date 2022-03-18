@@ -37,7 +37,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     this.loadCollections(collections);
   }
 
-  private async loadCollections(collections: MusicLibraryDescriptor[]) {
+  async loadCollections(collections: MusicLibraryDescriptor[]) {
     return Promise.all(
       collections
         .filter(desc => !desc.auxiliary)
