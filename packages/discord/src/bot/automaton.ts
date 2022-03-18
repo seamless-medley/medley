@@ -27,14 +27,17 @@ import {
   BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind
 } from "@seamless-medley/core";
 
+import type TypedEventEmitter from 'typed-emitter';
 
 import { delay } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { Station } from "./station";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
+import EventEmitter from "events";
 
 export type MedleyAutomatonOptions = {
+  id: string;
   /**
    * Default to 'medley'
    *
@@ -73,10 +76,15 @@ export type JoinResult = {
   station: Station;
 }
 
-export class MedleyAutomaton {
+export interface AutomatonEvents {
+  ready: () => void;
+}
+
+export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitter<AutomatonEvents>) {
   botToken: string;
   clientId: string;
 
+  readonly id: string;
   readonly baseCommand: string;
 
   readonly client: Client;
@@ -87,6 +95,10 @@ export class MedleyAutomaton {
     readonly stations: IReadonlyLibrary<Station>,
     options: MedleyAutomatonOptions
   ) {
+    super();
+
+
+    this.id = options.id;
     this.botToken = options.botToken;
     this.clientId = options.clientId;
     this.baseCommand = options.baseCommand || 'medley';
@@ -117,8 +129,18 @@ export class MedleyAutomaton {
     }
   }
 
-  login() {
-    this.client.login(this.botToken);
+  get isReady() {
+    return this.client.isReady();
+  }
+
+  async login() {
+    this.logger.info('Logging in');
+
+    await this.client.login(this.botToken)
+      .catch(e => {
+        this.logger.error('Error login', e);
+        throw e;
+      });
   }
 
   private ensureGuildState(guildId: Guild['id']) {
@@ -311,10 +333,13 @@ export class MedleyAutomaton {
     console.log('Ready');
 
     const guilds = await client.guilds.fetch();
-    for (const [id] of guilds) {
-      this.ensureGuildState(id);
-      this.registerCommands(id);
-    }
+
+    await Promise.all(guilds.map((guild) => {
+      this.ensureGuildState(guild.id);
+      return this.registerCommands(guild.id);
+    }));
+
+    this.emit('ready');
 
     // TODO: Try to join last voice channel
   }
@@ -628,15 +653,14 @@ export class MedleyAutomaton {
     return results;
   }
 
-  static async registerCommands(baseCommand: string, botToken: string, clientId: string, guildId: string) {
-    const client = new RestClient({ version: '9' })
-      .setToken(botToken);
+  async registerCommands(guildId: string) {
+    const client = new RestClient({ version: '9' }).setToken(this.botToken);
 
     try {
       await client.put(
-        Routes.applicationGuildCommands(clientId, guildId),
+        Routes.applicationGuildCommands(this.clientId, guildId),
         {
-          body: [createCommandDeclarations(baseCommand)]
+          body: [createCommandDeclarations(this.baseCommand || 'medley')]
         }
       );
 
@@ -645,11 +669,6 @@ export class MedleyAutomaton {
     catch (e) {
       console.error(e);
     }
-
-  }
-
-  async registerCommands(guildId: string) {
-    return MedleyAutomaton.registerCommands(this.baseCommand || 'medley', this.botToken, this.clientId, guildId);
   }
 }
 
