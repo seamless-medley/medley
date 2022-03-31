@@ -9,6 +9,7 @@ import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
 import { MetadataHelper, MetadataCache } from './metadata';
+import { createLogger, Logger } from '../logging';
 
 export enum TrackKind {
   Normal,
@@ -58,6 +59,8 @@ export interface BoomBoxEvents {
 }
 
 type BoomBoxOptions = {
+  id: string;
+
   medley: Medley<BoomBoxTrack>;
   queue: Queue<BoomBoxTrack>;
   crates: BoomBoxCrate[];
@@ -94,6 +97,7 @@ type BoomBoxOptions = {
 }
 
 export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
+  readonly id: string;
   readonly sequencer: CrateSequencer<BoomBoxTrack>;
 
   readonly options: Required<Pick<BoomBoxOptions, 'maxTrackHistory' | 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
@@ -106,9 +110,16 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   readonly trackHistory: TrackRecord[] = [];
 
+  private logger: Logger;
+
   constructor(options: BoomBoxOptions) {
     super();
     //
+    this.id = options.id;
+    this.logger = createLogger({
+      name: `boombox/${this.id}`
+    });
+
     this.options = {
       noDuplicatedArtist: options.noDuplicatedArtist || 50,
       duplicationSimilarity: options.duplicationSimilarity || 0.8,
@@ -128,7 +139,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.medley.on('finished', this.deckFinished);
     this.medley.on('mainDeckChanged', this.mainDeckChanged);
     //
-    this.sequencer = new CrateSequencer<BoomBoxTrack>(options.crates, {
+    this.sequencer = new CrateSequencer<BoomBoxTrack>(this.id, options.crates, {
       trackValidator: this.isTrackLoadable,
       trackVerifier: this.verifyTrack
     });
@@ -136,6 +147,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.sequencer.on('change', (crate: BoomBoxCrate) => this.emit('sequenceChange', crate));
     this.sequencer.on('rescue', (scanned, ignored) => {
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
+      this.logger.debug('Rescue, removing', n, 'artist history entries');
       this.artistHistory = this.artistHistory.slice(n);
     });
   }

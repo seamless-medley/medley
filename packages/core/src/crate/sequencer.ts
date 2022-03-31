@@ -4,6 +4,7 @@ import _, { isObjectLike } from "lodash";
 import { TrackCollection } from "../collections";
 import { Track, TrackMetadata } from "../track";
 import { Crate } from "./base";
+import { createLogger } from "../logging";
 
 export interface CrateSequencerEvents {
   change: (crate: Crate<Track<any>>) => void;
@@ -33,7 +34,11 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
   private _crateIndex = 0;
   private _lastCrate: Crate<T> | undefined;
 
-  constructor(private _crates: Crate<T>[], private options: CrateSequencerOptions<M> = {}) {
+  private logger = createLogger({
+    name: `sequencer/${this.id}`
+  })
+
+  constructor(readonly id: string, private _crates: Crate<T>[], private options: CrateSequencerOptions<M> = {}) {
     super();
   }
 
@@ -70,6 +75,8 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
             this.next();
             continue;
           }
+
+          this.logger.debug('Changed to crate', crate.id);
 
           this.emit('change', crate as unknown as Crate<Track<any>>);
         }
@@ -112,6 +119,8 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
                   track.metadata = metadata;
                 }
 
+                this.logger.debug('Next track (', this._playCounter, '/', crate.max, ') =>', track.path);
+
                 return track;
               }
               // track should be skipped, go to next track
@@ -130,6 +139,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     // no valid track in any crates
     if (ignored === scanned && scanned > 0) {
       // Rescue, tracks were found but none was allowed to play
+      this.logger.debug('Tracks were found but none was allowed to play, rescuing...');
       this.emit('rescue', scanned, ignored);
     }
 
@@ -161,6 +171,8 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     }
 
     this.crateIndex++;
+    //
+    this.logger.debug('next', this.current?.id);
   }
 
   setCurrentCrate(crate: Crate<T> | number) {

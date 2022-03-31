@@ -2,6 +2,7 @@ import { isFunction, sumBy } from "lodash";
 import { weightedSample } from "../utils";
 import { TrackCollection } from "../collections/base";
 import { Track } from "../track";
+import { createLogger, Logger } from '../logging';
 
 export type CrateSourceWithWeight<T extends Track<any>, M = never> = {
   collection: TrackCollection<T, M>;
@@ -38,6 +39,8 @@ export class Crate<T extends Track<any>, M = never> {
 
   private _max: number;
 
+  protected logger: Logger;
+
   constructor(options: CrateOptions<T, M>) {
     this.id = options.id
 
@@ -45,6 +48,11 @@ export class Crate<T extends Track<any>, M = never> {
     this.limit = options.limit;
 
     this._max = options.max ?? 0;
+
+    this.logger = createLogger({
+      name: `crate/${this.id}`
+    });
+
     this.updateSources(options.sources);
   }
 
@@ -65,17 +73,27 @@ export class Crate<T extends Track<any>, M = never> {
     const { chance, limit } = this;
 
     if (chance) {
+      this.logger.debug('Selecting from chances', chance.chances?.());
+
       const selected = await chance.next();
+
+      this.logger.debug('selected', selected);
+
       if (!selected) {
         return false;
       }
     }
+
     const result = isFunction(limit) ? limit() : limit;
+
+    this.logger.debug('Select limit from', limit, 'as', result);
 
     this._max = (result === 'all')
       ? sumBy(this._sources, s => s.length)
       : (isFinite(result) && (result > 0) ? result : 0)
       ;
+
+    this.logger.debug('Limit', this._max);
 
     return true;
   }
@@ -91,6 +109,7 @@ export class Crate<T extends Track<any>, M = never> {
     const isValid = (item && validator) ? await validator(item.path) : true;
 
     if (!isValid || !item) {
+      this.logger.debug('Invalid item');
       return undefined;
     }
 

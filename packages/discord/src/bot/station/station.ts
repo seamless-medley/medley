@@ -26,7 +26,6 @@ import type TypedEventEmitter from 'typed-emitter';
 import _, { difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createExciter } from "./exciter";
-import { createLogger, Logger } from "../../logging";
 import { MetadataCache, createLogger, Logger } from "@seamless-medley/core";
 
 export enum PlayState {
@@ -139,7 +138,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       this.medley.setAudioDevice({ type: 'Null', device: 'Null Device'});
     }
 
-    this.library = new MusicLibrary(this, options.metadataCache, (options.musicCollections || []));
+    this.library = new MusicLibrary(this.id, this, options.metadataCache, (options.musicCollections || []));
     this.library.once('ready', () => {
       this.logger.info('Ready');
       this.emit('ready');
@@ -147,6 +146,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
     // Create boombox
     const boombox = new BoomBox({
+      id: this.id,
       medley: this.medley,
       queue: this.queue,
       crates: [],

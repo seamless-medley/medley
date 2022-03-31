@@ -1,6 +1,7 @@
 import _, { castArray, difference, get, noop } from 'lodash';
 import normalizePath from 'normalize-path';
 import { WatchTrackCollection } from '../collections';
+import { createLogger } from '../logging';
 import { BoomBoxTrack, MetadataHelper, TrackKind } from '../playout';
 import { MetadataCache } from '../playout/metadata/cache';
 import { breath } from '../utils';
@@ -19,24 +20,30 @@ export type MusicLibraryMetadata<O> = MusicLibraryDescriptor & {
 }
 
 export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>>> {
+  private logger = createLogger({
+    name: `library/${this.id}`
   });
 
   private searchEngine = new SearchEngine();
 
   private collectionPaths = new Map<string, string>();
 
-  constructor(readonly owner: O, readonly metadataCache: MetadataCache | undefined, collections: MusicLibraryDescriptor[]) {
+  constructor(readonly id: string, readonly owner: O, readonly metadataCache: MetadataCache | undefined, collections: MusicLibraryDescriptor[]) {
     super();
     this.loadCollections(collections);
   }
 
   async loadCollections(collections: MusicLibraryDescriptor[]) {
+    this.logger.debug('Loading collections');
+
     return Promise.all(
       collections
         .filter(desc => !desc.auxiliary)
         .map(desc => this.addCollection(desc))
       )
       .then(async () => {
+        this.logger.debug('Loading auxiliary collections');
+
         const aux = collections.filter(desc => desc.auxiliary);
         let count: number;
 
@@ -91,7 +98,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
           this.searchEngine.add(track);
         })
-        .catch(noop);
+        .catch(e => this.logger.error(e));
     }
 
     setTimeout(() => this.indexTracks(collection, remainings, done), 0);

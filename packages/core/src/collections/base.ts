@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import EventEmitter from "events";
 import _, { castArray, chain, find, findIndex, identity, partition, reject, sample, shuffle, sortBy, uniqBy } from "lodash";
 import normalizePath from 'normalize-path';
+import { createLogger } from '../logging';
 import { Track } from "../track";
 
 export type TrackCollectionOptions<T extends Track<any>> = {
@@ -20,6 +21,9 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
 
   metadata?: M;
 
+  protected logger = createLogger({
+    name: `collection/${this.id}`
+  });
   constructor(readonly id: string, protected options: TrackCollectionOptions<T> = {}) {
     super();
     this.afterConstruct();
@@ -92,6 +96,7 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     const mapped = await tracksMapper?.(fresh) ?? fresh;
 
     if (mapped.length) {
+      this.logger.info('Adding', mapped.length, 'tracks');
       this.tracks = this.tracks.concat(mapped);
 
       for (const track of mapped) {
