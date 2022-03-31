@@ -397,7 +397,7 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
             ScopedLock sl(callbackLock);
             cb.deckUnloaded(sender, trackPlay);
 
-            if (nextTrackLoaded && nextDeck->isMain()) {                
+            if (nextTrackLoaded && nextDeck->isMain()) {
                 cb.mainDeckChanged(*nextDeck, nextDeck->getTrackPlay());
             }
         });
@@ -696,7 +696,7 @@ bool Medley::isTrackLoadable(const ITrack::Ptr track) {
     return utils::isTrackLoadable(formatMgr, track);
 }
 
-void medley::Medley::setReplayGainBoost(float decibels)
+void Medley::setReplayGainBoost(float decibels)
 {
     for (auto deck : decks) {
         deck->setReplayGainBoost(decibels);
