@@ -38,7 +38,7 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
   let coverImage: MessageAttachment | undefined;
 
   if (metadata) {
-    const { tags, coverAndLyrics } = metadata;
+    const { tags, maybeCoverAndLyrics } = metadata;
     if (tags) {
       const { title } = tags;
 
@@ -58,8 +58,11 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<T
       }
     }
 
+    const coverAndLyrics = await maybeCoverAndLyrics;
+
     if (coverAndLyrics) {
       const { cover, coverMimeType } = coverAndLyrics;
+
       if (cover.length) {
         embed.setColor('RANDOM');
 

@@ -18,7 +18,7 @@ export enum TrackKind {
 
 export type BoomBoxMetadata = {
   tags?: Metadata;
-  coverAndLyrics?: CoverAndLyrics;
+  maybeCoverAndLyrics?: Promise<CoverAndLyrics>;
   kind: TrackKind;
 }
 
@@ -328,11 +328,11 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     const { metadata } = track;
 
     if (metadata && metadata.kind !== TrackKind.Insertion) {
-      if (!metadata.coverAndLyrics) {
-        metadata.coverAndLyrics = await MetadataHelper.coverAndLyrics(trackPlay.track.path);
+      if (!metadata.maybeCoverAndLyrics) {
+        metadata.maybeCoverAndLyrics = MetadataHelper.coverAndLyrics(trackPlay.track.path);
       }
 
-      if (isRequestTrack(track) && !track.original.metadata?.coverAndLyrics) {
+      if (isRequestTrack(track) && !track.original.metadata?.maybeCoverAndLyrics) {
         track.original.metadata = {
           ...metadata,
           kind: TrackKind.Normal
@@ -346,10 +346,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   private deckUnloaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
     // clean up memory holding the cover and lyrics
     if (trackPlay.track?.metadata) {
-      trackPlay.track.metadata.coverAndLyrics = undefined;
+      trackPlay.track.metadata.maybeCoverAndLyrics = undefined;
 
-      if (isRequestTrack(trackPlay.track) && trackPlay.track.original.metadata?.coverAndLyrics) {
-        trackPlay.track.original.metadata.coverAndLyrics = undefined;
+      if (isRequestTrack(trackPlay.track) && trackPlay.track.original.metadata?.maybeCoverAndLyrics) {
+        trackPlay.track.original.metadata.maybeCoverAndLyrics = undefined;
       }
     }
 

@@ -39,7 +39,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   let lyricsText: string | undefined = undefined;
   let source = 'N/A';
 
-  const lyrics = track.metadata?.coverAndLyrics?.lyrics;
+  const lyrics = (await track.metadata?.maybeCoverAndLyrics)?.lyrics;
 
   if (lyrics) {
     lyricsText = lyricsToText(parseLyrics(lyrics), false).join('\n');
