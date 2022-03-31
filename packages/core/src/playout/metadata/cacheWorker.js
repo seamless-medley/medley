@@ -6,16 +6,19 @@ const KeyvRedis = require('@keyv/redis');
 const KeyvSqlite = require('@keyv/sqlite');
 const { stubFalse, noop } = require('lodash');
 
+/** @typedef {import('./cache').MetadataCacheStore} MetadataCacheStore */
+/** @typedef {import('./cache').MetadataCacheOptions} MetadataCacheOptions */
+
 /** @type {Keyv} */
 let container;
 
-/** @param {import('./cache').MetadataCacheStore} config */
+/** @param {MetadataCacheStore} config */
 function createStore(config) {
   if (config.type === 'sqlite') {
     return new KeyvSqlite({
       ...config,
       uri: `sqlite://${config.path}`
-    })
+    });
   }
 
   if (config.type === 'redis') {
@@ -24,7 +27,7 @@ function createStore(config) {
 }
 
 /**
- * @param {import('./cache').MetadataCacheOptions} options
+ * @param {MetadataCacheOptions} options
  */
 function configure(options) {
   container = new Keyv({

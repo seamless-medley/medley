@@ -28,7 +28,7 @@ export type MetadataCacheOptions = {
   store: MetadataCacheStore
 }
 
-interface Proxied {
+interface Methods {
   get(id: string): Promise<Metadata>;
   set(id: string, data: Metadata): Promise<void>;
   del(id: string): Promise<void>;
@@ -62,32 +62,24 @@ export class MetadataCache {
     }
   }
 
-  private async proxied(): Promise<Proxied> {
-    return (await this.pool.proxy()) as unknown as Proxied;
-  }
-
   async get(id: string, refresh = false) {
-    const proxy = await this.proxied();
-
-    const metadata = await proxy.get(id);
+    const metadata = await this.pool.exec<Methods['get']>('get', [id]);
 
     if (metadata && refresh) {
-      proxy.set(id, metadata);
+      this.pool.exec<Methods['set']>('set', [id, metadata]);
     }
 
     return metadata;
   }
 
   async persist(track: BoomBoxTrack, metadata?: Metadata) {
-    const proxy = await this.proxied();
-
     const toBePersisted = metadata ?? track.metadata?.tags;
 
     if (!toBePersisted) {
-      await proxy.del(track.id);
+      await this.pool.exec<Methods['del']>('del', [track.id]);
       return;
     }
 
-    await proxy.set(track.id, toBePersisted);
+    await this.pool.exec<Methods['set']>('set', [track.id, toBePersisted]);
   }
 }
