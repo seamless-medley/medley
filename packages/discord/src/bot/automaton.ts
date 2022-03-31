@@ -24,7 +24,8 @@ import {
 
 import {
   BoomBoxTrack,
-  BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind
+  BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
+  createLogger, Logger
 } from "@seamless-medley/core";
 
 import type TypedEventEmitter from 'typed-emitter';
@@ -34,7 +35,6 @@ import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { Station } from "./station";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
-import { createLogger, Logger } from "../logging";
 import EventEmitter from "events";
 
 export type MedleyAutomatonOptions = {
@@ -48,6 +48,11 @@ export type MedleyAutomatonOptions = {
   clientId: string;
   botToken: string;
   owners?: Snowflake[];
+
+  /**
+   * @default 3
+   */
+  maxTrackMessages?: number;
 }
 
 type StationLink = {
@@ -81,12 +86,13 @@ export interface AutomatonEvents {
 }
 
 export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitter<AutomatonEvents>) {
+  readonly id: string;
   botToken: string;
   clientId: string;
 
   owners: Snowflake[] = [];
 
-  readonly id: string;
+  maxTrackMessages: number = 3;
 
   readonly baseCommand: string;
 
@@ -108,6 +114,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this.botToken = options.botToken;
     this.clientId = options.clientId;
     this.owners = options.owners || [];
+    this.maxTrackMessages = options.maxTrackMessages ?? 3;
     this.baseCommand = options.baseCommand || 'medley';
 
     this.client = new Client({
@@ -500,8 +507,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           sentMessage: await maybeMessage
         });
 
-        // TODO: Configurable number
-        while (state.trackMessages.length > 3) {
+        while (state.trackMessages.length > this.maxTrackMessages) {
           const oldMsg = state.trackMessages.shift();
           if (oldMsg) {
             const { sentMessage, lyricMessage } = oldMsg;
