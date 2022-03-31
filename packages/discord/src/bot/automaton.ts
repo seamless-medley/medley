@@ -87,6 +87,7 @@ export interface AutomatonEvents {
 
 export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitter<AutomatonEvents>) {
   readonly id: string;
+
   botToken: string;
   clientId: string;
 

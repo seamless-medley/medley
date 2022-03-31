@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import EventEmitter from "events";
-import _, { castArray, chain, find, findIndex, identity, partition, reject, sample, shuffle, sortBy, uniqBy } from "lodash";
+import _, { castArray, chain, find, findIndex, partition, reject, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
@@ -24,6 +24,7 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
   protected logger = createLogger({
     name: `collection/${this.id}`
   });
+
   constructor(readonly id: string, protected options: TrackCollectionOptions<T> = {}) {
     super();
     this.afterConstruct();
@@ -88,6 +89,7 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     await this.addTracks(immediateTracks);
     return immediateTracks;
   }
+
 
   private async addTracks(tracks: T[]) {
     const { tracksMapper } = this.options;

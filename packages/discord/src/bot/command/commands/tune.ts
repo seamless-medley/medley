@@ -1,6 +1,5 @@
 import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageEmbed, MessageSelectMenu, MessageSelectOptionData, Permissions, SelectMenuInteraction } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
-import { Station } from "../../station";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deny, guildIdGuard, HighlightTextType, makeHighlightedMessage, permissionGuard, reply } from "../utils";
 

@@ -366,7 +366,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.library.findTrackById(id);
   }
 
-  search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): BoomBoxTrack[] {
+  search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number) {
+    // TODO: Search history
     return this.library.search(q, limit);
   }
 
