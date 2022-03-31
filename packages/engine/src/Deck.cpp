@@ -774,7 +774,7 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
     if (newSource != nullptr) {
         sourceSampleRate = newSource->getAudioFormatReader()->sampleRate;
 
-        newBufferingSource = new BufferingAudioSource(newSource, readAheadThread, false, (int)(sourceSampleRate * 2), 2);
+        newBufferingSource = new BufferingAudioSource(newSource, readAheadThread, false, (int)(sourceSampleRate * 4), 2);
         newBufferingSource->setNextReadPosition(firstAudibleSamplePosition);
 
         newResamplerSource = new ResamplingAudioSource(newBufferingSource, false, 2);
