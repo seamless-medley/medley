@@ -1,5 +1,7 @@
 #include "core.h"
 
+using namespace std::chrono_literals;
+
 void Medley::Initialize(Object& exports) {
     auto proto = {
         InstanceMethod<&Medley::getAvailableDevices>("getAvailableDevices"),
@@ -551,7 +553,7 @@ namespace {
             auto numChannels = request->numChannels;
 
             while (request->buffer.getNumReady() < request->buffering) {
-                std::this_thread::sleep_for(std::chrono::duration<double>(0.005));
+                std::this_thread::sleep_for(5ms);
             }
 
             request->currentTime = Time::getMillisecondCounterHiRes();
