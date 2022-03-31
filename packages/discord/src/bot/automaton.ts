@@ -482,7 +482,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return;
     }
 
-    const trackMsg = await createTrackMessage(trackPlay);
+    const trackMsg = await createTrackMessage(trackPlay, station.findTrackById(trackPlay.track.id));
     const sentMessages = await this.sendForStation(station, trackMessageToMessageOptions({
       ...trackMsg,
       buttons: {

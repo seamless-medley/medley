@@ -1,4 +1,4 @@
-import { BoomBoxTrackPlay, isRequestTrack, Metadata, MusicLibraryMetadata } from "@seamless-medley/core";
+import { BoomBoxTrack, BoomBoxTrackPlay, isRequestTrack, Metadata, MusicLibraryMetadata } from "@seamless-medley/core";
 import { Message, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, MessageOptions } from "discord.js";
 import { capitalize, isEmpty, get } from "lodash";
 import mime from 'mime-types';
@@ -25,8 +25,8 @@ export type TrackMessage = {
   lyricMessage?: Message;
 }
 
-export async function createTrackMessage(trackPlay: BoomBoxTrackPlay): Promise<TrackMessage> {
-  const { track } = trackPlay;
+export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrack?: BoomBoxTrack): Promise<TrackMessage> {
+  const track = actualTrack ?? trackPlay.track;
   const requestedBy = isRequestTrack<string>(track) ? track.requestedBy : undefined;
 
   const embed = new MessageEmbed()
