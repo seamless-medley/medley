@@ -11,7 +11,6 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::fadeOut>("fadeOut"),
         InstanceMethod<&Medley::seek>("seek"),
         InstanceMethod<&Medley::seekFractional>("seekFractional"),
-        InstanceMethod<&Medley::isTrackLoadable>("isTrackLoadable"),
         InstanceMethod<&Medley::getMetadata>("getMetadata"),
         //
         InstanceMethod<&Medley::requestAudioStream>("*$reqAudio"),
@@ -32,7 +31,8 @@ void Medley::Initialize(Object& exports) {
         InstanceAccessor<&Medley::getReplayGainBoost, &Medley::setReplayGainBoost>("replayGainBoost"),
         //
         StaticMethod<&Medley::static_getMetadata>("getMetadata"),
-        StaticMethod<&Medley::static_getCoverAndLyrics>("getCoverAndLyrics")
+        StaticMethod<&Medley::static_getCoverAndLyrics>("getCoverAndLyrics"),
+        StaticMethod<&Medley::static_isTrackLoadable>("isTrackLoadable"),
     };
 
     auto env = exports.Env();
@@ -264,18 +264,6 @@ void Medley::seek(const CallbackInfo& info) {
 
 void Medley::seekFractional(const CallbackInfo& info) {
     engine->setPositionFractional(info[0].ToNumber().DoubleValue());
-}
-
-Napi::Value Medley::isTrackLoadable(const CallbackInfo& info) {
-    auto env = info.Env();
-
-    if (info.Length() < 1) {
-        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
-        return Boolean::New(env, false);
-    }
-
-    auto trackPtr = Track::fromJS(info[0]);
-    return Boolean::New(env, engine->isTrackLoadable(trackPtr));
 }
 
 Napi::Value Medley::level(const CallbackInfo& info) {
@@ -756,5 +744,18 @@ Napi::Value Medley::static_getCoverAndLyrics(const Napi::CallbackInfo& info) {
     return result;
 }
 
+Napi::Value Medley::static_isTrackLoadable(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return Boolean::New(env, false);
+    }
+
+    auto trackPtr = Track::fromJS(info[0]);
+    return Boolean::New(env, medley::utils::isTrackLoadable(supportedFormats, trackPtr));
+}
 
 uint32_t Medley::audioRequestId = 0;
+
+Engine::SupportedFormats Medley::supportedFormats;

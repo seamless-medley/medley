@@ -57,8 +57,6 @@ public:
 
     void seekFractional(const CallbackInfo& info);
 
-    Napi::Value isTrackLoadable(const CallbackInfo& info);
-
     Napi::Value level(const CallbackInfo& info);
 
     Napi::Value reduction(const CallbackInfo& info);
@@ -112,6 +110,8 @@ public:
     static Napi::Value static_getMetadata(const Napi::CallbackInfo& info);
 
     static Napi::Value static_getCoverAndLyrics(const Napi::CallbackInfo& info);
+
+    static Napi::Value static_isTrackLoadable(const Napi::CallbackInfo& info);
 
     struct AudioRequest {
         AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter, float preferredGain)
@@ -227,4 +227,6 @@ private:
 
     Reference<Napi::Value> self;
     ThreadSafeFunction threadSafeEmitter;
+
+    static Engine::SupportedFormats supportedFormats;
 };

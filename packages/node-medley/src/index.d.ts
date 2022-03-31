@@ -218,8 +218,6 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
 
   getAudioDevice(): { type: string, device: string };
 
-  isTrackLoadable(track: TrackDescriptor<any>): boolean;
-
   getMetadata(index: DeckIndex): Metadata;
 
   async requestAudioStream(options?: RequestAudioOptions): Promise<RequestAudioStreamResult>;
@@ -231,7 +229,10 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   deleteAudioStream(id: number): void;
 
   static getMetadata(path: string): Metadata;
+
   static getCoverAndLyrics(path: string): CoverAndLyrics;
+
+  static isTrackLoadable(track: TrackDescriptor<any>): boolean;
 }
 
 export type AudioFormat = 'Int16LE' | 'Int16BE' | 'FloatLE' | 'FloatBE';
