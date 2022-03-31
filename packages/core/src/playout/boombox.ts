@@ -163,7 +163,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private requests: TrackCollection<RequestTrack<Requester>> = new TrackCollection('$_requests');
 
-  private isTrackLoadable: TrackValidator = async (path) => this.medley.isTrackLoadable(path);
+  private isTrackLoadable: TrackValidator = async (path) => MetadataHelper.isTrackLoadable(path);
 
   private verifyTrack: TrackVerifier<BoomBoxMetadata> = async (track) => {
     try {

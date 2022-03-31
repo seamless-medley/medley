@@ -240,7 +240,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       if (currentKind !== TrackKind.Request) {
         const sweeper = requestSweepers.shift();
 
-        if (sweeper && this.medley.isTrackLoadable(sweeper)) {
+
+        if (sweeper && MetadataHelper.isTrackLoadable(sweeper.path)) {
           this.queue.add(sweeper.path);
           requestSweepers.push(sweeper);
         }
@@ -392,7 +393,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       return false;
     }
 
-    if (!this.medley.isTrackLoadable(track)) {
+    if (!MetadataHelper.isTrackLoadable(track.path)) {
       return false;
     }
 

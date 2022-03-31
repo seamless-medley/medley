@@ -20,6 +20,7 @@ export type FetchResult = {
 interface Methods {
   metadata(path: string): Promise<Metadata>;
   coverAndLyrics(path: string): Promise<WorkerCoverAndLyrics | CoverAndLyrics>;
+  isTrackLoadable(path: string): Promise<boolean>;
   searchLyrics(artist: string, title: string): Promise<string>;
 }
 
@@ -59,6 +60,10 @@ export class MetadataHelper {
     return { hit: false, metadata: fresh };
   }
 
+  async isTrackLoadable(path: string) {
+    return this.pool.exec<Methods['isTrackLoadable']>('isTrackLoadable', [path]);
+  }
+
   async searchLyrics(artist: string, title: string) {
     return this.pool.exec<Methods['searchLyrics']>('searchLyrics', [artist, title]);
   }
@@ -81,6 +86,10 @@ export class MetadataHelper {
 
   static fetchMetadata(track: Track<any>, cache: MetadataCache | undefined, refresh = false) {
     return this.getDefaultInstance().fetchMetadata(track, cache, refresh);
+  }
+
+  static isTrackLoadable(path: string) {
+    return this.getDefaultInstance().isTrackLoadable(path);
   }
 
   static searchLyrics(artist: string, title: string) {
