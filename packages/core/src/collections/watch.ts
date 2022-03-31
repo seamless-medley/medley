@@ -41,10 +41,11 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
     return result;
   }
 
-  private storeNewTracks = debounce(() => this.add(this.fetchNewPaths()), 2000);
+  private storeNewFiles = debounce(() => this.add(this.fetchNewPaths()), 2000);
 
-  private handleTracksRemoval = debounce(() => {
-    this.removeBy(({ id }) => this.removedIds.has(id));
+  private handleFilesRemoval = debounce(() => {
+    const removed = this.removeBy(({ id }) => this.removedIds.has(id));
+    this.logger.info('Removed', removed.length, 'tracks');
     this.removedIds.clear();
   }, 2000);
 
@@ -53,14 +54,14 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
       const isFile = (await stat(path).then(s => s.isFile()).catch(stubFalse));
       if (isFile) {
         this.newPaths.push(path);
-        this.storeNewTracks();
+        this.storeNewFiles();
       }
       return;
     }
 
     if (event === 'remove') {
       this.removedIds.add(this.computePathId(path));
-      this.handleTracksRemoval();
+      this.handleFilesRemoval();
       return;
     }
   }
