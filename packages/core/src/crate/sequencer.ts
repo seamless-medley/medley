@@ -64,7 +64,12 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
         if (this._lastCrate !== crate) {
           this._lastCrate = crate;
 
-          crate.updateMax();
+          const selected = await crate.select();
+
+          if (!selected) {
+            this.next();
+            continue;
+          }
 
           this.emit('change', crate as unknown as Crate<Track<any>>);
         }

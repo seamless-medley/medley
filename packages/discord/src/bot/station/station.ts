@@ -3,7 +3,7 @@ import { BoomBox,
   BoomBoxEvents,
   BoomBoxTrack,
   BoomBoxTrackPlay,
-  Chance,
+  Chanceable,
   Crate,
   decibelsToGain,
   Library,
@@ -23,11 +23,11 @@ import { BoomBox,
 import { Guild, User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
-import _, { difference, random, sample, sortBy } from "lodash";
+import _, { difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createExciter } from "./exciter";
-import { MetadataCache } from "@seamless-medley/core/src/playout/metadata/cache";
 import { createLogger, Logger } from "../../logging";
+import { MetadataCache, createLogger, Logger } from "@seamless-medley/core";
 
 export enum PlayState {
   Idle = 'idle',
@@ -35,9 +35,11 @@ export enum PlayState {
   Paused = 'paused'
 }
 
-export type LimitByMax = {
-  by: 'max';
-  max: number;
+export type SequenceChance = 'random' | [yes: number, no: number] | (() => Promise<boolean>);
+
+export type LimitByUpto = {
+  by: 'upto';
+  upto: number;
 }
 
 export type LimitByRange = {
@@ -46,57 +48,16 @@ export type LimitByRange = {
 }
 
 export type LimitBySample = {
-  by: 'sample';
+  by: 'sample' | 'one-of';
   list: number[];
 }
 
-export type LimitByChance = {
-  by: 'chance';
-  chance: [n: number, denum: number];
-  value: number | [min: number, max: number];
-}
-
-export type SequenceLimit = number | LimitByMax | LimitByRange | LimitBySample | LimitByChance;
-
-function sequenceLimit(limit: SequenceLimit): number | (() => number) {
-  if (typeof limit === 'number') {
-    return limit;
-  }
-
-  const { by } = limit;
-
-  if (by === 'max') {
-    return () => random(1, limit.max);
-  }
-
-  if (by === 'range') {
-    const [min, max] = sortBy(limit.range);
-    return () => random(min, max);
-  }
-
-  if (by === 'sample') {
-    return () => sample(limit.list) ?? 0;
-  }
-
-  if (by === 'chance') {
-    const chance = new Chance(limit.chance);
-    const lim = limit.value || 0;
-
-    return () => {
-      if (!chance.next()) {
-        return 0;
-      }
-
-      return Array.isArray(lim) ? random(...lim, false) : lim;
-    }
-  }
-
-  return 0;
-}
+export type SequenceLimit = number | LimitByUpto | LimitByRange | LimitBySample;
 
 export type SequenceConfig = {
   crateId: string;
   collections: { id: string; weight?: number }[];
+  chance?: SequenceChance;
   limit: SequenceLimit;
 }
 
@@ -331,7 +292,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private createCrates() {
     this.boombox.crates = this.sequences.map(
-      ({ crateId, collections, limit }, index) => {
+      ({ crateId, collections, chance, limit }, index) => {
         const validCollections = collections.filter(col => this.library.has(col.id));
 
         if (validCollections.length === 0) {
@@ -343,12 +304,37 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
         return new Crate({
           id: crateId,
           sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.library.get(id)!, weight })),
-          limit: sequenceLimit(limit),
+          chance: createChanceable(chance),
+          limit: this.sequenceLimit(limit),
           max: existing?.max
         });
       })
       .filter((c): c is BoomBoxCrate => c !== undefined);
   }
+
+  private sequenceLimit(limit: SequenceLimit): number | (() => number) {
+    if (typeof limit === 'number') {
+      return limit;
+    }
+
+    const { by } = limit;
+
+    if (by === 'upto') {
+      return () => random(1, limit.upto);
+    }
+
+    if (by === 'range') {
+      const [min, max] = sortBy(limit.range);
+      return () => random(min, max);
+    }
+
+    if (by === 'sample' || by === 'one-of') {
+      return () => sample(limit.list) ?? 0;
+    }
+
+    return 0;
+  }
+
 
   private sweepers: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
 
@@ -502,6 +488,51 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 }
 
-export class StationRegistry extends Library<Station> {
+function createChanceable(def: SequenceChance | undefined): Chanceable {
+  if (def === 'random') {
+    return { next: () => random() === 1 };
+  }
+
+  if (isFunction(def)) {
+    return { next: def };
+  }
+
+  if (Array.isArray(def) && def.length > 1) {
+    return chanceOf(def);
+  }
+
+  return {
+    next: () => true,
+    chances: () => [true]
+  }
+}
+
+function chanceOf(n: [yes: number, no: number]): Chanceable {
+  const [yes, no] = n;
+
+  let all = shuffle(
+    Array(yes).fill(true)
+      .concat(Array(no).fill(false))
+  );
+
+  let index = 0;
+
+
+  return {
+    next: () => {
+      const v = all[index++];
+
+      if (index >= all.length) {
+        index = 0;
+        all = shuffle(all);
+      }
+
+      return v ?? false;
+    },
+    chances: () => all
+  }
+}
+
+export class StationRegistry<S extends Station> extends Library<S, S['id']> {
 
 }
