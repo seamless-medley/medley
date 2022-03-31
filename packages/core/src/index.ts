@@ -4,5 +4,6 @@ export * from './collections';
 export * from './library';
 export * from './crate';
 export * from './playout';
-export * from './utils';
 export * from './lyrics';
+export * from './utils';
+export * from './logging';
