@@ -17,6 +17,12 @@ export type FetchResult = {
   metadata: Metadata;
 }
 
+interface Methods {
+  metadata(path: string): Promise<Metadata>;
+  coverAndLyrics(path: string): Promise<WorkerCoverAndLyrics | CoverAndLyrics>;
+  searchLyrics(artist: string, title: string): Promise<string>;
+}
+
 export class MetadataHelper {
   private pool: WorkerPool;
 
@@ -25,11 +31,11 @@ export class MetadataHelper {
   }
 
   async metadata(path: string) {
-    return this.pool.exec<(path: string) => Metadata>('metadata', [path]);
+    return this.pool.exec<Methods['metadata']>('metadata', [path]);
   }
 
   async coverAndLyrics(path: string): Promise<CoverAndLyrics> {
-    const result = await this.pool.exec<(path: string) => WorkerCoverAndLyrics | CoverAndLyrics>('coverAndLyrics', [path]);
+    const result = await this.pool.exec<Methods['coverAndLyrics']>('coverAndLyrics', [path]);
 
     if (Buffer.isBuffer(result.cover)) {
       return result as CoverAndLyrics;
@@ -54,7 +60,7 @@ export class MetadataHelper {
   }
 
   async searchLyrics(artist: string, title: string) {
-    return this.pool.exec('searchLyrics', [artist, title]);
+    return this.pool.exec<Methods['searchLyrics']>('searchLyrics', [artist, title]);
   }
 
   static getDefaultInstance() {
