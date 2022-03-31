@@ -277,12 +277,17 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     }
 
     try {
+      const addToQueue = (track: BoomBoxTrack) => {
+        this.queue.add(track);
+        this.emit('trackQueued', track);
+        done(true);
+      }
+
       const requestedTrack = await this.fetchRequestTrack();
       if (requestedTrack) {
         this.emit('requestTrackFetched', requestedTrack);
 
-        this.queue.add(requestedTrack);
-        done(true);
+        addToQueue(requestedTrack);
         return;
       }
 
@@ -309,10 +314,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
         this._currentCrate = nextTrack.crate;
       }
 
-      this.queue.add(nextTrack);
-
-      this.emit('trackQueued', nextTrack);
-      done(true);
+      addToQueue(nextTrack);
       return;
     }
     catch (e) {
@@ -398,7 +400,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 
   private deckFinished: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
-    if (trackPlay.track.metadata?.kind === TrackKind.Insertion) {
+    const kind = trackPlay.track.metadata?.kind;
+
+    if (kind === undefined || kind === TrackKind.Insertion) {
       return;
     }
 
