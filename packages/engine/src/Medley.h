@@ -37,6 +37,12 @@ public:
         virtual void audioData(const AudioSourceChannelInfo& info) = 0;
     };
 
+    class SupportedFormats : public AudioFormatManager
+    {
+    public:
+        SupportedFormats();
+    };
+
     static constexpr int numDecks = 3;
 
     Medley(IQueue& queue);
@@ -268,7 +274,8 @@ private:
     friend class Mixer;
 
     AudioDeviceManager deviceMgr;
-    AudioFormatManager formatMgr;
+
+    SupportedFormats formatMgr;
 
     Deck* decks[numDecks]{};
 

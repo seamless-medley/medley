@@ -33,20 +33,6 @@ Medley::Medley(IQueue& queue)
 
     deviceMgr.addChangeListener(&mixer);
 
-    formatMgr.registerFormat(new MiniMP3AudioFormat(), true);
-    formatMgr.registerFormat(new WavAudioFormat(), false);
-    formatMgr.registerFormat(new AiffAudioFormat(), false);
-    formatMgr.registerFormat(new FlacAudioFormat(), false);
-    formatMgr.registerFormat(new OggVorbisAudioFormat(), false);
-
-#if JUCE_MAC || JUCE_IOS
-    formatMgr.registerFormat(new CoreAudioFormat(), false);
-#endif
-
-#if JUCE_USE_WINDOWS_MEDIA_FORMAT
-    formatMgr.registerFormat(new WindowsMediaAudioFormat(), false);
-#endif
-
     for (int i = 0; i < numDecks; i++) {
         decks[i] = new Deck(i, "Deck " + String(i), formatMgr, loadingThread, readAheadThread);
         decks[i]->addListener(this);
@@ -93,6 +79,24 @@ Medley::~Medley() {
     for (auto deck : decks) {
         delete deck;
     }
+}
+
+Medley::SupportedFormats::SupportedFormats()
+    : AudioFormatManager()
+{
+    registerFormat(new MiniMP3AudioFormat(), true);
+    registerFormat(new WavAudioFormat(), false);
+    registerFormat(new AiffAudioFormat(), false);
+    registerFormat(new FlacAudioFormat(), false);
+    registerFormat(new OggVorbisAudioFormat(), false);
+
+#if JUCE_MAC || JUCE_IOS
+    registerFormat(new CoreAudioFormat(), false);
+#endif
+
+#if JUCE_USE_WINDOWS_MEDIA_FORMAT
+    registerFormat(new WindowsMediaAudioFormat(), false);
+#endif
 }
 
 bool Medley::togglePause() {
