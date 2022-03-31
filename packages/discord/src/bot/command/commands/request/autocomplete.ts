@@ -14,7 +14,9 @@ export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteIn
   const narrowBy = forArtistOrTitleField ? (name !== 'artist' ? 'artist' : 'title') : undefined;
   const narrowTerm = narrowBy ? interaction.options.getString(narrowBy) : undefined;
 
-  const completions = _(station.autoSuggest(`${value}`, searchField, narrowTerm ? narrowBy : undefined, narrowTerm || undefined))
+  const suggestions = await station.autoSuggest(`${value}`, searchField, narrowTerm ? narrowBy : undefined, narrowTerm || undefined);
+
+  const completions = _(suggestions)
       .take(25)
       .map<ApplicationCommandOptionChoice>(s => ({ name: s, value: s }))
       .value()

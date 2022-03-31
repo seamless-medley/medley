@@ -28,7 +28,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
 
   const [artist, title, query] = options;
 
-  const results = station.search({
+  const results = await station.search({
     artist,
     title,
     query

@@ -1,11 +1,11 @@
 import _, { castArray, difference, get, noop } from 'lodash';
-import MiniSearch, { Query, SearchResult } from 'minisearch';
 import normalizePath from 'normalize-path';
 import { WatchTrackCollection } from '../collections';
 import { BoomBoxTrack, MetadataHelper, TrackKind } from '../playout';
 import { MetadataCache } from '../playout/metadata/cache';
 import { breath } from '../utils';
 import { BaseLibrary } from './library';
+import { SearchEngine, Query, SearchResult } from './search';
 
 export type MusicLibraryDescriptor = {
   id: string;
@@ -19,16 +19,9 @@ export type MusicLibraryMetadata<O> = MusicLibraryDescriptor & {
 }
 
 export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>>> {
-  private miniSearch = new MiniSearch<BoomBoxTrack>({
-    fields: ['artist', 'title'],
-    extractField: (track, field) => {
-      if (field === 'id') {
-        return track.id;
-      }
-
-      return get(track.metadata?.tags, field);
-    }
   });
+
+  private searchEngine = new SearchEngine();
 
   private collectionPaths = new Map<string, string>();
 
@@ -64,7 +57,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
   }
 
   private handleTrackRemoval = (tracks: BoomBoxTrack[]) => {
-    this.miniSearch.removeAll(tracks);
+    this.searchEngine.removeAll(tracks);
   }
 
   remove(...collections: (string | WatchTrackCollection<BoomBoxTrack>)[]) {
@@ -96,7 +89,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
             kind: TrackKind.Normal
           };
 
-          this.miniSearch.add(track);
+          this.searchEngine.add(track);
         })
         .catch(noop);
     }
@@ -227,7 +220,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     });
   }
 
-  search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): BoomBoxTrack[] {
+  async search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): Promise<BoomBoxTrack[]> {
     const { artist, title, query } = q;
 
     const queries: Query[] = [];
@@ -257,7 +250,9 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       queries.push(query)
     }
 
-    const chain = _(this.miniSearch.search({ queries, combineWith: 'OR' }, { prefix: true, fuzzy: 0.2 }))
+    const result = await this.searchEngine.search({ queries, combineWith: 'OR' }, { prefix: true, fuzzy: 0.2 });
+
+    const chain = _(result)
       .sortBy(s => -s.score)
       .map(t => this.findTrackById(t.id))
       .filter((t): t is BoomBoxTrack => t !== undefined)
@@ -266,12 +261,12 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     return (limit ? chain.take(limit) : chain).value();
   }
 
-  autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string) {
+  async autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string): Promise<string[]> {
     const nt = narrowTerm?.toLowerCase();
 
     if (!q && field === 'title' && narrowBy === 'artist' && narrowTerm) {
       // Start showing title suggestion for a known artist
-      const tracks = this.search({
+      const tracks = await this.search({
         artist: narrowTerm,
         title: null,
         query: null
@@ -289,7 +284,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       }
       : undefined;
 
-    return this.miniSearch.autoSuggest(
+    const result = await this.searchEngine.autoSuggest(
       q,
       {
         fields: field ? castArray(field) : undefined,
@@ -297,7 +292,9 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         fuzzy: 0.5,
         filter: narrow
       }
-    ).map(s => s.suggestion);
+    );
+
+    return result.map(s => s.suggestion);
   }
 }
 
