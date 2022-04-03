@@ -1,17 +1,18 @@
-import { BoomBox,
+import {
+  BoomBox,
   BoomBoxCrate,
   BoomBoxEvents,
   BoomBoxTrack,
   BoomBoxTrackPlay,
   Chanceable,
   Crate,
-  decibelsToGain,
   Library,
   Medley,
   MetadataHelper,
   MusicLibrary,
   MusicLibraryDescriptor,
   Queue,
+  RequestAudioOptions,
   RequestTrack,
   SweeperInsertionRule,
   TrackCollection,
@@ -65,11 +66,6 @@ export type StationOptions = {
   name: string;
 
   description?: string;
-  /**
-   * Initial audio gain, default to -15dBFS (Appx 0.178)
-   * @default -15dBFS
-   */
-  initialGain?: number;
 
   musicCollections: MusicLibraryDescriptor[];
 
@@ -113,9 +109,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   readonly library: MusicLibrary<Station>;
   private sequences: SequenceConfig[] = [];
 
-  readonly initialGain: number;
-  private intros?: TrackCollection<BoomBoxTrack>;
-  private requestSweepers?: TrackCollection<BoomBoxTrack>;
+  intros?: TrackCollection<BoomBoxTrack>;
+  requestSweepers?: TrackCollection<BoomBoxTrack>;
 
   private audiences: Map<string, Set<string>> = new Map();
 
@@ -163,7 +158,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     boombox.on('requestTrackFetched', this.handleRequestTrack);
 
     this.boombox = boombox;
-    this.initialGain = options.initialGain || decibelsToGain(-15);
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
 
@@ -260,17 +254,13 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }
   }
 
-  async createExciter() {
-    const audioRequest = await this.medley.requestAudioStream({
-      bufferSize: 48000 * 5.0,
-      buffering: 960, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
-      preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
-      // discord voice only accept 48KHz sample rate, 16 bit per sample
-      sampleRate: 48000,
-      format: 'Int16LE',
-      gain: this.initialGain
-    });
+  async requestAudioStream(options: RequestAudioOptions) {
+    return this.medley.requestAudioStream(options);
+  }
 
+  // FIXME: This is specific to Discord
+  async createExciter(options: RequestAudioOptions) {
+    const audioRequest = await this.requestAudioStream(options);
     return createExciter(audioRequest);
   }
 

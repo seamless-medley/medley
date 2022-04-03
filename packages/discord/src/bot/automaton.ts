@@ -25,7 +25,7 @@ import {
 import {
   BoomBoxTrack,
   BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
-  createLogger, Logger
+  createLogger, Logger, decibelsToGain
 } from "@seamless-medley/core";
 
 import type TypedEventEmitter from 'typed-emitter';
@@ -48,6 +48,12 @@ export type MedleyAutomatonOptions = {
   clientId: string;
   botToken: string;
   owners?: Snowflake[];
+
+  /**
+   * Initial audio gain, default to -15dBFS (Appx 0.178)
+   * @default -15dBFS
+   */
+   initialGain?: number;
 
   /**
    * @default 3
@@ -95,6 +101,8 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
   maxTrackMessages: number = 3;
 
+  initialGain: number;
+
   readonly baseCommand: string;
 
   readonly client: Client;
@@ -116,6 +124,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this.clientId = options.clientId;
     this.owners = options.owners || [];
     this.maxTrackMessages = options.maxTrackMessages ?? 3;
+    this.initialGain = options.initialGain ?? decibelsToGain(-15);
     this.baseCommand = options.baseCommand || 'medley';
 
     this.client = new Client({
@@ -211,7 +220,16 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return stationLink;
     }
 
-    const exciter = await selectedStation.createExciter();
+    // FIXME: This is specific to Discord
+    const exciter = await selectedStation.createExciter({
+      bufferSize: 48000 * 5.0,
+      buffering: 960, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
+      preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
+      // discord voice only accept 48KHz sample rate, 16 bit per sample
+      sampleRate: 48000,
+      format: 'Int16LE',
+      gain: this.initialGain
+    });
 
     // Create discord voice AudioPlayer if neccessary
     const audioPlayer = stationLink?.audioPlayer ?? createAudioPlayer({
@@ -246,7 +264,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
 
     state.stationLink = newLink;
-    state.gain = selectedStation.initialGain;
+    state.gain = this.initialGain;
 
     return newLink;
   }
@@ -275,7 +293,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
   getGain(guildId: Guild['id']) {
     const state = this._guildStates.get(guildId);
-    return state?.gain ?? state?.stationLink?.station.initialGain ?? 1.0;
+    return state?.gain ?? this.initialGain ?? 1.0;
   }
 
   setGain(guildId: Guild['id'], gain: number): boolean {
