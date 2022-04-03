@@ -26,8 +26,9 @@ export type TrackMessage = {
 }
 
 export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrack?: BoomBoxTrack): Promise<TrackMessage> {
-  const track = actualTrack ?? trackPlay.track;
-  const requestedBy = isRequestTrack<string>(track) ? track.requestedBy : undefined;
+  const requested = isRequestTrack<string>(trackPlay.track) ? trackPlay.track : undefined;
+  const requestedBy = requested?.requestedBy;
+  const track  = actualTrack ?? requested?.original ?? trackPlay.track;
 
   const embed = new MessageEmbed()
     .setColor('RANDOM')
