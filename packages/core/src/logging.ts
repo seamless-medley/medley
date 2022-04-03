@@ -1,12 +1,11 @@
 import { ISettingsParam, Logger } from "tslog";
 export { Logger } from "tslog";
 
-// TODO: automatically set log level from env
-
 export function createLogger(options?: ISettingsParam, parrent?: Logger) {
   const settings: ISettingsParam = {
     displayFilePath: 'hidden',
     displayFunctionName: false,
+    minLevel: !!process.env.DEBUG ? 'debug' : 'info',
     ...options
   }
 
