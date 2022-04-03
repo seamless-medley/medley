@@ -100,7 +100,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   readonly id: string;
   readonly sequencer: CrateSequencer<BoomBoxTrack>;
 
-  readonly options: Required<Pick<BoomBoxOptions, 'maxTrackHistory' | 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
+  options: Required<Pick<BoomBoxOptions, 'maxTrackHistory' | 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
 
   readonly medley: Medley<BoomBoxTrack>;
   readonly queue: Queue<BoomBoxTrack>;
