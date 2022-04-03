@@ -26,7 +26,7 @@ import type TypedEventEmitter from 'typed-emitter';
 import _, { difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createExciter } from "./exciter";
-import { MetadataCache, createLogger, Logger } from "@seamless-medley/core";
+import { MetadataCache, createLogger, Logger, CrateLimit } from "@seamless-medley/core";
 
 export enum PlayState {
   Idle = 'idle',
@@ -51,7 +51,7 @@ export type LimitBySample = {
   list: number[];
 }
 
-export type SequenceLimit = number | LimitByUpto | LimitByRange | LimitBySample;
+export type SequenceLimit = number | 'all' | LimitByUpto | LimitByRange | LimitBySample;
 
 export type SequenceConfig = {
   crateId: string;
@@ -312,8 +312,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       .filter((c): c is BoomBoxCrate => c !== undefined);
   }
 
-  private sequenceLimit(limit: SequenceLimit): number | (() => number) {
+  private sequenceLimit(limit: SequenceLimit): CrateLimit  {
     if (typeof limit === 'number') {
+      return limit;
+    }
+
+    if (limit === 'all') {
       return limit;
     }
 
