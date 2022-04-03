@@ -1,6 +1,6 @@
 import _, { castArray, difference, get, noop } from 'lodash';
 import normalizePath from 'normalize-path';
-import { WatchTrackCollection } from '../collections';
+import { TrackCollectionOptions, WatchTrackCollection } from '../collections';
 import { createLogger } from '../logging';
 import { BoomBoxTrack, MetadataHelper, TrackKind } from '../playout';
 import { MetadataCache } from '../playout/metadata/cache';
@@ -13,7 +13,7 @@ export type MusicLibraryDescriptor = {
   path: string;
   description?: string;
   auxiliary?: boolean;
-}
+} & Pick<TrackCollectionOptions<any>, 'reshuffleEvery' | 'newTracksAddingMode'>;
 
 export type MusicLibraryMetadata<O> = MusicLibraryDescriptor & {
   owner: O;
