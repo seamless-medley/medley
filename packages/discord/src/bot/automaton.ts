@@ -270,7 +270,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     const { station, audioRequest } = link;
 
     station.medley.deleteAudioStream(audioRequest.id);
-    station.removeAudiencesForGuild(guildId);
+    station.removeAudiencesForGroup(guildId);
   }
 
   getGain(guildId: Guild['id']) {
@@ -383,7 +383,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     if (isMe) {
       if (channelChange === 'leave') {
         // Me Leaving
-        station?.removeAudiencesForGuild(newState.guild.id);
+        station?.removeAudiencesForGroup(newState.guild.id);
         state.voiceChannelId = undefined;
         return;
       }
@@ -396,7 +396,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
         if (station) {
           if (state.serverMuted) {
-            station.removeAudiencesForGuild(guildId);
+            station.removeAudiencesForGroup(guildId);
           } else {
             this.updateStationAudiences(station, newState.channel!);
           }
@@ -410,7 +410,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
         if (station) {
           if (state.serverMuted) {
-            station.removeAudiencesForGuild(guildId);
+            station.removeAudiencesForGroup(guildId);
           } else {
             this.updateStationAudiences(station, newState.channel!);
           }
@@ -645,7 +645,11 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   private async sendForStation(station: Station, options: string | MessagePayload | MessageOptions) {
     const results: [string, Promise<Message<boolean> | undefined> | undefined][] = [];
 
-    for (const guildId of station.guildIds) {
+    for (const guildId of station.groupIds) {
+      if ((station.getAudiences(guildId)?.size ?? 0) < 1) {
+        continue;
+      }
+
       const state = this._guildStates.get(guildId);
 
       if (state) {

@@ -20,7 +20,6 @@ import { BoomBox,
   WatchTrackCollection
 } from "@seamless-medley/core";
 
-import { Guild, User } from "discord.js";
 import EventEmitter from "events";
 import type TypedEventEmitter from 'typed-emitter';
 import _, { difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
@@ -98,7 +97,7 @@ export type SweeperConfig = {
 export type SweeperRule = SweeperConfig;
 export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
   ready: () => void;
-  requestTrackAdded: (track: TrackPeek<RequestTrack<User['id']>>) => void;
+  requestTrackAdded: (track: TrackPeek<RequestTrack<string>>) => void;
 }
 
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
@@ -109,7 +108,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   readonly queue: Queue<BoomBoxTrack>;
   readonly medley: Medley<BoomBoxTrack>;
 
-  private boombox: BoomBox<User['id']>;
+  private boombox: BoomBox<string>;
 
   readonly library: MusicLibrary<Station>;
   private sequences: SequenceConfig[] = [];
@@ -118,7 +117,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   private intros?: TrackCollection<BoomBoxTrack>;
   private requestSweepers?: TrackCollection<BoomBoxTrack>;
 
-  private audiences: Map<Guild['id'], Set<User['id']>> = new Map();
+  private audiences: Map<string, Set<string>> = new Map();
 
   private logger: Logger;
 
@@ -379,7 +378,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
-  async request(trackId: BoomBoxTrack['id'], requestedBy: User['id']) {
+  async request(trackId: BoomBoxTrack['id'], requestedBy: string) {
     const track = this.findTrackById(trackId);
     if (!track) {
       return false;
@@ -432,27 +431,27 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.crateIndex = newIndex;
   }
 
-  addAudiences(guildId: Guild['id'], userId: User['id']) {
-    if (!this.audiences.has(guildId)) {
-      this.audiences.set(guildId, new Set());
+  addAudiences(groupId: string, audienceId: string) {
+    if (!this.audiences.has(groupId)) {
+      this.audiences.set(groupId, new Set());
     }
 
-    this.audiences.get(guildId)!.add(userId);
+    this.audiences.get(groupId)!.add(audienceId);
     this.playIfHasAudiences();
   }
 
-  removeAudiences(guildId: Guild['id'], userId: User['id']) {
-    this.getAudiences(guildId)?.delete(userId);
+  removeAudiences(groupId: string, audienceId: string) {
+    this.getAudiences(groupId)?.delete(audienceId);
     this.pauseIfNoAudiences();
   }
 
-  removeAudiencesForGuild(guildId: Guild['id']) {
-    this.audiences.delete(guildId);
+  removeAudiencesForGroup(groupId: string) {
+    this.audiences.delete(groupId);
     this.pauseIfNoAudiences();
   }
 
-  updateAudiences(guildId: Guild['id'], userIds: User['id'][]) {
-    this.audiences.set(guildId, new Set(userIds));
+  updateAudiences(groupId: string, audienceId: string[]) {
+    this.audiences.set(groupId, new Set(audienceId));
     this.playIfHasAudiences();
   }
 
@@ -470,12 +469,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }
   }
 
-  getAudiences(guildId: Guild['id']) {
-    return this.audiences.get(guildId);
+  getAudiences(groupId: string) {
+    return this.audiences.get(groupId);
   }
 
   get totalAudiences() {
-    const audiences = new Set<User['id']>();
+    const audiences = new Set<string>();
 
     for (const ids of this.audiences.values()) {
       for (const id of ids) {
@@ -496,7 +495,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return false;
   }
 
-  get guildIds() {
+  get groupIds() {
     return Array.from(this.audiences.keys());
   }
 }
