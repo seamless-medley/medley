@@ -283,6 +283,15 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     return this.requests.peek(from, n);
   }
 
+  getRequestsOf(requester: Requester) {
+    return this.requests.all().filter(r => r.requestedBy.includes(requester));
+  }
+
+  unrequest(requestIds: number[]) {
+    const all = new Set(requestIds);
+    this.requests.removeBy(r => all.has(r.rid));
+  }
+
   private enqueue: EnqueueListener = async (done) => {
     if (this.queue.length > 0) {
       done(true);

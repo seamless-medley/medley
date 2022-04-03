@@ -412,6 +412,14 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.sortRequests();
   }
 
+  getRequestsOf(requester: string) {
+    return this.boombox.getRequestsOf(requester);
+  }
+
+  unrequest(requestIds: number[]) {
+    this.boombox.unrequest(requestIds);
+  }
+
   get crateIndex() {
     return this.boombox.crateIndex;
   }

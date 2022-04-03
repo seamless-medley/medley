@@ -6,12 +6,11 @@ import skip from './commands/skip';
 import volume from "./commands/volume";
 import lyrics from "./commands/lyrics";
 import request from "./commands/request";
+import unrequest from './commands/unrequest';
 import vote from './commands/vote';
 import message from './commands/message';
 import history from './commands/history';
 import tune from './commands/tune';
-
-// TODO: New command "unrequest" for deleting the requested song
 
 import { Command, CommandError, CommandType, InteractionHandler, SubCommandLikeOption } from "./type";
 import { deny, isReplyable } from "./utils";
@@ -23,6 +22,7 @@ const descriptors = {
   volume,
   lyrics,
   request,
+  unrequest,
   vote,
   message,
   history,
