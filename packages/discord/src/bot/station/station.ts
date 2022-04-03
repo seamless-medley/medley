@@ -132,11 +132,13 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       this.medley.setAudioDevice({ type: 'Null', device: 'Null Device'});
     }
 
-    this.library = new MusicLibrary(this.id, this, options.metadataCache, (options.musicCollections || []));
+    this.library = new MusicLibrary(this.id, this, options.metadataCache);
     this.library.once('ready', () => {
       this.logger.info('Ready');
       this.emit('ready');
     });
+
+    this.library.loadCollections(options.musicCollections);
 
     // Create boombox
     const boombox = new BoomBox({

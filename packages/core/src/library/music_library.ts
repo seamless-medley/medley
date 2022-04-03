@@ -28,39 +28,41 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
   private collectionPaths = new Map<string, string>();
 
-  constructor(readonly id: string, readonly owner: O, readonly metadataCache: MetadataCache | undefined, collections: MusicLibraryDescriptor[]) {
+  constructor(readonly id: string, readonly owner: O, readonly metadataCache: MetadataCache | undefined) {
     super();
-    this.loadCollections(collections);
   }
 
   async loadCollections(collections: MusicLibraryDescriptor[]) {
     this.logger.debug('Loading collections');
 
-    return Promise.all(
-      collections
-        .filter(desc => !desc.auxiliary)
-        .map(desc => this.addCollection(desc))
-      )
-      .then(async () => {
-        this.logger.debug('Loading auxiliary collections');
+    const normalCollections = await Promise.all(collections
+      .filter(desc => !desc.auxiliary)
+      .map(desc => this.addCollection(desc))
+    );
 
-        const aux = collections.filter(desc => desc.auxiliary);
-        let count: number;
+    this.logger.debug('Loading auxiliary collections');
+    const auxCollections: typeof normalCollections = [];
 
-        const setCount = (newCount: number) => {
-          count = newCount;
+    const aux = collections.filter(desc => desc.auxiliary);
+    let count: number;
 
-          if (count <= 0) {
-            this.emit('ready');
-          }
-        }
+    const setCount = (newCount: number) => {
+      count = newCount;
 
-        setCount(aux.length);
+      if (count <= 0) {
+        this.emit('ready');
+      }
+    }
 
-        for (const descriptor of aux) {
-          await this.addCollection(descriptor, () => setCount(count - 1)).then(breath)
-        }
-      })
+    setCount(aux.length);
+
+    for (const descriptor of aux) {
+      const collection = await this.addCollection(descriptor, () => setCount(count - 1));
+      await breath();
+      auxCollections.push(collection);
+    }
+
+    return normalCollections.concat(auxCollections);
   }
 
   private handleTrackRemoval = (tracks: BoomBoxTrack[]) => {
@@ -104,17 +106,21 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     setTimeout(() => this.indexTracks(collection, remainings, done), 0);
   }
 
-  addCollection(descriptor: MusicLibraryDescriptor, onceReady?: () => void) {
-    return new Promise<void>((resolve) => {
+  addCollection(descriptor: MusicLibraryDescriptor, onceReady?: () => void): Promise<WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>>> {
+    return new Promise((resolve) => {
       const { id } = descriptor;
       const path = normalizePath(descriptor.path);
 
       const newCollection = WatchTrackCollection.initWithWatch<BoomBoxTrack, MusicLibraryMetadata<O>>(
-        id, `${path}/**/*`
+        id, `${path}/**/*`,
+        {
+          newTracksAddingMode: descriptor.newTracksAddingMode,
+          reshuffleEvery: descriptor.reshuffleEvery
+        }
       );
 
       newCollection.on('tracksAdd', tracks => {
-        this.indexTracks(newCollection, tracks, resolve);
+        this.indexTracks(newCollection, tracks, () => resolve(newCollection));
       });
 
       newCollection.metadata = {
