@@ -66,6 +66,11 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   try {
     const result = await automaton.join(channelToJoin);
 
+    const newState = automaton.getGuildState(guildId);
+    if (newState && !newState.textChannelId) {
+      newState.textChannelId = interaction.channelId;
+    }
+
     if (result.status === 'joined') {
       reply(interaction, {
         content: null,
@@ -78,7 +83,6 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     if (result.status === 'no_station') {
       createStationSelector(automaton, interaction, async (tuned) => {
         if (tuned) {
-          // Rejoin
           if ((await automaton.join(channelToJoin)).status !== 'joined') {
             interaction.followUp(makeHighlightedMessage('Could not tune and join', HighlightTextType.Red));
             return;
