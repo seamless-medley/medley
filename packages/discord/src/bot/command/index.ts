@@ -1,5 +1,6 @@
 import { AutocompleteInteraction, ButtonInteraction, CommandInteraction, Interaction } from "discord.js";
 import _ from "lodash";
+import { createLogger } from "@seamless-medley/core";
 import join from "./commands/join";
 import skip from './commands/skip';
 import volume from "./commands/volume";
@@ -51,6 +52,8 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
     button: desc.createButtonHandler?.(automaton),
     autocomplete: desc.createAutocompleteHandler?.(automaton)
   }]));
+
+  const logger = createLogger({ name: 'command' });
 
   return async (interaction: Interaction) => {
     if (interaction.user.bot) {
@@ -107,7 +110,7 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
         return;
       }
 
-      console.error('Interaction Error', e);
+      logger.error('Interaction Error', e);
     }
   }
 }
