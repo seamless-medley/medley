@@ -101,7 +101,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
   if (selector instanceof Message) {
     let done = false;
 
-    const collector = selector.createMessageComponentCollector({ componentType: 'SELECT_MENU', time: 30_000 });
+    const collector = selector.createMessageComponentCollector({ componentType: 'SELECT_MENU', time: 60_000 });
 
     collector.on('collect', async i => {
       if (i.user.id !== issuer) {

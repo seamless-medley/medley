@@ -6,13 +6,13 @@ import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeReque
 export const handleSelectMenu = async (automaton: MedleyAutomaton, interaction: SelectMenuInteraction) => {
   const { station } = guildStationGuard(automaton, interaction);
 
-  const { values, member } = interaction;
+  const { values, user } = interaction;
 
-  if (values.length && member) {
+  if (values.length) {
     const [trackId] = values;
 
     if (trackId) {
-      const ok = await station.request(trackId, member.user.id);
+      const ok = await station.request(trackId, user.id);
 
       if (ok === false || ok.index < 0) {
         await interaction.update({
