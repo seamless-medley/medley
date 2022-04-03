@@ -7,6 +7,15 @@ import { Track } from "../track";
 
 export type TrackCollectionOptions<T extends Track<any>> = {
   tracksMapper?: (tracks: T[]) => Promise<T[]>;
+
+  reshuffleEvery?: number;
+
+  /**
+   * How the new tracks should be added
+   *
+   * @default append
+   */
+  newTracksAddingMode?: 'prepend' | 'append';
 }
 
 export type TrackPeek<T extends Track<any>> = {
@@ -25,7 +34,7 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     name: `collection/${this.id}`
   });
 
-  constructor(readonly id: string, protected options: TrackCollectionOptions<T> = {}) {
+  constructor(readonly id: string, public options: TrackCollectionOptions<T> = {}) {
     super();
     this.afterConstruct();
   }
@@ -61,11 +70,25 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     return this._ready;
   }
 
+  private shiftCounter = 0;
+
   shift(): T | undefined {
     const track = this.tracks.shift();
     if (track) {
       this.trackIdMap.delete(track.id);
     }
+
+    if (this.options.reshuffleEvery) {
+      ++this.shiftCounter;
+
+      if (this.shiftCounter >= this.options.reshuffleEvery) {
+        this.logger.debug('Re-shuffle', this.options.reshuffleEvery);
+
+        this.shiftCounter = 0;
+        this.tracks = shuffle(this.tracks);
+      }
+    }
+
     return track;
   }
 
@@ -99,7 +122,10 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
 
     if (mapped.length) {
       this.logger.info('Adding', mapped.length, 'tracks');
-      this.tracks = this.tracks.concat(mapped);
+
+      const [a, b] = (this.options.newTracksAddingMode === 'prepend') ? [mapped, this.tracks] : [this.tracks, mapped];
+
+      this.tracks = a.concat(b);
 
       for (const track of mapped) {
         this.trackIdMap.set(track.id, track);
