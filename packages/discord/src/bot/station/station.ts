@@ -447,14 +447,14 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private playIfHasAudiences() {
     if (this.playState !== PlayState.Playing && this.hasAudiences) {
-      this.logger.info('Start');
+      this.logger.info('Playing started');
       this.start();
     }
   }
 
   private pauseIfNoAudiences() {
     if (this.playState === PlayState.Playing && !this.hasAudiences) {
-      this.logger.info('Pause');
+      this.logger.info('Playing paused');
       this.pause();
     }
   }
