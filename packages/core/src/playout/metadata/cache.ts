@@ -38,7 +38,7 @@ export class MetadataCache {
   private pool: WorkerPool;
 
   constructor() {
-    this.pool = workerpool.pool(__dirname + '/cacheWorker.js', {
+    this.pool = workerpool.pool(__dirname + '/cache_worker.js', {
 
     });
 

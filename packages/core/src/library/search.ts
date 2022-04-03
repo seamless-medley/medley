@@ -30,7 +30,7 @@ export class SearchEngine {
 
   private id = (SearchEngine.counter++).toString(36);
 
-  private pool = workerpool.pool(__dirname + '/searchWorker.js', {
+  private pool = workerpool.pool(__dirname + '/search_worker.js', {
     minWorkers: 1,
     maxWorkers: 1
   });

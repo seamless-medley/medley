@@ -28,7 +28,7 @@ export class MetadataHelper {
   private pool: WorkerPool;
 
   constructor(workerType?: WorkerPoolOptions['workerType']) {
-    this.pool = workerpool.pool(__dirname + '/metadataWorker.js', { workerType });
+    this.pool = workerpool.pool(__dirname + '/metadata_worker.js', { workerType });
   }
 
   async metadata(path: string) {
