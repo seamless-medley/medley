@@ -289,12 +289,10 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     }
 
     const narrow = (narrowBy && nt)
-      ? (result: SearchResult): boolean => {
-        const track = this.findTrackById(result.id);
-        const narrowing = (track?.metadata?.tags as any || {})[narrowBy] as string | undefined;
-        const match = narrowing?.toLowerCase().includes(nt) || false;
-        return match;
-      }
+      ? ({
+        by: narrowBy,
+        term: nt
+      })
       : undefined;
 
     const result = await this.searchEngine.autoSuggest(
@@ -303,7 +301,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         fields: field ? castArray(field) : undefined,
         prefix: true,
         fuzzy: 0.5,
-        filter: narrow
+        narrow,
       }
     );
 
