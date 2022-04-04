@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npm-run-all dev:*",
     "dev:pre": "copyfiles --up 4 ../node-medley/build/Release/medley.node build/Release/",
-    "dev:run": "cross-env MEDLEY_DEMO=1 tsnd src/start.ts"
+    "dev:run": "cross-env MEDLEY_DEMO=1 DEBUG=1 tsnd src/start.ts"
   },
   "author": "",
   "license": "ISC",
