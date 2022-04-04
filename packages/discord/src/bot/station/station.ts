@@ -260,12 +260,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.medley.requestAudioStream(options);
   }
 
-  // FIXME: This is specific to Discord
-  async createExciter(options: RequestAudioOptions) {
-    const audioRequest = await this.requestAudioStream(options);
-    return createExciter(audioRequest);
-  }
-
   updateCollections(newCollections: MusicLibraryDescriptor[]) {
     this.library.update(newCollections);
     this.createCrates();
