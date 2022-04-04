@@ -7,6 +7,7 @@ process.on('uncaughtException', (e) => {
 const station = new Station({
   id: 'default',
   name: 'Default station',
+  useNullAudioDevice: false,
   musicCollections: [
     { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
     { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
