@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "es2018",
     "module": "commonjs",
+    "jsx": "preserve",
     "allowJs": false,
     "strict": true,
     "esModuleInterop": true,
@@ -9,7 +10,8 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist"
   },
   "include": ["src"],
   "references": [

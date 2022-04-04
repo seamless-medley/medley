@@ -1,18 +1,28 @@
 {
-  "name": "@seamless-medley/discord",
+  "name": "@seamless-medley/radio",
   "version": "0.1.0",
-  "description": "Discord Music Bot built on top of Medley",
+  "description": "Play your music seamlessly like a professional radio station, to your speaker, Discord, etc",
   "author": {
     "name": "Wittawas Nakkasem",
     "email": "vittee@hotmail.com"
   },
+  "keywords": [
+    "radio",
+    "discord",
+    "medley",
+    "automation"
+  ],
   "license": "AGPL-3.0",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "npm-run-all dev:*",
-    "dev:pre": "copyfiles --up 4 ../node-medley/build/Release/medley.node build/Release/",
-    "dev:bot": "tsnd src/bot/main.ts",
-    "sample": "cross-env MEDLEY_DEMO=1 ts-node src/bot/sample_main.ts"
+    "copy-native": "copyfiles --up 4 ../node-medley/build/Release/medley.node build/Release/ || true",
+    "dev": "npm-run-all copy-native --parallel dev:*",
+    "dev:bot": "cross-env MEDLEY_DEMO=1  DEBUG=1 tsnd -- src/discord/bot_main.ts",
+    "dev:react": "vite",
+    "dev:test": "cross-env MEDLEY_DEMO=1 tsnd -- src/discord/test.ts",
+    "sample": "cross-env MEDLEY_DEMO=1 ts-node src/discord/sample_main.ts",
+    "build": "tsc --build",
+    "vb": "vite build"
   },
   "dependencies": {
     "@chakra-ui/react": "^1.7.3",
