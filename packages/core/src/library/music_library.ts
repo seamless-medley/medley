@@ -300,7 +300,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       {
         fields: field ? castArray(field) : undefined,
         prefix: true,
-        fuzzy: 0.5,
+        fuzzy: 0.3,
         narrow,
       }
     );
