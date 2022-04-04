@@ -165,6 +165,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   private _currentCrate: BoomBoxCrate | undefined;
   private _currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
 
+  /**
+   * Current crate
+   */
   get crate() {
     return this._currentCrate;
   }
@@ -438,6 +441,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.emit('trackActive', trackPlay);
   }
 
+  /**
+   * All creates
+   */
   get crates() {
     return this.sequencer.crates;
   }

@@ -36,7 +36,7 @@ import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
 import EventEmitter from "events";
-import { createExciter } from "./station/exciter";
+import { createExciter } from "./exciter";
 
 export type MedleyAutomatonOptions = {
   id: string;

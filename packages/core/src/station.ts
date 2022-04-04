@@ -269,18 +269,13 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.medley.requestAudioStream(options);
   }
 
-  updateCollections(newCollections: MusicLibraryDescriptor[]) {
-    this.library.update(newCollections);
+  async updateLibrary(collections: MusicLibraryDescriptor[]) {
+    await this.library.loadCollections(collections);
     this.createCrates();
   }
 
   updateSequence(sequences: SequenceConfig[]) {
     this.sequences = [...sequences];
-    this.createCrates();
-  }
-
-  async updateLibrary(collections: MusicLibraryDescriptor[]) {
-    await this.library.loadCollections(collections);
     this.createCrates();
   }
 
@@ -341,7 +336,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
     this.boombox.sweeperInsertionRules = configs.map<SweeperInsertionRule>(({ from, to, path }) => {
       if (!this.sweepers.has(path)) {
-        this.sweepers.set(path, WatchTrackCollection.initWithWatch<BoomBoxTrack>(path, `${normalizePath(path)}/**/*`));
+        const collection = new WatchTrackCollection<BoomBoxTrack>(path).watch(`${normalizePath(path)}/**/*`);
+        this.sweepers.set(path, collection);
       }
 
       return {

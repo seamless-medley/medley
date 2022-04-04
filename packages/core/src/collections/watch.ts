@@ -13,6 +13,7 @@ type WatchCallback<F = typeof watch> = F extends (pathName: any, options: any, c
 
 // A track collection capable of watching for changes in file system directory
 export class WatchTrackCollection<T extends Track<any>, M = never> extends TrackCollection<T, M> {
+  /** @deprecated */
   static initWithWatch<T extends Track<any>, M = never>(id: string, paths: string, options: TrackCollectionOptions<T> = {}): WatchTrackCollection<T, M> {
     const inst = new WatchTrackCollection<T, M>(id, options);
     inst.watch(paths);
