@@ -126,7 +126,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.queue = new Queue();
     this.medley = new Medley(this.queue);
 
-    if (options.useNullAudioDevice) {
+    if (options.useNullAudioDevice ?? true) {
       if (this.getCurrentAudioDevice().type !== 'Null') {
         this.setAudioDevice({ type: 'Null', device: 'Null Device'});
       }
