@@ -39,17 +39,21 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
   const guildId = guildIdGuard(interaction);
 
-  const state = automaton.getGuildState(guildId);
+  const state = automaton.ensureGuildState(guildId);
 
-  if (state?.voiceChannelId === channelToJoin.id) {
+  if (state.voiceChannelId === channelToJoin.id) {
     warn(interaction, 'Already joined');
     return;
   }
 
   await reply(interaction, `Joining ${channelToJoin}`);
 
+  if (!state.textChannelId) {
+    state.textChannelId = interaction.channelId;
+  }
+
   const createEmbed = () => {
-    const stationName = state?.stationLink?.station?.name;
+    const stationName = state.stationLink?.station?.name;
 
     const embed = new MessageEmbed()
       .setColor('RANDOM')
@@ -65,11 +69,6 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
   try {
     const result = await automaton.join(channelToJoin);
-
-    const newState = automaton.getGuildState(guildId);
-    if (newState && !newState.textChannelId) {
-      newState.textChannelId = interaction.channelId;
-    }
 
     if (result.status === 'joined') {
       reply(interaction, {
