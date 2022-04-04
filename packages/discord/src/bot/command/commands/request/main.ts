@@ -1,8 +1,7 @@
-import { BoomBoxTrack, MusicLibraryMetadata } from "@seamless-medley/core";
+import { BoomBoxTrack, MusicLibraryMetadata, Station } from "@seamless-medley/core";
 import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSelectMenu, MessageSelectOptionData } from "discord.js";
 import _, { truncate } from "lodash";
 import { parse as parsePath } from 'path';
-import { Station } from "../../../station";
 import { InteractionHandlerFactory } from "../../type";
 import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview, reply } from "../../utils";
 import { handleSelectMenu } from "./selectmenu";

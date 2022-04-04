@@ -1,9 +1,8 @@
-import { getTrackBanner, RequestTrack, TrackPeek } from "@seamless-medley/core";
+import { getTrackBanner, RequestTrack, TrackPeek, Station } from "@seamless-medley/core";
 import { APIMessage } from "discord-api-types/v9";
 import { BaseCommandInteraction, Interaction, InteractionReplyOptions, Message, MessageComponentInteraction, MessagePayload, PermissionResolvable, Permissions, User } from "discord.js";
 import { castArray, maxBy, padStart } from "lodash";
 import { MedleyAutomaton } from "../automaton";
-import { Station } from "../station";
 import { CommandError } from "./type";
 
 export enum HighlightTextType {

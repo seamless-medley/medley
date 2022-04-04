@@ -25,6 +25,7 @@ import {
 import {
   BoomBoxTrack,
   BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
+  Station,
   createLogger, Logger, decibelsToGain
 } from "@seamless-medley/core";
 
@@ -32,7 +33,6 @@ import type TypedEventEmitter from 'typed-emitter';
 
 import { delay } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
-import { Station } from "./station";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
 import EventEmitter from "events";

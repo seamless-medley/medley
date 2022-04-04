@@ -1,32 +1,24 @@
+import EventEmitter from "events";
+import normalizePath from 'normalize-path';
+import { Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
+import { difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
+import type TypedEventEmitter from 'typed-emitter';
+import { TrackCollection, TrackPeek, WatchTrackCollection } from "./collections";
+import { Chanceable, Crate, CrateLimit } from "./crate";
+import { Library, MusicLibrary, MusicLibraryDescriptor } from "./library";
+import { createLogger, Logger } from "./logging";
 import {
   BoomBox,
   BoomBoxCrate,
   BoomBoxEvents,
   BoomBoxTrack,
   BoomBoxTrackPlay,
-  Chanceable,
-  Crate,
-  Library,
-  Medley,
+  MetadataCache,
   MetadataHelper,
-  MusicLibrary,
-  MusicLibraryDescriptor,
-  Queue,
-  RequestAudioOptions,
   RequestTrack,
   SweeperInsertionRule,
-  TrackCollection,
-  TrackKind,
-  TrackPeek,
-  WatchTrackCollection
-} from "@seamless-medley/core";
-
-import EventEmitter from "events";
-import type TypedEventEmitter from 'typed-emitter';
-import _, { difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
-import normalizePath from 'normalize-path';
-import { createExciter } from "./exciter";
-import { MetadataCache, createLogger, Logger, CrateLimit } from "@seamless-medley/core";
+  TrackKind
+} from "./playout";
 
 export enum PlayState {
   Idle = 'idle',
@@ -97,6 +89,8 @@ export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trac
   ready: () => void;
   requestTrackAdded: (track: TrackPeek<RequestTrack<string>>) => void;
 }
+
+// TODO: This class is so useful and could be de-coupled from Discord related codes
 
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
   readonly id: string;
