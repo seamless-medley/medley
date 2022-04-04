@@ -1,9 +1,17 @@
-import { Query, SearchOptions, SearchResult, Suggestion } from 'minisearch';
 import workerpool from 'workerpool';
+import { Query, SearchOptions as MiniSearchOptions, SearchResult, Suggestion } from 'minisearch';
 import { BoomBoxTrack } from '../playout';
 
 export type { Query, SearchResult };
 
+export type SearchOptions = Omit<MiniSearchOptions, 'filter' | 'boostDocument' | 'prefix' | 'fuzzy' | 'tokenize' | 'processTerm'> & {
+  prefix?: boolean;
+  fuzzy?: boolean | number;
+  narrow?: {
+    term: string;
+    by: string;
+  };
+}
 export type TrackIndex = {
   id: string;
   artist?: string;

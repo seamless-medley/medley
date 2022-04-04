@@ -1,12 +1,13 @@
 // @ts-check
 
-const { get, noop } = require('lodash');
+const { noop, omit } = require('lodash');
 const workerpool = require('workerpool');
 const MiniSearch = require('minisearch');
 
 /** @typedef {import('minisearch').default<TrackIndex>} Search */
 /** @typedef {import('minisearch').Query} Query */
-/** @typedef {import('minisearch').SearchOptions} SearchOptions */
+/** @typedef {import('minisearch').SearchOptions} MiniSearchOptions */
+/** @typedef {import('./search').SearchOptions} SearchOptions */
 /** @typedef {import('./search').TrackIndex} TrackIndex */
 
 /** @type {Map<string, Search>} */
@@ -21,11 +22,13 @@ function acquire(id) {
     return instances.get(id);
   }
 
+  const fields = ['artist', 'title'];
+
   /** @type {Search} */
   // @ts-expect-error
   const miniSearch = new MiniSearch({
-    fields: ['artist', 'title'],
-    extractField: get
+    fields,
+    storeFields: fields
   });
 
   instances.set(id, miniSearch);
@@ -68,7 +71,21 @@ function search(id, query, searchOptions) {
  * @param {SearchOptions | undefined} options
  */
 function autoSuggest(id, queryString, options) {
-  return acquire(id).autoSuggest(queryString, options)
+  const { narrow } = options;
+
+  /** @type {MiniSearchOptions} */
+  const miniSearchOptions = omit(options, 'narrow');
+
+  if (narrow) {
+    miniSearchOptions.filter = (result) => {
+      /** @type {string?} */
+      const narrowing = result[narrow.by];
+      const match = narrowing?.toLowerCase().includes(narrow.term) ?? false;
+      return match;
+    }
+  }
+
+  return acquire(id).autoSuggest(queryString, miniSearchOptions);
 }
 
 workerpool.worker({
