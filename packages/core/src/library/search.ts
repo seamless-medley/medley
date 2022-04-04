@@ -1,6 +1,6 @@
-import workerpool from 'workerpool';
 import { Query, SearchOptions as MiniSearchOptions, SearchResult, Suggestion } from 'minisearch';
 import { BoomBoxTrack } from '../playout';
+import { WorkerPoolAdapter } from '../worker_pool_adapter';
 
 export type { Query, SearchResult };
 
@@ -12,6 +12,7 @@ export type SearchOptions = Omit<MiniSearchOptions, 'filter' | 'boostDocument' |
     by: string;
   };
 }
+
 export type TrackIndex = {
   id: string;
   artist?: string;
@@ -33,29 +34,31 @@ function indexOf(track: BoomBoxTrack): TrackIndex {
   }
 }
 
-export class SearchEngine {
+export class SearchEngine extends WorkerPoolAdapter<Methods> {
   private static counter = 0;
 
   private id = (SearchEngine.counter++).toString(36);
 
-  private pool = workerpool.pool(__dirname + '/search_worker.js', {
-    minWorkers: 1,
-    maxWorkers: 1
-  });
+  constructor() {
+    super(__dirname + '/search_worker.js', {
+      minWorkers: 1,
+      maxWorkers: 1
+    })
+  }
 
   async add(track: BoomBoxTrack) {
-    return this.pool.exec<Methods['add']>('add', [this.id, indexOf(track)]);
+    return this.exec('add', this.id, indexOf(track));
   }
 
   async removeAll(tracks: BoomBoxTrack[]) {
-    await this.pool.exec<Methods['removeAll']>('removeAll', [this.id, tracks.map(indexOf)]);
+    await this.exec('removeAll', this.id, tracks.map(indexOf));
   }
 
   async search(query: Query, searchOptions?: SearchOptions) {
-    return this.pool.exec<Methods['search']>('search', [this.id, query, searchOptions]);
+    return this.exec('search', this.id, query, searchOptions);
   }
 
   async autoSuggest(queryString: string, searchOptions?: SearchOptions) {
-    return this.pool.exec<Methods['autoSuggest']>('autoSuggest', [this.id, queryString, searchOptions]);
+    return this.exec('autoSuggest', this.id, queryString, searchOptions);
   }
 }

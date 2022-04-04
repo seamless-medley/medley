@@ -1,10 +1,10 @@
-import workerpool, { WorkerPool } from 'workerpool';
 import type KeyvSqlite from '@keyv/sqlite';
 import type KeyvRedis from '@keyv/redis';
 
 
 import type { Metadata } from '@seamless-medley/medley';
 import type { BoomBoxTrack } from '../boombox';
+import { WorkerPoolAdapter } from '../../worker_pool_adapter';
 
 export type MetadataCacheSqliteStore = {
   type: 'sqlite';
@@ -34,25 +34,11 @@ interface Methods {
   del(id: string): Promise<void>;
 }
 
-export class MetadataCache {
-  private pool: WorkerPool;
-
+export class MetadataCache extends WorkerPoolAdapter<Methods> {
   constructor() {
-    this.pool = workerpool.pool(__dirname + '/cache_worker.js', {
+    super(__dirname + '/cache_worker.js', {});
 
-    });
-
-    this.poolHack();
-  }
-
-  private poolHack() {
-    const pool = (this.pool as any);
-    const workers = pool.workers as any[];
-
-    for (let i = 0; i < workerpool.cpus; i++) {
-      const worker = pool._createWorkerHandler();
-      workers.push(worker);
-    }
+    this.preSpawn();
   }
 
   async init(options: MetadataCacheOptions) {
@@ -63,10 +49,10 @@ export class MetadataCache {
   }
 
   async get(id: string, refresh = false) {
-    const metadata = await this.pool.exec<Methods['get']>('get', [id]);
+    const metadata = await this.exec('get', id);
 
     if (metadata && refresh) {
-      this.pool.exec<Methods['set']>('set', [id, metadata]);
+      this.exec('set', id, metadata);
     }
 
     return metadata;
@@ -76,10 +62,10 @@ export class MetadataCache {
     const toBePersisted = metadata ?? track.metadata?.tags;
 
     if (!toBePersisted) {
-      await this.pool.exec<Methods['del']>('del', [track.id]);
+      await this.exec('del', track.id);
       return;
     }
 
-    await this.pool.exec<Methods['set']>('set', [track.id, toBePersisted]);
+    await this.exec('set', track.id, toBePersisted);
   }
 }

@@ -2,6 +2,7 @@ import workerpool, { WorkerPool, WorkerPoolOptions } from 'workerpool';
 import type { CoverAndLyrics, Metadata } from '@seamless-medley/medley';
 import { MetadataCache } from './cache';
 import { Track } from '../../track';
+import { WorkerPoolAdapter } from '../../worker_pool_adapter';
 
 let instance: MetadataHelper;
 
@@ -24,19 +25,17 @@ interface Methods {
   searchLyrics(artist: string, title: string): Promise<string>;
 }
 
-export class MetadataHelper {
-  private pool: WorkerPool;
-
+export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   constructor(workerType?: WorkerPoolOptions['workerType']) {
-    this.pool = workerpool.pool(__dirname + '/metadata_worker.js', { workerType });
+    super(__dirname + '/metadata_worker.js', { workerType });
   }
 
   async metadata(path: string) {
-    return this.pool.exec<Methods['metadata']>('metadata', [path]);
+    return this.exec('metadata', path);
   }
 
   async coverAndLyrics(path: string): Promise<CoverAndLyrics> {
-    const result = await this.pool.exec<Methods['coverAndLyrics']>('coverAndLyrics', [path]);
+    const result = await this.exec('coverAndLyrics', path);
 
     if (Buffer.isBuffer(result.cover)) {
       return result as CoverAndLyrics;
@@ -61,11 +60,11 @@ export class MetadataHelper {
   }
 
   async isTrackLoadable(path: string) {
-    return this.pool.exec<Methods['isTrackLoadable']>('isTrackLoadable', [path]);
+    return this.exec('isTrackLoadable', path);
   }
 
   async searchLyrics(artist: string, title: string) {
-    return this.pool.exec<Methods['searchLyrics']>('searchLyrics', [artist, title]);
+    return this.exec('searchLyrics', artist, title);
   }
 
   static getDefaultInstance() {
