@@ -1,9 +1,8 @@
-import { BoomBoxTrack, BoomBoxTrackPlay, isRequestTrack, Metadata, MusicLibraryMetadata } from "@seamless-medley/core";
+import { BoomBoxTrack, BoomBoxTrackPlay, isRequestTrack, Metadata, MusicLibraryMetadata, Station } from "@seamless-medley/core";
 import { Message, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, MessageOptions } from "discord.js";
 import { capitalize, isEmpty, get } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from 'path';
-import { Station } from "./station";
 
 export enum TrackMessageStatus {
   Playing,

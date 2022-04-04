@@ -1,4 +1,4 @@
-import _, { castArray, difference, get, noop } from 'lodash';
+import _, { castArray, difference, noop } from 'lodash';
 import normalizePath from 'normalize-path';
 import { TrackCollectionOptions, WatchTrackCollection } from '../collections';
 import { createLogger } from '../logging';
@@ -6,7 +6,7 @@ import { BoomBoxTrack, MetadataHelper, TrackKind } from '../playout';
 import { MetadataCache } from '../playout/metadata/cache';
 import { breath } from '../utils';
 import { BaseLibrary } from './library';
-import { SearchEngine, Query, SearchResult } from './search';
+import { SearchEngine, Query } from './search';
 
 export type MusicLibraryDescriptor = {
   id: string;

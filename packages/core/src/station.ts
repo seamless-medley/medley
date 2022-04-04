@@ -90,8 +90,6 @@ export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trac
   requestTrackAdded: (track: TrackPeek<RequestTrack<string>>) => void;
 }
 
-// TODO: This class is so useful and could be de-coupled from Discord related codes
-
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
   readonly id: string;
   readonly name: string;
