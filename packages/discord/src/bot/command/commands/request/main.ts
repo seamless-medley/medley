@@ -67,7 +67,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
 
   // Distinguish duplicated track artist and title
   _(selections)
-    .groupBy(({ label, description }) => `${label}:${description}`)
+    .groupBy(({ label, description }) => `${label}:${description}`.toLowerCase())
     .pickBy(group => group.length > 1)
     .forEach(group => {
       for (const sel of group) {
