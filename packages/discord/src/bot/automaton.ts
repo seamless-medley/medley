@@ -36,6 +36,7 @@ import { Station } from "./station";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
 import EventEmitter from "events";
+import { createExciter } from "./station/exciter";
 
 export type MedleyAutomatonOptions = {
   id: string;
@@ -167,7 +168,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       });
   }
 
-  private ensureGuildState(guildId: Guild['id']) {
+  ensureGuildState(guildId: Guild['id']) {
     if (!this._guildStates.has(guildId)) {
       this._guildStates.set(guildId, {
         guildId,
@@ -220,8 +221,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return stationLink;
     }
 
-    // FIXME: This is specific to Discord
-    const exciter = await selectedStation.createExciter({
+    const exciter = createExciter(await selectedStation.requestAudioStream({
       bufferSize: 48000 * 5.0,
       buffering: 960, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
       preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
@@ -229,7 +229,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       sampleRate: 48000,
       format: 'Int16LE',
       gain: this.initialGain
-    });
+    }));
 
     // Create discord voice AudioPlayer if neccessary
     const audioPlayer = stationLink?.audioPlayer ?? createAudioPlayer({
