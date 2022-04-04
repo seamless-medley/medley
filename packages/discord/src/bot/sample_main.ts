@@ -104,8 +104,8 @@ const storedConfigs: StoredConfig = {
   automatons: [
     {
       id: 'medley',
-      botToken: 'OTAwMzU5MTc1MTgyMzgxMDU2.YXAK0w.QFrh-QoGVtcQHJMWQGRweAkTBbI',
-      clientId: '900359175182381056',
+      botToken: '',
+      clientId: '',
       tuning: {
         guilds: {
           'guild_id1': 'station_id1',
