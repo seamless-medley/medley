@@ -82,6 +82,8 @@ export type StationOptions = {
   maxTrackHistory?: number;
   noDuplicatedArtist?: number;
   duplicationSimilarity?: number;
+
+  followCrateAfterRequestTrack?: boolean;
 }
 
 export type SweeperConfig = {
@@ -111,6 +113,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   intros?: TrackCollection<BoomBoxTrack>;
   requestSweepers?: TrackCollection<BoomBoxTrack>;
+
+  followCrateAfterRequestTrack: boolean;
 
   private audiences: Map<string, Set<string>> = new Map();
 
@@ -162,6 +166,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox = boombox;
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
+    this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? false;
 
     this.updateSequence(options.sequences);
     this.updateSweeperRules(options.sweeperRules || []);
@@ -202,6 +207,18 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
           this.queue.add(sweeper.path);
           requestSweepers.push(sweeper);
         }
+      }
+    }
+
+    if (this.followCrateAfterRequestTrack) {
+      const indices = this.boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
+
+      const a = indices.slice(0, this.boombox.crateIndex);
+      const b = indices.slice(this.boombox.crateIndex);
+
+      const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
+      if (located) {
+        this.boombox.crateIndex = located.index;
       }
     }
   }
