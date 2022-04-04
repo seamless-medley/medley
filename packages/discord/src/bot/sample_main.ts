@@ -1,7 +1,7 @@
-import { decibelsToGain, Library, TrackCollection } from "@seamless-medley/core";
-import _ from "lodash";
+import { createLogger, Station, StationOptions, StationRegistry, TrackCollection } from "@seamless-medley/core";
+import { MetadataCache } from "@seamless-medley/core/src/playout/metadata/cache";
+import _, { noop } from "lodash";
 import { MedleyAutomaton } from "./automaton";
-import { SequenceConfig, Station, SweeperConfig } from "./station";
 
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);
@@ -11,11 +11,22 @@ process.on('unhandledRejection', (e) => {
   console.error('Rejection', e);
 });
 
-const storedConfigs = {
+type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers'> & {
+  intros?: string[];
+  requestSweepers?: string[];
+}
+
+type StoredConfig = {
+  stations: StationConfig[];
+  automatons: any[];
+}
+
+const storedConfigs: StoredConfig = {
   stations: [
     {
       id: 'default',
-      initialGain: decibelsToGain(-15),
+      name: 'Default Station',
+      description: 'Various genres',
       intros: [
         'D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3',
       ],
@@ -27,34 +38,30 @@ const storedConfigs = {
         { id: 'hurt', description:'Hurt', path: 'D:\\vittee\\Google Drive\\musics\\hurt' },
         { id: 'lonely', description:'Lonely', path: 'D:\\vittee\\Google Drive\\musics\\lonely' },
         { id: 'lovesong', description:'Love Song', path: 'D:\\vittee\\Google Drive\\musics\\lovesong' },
-        { id: 'upbeat', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
-        { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released' }
+        { id: 'upbeat', description:'Upbeat', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
+        { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released' },
+        { id: 'thai', auxiliary: true, description:'Thai', path: 'M:\\Repository\\th' },
       ],
       sequences: [
-        { crateId: 'guid1', collections: [ { id: 'new-released' }], limit: [0, 2] },
-        { crateId: 'guid2', collections: [ { id: 'bright' }], limit: [2] },
+        { crateId: 'guid1', collections: [ { id: 'new-released' }], limit: { by: 'one-of', list: [1, 1, 1, 2] } },
+        { crateId: 'guid2', collections: [ { id: 'bright' }], limit: { by: 'upto', upto: 2 } },
         { crateId: 'guid3', collections: [ { id: 'groovy' }], limit: 1 },
-        { crateId: 'guid4', collections: [ { id: 'chill' }], limit: [2, 3] },
-        { crateId: 'guid5', collections: [ { id: 'lovesong' }], limit: [2, 3] },
-        { crateId: 'guid6',
+        { crateId: 'guid4', collections: [ { id: 'upbeat' }], chance: [2, 8], limit: { by: 'range', range: [1, 2] } },
+        { crateId: 'guid5', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 3] } },
+        { crateId: 'guid6', collections: [ { id: 'lovesong' }], limit: { by: 'range', range: [2, 3] } },
+        { crateId: 'guid7',
           collections: [
             { id: 'lonely', weight: 1 },
             { id: 'brokenhearted', weight: 0.5 }
           ],
-          limit: [2]
+          limit: { by: 'upto', upto: 1 }
         },
-        { crateId: 'guid7',
-          collections: [
-            { id: 'hurt', weight: 0.3 },
-            { id: 'brokenhearted', weight: 0.6 },
-            { id: 'lonely', weight: 0.1 },
-          ],
-          limit: [3, 5]
-        },
-        { crateId: 'guid8', collections: [ { id: 'lonely' }], limit: 1 },
-        { crateId: 'guid9', collections: [ { id: 'lovesong' }], limit: [2] },
-        { crateId: 'guid10', collections: [ { id: 'chill' }], limit: [2, 4] }
-      ] as SequenceConfig[],
+        { crateId: 'guid8', collections: [ { id: 'brokenhearted' }], limit: { by: 'range', range: [1, 2] } },
+        // TODO: hurt
+        { crateId: 'guid9', collections: [ { id: 'lonely' }], limit: { by: 'range', range: [1, 2] } },
+        { crateId: 'guid10', collections: [ { id: 'lovesong' }], limit: { by: 'upto', upto: 2 } },
+        { crateId: 'guid11', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 4] } }
+      ],
 
       sweeperRules: [
         { // Upbeat
@@ -73,19 +80,32 @@ const storedConfigs = {
           to: ['new-released'],
           path: 'D:\\vittee\\Desktop\\test-transition\\drops\\fresh'
         }
-      ] as SweeperConfig[],
+      ],
 
       requestSweepers: [
         'D:\\vittee\\Desktop\\test-transition\\drops\\your\\Music Radio Creative - Playing All Your Requests.mp3',
         'D:\\vittee\\Desktop\\test-transition\\drops\\your\\Music Radio Creative - Playing Your Favourite Artists.mp3',
         'D:\\vittee\\Desktop\\test-transition\\drops\\your\\Music Radio Creative - Simply Made for You.mp3'
       ]
+    },
+    {
+      id: 'thai',
+      name: 'Thai',
+      musicCollections: [
+        // { id: 'thai', description:'Thai', path: 'M:\\Repository\\th\\Blackhead\\Lossless' },
+        { id: 'thai', auxiliary: true, description: 'Thai', path: 'M:\\Repository\\th' },
+        // { id: 'thai', path: 'D:\\vittee\\Desktop\\test-transition\\xx' }
+      ],
+      sequences: [
+        { crateId: 'thai', collections: [ { id: 'thai' }], limit: Infinity }
+      ]
     }
   ],
   automatons: [
     {
-      botToken: '',
-      clientId: '',
+      id: 'medley',
+      botToken: 'OTAwMzU5MTc1MTgyMzgxMDU2.YXAK0w.QFrh-QoGVtcQHJMWQGRweAkTBbI',
+      clientId: '900359175182381056',
       tuning: {
         guilds: {
           'guild_id1': 'station_id1',
@@ -94,56 +114,82 @@ const storedConfigs = {
       }
     }
   ]
-};
+}
 
 ////////////////////////////////////////////////////////////////////////////////////
 
+async function main() {
+  const logger = createLogger({ name: 'main' });
 
-const stations = new Collection<Station>();
-for (const { id, musicCollections, sequences, intros } of storedConfigs.stations) {
-  const introsCollection = new TrackCollection('$_intro');
-  introsCollection.add(intros);
+  logger.info('Initializing');
 
-  const station = new Station({
-    id,
-    intros: introsCollection,
-    musicCollections,
-    sequences
-  });
-
-  station.updateSweeperRules([
-    { // Upbeat
-      to: ['upbeat', 'bright'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\up'
-    },
-    { // Easy mood
-      to: ['lovesong', 'bright', 'chill'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\easy'
-    },
-    { // Sad mood
-      to: ['lonely', 'brokenhearted', 'hurt'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\blue'
-    },
-    { // Fresh
-      to: ['new-released'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\fresh'
+  const cache = new MetadataCache();
+  await cache.init({
+    store: {
+      type: 'sqlite',
+      path: 'metadata.db',
+      table: 'tracks'
     }
-  ]);
-
-  station.crateIndex = _.random(0, sequences.length);
-
-  stations.add(station);
-}
-
-const automatons: MedleyAutomaton[] = [];
-for (const { botToken, clientId } of storedConfigs.automatons) {
-
-  const automaton = new MedleyAutomaton(stations, {
-    botToken,
-    clientId
   });
 
-  automaton.login();
+  const stations = await Promise.all(
+    storedConfigs.stations.map(config => new Promise<Station>((resolve) => {
+      const intros = config.intros ? (() => {
+        const collection = new TrackCollection('$_intros');
+        collection.add(config.intros);
+        return collection;
+      })() : undefined;
 
-  automatons.push(automaton);
+      const requestSweepers = config.requestSweepers ? (() => {
+        const collection = new TrackCollection('$_req_sweepers');
+        collection.add(config.requestSweepers);
+        return collection;
+      })() : undefined;
+
+      logger.info('Constructing station:', config.id);
+
+      const station = new Station({
+        id: config.id,
+        name: config.name,
+        description: config.description,
+        intros,
+        requestSweepers,
+        musicCollections: config.musicCollections,
+        sweeperRules: config.sweeperRules,
+        sequences: config.sequences,
+        metadataCache: cache
+      });
+
+      // stations.add(station);
+
+      station.once('ready', () => resolve(station));
+    }))
+  );
+
+  logger.info('Completed stations construction');
+
+  const stationRepo = new StationRegistry(...stations);
+
+  const automatons = await Promise.all(storedConfigs.automatons.map(({ id, botToken, clientId }) => new Promise<MedleyAutomaton>(async (resolve) => {
+    // TODO: tuning config
+    const automaton = new MedleyAutomaton(stationRepo, {
+      id,
+      botToken,
+      clientId
+    });
+
+    automaton.once('ready', () => resolve(automaton));
+
+    await automaton.login().catch(noop);
+    return automaton;
+  })));
+
+  if (automatons.some(a => !a.isReady)) {
+    logger.warn('Started, with some malfunctioning automatons');
+    return;
+  }
+
+  logger.info('Started');
 }
+
+main();

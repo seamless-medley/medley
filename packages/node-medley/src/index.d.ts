@@ -214,9 +214,9 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
 
   getAvailableDevices(): AudioDeviceTypeInfo[];
 
-  setAudioDevice(descriptor: { type?: string, device?: string }): boolean;
+  setAudioDevice(descriptor: Partial<AudioDeviceDescriptor>): boolean;
 
-  getAudioDevice(): { type: string, device: string };
+  getAudioDevice(): AudioDeviceDescriptor;
 
   getMetadata(index: DeckIndex): Metadata;
 
@@ -287,6 +287,11 @@ export type RequestAudioResult = {
 
 export type RequestAudioStreamResult = RequestAudioResult & {
   readonly stream: Readable;
+}
+
+export type AudioDeviceDescriptor = {
+  type: string;
+  device: string;
 }
 
 export type AudioDeviceTypeInfo = {

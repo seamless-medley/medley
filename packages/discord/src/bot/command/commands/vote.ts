@@ -193,6 +193,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
       await msg.delete();
 
+      // TODO: Should be in 'finally' block
       station.requestsEnabled = true;
     })
   }

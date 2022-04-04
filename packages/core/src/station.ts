@@ -59,6 +59,8 @@ export type StationOptions = {
 
   description?: string;
 
+  useNullAudioDevice?: boolean;
+
   musicCollections: MusicLibraryDescriptor[];
 
   sequences: SequenceConfig[];
@@ -124,8 +126,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.queue = new Queue();
     this.medley = new Medley(this.queue);
 
-    if (this.medley.getAudioDevice().type !== 'Null') {
-      this.medley.setAudioDevice({ type: 'Null', device: 'Null Device'});
+    if (options.useNullAudioDevice) {
+      if (this.getCurrentAudioDevice().type !== 'Null') {
+        this.setAudioDevice({ type: 'Null', device: 'Null Device'});
+      }
     }
 
     this.library = new MusicLibrary(this.id, this, options.metadataCache);
@@ -162,6 +166,18 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
     this.updateSequence(options.sequences);
     this.updateSweeperRules(options.sweeperRules || []);
+  }
+
+  get availableAudioDevices() {
+    return this.medley.getAvailableDevices();
+  }
+
+  getCurrentAudioDevice() {
+    return this.medley.getAudioDevice();
+  }
+
+  setAudioDevice(descriptor: { type?: string, device?: string }) {
+    return this.medley.setAudioDevice(descriptor);
   }
 
   private handleTrackQueued = (track: BoomBoxTrack) => {

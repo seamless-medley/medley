@@ -1,125 +1,61 @@
-import { Medley, Queue } from "@seamless-medley/medley";
-import { every } from "lodash";
-import { join as joinPath } from "path";
-import { BoomBoxTrack, Track } from ".";
-import { TrackCollection, WatchTrackCollection } from "./collections";
-import { Crate } from "./crate";
-import { TrackKind, BoomBox, BoomBoxMetadata } from "./playout";
+import { Station } from "./station";
 
 process.on('uncaughtException', (e) => {
   console.log('Uncaught exception', e);
 });
 
-const collections: Map<string, TrackCollection<BoomBoxTrack>> = new Map(
-  ['bright', 'chill', 'lovesong', 'lonely', 'brokenhearted', 'hurt', 'upbeat', 'new-released']
-    .map(sub => [sub, WatchTrackCollection.initWithWatch<BoomBoxTrack>(sub, joinPath(`D:\\vittee\\Google Drive\\musics\\`, sub))])
-);
-
-const sequences: [string, number][] = [
-  ['bright', 1],
-  ['chill', 1],
-  ['lovesong', 1],
-  ['lonely', 1],
-  ['brokenhearted', 1],
-  ['hurt', 1],
-  ['brokenhearted', 1],
-  ['lonely', 1],
-  ['lovesong', 1],
-  ['chill', 1],
-  ['bright', 1],
-  ['upbeat', 1],
-  ['new-released', 2]
-];
-
-const queue = new Queue<BoomBoxTrack>(['D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3']);
-const medley = new Medley(queue);
-const crates = sequences.map(([id, max], index) => new Crate({
-  id: `${index}:${id}-${max}`,
-  sources: collections.get(id)!,
-  limit: max
-}));
-
-const boombox = new BoomBox({
-  medley,
-  queue,
-  crates
-});
-
-// const nullDevice = medley.getAvailableDevices().filter(d => d.type == 'Null')[0];
-// medley.setAudioDevice({ type: nullDevice.type, device: nullDevice.defaultDevice });
-
-const sweepers = WatchTrackCollection.initWithWatch<BoomBoxTrack>('drops', 'D:\\vittee\\Desktop\\test-transition\\drops');
-
-boombox.sweeperInsertionRules = [
-  { // Upbeat
-    to: ['upbeat'],
-    collection: sweepers
-  },
-  { // Easy mood
-    to: ['lovesong', 'bright', 'chill'],
-    collection: sweepers
-  },
-  { // Sad mood
-    to: ['lonely', 'brokenhearted', 'hurt'],
-    collection: sweepers
-  },
-  { // Fresh
-    to: ['new-released'],
-    collection: sweepers
-  }
-];
-
-boombox.on('trackQueued', track => {
-  console.log('Add to Queue:', track.path);
-});
-
-let skipTimer: NodeJS.Timeout;
-
-boombox.on('trackStarted', trackPlay => {
-  if (trackPlay.track.metadata?.kind !== TrackKind.Insertion) {
-    console.log('Playing:', `${trackPlay.track.metadata?.tags?.artist} - ${trackPlay.track.metadata?.tags?.title}`);
-    // const lyrics = first(track.metadata?.tags?.lyrics);
-    // if (lyrics) {
-    //   console.log(lyricsToText(parseLyrics(lyrics), false));
-    // }
-
-    if (skipTimer) {
-      clearTimeout(skipTimer);
+const station = new Station({
+  id: 'default',
+  name: 'Default station',
+  musicCollections: [
+    { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
+    { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
+    { id: 'chill', description:'Chill', path: 'D:\\vittee\\Google Drive\\musics\\chill' },
+    { id: 'groovy', description:'Groovy', path: 'D:\\vittee\\Google Drive\\musics\\groovy' },
+    { id: 'hurt', description:'Hurt', path: 'D:\\vittee\\Google Drive\\musics\\hurt' },
+    { id: 'lonely', description:'Lonely', path: 'D:\\vittee\\Google Drive\\musics\\lonely' },
+    { id: 'lovesong', description:'Love Song', path: 'D:\\vittee\\Google Drive\\musics\\lovesong' },
+    { id: 'upbeat', description:'Upbeat', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
+    { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released' },
+    { id: 'thai', auxiliary: true, description:'Thai', path: 'M:\\Repository\\th' },
+  ],
+  sequences: [
+    { crateId: 'guid1', collections: [ { id: 'new-released' }], limit: { by: 'one-of', list: [1, 1, 1, 2] } },
+    { crateId: 'guid2', collections: [ { id: 'bright' }], limit: { by: 'upto', upto: 2 } },
+    { crateId: 'guid3', collections: [ { id: 'groovy' }], limit: 1 },
+    { crateId: 'guid4', collections: [ { id: 'upbeat' }], chance: [2, 8], limit: { by: 'range', range: [1, 2] } },
+    { crateId: 'guid5', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 3] } },
+    { crateId: 'guid6', collections: [ { id: 'lovesong' }], limit: { by: 'range', range: [0, 2] } },
+    { crateId: 'guid7',
+      collections: [
+        { id: 'lonely', weight: 1 },
+        { id: 'brokenhearted', weight: 0.5 }
+      ],
+      limit: { by: 'upto', upto: 1 }
+    },
+    { crateId: 'guid8', collections: [ { id: 'brokenhearted' }], limit: { by: 'range', range: [1, 2] } },
+    { crateId: 'guid9', collections: [ { id: 'lonely' }], limit: { by: 'range', range: [1, 2] } },
+    { crateId: 'guid10', collections: [ { id: 'lovesong' }], limit: { by: 'upto', upto: 2 } },
+    { crateId: 'guid11', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 4] } }
+  ],
+  sweeperRules: [
+    { // Upbeat
+      to: ['upbeat', 'bright'],
+      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\up'
+    },
+    { // Easy mood
+      to: ['lovesong', 'bright', 'chill'],
+      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\easy'
+    },
+    { // Sad mood
+      to: ['lonely', 'brokenhearted', 'hurt'],
+      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\blue'
+    },
+    { // Fresh
+      to: ['new-released'],
+      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\fresh'
     }
-
-    skipTimer = setTimeout(() => {
-      console.log('Seeking');
-      medley.seekFractional(0.75);
-    }, 10000);
-  }
+  ]
 });
 
-boombox.on('requestTrackFetched', track => {
-  const currentKind = boombox.trackPlay?.track.metadata?.kind || TrackKind.Normal;
-  if (currentKind !== TrackKind.Request) {
-    const sweeper = sweepers.shift();
-    if (sweeper) {
-      queue.add(sweeper.path);
-    }
-  }
-})
-
-// Test request
-// setTimeout(() => {
-//   for (let i = 0; i < 2; i++) {
-//     const track = collections.get('new-released')!.sample();
-//     if (track) {
-//       boombox.request(track.path);
-//     }
-//   }
-
-// }, 5000);
-
-setTimeout(function playWhenReady() {
-  if (every([...collections.values()], col => col.ready)) {
-    medley.play();
-    return;
-  }
-  setTimeout(playWhenReady, 100);
-}, 100);
-
+station.once('ready', () => station.start());
