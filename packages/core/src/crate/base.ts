@@ -80,6 +80,7 @@ export class Crate<T extends Track<any>, M = never> {
       this.logger.debug('selected', selected);
 
       if (!selected) {
+        this._max = 0;
         return false;
       }
     }
