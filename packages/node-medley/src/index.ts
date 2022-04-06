@@ -10,6 +10,8 @@ inherits(medley.Medley, EventEmitter);
 export const Medley = medley.Medley;
 export const Queue = medley.Queue;
 
+export const audioFormats = ['Int16LE', 'Int16BE', 'FloatLE', 'FloatBE'] as const;
+
 const formatToBytesPerSample = (format: AudioFormat) => {
   switch (format) {
     case 'FloatBE':
@@ -37,11 +39,13 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
   const totalSamples = () => buffers.reduce((a, b) => a + b.length, 0) / bytesPerSample / 2;
 
   const consume = async (size: number) => {
-    return await this['*$reqAudio$consume'](streamId, options.buffering || size) as Buffer;
+    return await this['*$reqAudio$consume'](streamId, Math.max(size, (options.buffering ?? 0) * bytesPerSample * 2)) as Buffer;
   }
 
+  const { sampleRate = 44100 } = options;
+
   const stream = new Readable({
-    highWaterMark: 16384,
+    highWaterMark: sampleRate * bytesPerSample * 2,
     objectMode: false,
     read: async (size: number) => {
       buffers.push(await consume(size));
@@ -50,7 +54,7 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
   });
 
   if (options.preFill) {
-    const consumingSize = (options.buffering || (options.sampleRate || 44100) * 0.01) * bytesPerSample * 2;
+    const consumingSize = (options.buffering || sampleRate * 0.01) * bytesPerSample * 2;
     while (totalSamples() < options.preFill) {
       buffers.push(await consume(consumingSize));
     }

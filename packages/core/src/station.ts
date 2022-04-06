@@ -285,6 +285,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.medley.requestAudioStream(options);
   }
 
+  deleteAudioStream(streamId: number) {
+    this.medley.deleteAudioStream(streamId);
+  }
+
   async updateLibrary(collections: MusicLibraryDescriptor[]) {
     await this.library.loadCollections(collections);
     this.createCrates();

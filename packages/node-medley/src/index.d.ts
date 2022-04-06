@@ -235,7 +235,9 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   static isTrackLoadable(track: TrackDescriptor<any>): boolean;
 }
 
-export type AudioFormat = 'Int16LE' | 'Int16BE' | 'FloatLE' | 'FloatBE';
+declare const audioFormats = ['Int16LE', 'Int16BE', 'FloatLE', 'FloatBE'] as const;
+
+export type AudioFormat = typeof audioFormats[number];
 
 export type RequestAudioOptions = {
   sampleRate?: number;
