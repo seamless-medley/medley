@@ -110,7 +110,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   followCrateAfterRequestTrack: boolean;
 
-  private audiences: Map<string, Set<string>> = new Map();
+  private audiences: Map<string, Map<string, any>> = new Map();
 
   private logger: Logger;
 
@@ -442,16 +442,16 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.crateIndex = newIndex;
   }
 
-  addAudiences(groupId: string, audienceId: string) {
+  addAudiences(groupId: string, audienceId: string, data?: any) {
     if (!this.audiences.has(groupId)) {
-      this.audiences.set(groupId, new Set());
+      this.audiences.set(groupId, new Map());
     }
 
-    this.audiences.get(groupId)!.add(audienceId);
+    this.audiences.get(groupId)!.set(audienceId, data);
     this.playIfHasAudiences();
   }
 
-  removeAudiences(groupId: string, audienceId: string) {
+  removeAudience(groupId: string, audienceId: string) {
     this.getAudiences(groupId)?.delete(audienceId);
     this.pauseIfNoAudiences();
   }
@@ -461,21 +461,19 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.pauseIfNoAudiences();
   }
 
-  updateAudiences(groupId: string, audienceId: string[]) {
-    this.audiences.set(groupId, new Set(audienceId));
+  updateAudiences(groupId: string, audiences: [id: string, data: any][]) {
+    this.audiences.set(groupId, new Map(audiences));
     this.playIfHasAudiences();
   }
 
-  private playIfHasAudiences() {
+  playIfHasAudiences() {
     if (this.playState !== PlayState.Playing && this.hasAudiences) {
-      this.logger.info('Playing started');
       this.start();
     }
   }
 
-  private pauseIfNoAudiences() {
+  pauseIfNoAudiences() {
     if (this.playState === PlayState.Playing && !this.hasAudiences) {
-      this.logger.info('Playing paused');
       this.pause();
     }
   }
@@ -487,8 +485,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   get totalAudiences() {
     const audiences = new Set<string>();
 
-    for (const ids of this.audiences.values()) {
-      for (const id of ids) {
+    for (const aud of this.audiences.values()) {
+      for (const id of aud.keys()) {
         audiences.add(id);
       }
     }
@@ -497,8 +495,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 
   get hasAudiences() {
-    for (const ids of this.audiences.values()) {
-      if (ids.size > 0) {
+    for (const aud of this.audiences.values()) {
+      if (aud.size > 0) {
         return true;
       }
     }

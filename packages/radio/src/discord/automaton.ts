@@ -381,7 +381,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       channel.guildId,
       channel.members
         .filter(member => !member.user.bot && !channel.guild.voiceStates.cache.get(member.id)?.deaf)
-        .map(member => member.id)
+        .map(member => [member.id, undefined])
     );
   }
 
@@ -457,7 +457,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       }
 
       // is leaving
-      station?.removeAudiences(guildId, newState.member.id);
+      station?.removeAudience(guildId, newState.member.id);
       return;
     }
 
@@ -473,7 +473,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
       if (oldState.channelId === state.voiceChannelId) {
         // User has moved away
-        station?.removeAudiences(guildId, newState.member.id);
+        station?.removeAudience(guildId, newState.member.id);
         return;
       }
 
@@ -486,7 +486,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       if (!newState.deaf) {
         station?.addAudiences(guildId, newState.member.id);
       } else {
-        station?.removeAudiences(guildId, newState.member.id);
+        station?.removeAudience(guildId, newState.member.id);
       }
     }
   }
