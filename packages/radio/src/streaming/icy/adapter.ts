@@ -81,10 +81,41 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
     }
   });
 
+  const trackPlays: BoomBoxTrackPlay[] = [];
   const multiplexers = new Set<MetadataMux>();
 
+  function getIcyMetadata(): IcyMetadata | undefined {
+    if (trackPlays.length > 1) {
+      return;
+    }
+
+    const title = (trackPlays.length === 1) ? getTrackBanner(trackPlays[0].track) : station.name;
+    return {
+      StreamTitle: title
+    }
   }
 
+  function notifyMetadata() {
+    const metadata = getIcyMetadata();
+
+    if (!metadata) {
+      return;
+    }
+
+    for (const mux of multiplexers) {
+      mux.metadata = metadata;
+    }
+  }
+
+  station.on('trackStarted', trackPlay => {
+    trackPlays.push(trackPlay);
+    notifyMetadata();
+  });
+
+  station.on('trackFinished', trackPlay => {
+    remove(trackPlays, (t) => t.uuid === trackPlay.uuid);
+    notifyMetadata();
+  });
 
   return {
     audioRequest,
@@ -121,6 +152,10 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
       }
 
       res.writeHead(200, omitBy(resHeaders, isUndefined));
+
+      setTimeout(() => {
+        mux.metadata = getIcyMetadata();
+      }, 2000);
     },
 
     stop() {
