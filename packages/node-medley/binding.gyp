@@ -89,13 +89,13 @@
                                         'EnableIntrinsicFunctions': 'true',
                                         'Optimization': 2,
                                         'WholeProgramOptimization': 'true',
-                                        'AdditionalIncludeDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\include'],
+                                        'AdditionalIncludeDirectories': ['$(VcpkgRoot)\\installed\\x64-windows-static\\include'],
                                         'AdditionalOptions': ['/EHsc', '/MTd', '/MP', '/O2', '/GL', '/Gy', '/Oi', '/source-charset:utf-8', '-std:c++17'],
                                     },
                                     'VCLinkerTool': {
                                         'OptimizeReferences': 2,
                                         'EnableCOMDATFolding': 2,
-                                        'AdditionalLibraryDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\debug\lib'],
+                                        'AdditionalLibraryDirectories': ['$(VcpkgRoot)\\installed\\x64-windows-static\\debug\lib'],
                                         'AdditionalDependencies': ['tag.lib', 'samplerate.lib']
                                     }
                                 }
@@ -111,13 +111,13 @@
                                         'EnableIntrinsicFunctions': 'true',
                                         'Optimization': 2,
                                         'WholeProgramOptimization': 'true',
-                                        'AdditionalIncludeDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\include'],
+                                        'AdditionalIncludeDirectories': ['$(VcpkgRoot)\\installed\\x64-windows-static\\include'],
                                         'AdditionalOptions': ['/EHsc', '/MT', '/MP', '/O2', '/GL', '/Gy', '/Oi', '/source-charset:utf-8', '-std:c++17'],
                                     },
                                     'VCLinkerTool': {
                                         'OptimizeReferences': 2,
                                         'EnableCOMDATFolding': 2,
-                                        'AdditionalLibraryDirectories': ['$(VcpkgInstalledDir)\\x64-windows-static\\lib'],
+                                        'AdditionalLibraryDirectories': ['$(VcpkgRoot)\\installed\\x64-windows-static\\lib'],
                                         'AdditionalDependencies': ['tag.lib', 'samplerate.lib']
                                     }
                                 }
