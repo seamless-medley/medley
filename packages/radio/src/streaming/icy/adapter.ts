@@ -126,6 +126,11 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
 
       const url = new URL(req.url, `http://${req.headers.host ?? '0.0.0.0'}`);
 
+      const audienceGroup = `icy$${url.host}${url.pathname}`;
+      const audienceId = `${req.ip}:${req.socket.remotePort}`;
+
+      station.addAudiences(audienceGroup, audienceId, { req, res });
+
       const mux = new MetadataMux(metadataInterval);
       multiplexers.add(mux);
 
@@ -136,7 +141,10 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
 
         mux.unpipe(res);
         outlet.unpipe(mux);
+
+        station.removeAudience(audienceGroup, audienceId);
       });
+
       const resHeaders: OutgoingHttpHeaders = {
         'Connection': 'close',
         'Content-Type': mimeTypes[outputFormat],
