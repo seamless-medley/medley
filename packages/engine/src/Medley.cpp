@@ -99,8 +99,8 @@ Medley::SupportedFormats::SupportedFormats()
 #endif
 }
 
-bool Medley::togglePause() {
-    return !mixer.togglePause();
+bool Medley::togglePause(bool fade) {
+    return !mixer.togglePause(fade);
 }
 
 void Medley::setPosition(double time) {
@@ -634,26 +634,33 @@ void Medley::setFadingCurve(double curve) {
     updateFadingFactor();
 }
 
-void Medley::play()
+void Medley::play(bool shouldFade)
 {
     if (!isDeckPlaying()) {
         loadNextTrack(nullptr, true);
     }
 
     keepPlaying = true;
-    mixer.setPause(false, mixer.isPaused());
+    mixer.setPause(false, shouldFade && mixer.isPaused());
 }
 
-void Medley::stop()
+void Medley::stop(bool shouldFade)
 {
-    mixer.fadeOut(400, [=]() {
+    auto stopAndUnload = [=]() {
         keepPlaying = false;
 
         for (auto deck : decks) {
             deck->stop();
             deck->unloadTrack();
         }
-    });
+    };
+
+    if (!shouldFade) {
+        stopAndUnload();
+        return;
+    }
+
+    mixer.fadeOut(400, stopAndUnload);
 }
 
 bool Medley::isDeckPlaying()
@@ -729,8 +736,8 @@ void Medley::Mixer::setPause(bool p, bool fade) {
 }
 
 
-bool Medley::Mixer::togglePause() {
-    setPause(!paused);
+bool Medley::Mixer::togglePause(bool fade) {
+    setPause(!paused, fade);
     return !paused;
 }
 

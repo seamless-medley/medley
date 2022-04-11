@@ -257,6 +257,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.medley.fadeOut();
   }
 
+  private _started = false;
+
   start() {
     if (this.playState === PlayState.Idle && this.queue.length === 0) {
       if (this.intros) {
@@ -268,16 +270,20 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     }
 
-    if (!this.medley.playing) {
-      this.logger.info('Start playing');
-    }
+    if (!this._started) {
+      this._started = true;
+      this.medley.play(false);
 
-    this.medley.play();
+      this.logger.info('Playing started');
+    }
   }
 
   pause() {
     if (!this.medley.paused) {
-      this.medley.togglePause();
+      this._started = false;
+      this.medley.togglePause(false);
+
+      this.logger.info('Playing paused');
     }
   }
 

@@ -182,14 +182,14 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   /**
    * Start the engine, also clear the `paused` state.
    */
-  play(): void;
+  play(shouldFade: boolean = true): void;
 
   /**
    * Stop the engine and unload track(s).
    */
-  stop(): void;
+  stop(shouldFade: boolean = true): void;
 
-  togglePause(): void;
+  togglePause(fade: boolean = true): void;
 
   /**
    * Force fading out and unloading of the current track.

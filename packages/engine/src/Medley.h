@@ -99,9 +99,9 @@ public:
 
     void setFadingCurve(double curve);
 
-    void play();
+    void play(bool shouldFade = true);
 
-    void stop();
+    void stop(bool shouldFade = true);
 
     bool isDeckPlaying();
 
@@ -117,7 +117,7 @@ public:
 
     inline float getVolume() const { return mixer.getVolume(); }
 
-    bool togglePause();
+    bool togglePause(bool fade = true);
 
     inline bool isPaused() const { return mixer.isPaused(); }
 
@@ -206,7 +206,7 @@ private:
             fader.alwaysResetTime(true);
         }
 
-        bool togglePause();
+        bool togglePause(bool fade = true);
 
         void getNextAudioBlock(const AudioSourceChannelInfo& info) override;
 
