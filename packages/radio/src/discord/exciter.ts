@@ -18,7 +18,7 @@ class BufferredEncoder extends Transform {
     this.buffer = Buffer.concat([this.buffer, chunk]);
 
     const requiredBytes = 960 * 2 * 2; // bytes for 20ms
-    const backlogSize = requiredBytes * 12; // bytes for 240ms
+    const backlogSize = requiredBytes * 12;
 
     let blocksProcessed = 0;
     while (this.buffer.length >= backlogSize + requiredBytes * (blocksProcessed + 1)) {
