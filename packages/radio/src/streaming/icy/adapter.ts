@@ -2,7 +2,7 @@ import { RequestAudioStreamResult, Station } from "@seamless-medley/core";
 import { RequestHandler } from "express";
 import { noop } from "lodash";
 import { PassThrough, pipeline } from "stream";
-import { FFmpegChildProcess, spawnFFmpeg } from "../ffmpeg";
+import { createFFmpegOverseer } from "../ffmpeg";
 import { Adapter, AdapterOptions, audioFormatToAudioType } from "../types";
 
 type IcyAdapter = Adapter & {
@@ -20,20 +20,11 @@ export async function createIcyAdapter(station: Station, options?: AdapterOption
 
   let stopped = false;
   let audioRequest!: RequestAudioStreamResult;
-  let ffmpeg: FFmpegChildProcess;
 
   const outlet = new PassThrough();
 
-  async function doSpawn() {
-    if (stopped) {
-      return;
-    }
-
-    if (ffmpeg && !ffmpeg.killed) {
-      ffmpeg.kill();
-    }
-
-    ffmpeg = spawnFFmpeg([
+  const overseer = await createFFmpegOverseer({
+    args: [
       '-f', audioType!,
       '-vn',
       '-ar', sampleRate.toString(),
@@ -42,22 +33,35 @@ export async function createIcyAdapter(station: Station, options?: AdapterOption
       '-f', outputFormat,
       '-b:a', `${bitrate}k`,
       'pipe:1'
-    ]);
+    ],
 
-    if (audioRequest?.id) {
-      station.deleteAudioStream(audioRequest.id);
+    afterSpawn: async (overseer) => {
+      if (audioRequest?.id) {
+        station.deleteAudioStream(audioRequest.id);
+      }
+
+      audioRequest = await station.requestAudioStream({
+        sampleRate,
+        format: sampleFormat
+      });
+
+      // TODO: Stall detection
+
+      pipeline(audioRequest.stream, overseer.process.stdin, async () => {
+        if (stopped) {
+          return;
+        }
+
+        await overseer.respawn();
+      });
+
+      overseer.process.stdout.on('data', buffer => outlet.write(buffer));
     }
+  });
 
-    audioRequest = await station.requestAudioStream({
-      sampleRate,
-      format: sampleFormat
-    });
 
-    pipeline(audioRequest.stream, ffmpeg.stdin, doSpawn);
-    ffmpeg.stdout.on('data', buffer => outlet.write(buffer));
   }
 
-  await doSpawn();
 
   return {
     audioRequest,
@@ -80,7 +84,7 @@ export async function createIcyAdapter(station: Station, options?: AdapterOption
       stopped = true;
 
       station.deleteAudioStream(audioRequest.id);
-      ffmpeg.kill();
+      overseer.kill();
       outlet.end();
     }
   }
