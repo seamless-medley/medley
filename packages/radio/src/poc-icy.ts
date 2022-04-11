@@ -74,7 +74,7 @@ async function main() {
 
   station.once('ready', async () => {
     const source = await createIcyAdapter(station, {
-      outputFormat: 'adts',
+      outputFormat: 'mp3',
       bitrate: 128
     });
 
@@ -82,7 +82,7 @@ async function main() {
       app.get('/test', source.handler);
     }
 
-    station.start();
+    station.playIfHasAudiences();
   });
 
 }
