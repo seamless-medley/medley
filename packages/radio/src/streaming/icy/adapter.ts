@@ -7,14 +7,13 @@ import { createFFmpegOverseer } from "../ffmpeg";
 import { Adapter, AdapterOptions, audioFormatToAudioType } from "../types";
 import { IcyMetadata, MetadataMux } from "./mux";
 
-const outputFormats = ['mp3', 'adts', 'ogg'] as const;
+const outputFormats = ['mp3', 'adts'] as const;
 
 type OutputFormats = typeof outputFormats;
 
 const mimeTypes: Record<OutputFormats[number], string> = {
   mp3: 'audio/mpeg',
-  adts: 'audio/x-hx-aac-adts',
-  ogg: 'audio/ogg'
+  adts: 'audio/aac'
 }
 
 type IcyAdapterOptions = AdapterOptions<OutputFormats[number]> & {
