@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import _, { flatten, some, toLower, trim, uniq } from "lodash";
+import _, { flatten, matches, some, toLower, trim, uniq } from "lodash";
 import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
@@ -287,12 +287,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 
   getRequestsOf(requester: Requester) {
-    return this.requests.all().filter(r => r.requestedBy.includes(requester));
+    const matchRequester = matches(requester);
+    return this.requests.all().filter(r => r.requestedBy.some(matchRequester));
   }
 
   unrequest(requestIds: number[]) {
     const all = new Set(requestIds);
-    this.requests.removeBy(r => all.has(r.rid));
+    return this.requests.removeBy(r => all.has(r.rid));
   }
 
   private enqueue: EnqueueListener = async (done) => {

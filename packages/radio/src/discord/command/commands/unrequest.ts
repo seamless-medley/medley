@@ -2,45 +2,38 @@ import { parse as parsePath } from 'path';
 import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSelectMenu, MessageSelectOptionData } from "discord.js";
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, reply, accept, makeHighlightedMessage, HighlightTextType } from "../utils";
+import { guildStationGuard, reply, makeHighlightedMessage, HighlightTextType } from "../utils";
 import { AudienceType, makeRequestAudience } from '@seamless-medley/core';
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
   name: 'unrequest',
-  description: 'Cancel requested song(s)',
-  options: [
-    {
-      type: OptionType.Boolean,
-      name: 'all',
-      description: 'Cancel all requests',
-      required: false
-    }
-  ]
+  description: 'Cancel requested song(s)'
 }
+
+const onGoing = new Set<string>();
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
-  const all = interaction.options.getBoolean('all');
-
-  const ephemeral = true;
-  await interaction.deferReply({ ephemeral });
+  await interaction.deferReply();
 
   const requests = station.getRequestsOf(makeRequestAudience(AudienceType.Discord, guildId, interaction.user.id));
 
   if (requests.length < 1) {
     reply(interaction, {
-      ephemeral: true,
       content: 'No requests found'
     });
 
     return;
   }
 
-  if (all) {
-    accept(interaction, 'OK, cancel all your requests', undefined, ephemeral);
-    station.unrequest(requests.map(r => r.rid));
+  const issuer = interaction.user.id;
+
+  const runningKey = `${guildId}:${issuer}`;
+
+  if (onGoing.has(runningKey)) {
+    reply(interaction, 'Finish the ealier `unrequest` command, please');
     return;
   }
 
@@ -50,9 +43,8 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     value: request.rid.toString(36),
   }));
 
-
   const selector = await reply(interaction, {
-    ephemeral,
+    // ephemeral,
     fetchReply: true,
     content: 'Requests:',
     components: [
@@ -78,26 +70,42 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   });
 
   if (selector instanceof Message) {
+    onGoing.add(runningKey);
+
     let done = false;
 
-    const collector = selector.createMessageComponentCollector({ componentType: 'SELECT_MENU', time: 90_000 });
+    const collector = selector.createMessageComponentCollector({
+      componentType: 'SELECT_MENU',
+      time: 90_000
+    });
 
     collector.on('collect', async i => {
+      if (i.user.id !== issuer) {
+        i.reply({
+          content: `Sorry, this selection is for <@${issuer}> only`,
+          ephemeral: true
+        })
+        return;
+      }
+
       done = true;
       collector.stop();
+      onGoing.delete(runningKey);
 
       const requestIds = i.values.map(v => parseInt(v, 36));
-      station.unrequest(requestIds);
+      const removed = station.unrequest(requestIds);
 
       i.update({
         components: [],
-        content: makeHighlightedMessage(`OK, ${requestIds.length} track(s) canceled`, HighlightTextType.Cyan)
+        content: makeHighlightedMessage(`OK, ${removed.length} track(s) canceled`, HighlightTextType.Cyan)
       });
 
     });
 
-    collector.on('end', () => {
+    collector.on('end', x => {
       if (!done && selector.editable) {
+        onGoing.delete(runningKey);
+
         selector.edit({
           content: makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
           components: []
@@ -109,19 +117,23 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       componentType: 'BUTTON',
       filter: i => {
         i.deferUpdate();
-        return i.customId === 'cancel_unrequest';
+        return i.customId === 'cancel_unrequest' && i.user.id === issuer;
       },
-      time: 90_000
+      idle: 90_000
     })
-    .then(() => {
-      done = true;
-      collector.stop();
+    .then(i => {
+      if (!done) {
+        done = true;
+        collector.stop();
 
-      if (selector.deletable) {
-        selector.delete();
+        onGoing.delete(runningKey);
+
+        if (selector.deletable) {
+          selector.delete();
+        }
       }
     })
-    .catch(() => void undefined);
+    .catch(() => onGoing.delete(runningKey));
   }
 }
 

@@ -1,7 +1,7 @@
 import EventEmitter from "events";
 import normalizePath from 'normalize-path';
 import { Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
-import { curry, difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
+import _, { curry, difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek, WatchTrackCollection } from "./collections";
 import { Chanceable, Crate, CrateLimit } from "./crate";
@@ -449,7 +449,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 
   unrequest(requestIds: number[]) {
-    this.boombox.unrequest(requestIds);
+    return this.boombox.unrequest(requestIds);
   }
 
   get crateIndex() {

@@ -5,7 +5,7 @@ import { createAutocompleteHandler } from './autocomplete';
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
   name: 'request',
-  description: 'Request a song',
+  description: 'Request a song or view request list',
   options: [
     {
       type: OptionType.String,

@@ -1,29 +1,40 @@
 import { BoomBoxTrack, MusicLibraryMetadata, Station } from "@seamless-medley/core";
 import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSelectMenu, MessageSelectOptionData } from "discord.js";
-import _, { truncate } from "lodash";
-import { parse as parsePath } from 'path';
+import _, { isNull, truncate, uniq, zip } from "lodash";
+import { parse as parsePath, extname } from 'path';
 import { InteractionHandlerFactory } from "../../type";
 import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview, reply } from "../../utils";
 import { handleSelectMenu } from "./selectmenu";
 
+const onGoing = new Set<string>();
+
 export const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
-  const { station } = guildStationGuard(automaton, interaction);
+  const { guildId, station } = guildStationGuard(automaton, interaction);
 
   const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f));
 
-  if (options.every(_.isNull)) {
+  if (options.every(isNull)) {
     const preview = await makeRequestPreview(station);
 
     if (preview) {
-      interaction.reply(preview.join('\n'))
+      reply(interaction, preview.join('\n'))
     } else {
-      interaction.reply('Request list is empty');
+      reply(interaction, 'Request list is empty');
     }
 
     return;
   }
 
   await interaction.deferReply();
+
+  const issuer = interaction.user.id;
+
+  const runningKey = `${guildId}:${issuer}`;
+
+  if (onGoing.has(runningKey)) {
+    reply(interaction, 'Finish the ealier `request` command, please');
+    return;
+  }
 
   const [artist, title, query] = options;
 
@@ -36,7 +47,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
   if (results.length < 1) {
     const escq = (s: string) => s.replace(/"/g, '\\"');
 
-    const tagTerms = _.zip(['artist', 'title'], [artist, title])
+    const tagTerms = zip(['artist', 'title'], [artist, title])
       .filter((t): t is [any, string] => !!t[1])
       .map(([n, v]) => `('${n}' ~ "${escq(v)}")`)
       .join(' AND ');
@@ -55,25 +66,57 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
     return;
   }
 
-  const issuer = interaction.user.id;
+  type Selection = MessageSelectOptionData & {
+    track: BoomBoxTrack;
+    group: string;
+    distillations: string[];
+    collection: BoomBoxTrack['collection']
+  };
 
-  const selections = results.map<MessageSelectOptionData & { collection: BoomBoxTrack['collection'] }>(track => ({
-    label: truncate(track.metadata?.tags?.title || parsePath(track.path).name, { length: 100 }),
-    description: track.metadata?.tags?.title ? truncate(track.metadata?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined,
-    value: track.id,
-    collection: track.collection
-  }));
+  const selections = results.map<Selection>(track => {
+    const label = truncate(track.metadata?.tags?.title || parsePath(track.path).name, { length: 100 });
+    const description = track.metadata?.tags?.title ? truncate(track.metadata?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined;
 
-  // Distinguish duplicated track artist and title
-  _(selections)
-    .groupBy(({ label, description }) => `${label}:${description}`.toLowerCase())
-    .pickBy(group => group.length > 1)
-    .forEach(group => {
-      for (const sel of group) {
-        const { description } = sel.collection.metadata as unknown as MusicLibraryMetadata<Station>;
-        sel.description += ` (from \'${description ?? sel.collection.id}\' collection)`
-      }
-    });
+    return {
+      label,
+      description,
+      group: description || '',
+      value: track.id,
+      track,
+      distillations: [],
+      collection: track.collection
+    }
+  });
+
+  function distrill(cb: (sel: Selection) => string | undefined) {
+    _(selections)
+      .groupBy(({ label, description, distillations }) => `${label}:${description}:${uniq(distillations.join('-'))}`.toLowerCase())
+      .pickBy(group => group.length > 1)
+      .forEach(group => {
+        for (const sel of group) {
+          const distrlled = cb(sel);
+          if (distrlled) {
+            sel.distillations.push(distrlled);
+          }
+        }
+      });
+  }
+
+  // By collection
+  distrill(sel => (sel.collection.metadata as unknown as MusicLibraryMetadata<Station>)?.description ?? sel.collection.id);
+
+  // By file extension
+  distrill(sel => extname(sel.track.path.toUpperCase()).substring(1));
+
+  // By album
+  distrill(sel => sel.track.metadata?.tags?.album);
+
+  for (const sel of selections) {
+    const distrillations = uniq(sel.distillations.filter(Boolean));
+
+    const distilled = distrillations.length ? ` (${distrillations.map(d => `#${d}`).join(', ')})` : '';
+    sel.description = truncate(sel.description + distilled, { length: 100 });
+  }
 
   const selector = await reply(interaction, {
     content: 'Search result:',
@@ -98,9 +141,14 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
   });
 
   if (selector instanceof Message) {
+    onGoing.add(runningKey);
+
     let done = false;
 
-    const collector = selector.createMessageComponentCollector({ componentType: 'SELECT_MENU', time: 60_000 });
+    const collector = selector.createMessageComponentCollector({
+      componentType: 'SELECT_MENU',
+      time: 90_000
+    });
 
     collector.on('collect', async i => {
       if (i.user.id !== issuer) {
@@ -113,11 +161,15 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
 
       done = true;
       collector.stop();
+      onGoing.delete(runningKey);
+
       await handleSelectMenu(automaton, i);
     });
 
     collector.on('end', () => {
       if (!done && selector.editable) {
+        onGoing.delete(runningKey);
+
         selector.edit({
           content: makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
           components: []
@@ -131,16 +183,20 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
         i.deferUpdate();
         return i.customId === 'cancel_request' && i.user.id === issuer;
       },
-      time: 60_000
+      idle: 90_000
     })
     .then(() => {
-      done = true;
-      collector.stop();
+      if (!done) {
+        done = true;
+        collector.stop();
 
-      if (selector.deletable) {
-        selector.delete();
+        onGoing.delete(runningKey);
+
+        if (selector.deletable) {
+          selector.delete();
+        }
       }
     })
-    .catch(() => void undefined);
+    .catch(() => onGoing.delete(runningKey));
   }
 }
