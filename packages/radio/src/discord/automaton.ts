@@ -512,18 +512,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return;
     }
 
-    const trackMsg = await createTrackMessage(trackPlay, station.findTrackById(trackPlay.track.id));
-
-    const sentMessages = await this.sendForStation(station, trackMessageToMessageOptions({
-      ...trackMsg,
-      buttons: {
-        lyric: trackMsg.buttons.lyric,
-        skip: undefined
-      }
-    }));
+    const sentMessages = await this.sendTrackPlayForStation(trackPlay, station);
 
     // Store message for each guild
-    for (const [guildId, maybeMessage] of sentMessages) {
+    for (const [guildId, trackMsg, maybeMessage] of sentMessages) {
       const state = this._guildStates.get(guildId);
       if (state) {
         state.trackMessages.push({
@@ -662,12 +654,11 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
   }
 
-  // TODO: Rename to sendTrackMessageForStation, accepting TrackMessage
   /**
    * Send to all guilds for a station
    */
-  private async sendForStation(station: Station, options: string | MessagePayload | MessageOptions) {
-    const results: [string, Promise<Message<boolean> | undefined> | undefined][] = [];
+  private async sendTrackPlayForStation(trackPlay: BoomBoxTrackPlay, station: Station) {
+    const results: [guildId: string, trackMsg: TrackMessage, maybeMessage: Promise<Message<boolean> | undefined> | undefined][] = [];
 
     for (const group of station.audienceGroups) {
       const { groupId: guildId } = extractAudienceGroup(group);
@@ -686,9 +677,19 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           const channel = textChannelId ? guild.channels.cache.get(textChannelId) : undefined;
           const textChannel = channel?.isText() ? channel : undefined;
 
+          const trackMsg = await createTrackMessage(guildId, trackPlay, station.findTrackById(trackPlay.track.id));
+
+          const options = trackMessageToMessageOptions({
+            ...trackMsg,
+            buttons: {
+              lyric: trackMsg.buttons.lyric,
+              skip: undefined
+            }
+          });
+
           const d = (textChannel || guild.systemChannel)?.send(options).catch(() => undefined);
 
-          results.push([guildId, d]);
+          results.push([guildId, trackMsg, d]);
         }
       }
     }

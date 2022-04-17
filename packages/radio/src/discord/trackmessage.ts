@@ -14,7 +14,6 @@ export enum TrackMessageStatus {
 export type TrackMessage = {
   trackPlay: BoomBoxTrackPlay;
   status: TrackMessageStatus;
-  requesters: Array<Record<'guildId' | 'userId', string>>,
   embed: MessageEmbed;
   coverImage?: MessageAttachment;
   buttons: {
@@ -25,7 +24,7 @@ export type TrackMessage = {
   lyricMessage?: Message;
 }
 
-export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrack?: BoomBoxTrack): Promise<TrackMessage> {
+export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrackPlay, actualTrack?: BoomBoxTrack): Promise<TrackMessage> {
   const requested = isRequestTrack<RequestAudience>(trackPlay.track) ? trackPlay.track : undefined;
   const requestedBy = requested?.requestedBy;
   const track  = actualTrack ?? requested?.original ?? trackPlay.track;
@@ -44,7 +43,7 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrac
       const { title } = tags;
 
       if (title) {
-        embed.setDescription(title);
+        embed.setDescription(`> ${title}`);
       }
 
       for (const tag of ['artist', 'album', 'genre']) {
@@ -54,7 +53,7 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrac
         ).toString();
 
         if (!isEmpty(val)) {
-          embed.addField(capitalize(tag), val, true);
+          embed.addField(capitalize(tag), `> ${val}`, true);
         }
       }
     }
@@ -88,19 +87,16 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrac
       ...extractAudienceGroup(r.group),
       id: r.id
     }))
-    .filter(({ type }) => type === AudienceType.Discord)
-    .map(r => ({
-      guildId: r.groupId,
-      userId: r.id
-    }));
-
-  if (requesters.length) {
-    const mentions = requesters.map(r =>  `<@${r.userId}>`).join(' ');
-    embed.addField('Requested by', mentions);
-  }
+    .filter(({ type, groupId }) => type === AudienceType.Discord && groupId === guildId)
+    .map(r => r.id);
 
   if (coverImage) {
     embed.setThumbnail(`attachment://${coverImage.name}`)
+  }
+
+  if (requestedBy?.length) {
+    const mentions =  requesters.length > 0 ? requesters.map(id =>  `<@${id}>`).join(' ') : '> `Someone else`';
+    embed.addField('Requested by', mentions);
   }
 
   const lyricButton = new MessageButton()
@@ -118,7 +114,6 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrac
   return {
     trackPlay,
     status: TrackMessageStatus.Playing,
-    requesters,
     embed,
     coverImage,
     buttons: {
@@ -129,7 +124,9 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrac
 }
 
 export function trackMessageToMessageOptions(msg: TrackMessage): MessageOptions {
-  const { lyric, skip } = msg.buttons;
+  const { embed, coverImage, buttons } = msg;
+
+  const { lyric, skip } = buttons;
 
   let actionRow: MessageActionRow | undefined = undefined;
 
@@ -146,8 +143,8 @@ export function trackMessageToMessageOptions(msg: TrackMessage): MessageOptions 
   }
 
   return {
-    embeds: [msg.embed],
-    files: msg.coverImage ? [msg.coverImage] : undefined,
+    embeds: [embed],
+    files: coverImage ? [coverImage] : undefined,
     components: actionRow ? [actionRow] : []
   }
 }
