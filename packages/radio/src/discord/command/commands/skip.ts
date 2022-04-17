@@ -1,4 +1,4 @@
-import { isRequestTrack } from "@seamless-medley/core";
+import { AudienceType, extractAudienceGroup, isRequestTrack, RequestAudience } from "@seamless-medley/core";
 import { ButtonInteraction, CommandInteraction, Permissions } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
@@ -25,13 +25,38 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
 
   const { trackPlay } = station;
 
-  if (trackPlay && isRequestTrack(trackPlay.track)) {
-    const { requestedBy } = trackPlay.track;
+  if (trackPlay && isRequestTrack<RequestAudience>(trackPlay.track)) {
+    let canSkip = automaton.owners.includes(interaction.user.id);
 
-    if (!automaton.owners.includes(interaction.user.id) && !requestedBy.includes(interaction.user.id)) {
-      const mentions = requestedBy.map(id =>  `<@${id}>`).join(' ');
-      await reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by ${mentions}`);
-      return;
+    if (!canSkip) {
+      const { requestedBy } = trackPlay.track;
+
+      const requesters = (requestedBy || [])
+        .map(r => ({
+          ...extractAudienceGroup(r.group),
+          id: r.id
+        }))
+        .filter(({ type }) => type === AudienceType.Discord)
+        .map(r => ({
+          guildId: r.groupId,
+          userId: r.id
+        }));
+
+      canSkip = requestedBy.some(r => r.id === interaction.user.id);
+
+      if (!canSkip) {
+        const requesters = requestedBy
+          .map(r => ({
+            ...extractAudienceGroup(r.group),
+            id: r.id
+          }))
+          .filter(({ type, groupId }) => type === AudienceType.Discord && groupId === guildId)
+          .map(r => r.id);
+
+        const mentions = requesters.length > 0 ? requestedBy.map(id =>  `<@${id}>`).join(' ') : '`Someone else`';
+        await reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by ${mentions}`);
+        return;
+      }
     }
   }
 
