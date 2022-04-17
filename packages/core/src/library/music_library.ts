@@ -255,7 +255,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     const result = await this.searchEngine.search({ queries, combineWith: 'OR' }, { prefix: true, fuzzy: 0.2 });
 
     const chain = _(result)
-      .sortBy(s => -s.score)
+      .sortBy([s => -s.score, 'title'])
       .map(t => this.findTrackById(t.id))
       .filter((t): t is BoomBoxTrack => t !== undefined)
       .uniqBy(t => t.id)
