@@ -3,6 +3,7 @@ import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSe
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, reply, accept, makeHighlightedMessage, HighlightTextType } from "../utils";
+import { AudienceType, makeRequestAudience } from '@seamless-medley/core';
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -19,15 +20,14 @@ const declaration: SubCommandLikeOption = {
 }
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
-  const { station } = guildStationGuard(automaton, interaction);
-
+  const { guildId, station } = guildStationGuard(automaton, interaction);
 
   const all = interaction.options.getBoolean('all');
 
   const ephemeral = true;
   await interaction.deferReply({ ephemeral });
 
-  const requests = station.getRequestsOf(interaction.user.id);
+  const requests = station.getRequestsOf(makeRequestAudience(AudienceType.Discord, guildId, interaction.user.id));
 
   if (requests.length < 1) {
     reply(interaction, {

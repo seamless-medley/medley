@@ -1,9 +1,9 @@
-import { getTrackBanner, RequestTrack, TrackPeek } from "@seamless-medley/core";
-import { CommandInteraction, Message, MessageEmbed, MessageReaction, User } from "discord.js";
-import { chain, keyBy, sampleSize, take } from "lodash";
+import { RequestAudience, AudienceType, getTrackBanner, makeRequestAudience, RequestTrack, TrackPeek } from "@seamless-medley/core";
+import { CommandInteraction, Message, MessageEmbed, MessageReaction, } from "discord.js";
+import { chain, isEqual, keyBy, sampleSize, take } from "lodash";
 import * as emojis from "../../emojis";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { deny, guildIdGuard, guildStationGuard, makeRequestPreview, warn } from "../utils";
+import { guildStationGuard, makeRequestPreview, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -11,7 +11,7 @@ const declaration: SubCommandLikeOption = {
   description: 'Vote for songs'
 }
 
-type Nominatee = TrackPeek<RequestTrack<string>> & {
+type Nominatee = TrackPeek<RequestTrack<RequestAudience>> & {
   banner: string;
   votes: number,
   // TODO: voters
@@ -100,7 +100,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       }
     }
 
-    const handleNewRequest = async (peek: TrackPeek<RequestTrack<User['id']>>) => {
+    const handleNewRequest = async (peek: TrackPeek<RequestTrack<RequestAudience>>) => {
       if (nominatees.length >= 20) {
         // Discord allows 20 reactions per message
         return;
@@ -158,10 +158,12 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
             contributors = contributors.concat(userIds);
 
+            const audienceMaker = makeRequestAudience(AudienceType.Discord, guildId);
+
             request.track.requestedBy = chain(request.track.requestedBy)
-              .concat(userIds)
-              .uniq()
-              .without(automaton.client.user!.id)
+              .concat(userIds.map(audienceMaker))
+              .uniqWith(isEqual)
+              .reject(audienceMaker(automaton.client.user!.id))
               .value();
           }
         }

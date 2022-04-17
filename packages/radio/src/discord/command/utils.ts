@@ -1,4 +1,4 @@
-import { getTrackBanner, RequestTrack, TrackPeek, Station } from "@seamless-medley/core";
+import { getTrackBanner, RequestTrack, TrackPeek, Station, RequestAudience } from "@seamless-medley/core";
 import { APIMessage } from "discord-api-types/v9";
 import { BaseCommandInteraction, Interaction, InteractionReplyOptions, Message, MessageComponentInteraction, MessagePayload, PermissionResolvable, Permissions, User } from "discord.js";
 import { castArray, maxBy, padStart } from "lodash";
@@ -78,7 +78,7 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: Inter
   }
 }
 
-const previewTrack = ({ index, track }: TrackPeek<RequestTrack<User['id']>>, padding: number, focus: number | undefined) => {
+const previewTrack = ({ index, track }: TrackPeek<RequestTrack<RequestAudience>>, padding: number, focus: number | undefined) => {
   const label = padStart(`${focus === index ? '+ ' : ''}${index + 1}`, padding);
   return `${label}: ${getTrackBanner(track)} [${track.priority || 0}]`;
 }

@@ -1,10 +1,10 @@
-import { getTrackBanner } from "@seamless-medley/core";
+import { AudienceType, getTrackBanner, makeRequestAudience } from "@seamless-medley/core";
 import { SelectMenuInteraction } from "discord.js";
 import { MedleyAutomaton } from "../../../automaton";
 import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview } from "../../utils";
 
 export const handleSelectMenu = async (automaton: MedleyAutomaton, interaction: SelectMenuInteraction) => {
-  const { station } = guildStationGuard(automaton, interaction);
+  const { guildId, station } = guildStationGuard(automaton, interaction);
 
   const { values, user } = interaction;
 
@@ -12,7 +12,7 @@ export const handleSelectMenu = async (automaton: MedleyAutomaton, interaction: 
     const [trackId] = values;
 
     if (trackId) {
-      const ok = await station.request(trackId, user.id);
+      const ok = await station.request(trackId, makeRequestAudience(AudienceType.Discord, guildId, user.id));
 
       if (ok === false || ok.index < 0) {
         await interaction.update({

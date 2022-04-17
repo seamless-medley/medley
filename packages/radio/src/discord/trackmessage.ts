@@ -1,4 +1,4 @@
-import { BoomBoxTrack, BoomBoxTrackPlay, isRequestTrack, Metadata, MusicLibraryMetadata, Station } from "@seamless-medley/core";
+import { RequestAudience, BoomBoxTrack, BoomBoxTrackPlay, isRequestTrack, Metadata, MusicLibraryMetadata, Station, extractAudienceGroup, AudienceType } from "@seamless-medley/core";
 import { Message, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, MessageOptions } from "discord.js";
 import { capitalize, isEmpty, get } from "lodash";
 import mime from 'mime-types';
@@ -14,6 +14,7 @@ export enum TrackMessageStatus {
 export type TrackMessage = {
   trackPlay: BoomBoxTrackPlay;
   status: TrackMessageStatus;
+  requesters: Array<Record<'guildId' | 'userId', string>>,
   embed: MessageEmbed;
   coverImage?: MessageAttachment;
   buttons: {
@@ -25,13 +26,13 @@ export type TrackMessage = {
 }
 
 export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrack?: BoomBoxTrack): Promise<TrackMessage> {
-  const requested = isRequestTrack<string>(trackPlay.track) ? trackPlay.track : undefined;
+  const requested = isRequestTrack<RequestAudience>(trackPlay.track) ? trackPlay.track : undefined;
   const requestedBy = requested?.requestedBy;
   const track  = actualTrack ?? requested?.original ?? trackPlay.track;
 
   const embed = new MessageEmbed()
     .setColor('RANDOM')
-    .setTitle(requestedBy ? 'Playing your request' : 'Playing');
+    .setTitle(requestedBy?.length ? 'Playing your request' : 'Playing');
 
   const { metadata } = track;
 
@@ -82,8 +83,19 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrac
     embed.addField('Station', station.name);
   }
 
-  if (requestedBy?.length) {
-    const mentions = requestedBy.map(id =>  `<@${id}>`).join(' ');
+  const requesters = (requestedBy || [])
+    .map(r => ({
+      ...extractAudienceGroup(r.group),
+      id: r.id
+    }))
+    .filter(({ type }) => type === AudienceType.Discord)
+    .map(r => ({
+      guildId: r.groupId,
+      userId: r.id
+    }));
+
+  if (requesters.length) {
+    const mentions = requesters.map(r =>  `<@${r.userId}>`).join(' ');
     embed.addField('Requested by', mentions);
   }
 
@@ -106,6 +118,7 @@ export async function createTrackMessage(trackPlay: BoomBoxTrackPlay, actualTrac
   return {
     trackPlay,
     status: TrackMessageStatus.Playing,
+    requesters,
     embed,
     coverImage,
     buttons: {

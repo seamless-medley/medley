@@ -1,7 +1,7 @@
 import EventEmitter from "events";
 import normalizePath from 'normalize-path';
 import { Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
-import { difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
+import { curry, difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek, WatchTrackCollection } from "./collections";
 import { Chanceable, Crate, CrateLimit } from "./crate";
@@ -87,11 +87,23 @@ export type SweeperConfig = {
 }
 
 export type SweeperRule = SweeperConfig;
-export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
-  ready: () => void;
-  requestTrackAdded: (track: TrackPeek<RequestTrack<string>>) => void;
+
+export enum AudienceType {
+  Discord = 'discord',
+  Icy = 'icy'
 }
 
+export type AudienceGroupId = `${AudienceType}$${string}`;
+
+export type RequestAudience = {
+  group: AudienceGroupId;
+  id: string;
+}
+
+export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
+  ready: () => void;
+  requestTrackAdded: (track: TrackPeek<RequestTrack<RequestAudience>>) => void;
+}
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
   readonly id: string;
   readonly name: string;
@@ -100,7 +112,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   readonly queue: Queue<BoomBoxTrack>;
   readonly medley: Medley<BoomBoxTrack>;
 
-  private boombox: BoomBox<string>;
+  private boombox: BoomBox<RequestAudience>;
 
   readonly library: MusicLibrary<Station>;
   private sequences: SequenceConfig[] = [];
@@ -110,7 +122,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   followCrateAfterRequestTrack: boolean;
 
-  private audiences: Map<string, Map<string, any>> = new Map();
+  private audiences: Map<AudienceGroupId, Map<string, any>> = new Map();
 
   private logger: Logger;
 
@@ -200,7 +212,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.emit('trackFinished', trackPlay);
   }
 
-  private handleRequestTrack = (track: RequestTrack<void>) => {
+  private handleRequestTrack = (track: RequestTrack<unknown>) => {
     const { requestSweepers } = this;
 
     if (requestSweepers) {
@@ -395,7 +407,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
-  async request(trackId: BoomBoxTrack['id'], requestedBy: string) {
+  async request(trackId: BoomBoxTrack['id'], requestedBy: RequestAudience) {
     const track = this.findTrackById(trackId);
     if (!track) {
       return false;
@@ -432,7 +444,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.sortRequests();
   }
 
-  getRequestsOf(requester: string) {
+  getRequestsOf(requester: RequestAudience) {
     return this.boombox.getRequestsOf(requester);
   }
 
@@ -448,7 +460,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.crateIndex = newIndex;
   }
 
-  addAudiences(groupId: string, audienceId: string, data?: any) {
+  addAudiences(groupId: AudienceGroupId, audienceId: string, data?: any) {
     if (!this.audiences.has(groupId)) {
       this.audiences.set(groupId, new Map());
     }
@@ -457,17 +469,17 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.playIfHasAudiences();
   }
 
-  removeAudience(groupId: string, audienceId: string) {
+  removeAudience(groupId: AudienceGroupId, audienceId: string) {
     this.getAudiences(groupId)?.delete(audienceId);
     this.pauseIfNoAudiences();
   }
 
-  removeAudiencesForGroup(groupId: string) {
+  removeAudiencesForGroup(groupId: AudienceGroupId) {
     this.audiences.delete(groupId);
     this.pauseIfNoAudiences();
   }
 
-  updateAudiences(groupId: string, audiences: [id: string, data: any][]) {
+  updateAudiences(groupId: AudienceGroupId, audiences: [id: string, data: any][]) {
     this.audiences.set(groupId, new Map(audiences));
     this.playIfHasAudiences();
   }
@@ -484,7 +496,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }
   }
 
-  getAudiences(groupId: string) {
+  getAudiences(groupId: AudienceGroupId) {
     return this.audiences.get(groupId);
   }
 
@@ -510,7 +522,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return false;
   }
 
-  get groupIds() {
+  get audienceGroups() {
     return Array.from(this.audiences.keys());
   }
 }
@@ -563,3 +575,18 @@ function chanceOf(n: [yes: number, no: number]): Chanceable {
 export class StationRegistry<S extends Station> extends Library<S, S['id']> {
 
 }
+
+export const makeAudienceGroup = (type: AudienceType, groupId: string): AudienceGroupId => `${type}$${groupId}`;
+
+export const extractAudienceGroup = (id: AudienceGroupId) => {
+  const [type, groupId] = id.split('$', 2);
+  return {
+    type,
+    groupId
+  }
+}
+
+export const makeRequestAudience = curry((type: AudienceType, groupId: string, id: string): RequestAudience => ({
+  group: makeAudienceGroup(type, groupId),
+  id
+}));

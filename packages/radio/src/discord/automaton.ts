@@ -26,7 +26,7 @@ import {
   BoomBoxTrack,
   BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
   Station,
-  createLogger, Logger, decibelsToGain
+  createLogger, Logger, decibelsToGain, makeAudienceGroup as makeStationAudienceGroup, AudienceGroupId, AudienceType, extractAudienceGroup
 } from "@seamless-medley/core";
 
 import type TypedEventEmitter from 'typed-emitter';
@@ -91,6 +91,8 @@ export type JoinResult = {
 export interface AutomatonEvents {
   ready: () => void;
 }
+
+const makeAudienceGroup = (id: string): AudienceGroupId => makeStationAudienceGroup(AudienceType.Discord, id);
 
 export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitter<AutomatonEvents>) {
   readonly id: string;
@@ -288,7 +290,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     const { station, audioRequest } = link;
 
     station.medley.deleteAudioStream(audioRequest.id);
-    station.removeAudiencesForGroup(guildId);
+    station.removeAudiencesForGroup(makeAudienceGroup(guildId));
   }
 
   getGain(guildId: Guild['id']) {
@@ -378,7 +380,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
   private updateStationAudiences(station: Station, channel: VoiceBasedChannel) {
     station.updateAudiences(
-      channel.guildId,
+      makeAudienceGroup(channel.guildId),
       channel.members
         .filter(member => !member.user.bot && !channel.guild.voiceStates.cache.get(member.id)?.deaf)
         .map(member => [member.id, undefined])
@@ -396,12 +398,14 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return;
     }
 
+    const audienceGroup = makeAudienceGroup(guildId);
+
     const isMe = (newState.member.id === newState.guild.me?.id);
 
     if (isMe) {
       if (channelChange === 'leave') {
         // Me Leaving
-        station?.removeAudiencesForGroup(newState.guild.id);
+        station?.removeAudiencesForGroup(audienceGroup);
         state.voiceChannelId = undefined;
         return;
       }
@@ -414,7 +418,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
         if (station) {
           if (state.serverMuted) {
-            station.removeAudiencesForGroup(guildId);
+            station.removeAudiencesForGroup(audienceGroup);
           } else {
             this.updateStationAudiences(station, newState.channel!);
           }
@@ -428,7 +432,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
         if (station) {
           if (state.serverMuted) {
-            station.removeAudiencesForGroup(guildId);
+            station.removeAudiencesForGroup(audienceGroup);
           } else {
             this.updateStationAudiences(station, newState.channel!);
           }
@@ -457,7 +461,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       }
 
       // is leaving
-      station?.removeAudience(guildId, newState.member.id);
+      station?.removeAudience(audienceGroup, newState.member.id);
       return;
     }
 
@@ -465,7 +469,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       if (newState.channelId === state.voiceChannelId) {
         if (!newState.deaf) {
           // User has joined or moved into
-          station?.addAudiences(guildId, newState.member.id);
+          station?.addAudiences(audienceGroup, newState.member.id);
         }
 
         return;
@@ -473,7 +477,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
       if (oldState.channelId === state.voiceChannelId) {
         // User has moved away
-        station?.removeAudience(guildId, newState.member.id);
+        station?.removeAudience(audienceGroup, newState.member.id);
         return;
       }
 
@@ -484,9 +488,9 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     // No channel change
     if (oldState.deaf !== newState.deaf && newState.channelId === state.voiceChannelId) {
       if (!newState.deaf) {
-        station?.addAudiences(guildId, newState.member.id);
+        station?.addAudiences(audienceGroup, newState.member.id);
       } else {
-        station?.removeAudience(guildId, newState.member.id);
+        station?.removeAudience(audienceGroup, newState.member.id);
       }
     }
   }
@@ -509,6 +513,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
 
     const trackMsg = await createTrackMessage(trackPlay, station.findTrackById(trackPlay.track.id));
+
     const sentMessages = await this.sendForStation(station, trackMessageToMessageOptions({
       ...trackMsg,
       buttons: {
@@ -657,14 +662,17 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
   }
 
+  // TODO: Rename to sendTrackMessageForStation, accepting TrackMessage
   /**
    * Send to all guilds for a station
    */
   private async sendForStation(station: Station, options: string | MessagePayload | MessageOptions) {
     const results: [string, Promise<Message<boolean> | undefined> | undefined][] = [];
 
-    for (const guildId of station.groupIds) {
-      if ((station.getAudiences(guildId)?.size ?? 0) < 1) {
+    for (const group of station.audienceGroups) {
+      const { groupId: guildId } = extractAudienceGroup(group);
+
+      if ((station.getAudiences(group)?.size ?? 0) < 1) {
         continue;
       }
 
