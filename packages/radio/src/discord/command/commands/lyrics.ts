@@ -1,4 +1,4 @@
-import { BoomBoxTrack, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics } from "@seamless-medley/core";
+import { BoomBoxTrack, CoverAndLyrics, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics } from "@seamless-medley/core";
 import { ButtonInteraction, Message, MessageAttachment, MessageEmbed } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
@@ -39,20 +39,33 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   let lyricsText: string | undefined = undefined;
   let source = 'N/A';
 
-  const lyrics = (await track.metadata?.maybeCoverAndLyrics)?.lyrics;
+  const { lyrics, cover, coverMimeType } = (await track.metadata?.maybeCoverAndLyrics) ?? {};
 
   if (lyrics) {
-    lyricsText = lyricsToText(parseLyrics(lyrics), false).join('\n');
+    const parsed = parseLyrics(lyrics);
+
+    lyricsText = parsed.timeline.length > 0
+      ? lyricsToText(parsed, false).join('\n')
+      : lyrics.trim();
+
     source = 'metadata';
 
-  } else {
-    const artist = track.metadata?.tags?.artist;
-    const title = track.metadata?.tags?.title;
+  } else if (track.metadata?.tags) {
+    const artist = track.metadata.tags.artist;
+    const title = track.metadata.tags.title;
 
     if (artist && title) {
       await interaction.deferReply();
       lyricsText = await MetadataHelper.searchLyrics(artist, title).catch(() => undefined);
       source = 'Google';
+
+      if (lyricsText) {
+        track.metadata.maybeCoverAndLyrics = Promise.resolve<CoverAndLyrics>({
+          cover: cover ?? Buffer.alloc(0),
+          coverMimeType: coverMimeType ?? '',
+          lyrics: lyricsText
+        })
+      }
     }
   }
 
