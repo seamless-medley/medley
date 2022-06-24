@@ -18,8 +18,8 @@ import {
 import {
   BaseGuildTextChannel,
   BaseGuildVoiceChannel, Client, Guild,
-  Intents, Message, MessageOptions,
-  MessagePayload, Snowflake, VoiceBasedChannel, VoiceState
+  Intents, Message,
+  Snowflake, VoiceBasedChannel, VoiceState
 } from "discord.js";
 
 import {
@@ -281,13 +281,13 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private async detune(guildId: Guild['id']) {
-    const link = this._guildStates.get(guildId)?.stationLink;
+    const { stationLink }  = this._guildStates.get(guildId) ?? { };
 
-    if (!link) {
+    if (!stationLink) {
       return;
     }
 
-    const { station, audioRequest } = link;
+    const { station, audioRequest } = stationLink;
 
     station.medley.deleteAudioStream(audioRequest.id);
     station.removeAudiencesForGroup(makeAudienceGroup(guildId));
@@ -340,7 +340,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return { status: 'no_station' };
     }
 
-    const voiceConnection = joinVoiceChannel({
+    let voiceConnection = joinVoiceChannel({
       channelId,
       guildId,
       adapterCreator: voiceAdapterCreator as DiscordGatewayAdapterCreator
@@ -356,11 +356,14 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
     catch (e) {
       voiceConnection?.destroy();
-
+      voiceConnection = undefined;
+      //
+      this.logger.error(e);
       throw e;
     }
 
     stationLink.voiceConnection = voiceConnection;
+
     return { status: 'joined', station: stationLink.station };
   }
 
