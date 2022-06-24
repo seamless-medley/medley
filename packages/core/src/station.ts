@@ -153,7 +153,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.library.loadCollections(options.musicCollections);
 
     // Create boombox
-    const boombox = new BoomBox({
+    const boombox = new BoomBox<RequestAudience>({
       id: this.id,
       medley: this.medley,
       queue: this.queue,
@@ -161,7 +161,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       metadataCache: options.metadataCache,
       maxTrackHistory: options.maxTrackHistory,
       noDuplicatedArtist: options.noDuplicatedArtist,
-      duplicationSimilarity: options.duplicationSimilarity
+      duplicationSimilarity: options.duplicationSimilarity,
+      onInsertRequestTrack: this.handleRequestTrack
     });
 
     boombox.on('trackQueued', this.handleTrackQueued);
@@ -169,7 +170,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     boombox.on('trackStarted', this.handleTrackStarted);
     boombox.on('trackActive', this.handleTrackActive);
     boombox.on('trackFinished', this.handleTrackFinished);
-    boombox.on('requestTrackFetched', this.handleRequestTrack);
 
     this.boombox = boombox;
     this.intros = options.intros;
@@ -212,7 +212,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.emit('trackFinished', trackPlay);
   }
 
-  private handleRequestTrack = (track: RequestTrack<unknown>) => {
+  private handleRequestTrack = async (track: RequestTrack<RequestAudience>) => {
     const { requestSweepers } = this;
 
     if (requestSweepers) {
@@ -222,9 +222,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       if (currentKind !== TrackKind.Request) {
         const sweeper = requestSweepers.shift();
 
-
-        if (sweeper && MetadataHelper.isTrackLoadable(sweeper.path)) {
           this.queue.add(sweeper.path);
+        if (sweeper && await MetadataHelper.isTrackLoadable(sweeper.path)) {
           requestSweepers.push(sweeper);
         }
       }

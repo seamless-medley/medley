@@ -40,6 +40,8 @@ export type RequestTrack<Requester> = BoomBoxTrack & {
   original: BoomBoxTrack; // Store the original track as a RequestTrack is likely to be a shallow
 }
 
+export type OnInsertRequestTrack<R> = (track: RequestTrack<R>) => Promise<void>;
+
 export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
   return !!o && !!o.requestedBy;
 }
@@ -54,11 +56,10 @@ export interface BoomBoxEvents {
   trackStarted: (trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => void;
   trackActive: (trackPlay: BoomBoxTrackPlay) => void;
   trackFinished: (trackPlay: BoomBoxTrackPlay) => void;
-  requestTrackFetched: (track: RequestTrack<any>) => void;
   error: (error: Error) => void;
 }
 
-type BoomBoxOptions = {
+type BoomBoxOptions<Requester = any> = {
   id: string;
 
   medley: Medley<BoomBoxTrack>;
@@ -94,6 +95,8 @@ type BoomBoxOptions = {
    */
   duplicationSimilarity?: number;
 
+  onInsertRequestTrack?: OnInsertRequestTrack<Requester>;
+}
 export type DeckInfo = {
   trackPlay?: BoomBoxTrackPlay;
   playing: boolean;
@@ -104,7 +107,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   readonly id: string;
   readonly sequencer: CrateSequencer<BoomBoxTrack>;
 
-  options: Required<Pick<BoomBoxOptions, 'maxTrackHistory' | 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
+  options: Required<Pick<BoomBoxOptions<Requester>, 'maxTrackHistory' | 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
 
   private decks = Array(3).fill(0).map<DeckInfo>(() => ({ playing: false, active: false })) as [DeckInfo, DeckInfo, DeckInfo];
 
@@ -112,13 +115,15 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   readonly queue: Queue<BoomBoxTrack>;
   readonly metadataCache?: MetadataCache;
 
+  private readonly onInsertRequestTrack?: OnInsertRequestTrack<Requester>;
+
   private artistHistory: string[][];
 
   readonly trackHistory: TrackRecord[] = [];
 
   private logger: Logger;
 
-  constructor(options: BoomBoxOptions) {
+  constructor(options: BoomBoxOptions<Requester>) {
     super();
     //
     this.id = options.id;
@@ -144,6 +149,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.medley.on('started', this.deckStarted);
     this.medley.on('finished', this.deckFinished);
     this.medley.on('mainDeckChanged', this.mainDeckChanged);
+
+    this.onInsertRequestTrack = options.onInsertRequestTrack;
+
     //
     this.sequencer = new CrateSequencer<BoomBoxTrack>(this.id, options.crates, {
       trackValidator: this.isTrackLoadable,
@@ -320,8 +328,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
       const requestedTrack = await this.fetchRequestTrack();
       if (requestedTrack) {
-        this.emit('requestTrackFetched', requestedTrack);
-
+        await this.onInsertRequestTrack?.(requestedTrack);
         addToQueue(requestedTrack);
         return;
       }
