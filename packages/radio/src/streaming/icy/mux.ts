@@ -38,8 +38,8 @@ export class MetadataMux extends Transform {
       const data = Buffer.concat(buffers);
       const size = Math.min(data.length, this.bytesLeft);
 
-      const head = size < data.length ? data.slice(0, size) : data;
-      this.tail = data.slice(size);
+      const head = size < data.length ? data.subarray(0, size) : data;
+      this.tail = data.subarray(size);
 
       this.bytesLeft -= size;
       this.push(head);
