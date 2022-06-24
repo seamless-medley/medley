@@ -41,12 +41,12 @@ export type RequestTrack<Requester> = BoomBoxTrack & {
 }
 
 export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
-  return o && !!o.requestedBy;
+  return !!o && !!o.requestedBy;
 }
 
 export interface BoomBoxEvents {
   sequenceChange: (activeCrate: BoomBoxCrate) => void;
-  currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack>, newCollection: TrackCollection<BoomBoxTrack>) => void;
+  currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack>, newCollection: TrackCollection<BoomBoxTrack>, fromRequest: boolean) => void;
   currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
   trackQueued: (track: BoomBoxTrack) => void;
   trackLoaded: (trackPlay: BoomBoxTrackPlay) => void;
@@ -333,11 +333,15 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
         return;
       }
 
-      const currentCollection = this._currentTrackPlay?.track.collection;
+      const currentTrack = this._currentTrackPlay?.track;
+      const currentCollection = currentTrack?.collection;
       const nextCollection = nextTrack.collection;
 
-      if (currentCollection && nextCollection && currentCollection.id !== nextCollection.id) {
-        this.emit('currentCollectionChange', currentCollection, nextCollection);
+      const trasitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
+      const collectionChange = currentCollection?.id !== nextCollection.id;
+
+      if (currentCollection && nextCollection && (trasitingFromRequestTrack || collectionChange)) {
+        this.emit('currentCollectionChange', currentCollection, nextCollection, trasitingFromRequestTrack);
       }
 
       if (this._currentCrate !== nextTrack.crate) {
