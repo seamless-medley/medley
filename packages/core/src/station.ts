@@ -471,12 +471,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   removeAudience(groupId: AudienceGroupId, audienceId: string) {
     this.getAudiences(groupId)?.delete(audienceId);
-    this.pauseIfNoAudiences();
+    return this.pauseIfNoAudiences();
   }
 
   removeAudiencesForGroup(groupId: AudienceGroupId) {
     this.audiences.delete(groupId);
-    this.pauseIfNoAudiences();
+    return this.pauseIfNoAudiences();
   }
 
   updateAudiences(groupId: AudienceGroupId, audiences: [id: string, data: any][]) {
@@ -488,12 +488,16 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     if (this.playState !== PlayState.Playing && this.hasAudiences) {
       this.start();
     }
+
+    return !this.medley.paused;
   }
 
   pauseIfNoAudiences() {
     if (this.playState === PlayState.Playing && !this.hasAudiences) {
       this.pause();
     }
+
+    return this.medley.paused;
   }
 
   getAudiences(groupId: AudienceGroupId) {
