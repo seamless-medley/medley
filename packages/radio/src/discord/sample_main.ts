@@ -1,6 +1,6 @@
 import { createLogger, Station, StationOptions, StationRegistry, TrackCollection } from "@seamless-medley/core";
 import { MetadataCache } from "@seamless-medley/core/src/playout/metadata/cache";
-import _, { noop } from "lodash";
+import _, { noop, shuffle } from "lodash";
 import { MedleyAutomaton } from "./automaton";
 
 process.on('uncaughtException', (e) => {
@@ -21,15 +21,20 @@ type StoredConfig = {
   automatons: any[];
 }
 
+const moods = {
+  up: ['upbeat', 'bright', 'groovy'],
+  easy: ['lovesong', 'chill'],
+  sad: ['lonely', 'brokenhearted', 'hurt']
+}
 const storedConfigs: StoredConfig = {
   stations: [
     {
       id: 'default',
-      name: 'Default Station',
+      name: 'Today FM',
       description: 'Various genres',
-      intros: [
-        'D:\\vittee\\Desktop\\test-transition\\drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3',
-      ],
+      // intros: [
+      //   'E:\\medley-drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3',
+      // ],
       musicCollections: [
         { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
         { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
@@ -41,6 +46,7 @@ const storedConfigs: StoredConfig = {
         { id: 'upbeat', description:'Upbeat', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
         { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released' },
         { id: 'thai', auxiliary: true, description:'Thai', path: 'M:\\Repository\\th' },
+        { id: 'inter', auxiliary: true, description:'inter', path: 'M:\\Repository\\inter' },
       ],
       sequences: [
         { crateId: 'guid1', collections: [ { id: 'new-released' }], limit: { by: 'one-of', list: [1, 1, 1, 2] } },
@@ -57,49 +63,59 @@ const storedConfigs: StoredConfig = {
           limit: { by: 'upto', upto: 1 }
         },
         { crateId: 'guid8', collections: [ { id: 'brokenhearted' }], limit: { by: 'range', range: [1, 2] } },
-        // TODO: hurt
+        { crateId: 'guid8_1', collections: [ { id: 'hurt' }], chance: [1, 2], limit: { by: 'upto', upto: 1 } },
         { crateId: 'guid9', collections: [ { id: 'lonely' }], limit: { by: 'range', range: [1, 2] } },
         { crateId: 'guid10', collections: [ { id: 'lovesong' }], limit: { by: 'upto', upto: 2 } },
         { crateId: 'guid11', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 4] } }
       ],
 
       sweeperRules: [
-        { // Upbeat
-          to: ['upbeat', 'bright'],
-          path: 'D:\\vittee\\Desktop\\test-transition\\drops\\up'
+        {
+          to: moods.sad,
+          path: 'E:\\medley-drops\\to_blue'
         },
-        { // Easy mood
-          to: ['lovesong', 'bright', 'chill'],
-          path: 'D:\\vittee\\Desktop\\test-transition\\drops\\easy'
+        {
+          from: moods.sad,
+          to: moods.easy,
+          path: 'E:\\medley-drops\\blue_to_easy'
         },
-        { // Sad mood
-          to: ['lonely', 'brokenhearted', 'hurt'],
-          path: 'D:\\vittee\\Desktop\\test-transition\\drops\\blue'
+        {
+          from: moods.sad,
+          to: moods.up,
+          path: 'E:\\medley-drops\\blue_to_up'
+        },
+        {
+          from: moods.easy,
+          to: moods.up,
+          path: 'E:\\medley-drops\\easy_to_up'
+        },
+        {
+          from: moods.up,
+          to: moods.easy,
+          path: 'E:\\medley-drops\\up_to_easy'
         },
         { // Fresh
           to: ['new-released'],
-          path: 'D:\\vittee\\Desktop\\test-transition\\drops\\fresh'
+          path: 'E:\\medley-drops\\fresh'
         }
       ],
 
       requestSweepers: [
-        'D:\\vittee\\Desktop\\test-transition\\drops\\your\\Music Radio Creative - Playing All Your Requests.mp3',
-        'D:\\vittee\\Desktop\\test-transition\\drops\\your\\Music Radio Creative - Playing Your Favourite Artists.mp3',
-        'D:\\vittee\\Desktop\\test-transition\\drops\\your\\Music Radio Creative - Simply Made for You.mp3'
+        'E:\\medley-drops\\your\\Music Radio Creative - Playing All Your Requests.mp3',
+        'E:\\medley-drops\\your\\Music Radio Creative - Playing Your Favourite Artists.mp3',
+        'E:\\medley-drops\\your\\Music Radio Creative - Simply Made for You.mp3'
       ]
     },
-    {
-      id: 'thai',
-      name: 'Thai',
-      musicCollections: [
-        // { id: 'thai', description:'Thai', path: 'M:\\Repository\\th\\Blackhead\\Lossless' },
-        { id: 'thai', auxiliary: true, description: 'Thai', path: 'M:\\Repository\\th' },
-        // { id: 'thai', path: 'D:\\vittee\\Desktop\\test-transition\\xx' }
-      ],
-      sequences: [
-        { crateId: 'thai', collections: [ { id: 'thai' }], limit: Infinity }
-      ]
-    }
+    // {
+    //   id: 'thai',
+    //   name: 'Thai',
+    //   musicCollections: [
+    //     { id: 'thai', auxiliary: true, description: 'Thai', path: 'M:\\Repository\\th' },
+    //   ],
+    //   sequences: [
+    //     { crateId: 'thai', collections: [ { id: 'thai' }], limit: Infinity }
+    //   ]
+    // }
   ],
   automatons: [
     {
@@ -142,7 +158,7 @@ async function main() {
 
       const requestSweepers = config.requestSweepers ? (() => {
         const collection = new TrackCollection('$_req_sweepers');
-        collection.add(config.requestSweepers);
+        collection.add(shuffle(config.requestSweepers));
         return collection;
       })() : undefined;
 
