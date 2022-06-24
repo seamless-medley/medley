@@ -222,8 +222,15 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       if (currentKind !== TrackKind.Request) {
         const sweeper = requestSweepers.shift();
 
-          this.queue.add(sweeper.path);
         if (sweeper && await MetadataHelper.isTrackLoadable(sweeper.path)) {
+          if (sweeper.metadata?.kind === undefined) {
+            sweeper.metadata = {
+              ...sweeper.metadata,
+              kind: TrackKind.Insertion
+            }
+          }
+
+          this.queue.add(sweeper);
           requestSweepers.push(sweeper);
         }
       }
@@ -279,6 +286,13 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       if (this.intros) {
         const intro = this.intros.shift();
         if (intro) {
+          if (intro.metadata?.kind === undefined) {
+            intro.metadata = {
+              ...intro.metadata,
+              kind: TrackKind.Insertion
+            }
+          }
+
           this.queue.add(intro);
           this.intros.push(intro);
         }
