@@ -56,15 +56,20 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
 
     if (artist && title) {
       await interaction.deferReply();
-      lyricsText = await MetadataHelper.searchLyrics(artist, title).catch(() => undefined);
-      source = 'Google';
 
-      if (lyricsText) {
-        track.metadata.maybeCoverAndLyrics = Promise.resolve<CoverAndLyrics>({
+      track.metadata.maybeCoverAndLyrics = new Promise<CoverAndLyrics>(async (resolve) => {
+        const lyrics = await MetadataHelper.searchLyrics(artist, title).catch(() => undefined);
+
+        resolve({
           cover: cover ?? Buffer.alloc(0),
           coverMimeType: coverMimeType ?? '',
-          lyrics: lyricsText
-        })
+          lyrics: lyrics ?? ''
+        });
+      });
+
+      lyricsText = (await track.metadata.maybeCoverAndLyrics).lyrics;
+      if (lyricsText) {
+        source = 'Google';
       }
     }
   }
