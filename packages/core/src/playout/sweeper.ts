@@ -10,25 +10,29 @@ export type SweeperInsertionRule = {
 
 const isIn = (value: string, list: string[] | undefined) => !list || list.includes(value);
 
-const validateRule = (predicates: [string, string[] | undefined][]) => {
-  const [from, to] = predicates;
-  const [fromId, fromList] = from;
+const validateRule = (from: [id: string, list: string[] | undefined] | undefined, to: [id: string, list: string[] | undefined]) => {
   const [toId, toList] = to;
+
+  if (!from) {
+    return isIn(toId, toList);
+  }
+
+  const [fromId, fromList] = from;
 
   if (isIn(fromId, toList)) {
     return false;
   }
 
-  return isIn(fromId, fromList) && isIn(toId, without(toList));
+  return isIn(fromId, fromList) && isIn(toId, without(toList, ...(fromList ?? [])));
 }
 
-const matchRule = curry((from: string, to: string, rule: SweeperInsertionRule) => validateRule([
-    [from, rule.from],
+const matchRule = curry((from: string | undefined, to: string, rule: SweeperInsertionRule) => validateRule(
+    from ? [from, rule.from] : undefined,
     [to, rule.to]
-  ])
-)
+  )
+);
 
-const findRule = (from: string, to: string, rules: SweeperInsertionRule[]) => rules.find(matchRule(from, to));
+const findRule = (from: string | undefined, to: string, rules: SweeperInsertionRule[]) => rules.find(matchRule(from, to));
 
 export class SweeperInserter {
   constructor(private boombox: BoomBox, public rules: SweeperInsertionRule[] = []) {
