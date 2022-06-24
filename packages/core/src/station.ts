@@ -386,8 +386,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private sweepers: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
 
-  updateSweeperRules(configs: SweeperConfig[]) {
-    const oldPaths = this.boombox.sweeperInsertionRules.map(r => r.collection.id);
+
+
+  updateSweeperRules(configs: SweeperRule[]) {
+    const collectPath = () => this.boombox.sweeperInsertionRules.map(r => r.collection.id); // TODO: Store path in metadata
+
+    const oldPaths = collectPath();
 
     this.boombox.sweeperInsertionRules = configs.map<SweeperInsertionRule>(({ from, to, path }) => {
       if (!this.sweepers.has(path)) {
@@ -402,7 +406,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     });
 
-    const newPaths = this.boombox.sweeperInsertionRules.map(r => r.collection.id);
+    const newPaths = collectPath();
     const removedPaths = difference(oldPaths, newPaths);
 
     for (const path of removedPaths) {
