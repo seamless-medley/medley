@@ -6,7 +6,7 @@ using namespace juce;
 
 LookAheadLimiter::LookAheadLimiter()
 {
-    gainReductionCalculator.setThreshold(-3.0f);
+    gainReductionCalculator.setThreshold(-6.0f);
     gainReductionCalculator.setKnee(0.0f);
     gainReductionCalculator.setAttackTime(10.0f / 1000);
     gainReductionCalculator.setReleaseTime(60.0f / 1000);
