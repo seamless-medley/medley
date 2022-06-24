@@ -7,6 +7,12 @@ process.on('uncaughtException', (e) => {
 
 });
 
+const moods = {
+  up: ['upbeat', 'bright', 'groovy'],
+  easy: ['lovesong', 'chill'],
+  sad: ['lonely', 'brokenhearted', 'hurt']
+}
+
 const station = new Station({
   id: 'default',
   name: 'Default station',
@@ -43,23 +49,35 @@ const station = new Station({
     { crateId: 'guid11', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 4] } }
   ],
   sweeperRules: [
-    { // Upbeat
-      to: ['upbeat', 'bright'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\up'
+    {
+      to: moods.sad,
+      path: 'E:\\medley-drops\\to_blue'
     },
-    { // Easy mood
-      to: ['lovesong', 'bright', 'chill'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\easy'
+    {
+      from: moods.sad,
+      to: moods.easy,
+      path: 'E:\\medley-drops\\blue_to_easy'
     },
-    { // Sad mood
-      to: ['lonely', 'brokenhearted', 'hurt'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\blue'
+    {
+      from: moods.sad,
+      to: moods.up,
+      path: 'E:\\medley-drops\\blue_to_up'
+    },
+    {
+      from: moods.easy,
+      to: moods.up,
+      path: 'E:\\medley-drops\\easy_to_up'
+    },
+    {
+      from: moods.up,
+      to: moods.easy,
+      path: 'E:\\medley-drops\\up_to_easy'
     },
     { // Fresh
       to: ['new-released'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\fresh'
+      path: 'E:\\medley-drops\\fresh'
     }
-  ]
+  ],
 });
 
 async function main() {
