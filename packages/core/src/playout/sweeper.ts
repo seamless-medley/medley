@@ -39,23 +39,25 @@ export class SweeperInserter {
     boombox.on('currentCollectionChange', this.handler);
   }
 
-  private handler: BoomBoxEvents['currentCollectionChange'] = (oldCollection, newCollection) => {
-    const matched = findRule(oldCollection.id, newCollection.id, this.rules);
+  private handler: BoomBoxEvents['currentCollectionChange'] = (oldCollection, newCollection, ignoreFrom) => {
+    const matched = findRule(!ignoreFrom ? oldCollection.id : undefined, newCollection.id, this.rules);
 
-    if (matched) {
-      const insertion = matched.collection.shift();
-      if (insertion) {
-        // ensure track kind
-        if (!insertion.metadata?.kind) {
-          insertion.metadata = {
-            ...insertion.metadata,
-            kind: TrackKind.Insertion
-          }
+    if (!matched) {
+      return;
+    }
+
+    const insertion = matched.collection.shift();
+    if (insertion) {
+      // ensure track kind
+      if (insertion.metadata?.kind === undefined) {
+        insertion.metadata = {
+          ...insertion.metadata,
+          kind: TrackKind.Insertion
         }
-
-        this.boombox.queue.add(insertion);
-        matched.collection.push(insertion);
       }
+
+      this.boombox.queue.add(insertion);
+      matched.collection.push(insertion);
     }
   }
 }
