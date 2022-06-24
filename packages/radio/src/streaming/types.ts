@@ -6,6 +6,11 @@ type AudioTypes = typeof audioTypes[number];
 
 export const audioFormatToAudioType = (format: AudioFormat): AudioTypes | undefined => audioTypes[audioFormats.indexOf(format)];
 
+export const mimeTypes = {
+  mp3: 'audio/mpeg',
+  adts: 'audio/aac'
+}
+
 export type AdapterOptions<F extends string> = {
   sampleFormat?: AudioFormat;
   sampleRate?: number;
