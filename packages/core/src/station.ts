@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import normalizePath from 'normalize-path';
-import { Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
+import { DeckIndex, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
 import _, { curry, difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek, WatchTrackCollection } from "./collections";
@@ -255,6 +255,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     if (this.paused) return PlayState.Paused;
     if (this.playing) return PlayState.Playing;
     return PlayState.Idle;
+  }
+
+  getDeckInfo(index: DeckIndex) {
+    return this.boombox.getDeckInfo(index);
   }
 
   get trackPlay() {

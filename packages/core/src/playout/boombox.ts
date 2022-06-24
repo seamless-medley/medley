@@ -3,7 +3,7 @@ import _, { flatten, matches, some, toLower, trim, uniq } from "lodash";
 import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
-import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics } from "@seamless-medley/medley";
+import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, TrackValidator, TrackVerifier } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
@@ -94,6 +94,10 @@ type BoomBoxOptions = {
    */
   duplicationSimilarity?: number;
 
+export type DeckInfo = {
+  trackPlay?: BoomBoxTrackPlay;
+  playing: boolean;
+  active: boolean;
 }
 
 export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
@@ -101,6 +105,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   readonly sequencer: CrateSequencer<BoomBoxTrack>;
 
   options: Required<Pick<BoomBoxOptions, 'maxTrackHistory' | 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
+
+  private decks = Array(3).fill(0).map<DeckInfo>(() => ({ playing: false, active: false })) as [DeckInfo, DeckInfo, DeckInfo];
 
   readonly medley: Medley<BoomBoxTrack>;
   readonly queue: Queue<BoomBoxTrack>;
@@ -174,6 +180,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   get trackPlay() {
     return this._currentTrackPlay;
+  }
+
+  getDeckInfo(index: DeckIndex): Readonly<DeckInfo> {
+    return this.decks[index];
   }
 
   private requests: TrackCollection<RequestTrack<Requester>> = new TrackCollection('$_requests');
@@ -350,6 +360,12 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 
   private deckLoaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
+    this.decks[deck] = {
+      trackPlay,
+      playing: false,
+      active: false
+    }
+
     // build cover and lyrics metadata
     const { track } = trackPlay;
     const { metadata } = track;
@@ -371,6 +387,12 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 
   private deckUnloaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
+    this.decks[deck] = {
+      trackPlay: undefined,
+      playing: false,
+      active: false
+    }
+
     // clean up memory holding the cover and lyrics
     if (trackPlay.track?.metadata) {
       trackPlay.track.metadata.maybeCoverAndLyrics = undefined;
@@ -384,6 +406,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 
   private deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
+    this.decks[deck].playing = true;
+
     const kind = trackPlay.track.metadata?.kind;
 
     if (kind === undefined || kind === TrackKind.Insertion) {
@@ -425,6 +449,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 
   private deckFinished: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
+    this.decks[deck].playing = false;
+
     const kind = trackPlay.track.metadata?.kind;
 
     if (kind === undefined || kind === TrackKind.Insertion) {
@@ -435,6 +461,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 
   private mainDeckChanged: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
+    this.decks[deck].active = true;
+    for (let i = 0; i < 3; i++) {
+      if (i !== deck) {
+        this.decks[i].active = false;
+      }
+    }
+
     if (trackPlay.track.metadata?.kind === TrackKind.Insertion) {
       return;
     }
