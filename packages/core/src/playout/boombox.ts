@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import _, { flatten, matches, some, toLower, trim, uniq } from "lodash";
+import _, { flatten, matches, some, toLower, trim, uniq, without } from "lodash";
 import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
@@ -97,6 +97,7 @@ type BoomBoxOptions<Requester = any> = {
 
   onInsertRequestTrack?: OnInsertRequestTrack<Requester>;
 }
+
 export type DeckInfo = {
   trackPlay?: BoomBoxTrackPlay;
   playing: boolean;
@@ -311,7 +312,11 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   unrequest(requestIds: number[]) {
     const all = new Set(requestIds);
-    return this.requests.removeBy(r => all.has(r.rid));
+    const removed = this.requests.removeBy(r => all.has(r.rid));
+    return {
+      removed,
+      invalid: without(requestIds, ...removed.map(r => r.rid))
+    }
   }
 
   private enqueue: EnqueueListener = async (done) => {

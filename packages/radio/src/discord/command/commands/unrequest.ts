@@ -3,7 +3,7 @@ import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSe
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, reply, makeHighlightedMessage, HighlightTextType } from "../utils";
-import { AudienceType, makeRequestAudience } from '@seamless-medley/core';
+import { AudienceType, isRequestTrack, makeRequestAudience } from '@seamless-medley/core';
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -93,13 +93,24 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       onGoing.delete(runningKey);
 
       const requestIds = i.values.map(v => parseInt(v, 36));
-      const removed = station.unrequest(requestIds);
+      const unrequested = station.unrequest(requestIds);
+
+      let alreadyLoaded = false;
+
+      if (unrequested.invalid) {
+        alreadyLoaded = [0, 1, 2]
+          .map(i => station.getDeckInfo(i).trackPlay?.track)
+          .filter(isRequestTrack)
+          .some(t => requestIds.includes(t.rid))
+      }
 
       i.update({
         components: [],
-        content: makeHighlightedMessage(`OK, ${removed.length} track(s) canceled`, HighlightTextType.Cyan)
+        content: makeHighlightedMessage([
+          `OK, ${unrequested.removed.length} track(s) canceled`,
+          alreadyLoaded ? 'Some tracks are loaded' : undefined
+        ], HighlightTextType.Cyan)
       });
-
     });
 
     collector.on('end', x => {
