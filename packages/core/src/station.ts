@@ -86,6 +86,7 @@ export type SweeperConfig = {
   path: string;
 }
 
+// TODO: Union with SweeperInsertionRule
 export type SweeperRule = SweeperConfig;
 
 export enum AudienceType {
@@ -314,6 +315,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
       this.logger.info('Playing paused');
     }
+
   }
 
   async requestAudioStream(options: RequestAudioOptions) {
@@ -382,7 +384,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
     return 0;
   }
-
 
   private sweepers: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
 

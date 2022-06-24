@@ -1194,7 +1194,7 @@ private:
             }
 
             if (source == &btnPause) {
-                medley.togglePause();
+                medley.togglePause(false);
                 updatePauseButton();
                 return;
             }

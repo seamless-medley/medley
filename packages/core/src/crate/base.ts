@@ -73,8 +73,6 @@ export class Crate<T extends Track<any>, M = never> {
     const { chance, limit } = this;
 
     if (chance) {
-      this.logger.debug('Selecting from chances', chance.chances?.());
-
       const selected = await chance.next();
 
       this.logger.debug('selected', selected);

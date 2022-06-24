@@ -6,18 +6,19 @@
 #include "ReductionCalculator.h"
 #include "LookAheadReduction.h"
 
-using namespace juce::dsp;
+using namespace juce;
+using namespace dsp;
 
 class LookAheadLimiter : public ProcessorBase
 {
 public:
     LookAheadLimiter();
 
-    void prepare(const ProcessSpec& spec);
+    void prepare(const ProcessSpec& spec) override;
 
-    void process(const ProcessContextReplacing<float>& context);
+    void process(const ProcessContextReplacing<float>& context) override;
 
-    void reset();
+    void reset() override;
 
     /**
      * Reduction in dB
@@ -38,7 +39,7 @@ private:
         friend class LookAheadLimiter;
 
         ProcessSpec spec = { -1, 0, 0 };
-        float delayPeriod;
+        float delayPeriod = 0.0f;
         int delayInSamples = 0;
         bool bypassed = false;
         int writePosition = 0;
@@ -52,4 +53,3 @@ private:
     LookAheadReduction lookAheadFadeIn;
     juce::AudioBuffer<float> sideChainBuffer;
 };
-
