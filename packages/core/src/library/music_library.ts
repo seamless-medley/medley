@@ -40,24 +40,15 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       .map(desc => this.addCollection(desc))
     );
 
+    this.emit('ready');
+
     this.logger.debug('Loading auxiliary collections');
     const auxCollections: typeof normalCollections = [];
 
     const aux = descriptors.filter(desc => desc.auxiliary);
-    let count: number;
-
-    const setCount = (newCount: number) => {
-      count = newCount;
-
-      if (count <= 0) {
-        this.emit('ready');
-      }
-    }
-
-    setCount(aux.length);
 
     for (const descriptor of aux) {
-      const collection = await this.addCollection(descriptor, () => setCount(count - 1));
+      const collection = await this.addCollection(descriptor);
       await breath();
       auxCollections.push(collection);
     }
