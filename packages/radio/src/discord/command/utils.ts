@@ -1,7 +1,7 @@
 import { getTrackBanner, RequestTrack, TrackPeek, Station, RequestAudience } from "@seamless-medley/core";
 import { APIMessage } from "discord-api-types/v9";
 import { BaseCommandInteraction, Interaction, InteractionReplyOptions, Message, MessageComponentInteraction, MessagePayload, PermissionResolvable, Permissions, User } from "discord.js";
-import { castArray, maxBy, padStart } from "lodash";
+import { castArray, isString, maxBy, padStart } from "lodash";
 import { MedleyAutomaton } from "../automaton";
 import { CommandError } from "./type";
 
@@ -13,11 +13,11 @@ export enum HighlightTextType {
 
 type ReplyableInteraction = BaseCommandInteraction | MessageComponentInteraction;
 
-export function makeHighlightedMessage(s: string | string[], type: HighlightTextType, mention?: string) {
+export function makeHighlightedMessage(s: string | (string | undefined)[], type: HighlightTextType, mention?: string) {
   const isRed = type === HighlightTextType.Red;
   return (mention ? `<${mention}>` : '') +
     '```' + type + '\n' +
-    castArray(s).map(line => (isRed ? '-' : '') + line).join('\n') + '\n' +
+    castArray(s).filter(isString).map(line => (isRed ? '-' : '') + line).join('\n') + '\n' +
     '```'
     ;
 }
