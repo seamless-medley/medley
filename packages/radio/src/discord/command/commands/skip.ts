@@ -20,6 +20,7 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
   permissionGuard(interaction.memberPermissions, [
     Permissions.FLAGS.MANAGE_CHANNELS,
     Permissions.FLAGS.MANAGE_GUILD,
+    Permissions.FLAGS.MUTE_MEMBERS,
     Permissions.FLAGS.MOVE_MEMBERS
   ]);
 
