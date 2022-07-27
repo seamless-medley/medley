@@ -1,5 +1,5 @@
 import { decibelsToGain, gainToDecibels } from "@seamless-medley/core";
-import { CommandInteraction } from "discord.js";
+import { ChatInputCommandInteraction, CommandInteraction } from "discord.js";
 import { round } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { accept, guildIdGuard, warn } from "../utils";
@@ -22,7 +22,7 @@ const declaration: SubCommandLikeOption = {
 
 const g2d = (g: number) => round(gainToDecibels(g));
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const guildId = guildIdGuard(interaction);
 
   const oldGain = automaton.getGain(guildId);

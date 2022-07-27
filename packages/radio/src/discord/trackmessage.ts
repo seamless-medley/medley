@@ -1,6 +1,29 @@
-import { RequestAudience, BoomBoxTrack, BoomBoxTrackPlay, isRequestTrack, Metadata, MusicLibraryMetadata, Station, extractAudienceGroup, AudienceType } from "@seamless-medley/core";
-import { Message, MessageActionRow, MessageAttachment, MessageButton, MessageEmbed, MessageOptions } from "discord.js";
-import { capitalize, isEmpty, get } from "lodash";
+import {
+  RequestAudience,
+  BoomBoxTrack,
+  BoomBoxTrackPlay,
+  isRequestTrack,
+  Metadata,
+  MusicLibraryMetadata,
+  Station,
+  extractAudienceGroup,
+  AudienceType
+} from "@seamless-medley/core";
+
+import {
+  Message,
+  ButtonStyle,
+  ActionRowBuilder,
+  AttachmentBuilder,
+  ButtonBuilder,
+  EmbedBuilder,
+  MessageActionRowComponentBuilder,
+  MessageOptions,
+  MessageEditOptions
+} from "discord.js";
+
+import { capitalize,
+  isEmpty, get } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from 'path';
 
@@ -14,11 +37,11 @@ export enum TrackMessageStatus {
 export type TrackMessage = {
   trackPlay: BoomBoxTrackPlay;
   status: TrackMessageStatus;
-  embed: MessageEmbed;
-  coverImage?: MessageAttachment;
+  embed: EmbedBuilder;
+  coverImage?: AttachmentBuilder;
   buttons: {
-    skip?: MessageButton,
-    lyric?: MessageButton
+    skip?: ButtonBuilder,
+    lyric?: ButtonBuilder
   };
   sentMessage?: Message;
   lyricMessage?: Message;
@@ -29,13 +52,13 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
   const requestedBy = requested?.requestedBy;
   const track  = actualTrack ?? requested?.original ?? trackPlay.track;
 
-  const embed = new MessageEmbed()
-    .setColor('RANDOM')
+  const embed = new EmbedBuilder()
+    .setColor('Random')
     .setTitle(requestedBy?.length ? 'Playing your request' : 'Playing');
 
   const { metadata } = track;
 
-  let coverImage: MessageAttachment | undefined;
+  let coverImage: AttachmentBuilder | undefined;
 
   if (metadata) {
     const { tags, maybeCoverAndLyrics } = metadata;
@@ -53,7 +76,7 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
         ).toString();
 
         if (!isEmpty(val)) {
-          embed.addField(capitalize(tag), `> ${val}`, true);
+          embed.addFields({ name: capitalize(tag), value: `> ${val}`, inline: true });
         }
       }
     }
@@ -64,10 +87,10 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
       const { cover, coverMimeType } = coverAndLyrics;
 
       if (cover.length) {
-        embed.setColor('RANDOM');
+        embed.setColor('Random');
 
         const ext = mime.extension(coverMimeType);
-        coverImage = new MessageAttachment(cover, `cover.${ext}`);
+        coverImage = new AttachmentBuilder(cover, { name: `cover.${ext}` });
       }
 
     }
@@ -78,8 +101,10 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
   if (track.collection.metadata) {
     const { description, owner: station } = track.collection.metadata as MusicLibraryMetadata<Station>;
 
-    embed.addField('Collection', description ?? track.collection.id);
-    embed.addField('Station', station.name);
+    embed.addFields(
+      { name: 'Collection', value: description ?? track.collection.id },
+      { name: 'Station', value: station.name }
+    );
   }
 
   const requesters = (requestedBy || [])
@@ -96,19 +121,19 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
 
   if (requestedBy?.length) {
     const mentions =  requesters.length > 0 ? requesters.map(id =>  `<@${id}>`).join(' ') : '> `Someone else`';
-    embed.addField('Requested by', mentions);
+    embed.addFields({ name: 'Requested by', value: mentions });
   }
 
-  const lyricButton = new MessageButton()
+  const lyricButton = new ButtonBuilder()
     .setLabel('Lyrics')
     .setEmoji('📜')
-    .setStyle('SECONDARY')
+    .setStyle(ButtonStyle.Secondary)
     .setCustomId(`lyrics:${track.id}`);
 
-  const skipButton = new MessageButton()
+  const skipButton = new ButtonBuilder()
     .setLabel('Skip')
     .setEmoji('⛔')
-    .setStyle('DANGER')
+    .setStyle(ButtonStyle.Danger)
     .setCustomId(`skip:${trackPlay.uuid}`);
 
   return {
@@ -123,15 +148,17 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
   };
 }
 
-export function trackMessageToMessageOptions(msg: TrackMessage): MessageOptions {
+export type TrackMessageOptions = Pick<MessageOptions & MessageEditOptions, 'embeds' | 'files' | 'components'> ;
+
+export function trackMessageToMessageOptions<T>(msg: TrackMessage): TrackMessageOptions {
   const { embed, coverImage, buttons } = msg;
 
   const { lyric, skip } = buttons;
 
-  let actionRow: MessageActionRow | undefined = undefined;
+  let actionRow: ActionRowBuilder<MessageActionRowComponentBuilder> | undefined = undefined;
 
   if (lyric || skip) {
-    actionRow = new MessageActionRow();
+    actionRow = new ActionRowBuilder();
 
     if (lyric) {
       actionRow.addComponents(lyric);

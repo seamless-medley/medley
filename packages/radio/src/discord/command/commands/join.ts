@@ -1,4 +1,4 @@
-import { CommandInteraction, MessageEmbed, Permissions } from "discord.js";
+import { ChatInputCommandInteraction, EmbedBuilder, PermissionsBitField } from "discord.js";
 import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deny, guildIdGuard, HighlightTextType, makeHighlightedMessage, permissionGuard, reply, warn } from "../utils";
 import { createStationSelector } from "./tune";
@@ -18,10 +18,10 @@ const declaration: SubCommandLikeOption = {
   ]
 }
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   permissionGuard(interaction.memberPermissions, [
-    Permissions.FLAGS.MANAGE_CHANNELS,
-    Permissions.FLAGS.MANAGE_GUILD
+    PermissionsBitField.Flags.ManageChannels,
+    PermissionsBitField.Flags.ManageGuild
   ]);
 
   const channel = interaction.options.getChannel('channel');
@@ -32,7 +32,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
   const channelToJoin = automaton.client.channels.cache.get(channel.id);
 
-  if (!channelToJoin?.isVoice()) {
+  if (!channelToJoin?.isVoiceBased())  {
     deny(interaction, 'Cannot join non-voice channel');
     return;
   }
@@ -55,13 +55,13 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   const createEmbed = () => {
     const stationName = state.stationLink?.station?.name;
 
-    const embed = new MessageEmbed()
-      .setColor('RANDOM')
+    const embed = new EmbedBuilder()
+      .setColor('Random')
       .setTitle('Joined')
-      .addField('Channel', channel?.toString());
+      .addFields({ name: 'Channel', value: channel?.toString() });
 
     if (stationName) {
-      embed.addField('Station', stationName);
+      embed.addFields({ name: 'Station', value: stationName });
     }
 
     return embed;

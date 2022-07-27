@@ -1,7 +1,7 @@
 /// <reference path="../types.d.ts" />
 
 import { REST as RestClient } from "@discordjs/rest";
-import { Routes } from "discord-api-types/v9";
+import { Routes, OAuth2Scopes, PermissionFlagsBits } from "discord-api-types/v10";
 
 import {
   AudioPlayer,
@@ -18,8 +18,9 @@ import {
 import {
   BaseGuildTextChannel,
   BaseGuildVoiceChannel, Client, Guild,
-  Intents, Message,
-  Snowflake, VoiceBasedChannel, VoiceState
+  GatewayIntentBits, Message,
+  OAuth2Guild,
+  Snowflake, VoiceBasedChannel, VoiceState, ChannelType, PermissionsBitField
 } from "discord.js";
 
 import {
@@ -132,10 +133,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     this.client = new Client({
       intents: [
-        Intents.FLAGS.GUILDS,
-        Intents.FLAGS.GUILD_MESSAGES,
-        Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
-        Intents.FLAGS.GUILD_VOICE_STATES,
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.GuildVoiceStates
       ]
     });
 
@@ -255,7 +256,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       const { channelId } = newLink.voiceConnection.joinConfig;
       if (channelId) {
         const channel = this.client.guilds.cache.get(guildId)?.channels.cache.get(channelId);
-        if (channel?.isVoice()) {
+        if (channel?.type === ChannelType.GuildVoice) {
           this.updateStationAudiences(selectedStation, channel);
         }
       }
@@ -370,7 +371,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   private handleClientReady = async (client: Client) => {
     const guilds = await client.guilds.fetch();
 
-    await Promise.all(guilds.map((guild) => {
+    await Promise.all(guilds.map((guild: OAuth2Guild) => {
       this.ensureGuildState(guild.id);
       return this.registerCommands(guild.id);
     }));
@@ -403,7 +404,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     const audienceGroup = makeAudienceGroup(guildId);
 
-    const isMe = (newState.member.id === newState.guild.me?.id);
+    const isMe = (newState.member.id === this.client.user?.id);
 
     if (isMe) {
       if (channelChange === 'leave') {
@@ -593,13 +594,15 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
             const { sentMessage } = msg;
 
             if (sentMessage?.editable) {
-              sentMessage.edit(trackMessageToMessageOptions({
+              const { embeds, components } = trackMessageToMessageOptions({
                 ...msg,
                 buttons: {
                   lyric: showLyrics ? msg.buttons.lyric : undefined,
                   skip: showSkip ? msg.buttons.skip : undefined
                 }
-              }));
+              });
+
+              sentMessage.edit({ embeds, components });
             }
           }
         }
@@ -618,13 +621,15 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
         const { sentMessage } = msg;
         if (sentMessage?.editable) {
-          sentMessage.edit(trackMessageToMessageOptions({
+          const { embeds, components } = trackMessageToMessageOptions({
             ...msg,
             buttons: {
               lyric: undefined,
               skip: showSkipButton ? msg.buttons.skip : undefined
             }
-          }));
+          });
+
+          sentMessage.edit({ embeds, components });
         }
       }
     }
@@ -678,7 +683,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
         if (guild && voiceChannelId) {
           const channel = textChannelId ? guild.channels.cache.get(textChannelId) : undefined;
-          const textChannel = channel?.isText() ? channel : undefined;
+          const textChannel = channel?.type == ChannelType.GuildText ? channel : undefined;
 
           const trackMsg = await createTrackMessage(guildId, trackPlay, station.findTrackById(trackPlay.track.id));
 

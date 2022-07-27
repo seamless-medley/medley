@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSelectMenu, MessageSelectOptionData } from "discord.js";
+import { CommandInteraction, Message, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle, ComponentType, MessageActionRowComponentBuilder } from "discord.js";
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, reply, makeHighlightedMessage, HighlightTextType } from "../utils";
@@ -37,7 +37,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     return;
   }
 
-  const selections = requests.slice(0, 25).map<MessageSelectOptionData>(request => ({
+  const selections = requests.slice(0, 25).map(request => ({
     label: truncate(request.metadata?.tags?.title || parsePath(request.path).name, { length: 100 }),
     description: request.metadata?.tags?.title ? truncate(request.metadata?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined,
     value: request.rid.toString(36),
@@ -48,9 +48,9 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     fetchReply: true,
     content: 'Requests:',
     components: [
-      new MessageActionRow()
+      new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
-          new MessageSelectMenu()
+          new SelectMenuBuilder()
             .setCustomId('unrequest')
             .setPlaceholder('Select tracks to cancel')
             .setMinValues(0)
@@ -58,12 +58,12 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
             .addOptions(selections)
         ),
 
-      new MessageActionRow()
+      new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId('cancel_unrequest')
             .setLabel('Cancel')
-            .setStyle('SECONDARY')
+            .setStyle(ButtonStyle.Secondary)
             .setEmoji('❌')
         )
     ]
@@ -75,7 +75,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     let done = false;
 
     const collector = selector.createMessageComponentCollector({
-      componentType: 'SELECT_MENU',
+      componentType: ComponentType.SelectMenu,
       time: 90_000
     });
 
@@ -125,7 +125,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     });
 
     selector.awaitMessageComponent({
-      componentType: 'BUTTON',
+      componentType: ComponentType.Button,
       filter: i => {
         i.deferUpdate();
         return i.customId === 'cancel_unrequest' && i.user.id === issuer;

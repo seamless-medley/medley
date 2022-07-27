@@ -1,4 +1,4 @@
-import { CommandInteraction } from "discord.js";
+import { ChatInputCommandInteraction } from "discord.js";
 import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildIdGuard, reply } from "../utils";
 
@@ -17,7 +17,7 @@ const declaration: SubCommandLikeOption = {
   ]
 }
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automation) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automation) => async (interaction) => {
   const guildId = guildIdGuard(interaction);
 
   const state = automation.getGuildState(guildId);

@@ -1,5 +1,5 @@
 import { AudienceType, extractAudienceGroup, isRequestTrack, RequestAudience } from "@seamless-medley/core";
-import { ButtonInteraction, CommandInteraction, Permissions } from "discord.js";
+import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { accept, deny, guildStationGuard, permissionGuard, reply } from "../utils";
@@ -18,10 +18,10 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
   permissionGuard(interaction.memberPermissions, [
-    Permissions.FLAGS.MANAGE_CHANNELS,
-    Permissions.FLAGS.MANAGE_GUILD,
-    Permissions.FLAGS.MUTE_MEMBERS,
-    Permissions.FLAGS.MOVE_MEMBERS
+    PermissionsBitField.Flags.ManageChannels,
+    PermissionsBitField.Flags.ManageGuild,
+    PermissionsBitField.Flags.MuteMembers,
+    PermissionsBitField.Flags.MoveMembers
   ]);
 
   const { trackPlay } = station;

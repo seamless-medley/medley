@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionChoice, AutocompleteInteraction } from "discord.js";
+import { ApplicationCommandOptionChoiceData, AutocompleteInteraction } from "discord.js";
 import _ from "lodash";
 import { InteractionHandlerFactory } from "../../type";
 import { guildStationGuard } from "../../utils";
@@ -18,7 +18,7 @@ export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteIn
 
   const completions = _(suggestions)
       .take(25)
-      .map<ApplicationCommandOptionChoice>(s => ({ name: s, value: s }))
+      .map<ApplicationCommandOptionChoiceData>(s => ({ name: s, value: s }))
       .value()
 
   interaction.respond(completions);

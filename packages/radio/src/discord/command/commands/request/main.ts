@@ -1,5 +1,15 @@
 import { BoomBoxTrack, MusicLibraryMetadata, Station } from "@seamless-medley/core";
-import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageSelectMenu, MessageSelectOptionData } from "discord.js";
+import {
+  Message,
+  ActionRowBuilder,
+  ButtonBuilder,
+  SelectMenuBuilder,
+  ChatInputCommandInteraction,
+  ComponentType,
+  ButtonStyle,
+  SelectMenuComponentOptionData,
+  MessageActionRowComponentBuilder
+} from "discord.js";
 import _, { isNull, truncate, uniq, zip } from "lodash";
 import { parse as parsePath, extname } from 'path';
 import { InteractionHandlerFactory } from "../../type";
@@ -8,7 +18,7 @@ import { handleSelectMenu } from "./selectmenu";
 
 const onGoing = new Set<string>();
 
-export const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
+export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
   const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f));
@@ -66,7 +76,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
     return;
   }
 
-  type Selection = MessageSelectOptionData & {
+  type Selection = SelectMenuComponentOptionData & {
     track: BoomBoxTrack;
     group: string;
     distillations: string[];
@@ -121,19 +131,19 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
   const selector = await reply(interaction, {
     content: 'Search result:',
     components: [
-      new MessageActionRow()
+      new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
-          new MessageSelectMenu()
+          new SelectMenuBuilder()
             .setCustomId('request')
             .setPlaceholder('Select a track')
             .addOptions(selections)
         ),
-      new MessageActionRow()
+      new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId('cancel_request')
             .setLabel('Cancel')
-            .setStyle('SECONDARY')
+            .setStyle(ButtonStyle.Secondary)
             .setEmoji('❌')
         )
     ],
@@ -146,7 +156,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
     let done = false;
 
     const collector = selector.createMessageComponentCollector({
-      componentType: 'SELECT_MENU',
+      componentType: ComponentType.SelectMenu,
       time: 90_000
     });
 
@@ -178,7 +188,7 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
     });
 
     selector.awaitMessageComponent({
-      componentType: 'BUTTON',
+      componentType: ComponentType.Button,
       filter: (i) => {
         i.deferUpdate();
         return i.customId === 'cancel_request' && i.user.id === issuer;
@@ -197,6 +207,6 @@ export const createCommandHandler: InteractionHandlerFactory<CommandInteraction>
         }
       }
     })
-    .catch(() => onGoing.delete(runningKey));
+    .catch(() => onGoing.delete(runningKey)); // TODO: Logging
   }
 }

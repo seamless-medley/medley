@@ -1,8 +1,15 @@
 import {
   APIApplicationCommandOption as DiscordCommandOption,
   RESTPostAPIApplicationCommandsJSONBody
-} from "discord-api-types/v9";
-import { AutocompleteInteraction, ButtonInteraction, CommandInteraction, Interaction } from "discord.js";
+} from "discord-api-types/v10";
+
+import {
+  AutocompleteInteraction,
+  BaseInteraction,
+  ButtonInteraction,
+  ChatInputCommandInteraction
+} from "discord.js";
+
 import { MedleyAutomaton } from "../automaton";
 
 export enum CommandType {
@@ -82,13 +89,13 @@ type MinMaxCommandOption = BasicCommandOption & {
 
 export type CommandOption = BasicCommandOption | ChoiceCommandOption | MinMaxCommandOption | ChannelCommandOption | SubCommandLikeOption;
 
-export type InteractionHandler<T extends Interaction> = (interaction: T, ...args: any) => Promise<any>;
+export type InteractionHandler<T extends BaseInteraction> = (interaction: T, ...args: any) => Promise<any>;
 
-export type InteractionHandlerFactory<T extends Interaction> = (automaton: MedleyAutomaton) => InteractionHandler<T>;
+export type InteractionHandlerFactory<T extends BaseInteraction> = (automaton: MedleyAutomaton) => InteractionHandler<T>;
 
 export type CommandDescriptor = {
   declaration?: SubCommandLikeOption,
-  createCommandHandler?: InteractionHandlerFactory<CommandInteraction>;
+  createCommandHandler?: InteractionHandlerFactory<ChatInputCommandInteraction>;
   createButtonHandler?: InteractionHandlerFactory<ButtonInteraction>;
   createAutocompleteHandler?: InteractionHandlerFactory<AutocompleteInteraction>;
 }

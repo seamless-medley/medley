@@ -1,6 +1,17 @@
 import { getTrackBanner, RequestTrack, TrackPeek, Station, RequestAudience } from "@seamless-medley/core";
-import { APIMessage } from "discord-api-types/v9";
-import { BaseCommandInteraction, Interaction, InteractionReplyOptions, Message, MessageComponentInteraction, MessagePayload, PermissionResolvable, Permissions, User } from "discord.js";
+import {
+  BaseInteraction,
+  CommandInteraction,
+  InteractionReplyOptions,
+  InteractionResponse,
+  InteractionType,
+  Message,
+  MessageComponentInteraction,
+  MessagePayload,
+  PermissionResolvable,
+  PermissionsBitField
+} from "discord.js";
+
 import { castArray, isString, maxBy, padStart } from "lodash";
 import { MedleyAutomaton } from "../automaton";
 import { CommandError } from "./type";
@@ -11,7 +22,7 @@ export enum HighlightTextType {
   Red = 'diff'
 }
 
-type ReplyableInteraction = BaseCommandInteraction | MessageComponentInteraction;
+type ReplyableInteraction = CommandInteraction | MessageComponentInteraction;
 
 export function makeHighlightedMessage(s: string | (string | undefined)[], type: HighlightTextType, mention?: string) {
   const isRed = type === HighlightTextType.Red;
@@ -27,7 +38,7 @@ export const reply = async (interaction: ReplyableInteraction, options: string |
     ? interaction.reply(options)
     : interaction.editReply(options);
 
-type SimpleDeclareFn = (interaction: ReplyableInteraction, s: string, mention?: string, ephemeral?: boolean) => Promise<void | Message<boolean> | APIMessage>;
+type SimpleDeclareFn = (interaction: ReplyableInteraction, s: string, mention?: string, ephemeral?: boolean) => Promise<Message<boolean> | InteractionResponse<boolean>>;
 
 export const declare = (interaction: ReplyableInteraction, type: HighlightTextType, s: string, mention?: string, ephemeral?: boolean) => reply(interaction, {
   content: makeHighlightedMessage(s, type, mention),
@@ -43,17 +54,17 @@ export const deny: SimpleDeclareFn = (interaction, s, mention?, ephemeral?) =>
 export const warn: SimpleDeclareFn = (interaction, s, mention?, ephemeral?) =>
   declare(interaction, HighlightTextType.Yellow, s, mention, ephemeral);
 
-export function permissionGuard(permissions: Permissions | null, perm: PermissionResolvable, checkAdmin: boolean = true) {
+export function permissionGuard(permissions: PermissionsBitField | null, perm: PermissionResolvable, checkAdmin: boolean = true) {
   if (permissions && !permissions?.any(perm, checkAdmin)) {
     throw new CommandError('Insufficient permissions');
   }
 }
 
-export function isReplyable(interaction: Interaction): interaction is ReplyableInteraction {
-  return interaction.isApplicationCommand() || interaction.isMessageComponent();
+export function isReplyable(interaction: BaseInteraction): interaction is ReplyableInteraction {
+  return interaction.type === InteractionType.ApplicationCommand || interaction.type === InteractionType.MessageComponent;
 }
 
-export function guildIdGuard(interaction: Interaction): string {
+export function guildIdGuard(interaction: BaseInteraction): string {
 
   const { guildId } = interaction;
 
@@ -64,7 +75,7 @@ export function guildIdGuard(interaction: Interaction): string {
   return guildId;
 }
 
-export function guildStationGuard(automaton: MedleyAutomaton, interaction: Interaction): { guildId: string, station: Station } {
+export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseInteraction): { guildId: string, station: Station } {
   const guildId = guildIdGuard(interaction);
   const station = automaton.getTunedStation(guildId);
 

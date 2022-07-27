@@ -1,5 +1,5 @@
 import { RequestAudience, AudienceType, getTrackBanner, makeRequestAudience, RequestTrack, TrackPeek } from "@seamless-medley/core";
-import { CommandInteraction, Message, MessageEmbed, MessageReaction, } from "discord.js";
+import { CommandInteraction, Message, EmbedBuilder, MessageReaction, } from "discord.js";
 import { chain, isEqual, keyBy, sampleSize, take } from "lodash";
 import * as emojis from "../../emojis";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
@@ -66,9 +66,9 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   const message = await interaction.reply({
     content: createMessageContent(),
     embeds: [
-      new MessageEmbed()
+      new EmbedBuilder()
         .setTitle('Vote')
-        .setColor('RANDOM')
+        .setColor('Random')
         .setDescription('Click on a reaction emoji to vote for that song')
     ],
     fetchReply: true
@@ -178,12 +178,12 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
         .map(id => `<@${id}>`)
         .value();
 
-      const embed = new MessageEmbed()
+      const embed = new EmbedBuilder()
         .setTitle('Vote Results')
-        .setColor('RANDOM');
+        .setColor('Random');
 
       if (contributorMentions.length) {
-        embed.addField('Contributed by', contributorMentions.join(' '))
+        embed.addFields({ name: 'Contributed by', value: contributorMentions.join(' ')});
       }
 
       await msg.reply({

@@ -1,4 +1,17 @@
-import { CommandInteraction, Message, MessageActionRow, MessageButton, MessageEmbed, MessageSelectMenu, MessageSelectOptionData, Permissions, SelectMenuInteraction } from "discord.js";
+import {
+  CommandInteraction,
+  Message,
+  ActionRowBuilder,
+  ButtonBuilder,
+  EmbedBuilder,
+  SelectMenuBuilder,
+  PermissionsBitField,
+  SelectMenuInteraction,
+  ButtonStyle,
+  ComponentType,
+  MessageActionRowComponentBuilder
+} from "discord.js";
+
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deny, guildIdGuard, HighlightTextType, makeHighlightedMessage, permissionGuard, reply } from "../utils";
@@ -11,8 +24,8 @@ const declaration: SubCommandLikeOption = {
 
 const handleStationSelection = async (automaton: MedleyAutomaton, interaction: SelectMenuInteraction) => {
   permissionGuard(interaction.memberPermissions, [
-    Permissions.FLAGS.MANAGE_CHANNELS,
-    Permissions.FLAGS.MANAGE_GUILD
+    PermissionsBitField.Flags.ManageChannels,
+    PermissionsBitField.Flags.ManageGuild
   ]);
 
   const guildId = guildIdGuard(interaction);
@@ -27,10 +40,10 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
         content: null,
         components: [],
         embeds: [
-          new MessageEmbed()
-            .setColor('RANDOM')
+          new EmbedBuilder()
+            .setColor('Random')
             .setTitle('Tuned In')
-            .addField('Station', ok.name)
+            .addFields({ name: 'Station', value: ok.name })
         ]
       });
 
@@ -58,7 +71,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
 
   const issuer = interaction.user.id;
 
-  const listing = stations.map<MessageSelectOptionData>(station => ({
+  const listing = stations.map(station => ({
     label: station.name,
     value: station.id,
     description: station.description,
@@ -68,19 +81,19 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
   const selector = await reply(interaction, {
     content: 'Select a station:',
     components: [
-      new MessageActionRow()
+      new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
-          new MessageSelectMenu()
+          new SelectMenuBuilder()
             .setCustomId('tune')
             .setPlaceholder('Select a station')
             .addOptions(listing)
         ),
-      new MessageActionRow()
+      new ActionRowBuilder<MessageActionRowComponentBuilder>()
           .addComponents(
-            new MessageButton()
+            new ButtonBuilder()
               .setCustomId('cancel_tune')
               .setLabel('Cancel')
-              .setStyle('SECONDARY')
+              .setStyle(ButtonStyle.Secondary)
               .setEmoji('❌')
         )
     ],
@@ -91,7 +104,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     let done = false;
 
     const collector = selector.createMessageComponentCollector({
-      componentType: 'SELECT_MENU',
+      componentType: ComponentType.SelectMenu,
       time: 30_000
     });
 
@@ -121,7 +134,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     });
 
     selector.awaitMessageComponent({
-      componentType: 'BUTTON',
+      componentType: ComponentType.Button,
       filter: (i) => {
         i.deferUpdate();
         return i.customId === 'cancel_tune' && i.user.id === issuer;

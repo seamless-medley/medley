@@ -1,5 +1,5 @@
 import { BoomBoxTrack, CoverAndLyrics, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics } from "@seamless-medley/core";
-import { ButtonInteraction, Message, MessageAttachment, MessageEmbed } from "discord.js";
+import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
 import { deny, guildStationGuard, reply, warn } from "../utils";
@@ -82,14 +82,16 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
 
   const lyricMessage = await reply(interaction, {
     embeds: [
-      new MessageEmbed()
+      new EmbedBuilder()
         .setTitle('Lyrics')
         .setDescription(banner)
-        .addField('Requested by', `${interaction.member}`, true)
-        .addField('Source', source, true)
+        .addFields(
+          { name: 'Requested by', value: `${interaction.member}`, inline: true },
+          { name: 'Source', value: source, inline: true }
+        )
     ],
     files: [
-      new MessageAttachment(Buffer.from(lyricsText), 'lyrics.txt')
+      new AttachmentBuilder(Buffer.from(lyricsText), { name: 'lyrics.txt' })
     ],
     fetchReply: true
   });

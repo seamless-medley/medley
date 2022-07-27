@@ -1,4 +1,4 @@
-import { AutocompleteInteraction, ButtonInteraction, CommandInteraction, Interaction } from "discord.js";
+import { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Interaction, InteractionType } from "discord.js";
 import _ from "lodash";
 import { createLogger } from "@seamless-medley/core";
 import join from "./commands/join";
@@ -41,7 +41,7 @@ export const createCommandDeclarations = (name: string = 'medley', description: 
 }
 
 type Handlers = {
-  command?: InteractionHandler<CommandInteraction>;
+  command?: InteractionHandler<ChatInputCommandInteraction>;
   button?: InteractionHandler<ButtonInteraction>;
   autocomplete?: InteractionHandler<AutocompleteInteraction>;
 }
@@ -61,7 +61,7 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
     }
 
     try {
-      if (interaction.isCommand()) {
+      if (interaction.isChatInputCommand()) {
         if (interaction.commandName !== baseName) {
           return;
         }
@@ -86,7 +86,7 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
         return await handler?.button?.(interaction, ...params);
       }
 
-      if (interaction.isAutocomplete()) {
+      if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
         if (interaction.commandName !== baseName) {
           return;
         }
