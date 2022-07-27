@@ -113,6 +113,8 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
         overseer.respawn();
       }
 
+      currentTrackPlay = station.trackPlay;
+
       const transformers: Transform[] = [];
 
       const mux = new MetadataMux(needMetadata ? metadataInterval : 0);
@@ -134,7 +136,7 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
         multiplexers.delete(mux);
 
         for (let i = 0; i < transformers.length - 1; i++) {
-          (transformers[i] as any).unpipe(transformers[i + 1]);
+          transformers[i].unpipe(transformers[i + 1]);
         }
 
         outlet.unpipe(first);
