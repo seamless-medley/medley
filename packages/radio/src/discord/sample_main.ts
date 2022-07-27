@@ -176,8 +176,6 @@ async function main() {
         metadataCache: cache
       });
 
-      // stations.add(station);
-
       station.once('ready', () => resolve(station));
     }))
   );
@@ -193,6 +191,8 @@ async function main() {
       botToken,
       clientId
     });
+
+    logger.info('OAUthURL', automaton.oAuth2Url.toString());
 
     automaton.once('ready', () => resolve(automaton));
 

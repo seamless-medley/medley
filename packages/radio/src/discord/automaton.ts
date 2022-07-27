@@ -695,7 +695,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
             }
           });
 
-          const d = (textChannel || guild.systemChannel)?.send(options).catch(() => undefined);
+          const d = (textChannel || guild.systemChannel)?.send(options).catch(e => void this.logger.prettyError(e));
 
           results.push([guildId, trackMsg, d]);
         }
@@ -721,6 +721,26 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     catch (e) {
       this.logger.error('Error registering command', e);
     }
+  }
+
+  get oAuth2Url() {
+    const scopes = [OAuth2Scopes.Bot, OAuth2Scopes.ApplicationsCommands];
+
+    const permissions = new PermissionsBitField(
+      PermissionFlagsBits.ViewChannel |
+      PermissionFlagsBits.SendMessages |
+      PermissionFlagsBits.AttachFiles |
+      PermissionFlagsBits.AddReactions |
+      PermissionFlagsBits.Connect |
+      PermissionFlagsBits.Speak
+    );
+
+    const url = new URL('/api/oauth2/authorize', 'https://discord.com')
+    url.searchParams.append('client_id', this.clientId);
+    url.searchParams.append('scope', scopes.join(' '));
+    url.searchParams.append('permissions', permissions.bitfield.toString());
+
+    return url;
   }
 }
 
