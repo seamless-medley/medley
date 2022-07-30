@@ -47,6 +47,7 @@
     "minimatch": "^5.0.1",
     "opusscript": "^0.0.8",
     "socket.io": "^4.4.0",
+    "socket.io-client": "^4.5.1",
     "tslog": "^3.3.2"
   },
   "devDependencies": {
