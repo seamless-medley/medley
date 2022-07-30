@@ -28,7 +28,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
   private collectionPaths = new Map<string, string>();
 
-  constructor(readonly id: string, readonly owner: O, readonly metadataCache: MetadataCache | undefined) {
+  constructor(readonly id: string, readonly owner: O, readonly metadataCache?: MetadataCache) {
     super();
   }
 
