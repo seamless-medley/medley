@@ -1,6 +1,7 @@
 #include "Deck.h"
 #include "utils.h"
-#include <inttypes.h>
+#include <cinttypes>
+#include <cstddef>
 
 namespace {
     static const auto kSilenceThreshold = Decibels::decibelsToGain(-60.0f);
