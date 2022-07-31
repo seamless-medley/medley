@@ -4,6 +4,7 @@ const { worker } = require('workerpool');
 const Keyv = require("keyv");
 const KeyvRedis = require('@keyv/redis');
 const KeyvSqlite = require('@keyv/sqlite');
+const KeyvMongo = require('@keyv/mongo');
 const { stubFalse, noop } = require('lodash');
 
 /** @typedef {import('./cache').MetadataCacheStore} MetadataCacheStore */
@@ -12,7 +13,9 @@ const { stubFalse, noop } = require('lodash');
 /** @type {Keyv} */
 let container;
 
-/** @param {MetadataCacheStore} config */
+/**
+ * @param {MetadataCacheStore} config
+ */
 function createStore(config) {
   if (config.type === 'sqlite') {
     return new KeyvSqlite({
@@ -23,6 +26,10 @@ function createStore(config) {
 
   if (config.type === 'redis') {
     return new KeyvRedis(config);
+  }
+
+  if (config.type === 'mongo') {
+    return new KeyvMongo(config);
   }
 }
 

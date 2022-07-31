@@ -1,6 +1,6 @@
 import type KeyvSqlite from '@keyv/sqlite';
 import type KeyvRedis from '@keyv/redis';
-
+import type KeyvMongo from '@keyv/mongo';
 
 import type { Metadata } from '@seamless-medley/medley';
 import type { BoomBoxTrack } from '../boombox';
@@ -15,7 +15,11 @@ export type MetadataCacheRedisStore = {
   type: 'redis';
 } & KeyvRedis.Options;
 
-export type MetadataCacheStore = MetadataCacheSqliteStore | MetadataCacheRedisStore;
+export type MetadataCacheMongoStore = {
+  type: 'mongo';
+} & KeyvMongo.Options;
+
+export type MetadataCacheStore = MetadataCacheSqliteStore | MetadataCacheRedisStore | MetadataCacheMongoStore;
 
 export type MetadataCacheOptions = {
   namespace?: string;
