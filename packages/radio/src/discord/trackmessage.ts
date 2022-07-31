@@ -99,7 +99,7 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
   }
 
   if (track.collection.metadata) {
-    const { description, owner: station } = track.collection.metadata as MusicLibraryMetadata<Station>;
+    const { descriptor: { description }, owner: station } = track.collection.metadata as MusicLibraryMetadata<Station>;
 
     embed.addFields(
       { name: 'Collection', value: description ?? track.collection.id },

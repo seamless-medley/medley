@@ -4,6 +4,7 @@ import _, { castArray, chain, find, findIndex, partition, reject, sample, shuffl
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
+import { moveArrayElements } from '../utils';
 
 export type TrackCollectionOptions<T extends Track<any>> = {
   tracksMapper?: (tracks: T[]) => Promise<T[]>;
@@ -102,14 +103,15 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
   }
 
   async add(paths: string | string[]): Promise<T[]> {
-    const immediateTracks = await Promise.all(chain(paths)
+    const validPaths = chain(paths)
       .castArray()
       .filter(p => /\.(mp3|flac|wav|ogg|aiff)$/i.test(p))
-      .uniq().map(p => this.createTrack(p))
-      .value()
-    );
+      .uniq()
+      .value();
 
+    const immediateTracks = await Promise.all(validPaths.map(p => this.createTrack(p)));
     await this.addTracks(immediateTracks);
+
     return immediateTracks;
   }
 
@@ -121,8 +123,6 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     const mapped = await tracksMapper?.(fresh) ?? fresh;
 
     if (mapped.length) {
-      this.logger.info('Adding', mapped.length, 'tracks');
-
       const [a, b] = (this.options.newTracksAddingMode === 'prepend') ? [mapped, this.tracks] : [this.tracks, mapped];
 
       this.tracks = a.concat(b);
@@ -148,14 +148,23 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     return removed;
   }
 
-  remove(item: string | string[]): T[] {
-    const toRemove = castArray(item).map(path => this.computePathId(path));
+  remove(paths: string | string[]): T[] {
+    const toRemove = castArray(paths).map(path => this.computePathId(path));
     return this.removeBy(track => toRemove.includes(track.id));
   }
 
-  removeTrack(track: T |T[]): T[] {
-    const toRemove = castArray(track).map(track => track.path);
+  removeTrack(tracks: T | T[]): T[] {
+    const toRemove = castArray(tracks).map(track => track.path);
     return this.remove(toRemove);
+  }
+
+  moveTrack(newPosition: number, tracks: T | T[]) {
+    moveArrayElements(this.tracks, newPosition, ...castArray(tracks));
+  }
+
+  move(newPosition: number, paths: string | string[]) {
+    const toMove = castArray(paths).map(path => this.trackIdMap.get(this.computePathId(path)));
+    moveArrayElements(this.tracks, newPosition, ...toMove);
   }
 
   async shuffle() {
@@ -219,7 +228,7 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     return this.tracks.values();
   }
 
-  all() {
+  all(): ReadonlyArray<T> {
     return [...this.tracks];
   }
 }

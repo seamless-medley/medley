@@ -1,4 +1,5 @@
-import { random, sample, sum } from "lodash";
+import { clamp, random, sample, subtract, sum, uniq } from "lodash";
+import { inRange } from 'lodash/fp';
 
 export const decibelsToGain = (decibels: number): number => decibels > -100 ? Math.pow(10, decibels * 0.05) : 0;
 
@@ -45,3 +46,59 @@ export const breath = () => waitFor(0);
 
 export const nextTick = () => new Promise<void>(resolve => process.nextTick(resolve));
 
+export function moveArrayIndexes<T>(list: Array<T>, newPosition: number, ...indexes: number[]): typeof list {
+  indexes = uniq(indexes.filter(inRange(0, list.length)));
+  newPosition = clamp(newPosition, 0, list.length - indexes.length);
+
+  const values = indexes.map(i => list[i]);
+  for (const index of indexes) {
+    list.splice(index, 1);
+  }
+
+  list.splice(newPosition, 0, ...values);
+  return list;
+}
+
+export function moveArrayElementsWithValidator<T>(list: Array<T>, newPosition: number, validator: (v: T) => boolean, ...values: Array<T>): typeof list {
+  values = uniq(values).filter(v => v && validator(v) === true);
+  newPosition = clamp(newPosition, 0, list.length - values.length);
+
+  for (const v of values) {
+    list.splice(list.indexOf(v), 1);
+  }
+
+  list.splice(newPosition, 0, ...values);
+  return list;
+}
+
+export function moveArrayElements<T>(list: Array<T>, newPosition: number, ...values: Array<T>): typeof list {
+  const set = new Set(list);
+  moveArrayElementsWithValidator(list, newPosition, v => set.has(v), ...values);
+  return list;
+}
+
+export function numbersToRanges(...numbers: number[]): [start: number, end: number][] {
+  const result: [start: number, end: number][] = [];
+
+  numbers = numbers.sort(subtract);
+
+  let prev = undefined;
+  let pair: [start: number, end: number] | undefined = undefined;
+
+  for (const n of numbers) {
+    if (prev && (n - prev > 1)) {
+      pair = undefined;
+    }
+
+    if (pair === undefined) {
+      pair = [n, 0];
+      result.push(pair);
+    }
+
+    pair[1] = n + 1;
+
+    prev = n;
+  }
+
+  return result;
+}

@@ -12,10 +12,10 @@ export type MusicLibraryDescriptor = {
   id: string;
   path: string;
   description?: string;
-  auxiliary?: boolean;
 } & Pick<TrackCollectionOptions<any>, 'reshuffleEvery' | 'newTracksAddingMode'>;
 
-export type MusicLibraryMetadata<O> = MusicLibraryDescriptor & {
+export type MusicLibraryMetadata<O> = {
+  descriptor: MusicLibraryDescriptor;
   owner: O;
 }
 
@@ -30,30 +30,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
   constructor(readonly id: string, readonly owner: O, readonly metadataCache?: MetadataCache) {
     super();
-  }
-
-  async loadCollections(descriptors: MusicLibraryDescriptor[]) {
-    this.logger.debug('Loading collections');
-
-    const normalCollections = await Promise.all(descriptors
-      .filter(desc => !desc.auxiliary)
-      .map(desc => this.addCollection(desc))
-    );
-
-    this.emit('ready');
-
-    this.logger.debug('Loading auxiliary collections');
-    const auxCollections: typeof normalCollections = [];
-
-    const aux = descriptors.filter(desc => desc.auxiliary);
-
-    for (const descriptor of aux) {
-      const collection = await this.addCollection(descriptor);
-      await breath();
-      auxCollections.push(collection);
-    }
-
-    return normalCollections.concat(auxCollections);
   }
 
   private handleTrackRemoval = (tracks: BoomBoxTrack[]) => {
@@ -111,17 +87,18 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       );
 
       newCollection.metadata = {
-        ...descriptor,
+        descriptor,
         owner: this.owner
       };
 
       newCollection.once('ready', () => {
         newCollection.shuffle();
         onceReady?.();
+        resolve(newCollection);
       });
 
       newCollection.on('tracksAdd', tracks => {
-        this.indexTracks(newCollection, tracks, () => resolve(newCollection));
+        this.indexTracks(newCollection, tracks, noop);
       });
 
 

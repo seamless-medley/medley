@@ -61,12 +61,9 @@ export type StationOptions = {
 
   useNullAudioDevice?: boolean;
 
-  musicCollections: MusicLibraryDescriptor[];
-
-  sequences: SequenceConfig[];
-
   intros?: TrackCollection<BoomBoxTrack>;
 
+  /** @deprecated */
   sweeperRules?: SweeperRule[];
 
   requestSweepers?: TrackCollection<BoomBoxTrack>;
@@ -83,6 +80,8 @@ export type StationOptions = {
 export type SweeperConfig = {
   from?: string[];
   to?: string[];
+
+  /** @deprecated Use TrackCollection instead */
   path: string;
 }
 
@@ -105,6 +104,7 @@ export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trac
   ready: () => void;
   requestTrackAdded: (track: TrackPeek<RequestTrack<RequestAudience>>) => void;
 }
+
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
   readonly id: string;
   readonly name: string;
@@ -116,7 +116,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   private boombox: BoomBox<RequestAudience>;
 
   readonly library: MusicLibrary<Station>;
-  private sequences: SequenceConfig[] = [];
 
   intros?: TrackCollection<BoomBoxTrack>;
   requestSweepers?: TrackCollection<BoomBoxTrack>;
@@ -127,7 +126,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private logger: Logger;
 
-  constructor(options: StationOptions) {
+  constructor(options: Omit<StationOptions, 'musicCollections' | 'sequences' | 'sweeperRules'>) {
     super();
 
     this.id = options.id;
@@ -150,8 +149,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       this.logger.info('Ready');
       this.emit('ready');
     });
-
-    this.library.loadCollections(options.musicCollections);
 
     // Create boombox
     const boombox = new BoomBox<RequestAudience>({
@@ -176,9 +173,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
     this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? false;
-
-    this.updateSequence(options.sequences);
-    this.updateSweeperRules(options.sweeperRules || []);
   }
 
   get availableAudioDevices() {
@@ -237,6 +231,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     }
 
+    // TODO: Fix this
     if (this.followCrateAfterRequestTrack) {
       const indices = this.boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
 
@@ -326,18 +321,9 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.medley.deleteAudioStream(streamId);
   }
 
-  async updateLibrary(collections: MusicLibraryDescriptor[]) {
-    await this.library.loadCollections(collections);
-    this.createCrates();
-  }
-
+  /** @deprecated Allow direct manipulation */
   updateSequence(sequences: SequenceConfig[]) {
-    this.sequences = [...sequences];
-    this.createCrates();
-  }
-
-  private createCrates() {
-    this.boombox.crates = this.sequences.map(
+    const crates = sequences.map(
       ({ crateId, collections, chance, limit }, index) => {
         const validCollections = collections.filter(col => this.library.has(col.id));
 
@@ -356,6 +342,20 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
         });
       })
       .filter((c): c is BoomBoxCrate => c !== undefined);
+
+    this.addCrates(...crates);
+  }
+
+  addCrates(...crates: BoomBoxCrate[]) {
+    this.boombox.addCrates(...crates);
+  }
+
+  removeCrates(...cratesOrIds: Array<BoomBoxCrate['id'] | BoomBoxCrate>) {
+    this.boombox.removeCrates(...cratesOrIds);
+  }
+
+  moveCrates(newPosition: number, ...cratesOrIds: Array<BoomBoxCrate['id'] | BoomBoxCrate>) {
+    this.boombox.moveCrates(newPosition, ...cratesOrIds);
   }
 
   private sequenceLimit(limit: SequenceLimit): CrateLimit  {
@@ -387,8 +387,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private sweepers: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
 
-
-
+  /** @deprecated Rewrite this */
   updateSweeperRules(configs: SweeperRule[]) {
     const collectPath = () => this.boombox.sweeperInsertionRules.map(r => r.collection.id); // TODO: Store path in metadata
 
@@ -397,6 +396,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.sweeperInsertionRules = configs.map<SweeperInsertionRule>(({ from, to, path }) => {
       if (!this.sweepers.has(path)) {
         const collection = new WatchTrackCollection<BoomBoxTrack>(path).watch(`${normalizePath(path)}/**/*`);
+        collection.shuffle();
         this.sweepers.set(path, collection);
       }
 

@@ -113,7 +113,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   }
 
   // By collection
-  distrill(sel => (sel.collection.metadata as unknown as MusicLibraryMetadata<Station>)?.description ?? sel.collection.id);
+  distrill(sel => (sel.collection.metadata as unknown as MusicLibraryMetadata<Station>)?.descriptor.description ?? sel.collection.id);
 
   // By file extension
   distrill(sel => extname(sel.track.path.toUpperCase()).substring(1));

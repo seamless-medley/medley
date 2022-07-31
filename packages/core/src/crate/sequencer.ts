@@ -1,10 +1,11 @@
 import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
-import _, { isObjectLike } from "lodash";
+import _, { isObjectLike, isString, uniqBy } from "lodash";
 import { TrackCollection } from "../collections";
 import { Track, TrackMetadata } from "../track";
 import { Crate } from "./base";
 import { createLogger } from "../logging";
+import { moveArrayIndexes } from "../utils";
 
 export interface CrateSequencerEvents {
   change: (crate: Crate<Track<any>>) => void;
@@ -42,7 +43,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     super();
   }
 
-  get current(): Crate<T> | undefined {
+  get currentCrate(): Crate<T> | undefined {
     return this._crates[this._crateIndex % this._crates.length];
   }
 
@@ -63,7 +64,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     let ignored = 0;
     let count = this._crates.length;
     while (count-- > 0) {
-      const crate = this.current;
+      const crate = this.currentCrate;
 
       if (this.isCrate(crate)) {
         if (this._lastCrate !== crate) {
@@ -172,7 +173,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
 
     this.crateIndex++;
     //
-    this.logger.debug('next', this.current?.id);
+    this.logger.debug('next', this.currentCrate?.id);
   }
 
   setCurrentCrate(crate: Crate<T> | number) {
@@ -183,20 +184,20 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     }
   }
 
-  get crates() {
+  get crates(): ReadonlyArray<Crate<T>> {
     return this._crates;
   }
 
-  set crates(newCrates: Crate<T>[]) {
-    const oldCurrent = this.current;
+  private async alterCrates(fn: () => any) {
+    const oldCurrent = this.currentCrate;
     const savedId = oldCurrent?.id;
 
-    this._crates = newCrates;
+    await fn();
 
     let newIndex = this.ensureCrateIndex(this._crateIndex);
 
     if (savedId) {
-      let found = this._crates.findIndex(crate => crate.id === savedId);
+      const found = this._crates.findIndex(crate => crate.id === savedId);
 
       if (found !== -1) {
         newIndex = found;
@@ -206,6 +207,38 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     this.crateIndex = newIndex;
   }
 
+  addCrates(...crates: Crate<T>[]) {
+    this.alterCrates(() => {
+      this._crates = _(this._crates)
+        .push(...crates)
+        .uniqBy(c => c.id)
+        .value();
+    });
+  }
+
+  removeCrates(...cratesOrIds: Array<Crate<T>['id'] | Crate<T>>) {
+    const toBeRemoved = cratesOrIds.map(w => isString(w) ? w : w.id);
+
+    this.alterCrates(() => {
+      for (const id of toBeRemoved) {
+        if (id) {
+          const index = this._crates.findIndex(c => c.id === id)
+
+          if (index !== -1) {
+            this._crates.splice(index, 1);
+          }
+        }
+      }
+    });
+  }
+
+  moveCrates(newPosition: number, ...cratesOrIds: Array<Crate<T>['id'] | Crate<T>>) {
+    const toMove = cratesOrIds.map(w => this.crates.findIndex(c => c.id === (isString(w) ? w : w.id)));
+    moveArrayIndexes(this._crates, newPosition, ...toMove);
+  }
+
+
+  // TODO: Test this
   private latchFor: number = 0;
   private latchCount: number = 0;
 

@@ -498,8 +498,16 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     return this.sequencer.crates;
   }
 
-  set crates(value: BoomBoxCrate[]) {
-    this.sequencer.crates = value;
+  addCrates(...crates: BoomBoxCrate[]) {
+    this.sequencer.addCrates(...crates);
+  }
+
+  removeCrates(...cratesOrIds: Array<BoomBoxCrate['id'] | BoomBoxCrate>) {
+    this.sequencer.removeCrates(...cratesOrIds);
+  }
+
+  moveCrates(newPosition: number, ...cratesOrIds: Array<BoomBoxCrate['id'] | BoomBoxCrate>) {
+    this.sequencer.moveCrates(newPosition, ...cratesOrIds);
   }
 
   get crateIndex() {
