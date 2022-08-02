@@ -11,7 +11,9 @@
     "moduleResolution": "Node",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "composite": true
+    "composite": true,
+    "outDir": "./dist",
+    "rootDir": "src"
   },
   "include": ["src"]
 }

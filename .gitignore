@@ -8,6 +8,8 @@ dist/
 package-lock.json
 .pnpm-debug.log
 
+*.tsbuildinfo
+
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
