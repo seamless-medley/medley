@@ -32,29 +32,18 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
     if (!canSkip) {
       const { requestedBy } = trackPlay.track;
 
-      const requesters = (requestedBy || [])
-        .map(r => ({
-          ...extractAudienceGroup(r.group),
-          id: r.id
-        }))
-        .filter(({ type }) => type === AudienceType.Discord)
-        .map(r => ({
-          guildId: r.groupId,
-          userId: r.id
-        }));
-
       canSkip = requestedBy.some(r => r.id === interaction.user.id);
 
       if (!canSkip) {
         const requesters = requestedBy
-          .map(r => ({
-            ...extractAudienceGroup(r.group),
-            id: r.id
+          .map(({ group, id }) => ({
+            ...extractAudienceGroup(group),
+            id
           }))
           .filter(({ type, groupId }) => type === AudienceType.Discord && groupId === guildId)
           .map(r => r.id);
 
-        const mentions = requesters.length > 0 ? requestedBy.map(id =>  `<@${id}>`).join(' ') : '`Someone else`';
+        const mentions = requesters.length > 0 ? requesters.map(id =>  `<@${id}>`).join(' ') : '`Someone else`';
         await reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by ${mentions}`);
         return;
       }
