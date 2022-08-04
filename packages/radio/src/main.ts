@@ -15,7 +15,7 @@ async function run() {
   const controller = new SocketServerController(io);
 
   server.listen(port, () => {
-    console.log(`Listening om port ${port}`);
+    console.log(`Listening on port ${port}`);
   });
 }
 
