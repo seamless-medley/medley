@@ -456,6 +456,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return;
     }
 
+    if (guildState.serverMuted) {
+      return;
+    }
+
     // state change is originated from other member that is in the same room as me.
 
     if (channelChange === 'leave') {
@@ -500,14 +504,18 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private handleGuildCreate = async (guild: Guild) => {
-    // Invited into
+    // Invited to
+    this.logger.info(`Invited to ${guild.name}`);
 
     this.ensureGuildState(guild.id)
     this.registerCommands(guild.id);
+
+    guild?.systemChannel?.send('Greetings :notes:, use `/medley join` command to invite me to a voice channel');
   }
 
   private handleGuildDelete = async (guild: Guild) => {
     // Removed from
+    this.logger.info(`Removed from ${guild.name}`);
     this._guildStates.delete(guild.id);
   }
 

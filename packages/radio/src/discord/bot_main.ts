@@ -204,7 +204,7 @@ async function main() {
       }
 
       station.updateSequence(sequences);
-      station.updateSweeperRules(config.sweeperRules || []);
+      station.updateSweeperRules(sweeperRules || []);
 
       resolve(station);
 

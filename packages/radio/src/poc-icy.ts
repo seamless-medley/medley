@@ -82,19 +82,6 @@ const sweeperRules: SweeperRule[] = [
   }
 ]
 
-const station = new Station({
-  id: 'default',
-  name: 'Default station',
-  useNullAudioDevice: true,
-});
-
-for (const desc of musicCollections) {
-  station.library.addCollection(desc);
-}
-
-station.updateSequence(sequences);
-station.updateSweeperRules(sweeperRules);
-
 async function main() {
   const app = express();
 
@@ -105,19 +92,29 @@ async function main() {
     console.log('Listening on', port);
   });
 
-  station.once('ready', async () => {
-    const source = await createIcyAdapter(station, {
-      outputFormat: 'mp3',
-      bitrate: 128
-    });
-
-    if (source) {
-      app.get('/test', source.handler);
-    }
-
-    station.playIfHasAudiences();
+  const station = new Station({
+    id: 'default',
+    name: 'Default station',
+    useNullAudioDevice: true,
   });
 
+  for (const desc of musicCollections) {
+    await station.library.addCollection(desc);
+  }
+
+  station.updateSequence(sequences);
+  station.updateSweeperRules(sweeperRules);
+
+  const source = await createIcyAdapter(station, {
+    outputFormat: 'mp3',
+    bitrate: 128
+  });
+
+  if (source) {
+    app.get('/test', source.handler);
+  }
+
+  station.playIfHasAudiences();
 }
 
 main();

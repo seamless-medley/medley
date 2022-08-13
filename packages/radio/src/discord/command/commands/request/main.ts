@@ -1,4 +1,4 @@
-import { BoomBoxTrack, MusicLibraryMetadata, Station } from "@seamless-medley/core";
+import { BoomBoxTrack, createLogger, MusicLibraryMetadata, Station } from "@seamless-medley/core";
 import {
   Message,
   ActionRowBuilder,
@@ -17,6 +17,8 @@ import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeReque
 import { handleSelectMenu } from "./selectmenu";
 
 const onGoing = new Set<string>();
+
+const logger = createLogger({ name: 'command/request' });
 
 export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
@@ -207,6 +209,9 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         }
       }
     })
-    .catch(() => onGoing.delete(runningKey)); // TODO: Logging
+    .catch((e) => {
+      onGoing.delete(runningKey);
+      logger.error(e);
+    });
   }
 }
