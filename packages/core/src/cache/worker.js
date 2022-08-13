@@ -7,14 +7,14 @@ const KeyvSqlite = require('@keyv/sqlite');
 const KeyvMongo = require('@keyv/mongo');
 const { stubFalse, noop } = require('lodash');
 
-/** @typedef {import('./cache').MetadataCacheStore} MetadataCacheStore */
-/** @typedef {import('./cache').MetadataCacheOptions} MetadataCacheOptions */
+/** @typedef {import('./types').CacheStore} CacheStore */
+/** @typedef {import('./types').CacheOptions} CacheOptions */
 
 /** @type {Keyv} */
 let container;
 
 /**
- * @param {MetadataCacheStore} config
+ * @param {CacheStore} config
  */
 function createStore(config) {
   if (config.type === 'sqlite') {
@@ -34,12 +34,11 @@ function createStore(config) {
 }
 
 /**
- * @param {MetadataCacheOptions} options
+ * @param {CacheOptions} options
  */
 function configure(options) {
   container = new Keyv({
     namespace: options.namespace || 'medley',
-    ttl: options.ttl || (60 * 60 * 24 * 1000),
     store: createStore(options.store),
     adapter: options.store.type
   });
@@ -55,14 +54,15 @@ function get(key) {
 /**
  * @param {string} key
  * @param {any} value
+ * @param {number | undefined} ttl
  */
-async function set(key, value) {
+async function set(key, value, ttl) {
   if (!container) {
     return false;
   }
 
   for (let i = 0; i < 10; i++) {
-    const ok = await container.set(key, value).catch(stubFalse);
+    const ok = await container.set(key, value, ttl).catch(stubFalse);
     if (ok) {
       return true;
     }

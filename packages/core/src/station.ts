@@ -5,7 +5,7 @@ import _, { curry, difference, isFunction, random, sample, shuffle, sortBy } fro
 import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek, WatchTrackCollection } from "./collections";
 import { Chanceable, Crate, CrateLimit } from "./crate";
-import { Library, MusicLibrary, MusicLibraryDescriptor } from "./library";
+import { Library, MusicLibrary } from "./library";
 import { createLogger, Logger } from "./logging";
 import {
   BoomBox,
@@ -17,7 +17,8 @@ import {
   SweeperInsertionRule,
   TrackKind
 } from "./playout";
-import { MetadataCache, MetadataHelper } from "./metadata";
+import { MetadataCache, TrackIdCache } from "./cache";
+import { MetadataHelper } from "./metadata";
 
 export enum PlayState {
   Idle = 'idle',
@@ -65,6 +66,7 @@ export type StationOptions = {
   requestSweepers?: TrackCollection<BoomBoxTrack>;
 
   // BoomBox
+  trackIdCache?: TrackIdCache;
   metadataCache?: MetadataCache;
   maxTrackHistory?: number;
   noDuplicatedArtist?: number;
@@ -140,7 +142,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     }
 
-    this.library = new MusicLibrary(this.id, this, options.metadataCache);
+    this.library = new MusicLibrary(this.id, this, options.metadataCache, options.trackIdCache);
 
     // Create boombox
     const boombox = new BoomBox<RequestAudience>({

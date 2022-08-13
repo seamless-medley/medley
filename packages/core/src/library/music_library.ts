@@ -2,16 +2,17 @@ import _, { castArray, noop } from 'lodash';
 import normalizePath from 'normalize-path';
 import { TrackCollectionOptions, WatchTrackCollection } from '../collections';
 import { createLogger } from '../logging';
-import { MetadataCache, MetadataHelper } from '../metadata';
+import { MetadataCache, TrackIdCache } from '../cache';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
 import { SearchEngine, Query } from './search';
+import { MetadataHelper } from '../metadata';
 
 export type MusicLibraryDescriptor = {
   id: string;
   path: string;
   description?: string;
-} & Pick<TrackCollectionOptions<any>, 'reshuffleEvery' | 'newTracksAddingMode'>;
+} & Pick<TrackCollectionOptions<any>, 'reshuffleEvery' | 'newTracksAddingMode' | 'useISRCAsTrackId'>;
 
 export type MusicLibraryMetadata<O> = {
   descriptor: MusicLibraryDescriptor;
@@ -27,7 +28,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
   private collectionPaths = new Map<string, string>();
 
-  constructor(readonly id: string, readonly owner: O, readonly metadataCache?: MetadataCache) {
+  constructor(readonly id: string, readonly owner: O, readonly metadataCache?: MetadataCache, readonly trackIdCache?: TrackIdCache) {
     super();
   }
 
@@ -58,7 +59,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
     if (!track.metadata) {
       await helper.fetchMetadata(track, this.metadataCache)
-        .then(async ({ hit, metadata: tags }) => {
+        .then(async ({ metadata: tags }) => {
           track.metadata = {
             tags,
             kind: TrackKind.Normal
@@ -80,8 +81,10 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       const newCollection = new WatchTrackCollection<BoomBoxTrack, MusicLibraryMetadata<O>>(
         id,
         {
+          trackIdCache: this.trackIdCache,
           newTracksAddingMode: descriptor.newTracksAddingMode,
-          reshuffleEvery: descriptor.reshuffleEvery
+          reshuffleEvery: descriptor.reshuffleEvery,
+          useISRCAsTrackId: descriptor.useISRCAsTrackId
         }
       );
 

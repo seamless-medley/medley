@@ -8,8 +8,9 @@ import { Crate, CrateSequencer, TrackValidator, TrackVerifier } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
-import { MetadataHelper, MetadataCache } from '../metadata';
+import { MetadataCache } from '../cache';
 import { createLogger, Logger } from '../logging';
+import { MetadataHelper } from '../metadata';
 
 export enum TrackKind {
   Normal,
@@ -197,11 +198,11 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private requests: TrackCollection<RequestTrack<Requester>> = new TrackCollection('$_requests');
 
-  private isTrackLoadable: TrackValidator = async (path) => MetadataHelper.isTrackLoadable(path);
+  private isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path);
 
   private verifyTrack: TrackVerifier<BoomBoxMetadata> = async (track) => {
     try {
-      const musicMetadata = track.metadata?.tags ?? (await MetadataHelper.fetchMetadata(track, this.metadataCache, true)).metadata;
+      const musicMetadata = track.metadata?.tags ?? (await helper.fetchMetadata(track, this.metadataCache, true)).metadata;
 
       const boomBoxMetadata: BoomBoxMetadata = {
         kind: TrackKind.Normal,
@@ -388,7 +389,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     if (metadata && metadata.kind !== TrackKind.Insertion) {
       if (!metadata.maybeCoverAndLyrics) {
-        metadata.maybeCoverAndLyrics = MetadataHelper.coverAndLyrics(trackPlay.track.path);
+        metadata.maybeCoverAndLyrics = helper.coverAndLyrics(trackPlay.track.path);
       }
 
       if (isRequestTrack(track) && !track.original.metadata?.maybeCoverAndLyrics) {
@@ -541,3 +542,6 @@ export function getTrackBanner(track: BoomBoxTrack) {
 
   return info.length ? info.join(' - ') : parsePath(track.path).name;
 }
+
+const trackHelper = new MetadataHelper();
+const helper = new MetadataHelper();

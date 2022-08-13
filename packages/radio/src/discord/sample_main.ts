@@ -1,4 +1,4 @@
-import { breath, createLogger, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, TrackCollection } from "@seamless-medley/core";
+import { breath, createLogger, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, SweeperRule, TrackCollection, TrackIdCache } from "@seamless-medley/core";
 import { MetadataCache } from "@seamless-medley/core";
 import _, { noop, shuffle } from "lodash";
 import { MedleyAutomaton } from "./automaton";
@@ -62,6 +62,37 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid11', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 4] } }
 ];
 
+const sweeperRules: SweeperRule[] = [
+  {
+    to: moods.sad,
+    path: 'E:\\medley-drops\\to_blue'
+  },
+  {
+    from: moods.sad,
+    to: moods.easy,
+    path: 'E:\\medley-drops\\blue_to_easy'
+  },
+  {
+    from: moods.sad,
+    to: moods.up,
+    path: 'E:\\medley-drops\\blue_to_up'
+  },
+  {
+    from: moods.easy,
+    to: moods.up,
+    path: 'E:\\medley-drops\\easy_to_up'
+  },
+  {
+    from: moods.up,
+    to: moods.easy,
+    path: 'E:\\medley-drops\\up_to_easy'
+  },
+  { // Fresh
+    to: ['new-released'],
+    path: 'E:\\medley-drops\\fresh'
+  }
+];
+
 const storedConfigs: StoredConfig = {
   stations: [
     {
@@ -71,38 +102,6 @@ const storedConfigs: StoredConfig = {
       // intros: [
       //   'E:\\medley-drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3',
       // ],
-
-
-      sweeperRules: [
-        {
-          to: moods.sad,
-          path: 'E:\\medley-drops\\to_blue'
-        },
-        {
-          from: moods.sad,
-          to: moods.easy,
-          path: 'E:\\medley-drops\\blue_to_easy'
-        },
-        {
-          from: moods.sad,
-          to: moods.up,
-          path: 'E:\\medley-drops\\blue_to_up'
-        },
-        {
-          from: moods.easy,
-          to: moods.up,
-          path: 'E:\\medley-drops\\easy_to_up'
-        },
-        {
-          from: moods.up,
-          to: moods.easy,
-          path: 'E:\\medley-drops\\up_to_easy'
-        },
-        { // Fresh
-          to: ['new-released'],
-          path: 'E:\\medley-drops\\fresh'
-        }
-      ],
 
       requestSweepers: [
         'E:\\medley-drops\\your\\Music Radio Creative - Playing All Your Requests.mp3',
@@ -143,8 +142,25 @@ async function main() {
 
   logger.info('Initializing');
 
-  const cache = new MetadataCache();
-  await cache.init({
+  const trackIdCache = new TrackIdCache();
+  await trackIdCache.init({
+    ttls: [
+      7 * 24 * 60 * 60 * 1000,
+      10 * 24 * 60 * 60 * 1000
+    ],
+    store: {
+      type: 'sqlite',
+      path: 'trackid.db',
+      table: 'trackids'
+    }
+  });
+
+  const metadataCache = new MetadataCache();
+  await metadataCache.init({
+    ttls: [
+      10 * 24 * 60 * 60 * 1000,
+      15 * 24 * 60 * 60 * 1000
+    ],
     store: {
       type: 'sqlite',
       path: 'metadata.db',
@@ -174,7 +190,8 @@ async function main() {
         description: config.description,
         intros,
         requestSweepers,
-        metadataCache: cache
+        trackIdCache,
+        metadataCache
       });
 
       for (const desc of musicCollections) {
@@ -184,7 +201,7 @@ async function main() {
       }
 
       station.updateSequence(sequences);
-      station.updateSweeperRules(config.sweeperRules || []);
+      station.updateSweeperRules(sweeperRules || []);
 
       resolve(station);
 

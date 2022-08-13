@@ -4,7 +4,7 @@ export * from './collections';
 export * from './library';
 export * from './crate';
 export * from './playout';
-export * from './metadata';
+export * from './cache';
 export * from './station';
 export * from './lyrics';
 export * from './utils';

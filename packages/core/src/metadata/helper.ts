@@ -1,6 +1,6 @@
 import { WorkerPoolOptions } from 'workerpool';
 import type { CoverAndLyrics, Metadata } from '@seamless-medley/medley';
-import { MetadataCache } from './cache';
+import { MetadataCache } from '../cache';
 import { Track } from '../track';
 import { WorkerPoolAdapter } from '../worker_pool_adapter';
 
@@ -27,7 +27,7 @@ interface Methods {
 
 export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   constructor(workerType?: WorkerPoolOptions['workerType']) {
-    super(__dirname + '/metadata_worker.js', { workerType });
+    super(__dirname + '/worker.js', { workerType });
   }
 
   async metadata(path: string) {

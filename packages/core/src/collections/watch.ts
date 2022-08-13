@@ -54,7 +54,7 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
     }
 
     if (event === 'remove') {
-      this.removedIds.add(this.computeTrackId(path));
+      this.removedIds.add(await this.getTrackId(path));
       this.handleFilesRemoval();
       return;
     }
