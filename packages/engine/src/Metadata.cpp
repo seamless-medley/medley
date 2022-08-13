@@ -133,6 +133,15 @@ bool medley::Metadata::readID3V2(const File& f)
     auto& tag = *file.ID3v2Tag();
     readTag(tag);
 
+    const auto& tsrcFrames = tag.frameListMap()["TSRC"];
+    if (!tsrcFrames.isEmpty()) {
+        for (const auto pFrame : tsrcFrames) {
+            if (pFrame) {
+                isrc = pFrame->toString().toCWString();
+            }
+        }
+    }
+
     if (tag.header()->majorVersion() >= 3) {
         auto trackGain = readFirstUserTextIdentificationFrame(tag, L"REPLAYGAIN_TRACK_GAIN");
         this->trackGain = (float)parseReplayGainGain(trackGain);
@@ -173,6 +182,10 @@ bool medley::Metadata::readXiph(const File& f)
 
     auto& tag = *file.xiphComment();
     readTag(tag);
+
+    juce::String isrc;
+    readXiphCommentField(tag, "ISRC", &isrc);
+    this->isrc = isrc;
 
     juce::String trackGain;
     readXiphCommentField(tag, "REPLAYGAIN_TRACK_GAIN", &trackGain);
