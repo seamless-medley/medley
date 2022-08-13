@@ -13,12 +13,11 @@ import {
   BoomBoxEvents,
   BoomBoxTrack,
   BoomBoxTrackPlay,
-  MetadataCache,
-  MetadataHelper,
   RequestTrack,
   SweeperInsertionRule,
   TrackKind
 } from "./playout";
+import { MetadataCache, MetadataHelper } from "./metadata";
 
 export enum PlayState {
   Idle = 'idle',
@@ -62,9 +61,6 @@ export type StationOptions = {
   useNullAudioDevice?: boolean;
 
   intros?: TrackCollection<BoomBoxTrack>;
-
-  /** @deprecated */
-  sweeperRules?: SweeperRule[];
 
   requestSweepers?: TrackCollection<BoomBoxTrack>;
 
@@ -145,10 +141,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }
 
     this.library = new MusicLibrary(this.id, this, options.metadataCache);
-    this.library.once('ready', () => {
-      this.logger.info('Ready');
-      this.emit('ready');
-    });
 
     // Create boombox
     const boombox = new BoomBox<RequestAudience>({

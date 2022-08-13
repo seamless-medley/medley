@@ -233,8 +233,10 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
   }
 
   moveCrates(newPosition: number, ...cratesOrIds: Array<Crate<T>['id'] | Crate<T>>) {
-    const toMove = cratesOrIds.map(w => this.crates.findIndex(c => c.id === (isString(w) ? w : w.id)));
-    moveArrayIndexes(this._crates, newPosition, ...toMove);
+    this.alterCrates(() => {
+      const toMove = cratesOrIds.map(w => this.crates.findIndex(c => c.id === (isString(w) ? w : w.id)));
+      moveArrayIndexes(this._crates, newPosition, ...toMove);
+    });
   }
 
 

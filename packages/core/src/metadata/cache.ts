@@ -3,8 +3,8 @@ import type KeyvRedis from '@keyv/redis';
 import type KeyvMongo from '@keyv/mongo';
 
 import type { Metadata } from '@seamless-medley/medley';
-import type { BoomBoxTrack } from '../boombox';
-import { WorkerPoolAdapter } from '../../worker_pool_adapter';
+import { WorkerPoolAdapter } from '../worker_pool_adapter';
+import { Track } from '../track';
 
 export type MetadataCacheSqliteStore = {
   type: 'sqlite';
@@ -62,14 +62,12 @@ export class MetadataCache extends WorkerPoolAdapter<Methods> {
     return metadata;
   }
 
-  async persist(track: BoomBoxTrack, metadata?: Metadata) {
-    const toBePersisted = metadata ?? track.metadata?.tags;
-
-    if (!toBePersisted) {
+  async persist(track: Track<any>, metadata: Metadata | undefined) {
+    if (!metadata) {
       await this.exec('del', track.id);
       return;
     }
 
-    await this.exec('set', track.id, toBePersisted);
+    await this.exec('set', track.id, metadata);
   }
 }

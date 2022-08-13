@@ -1,8 +1,8 @@
-import workerpool, { WorkerPool, WorkerPoolOptions } from 'workerpool';
+import { WorkerPoolOptions } from 'workerpool';
 import type { CoverAndLyrics, Metadata } from '@seamless-medley/medley';
 import { MetadataCache } from './cache';
-import { Track } from '../../track';
-import { WorkerPoolAdapter } from '../../worker_pool_adapter';
+import { Track } from '../track';
+import { WorkerPoolAdapter } from '../worker_pool_adapter';
 
 let instance: MetadataHelper;
 

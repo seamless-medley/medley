@@ -2,8 +2,8 @@ import _, { castArray, noop } from 'lodash';
 import normalizePath from 'normalize-path';
 import { TrackCollectionOptions, WatchTrackCollection } from '../collections';
 import { createLogger } from '../logging';
-import { BoomBoxTrack, MetadataHelper, TrackKind } from '../playout';
-import { MetadataCache } from '../playout/metadata/cache';
+import { MetadataCache, MetadataHelper } from '../metadata';
+import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
 import { SearchEngine, Query } from './search';
 

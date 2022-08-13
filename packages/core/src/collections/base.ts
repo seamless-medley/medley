@@ -51,13 +51,13 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     }
   }
 
-  protected computePathId(path: string): string {
+  protected computeTrackId(path: string): string {
     return createHash('md5').update(normalizePath(path)).digest('base64');
   }
 
   protected createTrack(path: string): T {
     return {
-      id: this.computePathId(path),
+      id: this.computeTrackId(path),
       path,
       collection: this
     } as unknown as T;
@@ -115,7 +115,6 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     return immediateTracks;
   }
 
-
   private async addTracks(tracks: T[]) {
     const { tracksMapper } = this.options;
 
@@ -149,7 +148,7 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
   }
 
   remove(paths: string | string[]): T[] {
-    const toRemove = castArray(paths).map(path => this.computePathId(path));
+    const toRemove = castArray(paths).map(path => this.computeTrackId(path));
     return this.removeBy(track => toRemove.includes(track.id));
   }
 
@@ -163,7 +162,7 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
   }
 
   move(newPosition: number, paths: string | string[]) {
-    const toMove = castArray(paths).map(path => this.trackIdMap.get(this.computePathId(path)));
+    const toMove = castArray(paths).map(path => this.trackIdMap.get(this.computeTrackId(path)));
     moveArrayElements(this.tracks, newPosition, ...toMove);
   }
 
