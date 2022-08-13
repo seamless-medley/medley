@@ -24,6 +24,13 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
     PermissionsBitField.Flags.MoveMembers
   ]);
 
+  const state = automaton.getGuildState(guildId);
+
+  if (!state?.voiceChannelId) {
+    await deny(interaction, 'Not in a voice channel');
+    return;
+  }
+
   const { trackPlay } = station;
 
   if (trackPlay && isRequestTrack<RequestAudience>(trackPlay.track)) {
