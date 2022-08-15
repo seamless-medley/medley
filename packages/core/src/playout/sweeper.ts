@@ -49,9 +49,9 @@ export class SweeperInserter {
     const insertion = matched.collection.shift();
     if (insertion) {
       // ensure track kind
-      if (insertion.metadata?.kind === undefined) {
-        insertion.metadata = {
-          ...insertion.metadata,
+      if (insertion.extra?.kind === undefined) {
+        insertion.extra = {
+          ...insertion.extra,
           kind: TrackKind.Insertion
         }
       }

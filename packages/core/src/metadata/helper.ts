@@ -19,10 +19,10 @@ export type FetchResult = {
 }
 
 interface Methods {
-  metadata(path: string): Promise<Metadata>;
-  coverAndLyrics(path: string): Promise<WorkerCoverAndLyrics | CoverAndLyrics>;
-  isTrackLoadable(path: string): Promise<boolean>;
-  searchLyrics(artist: string, title: string): Promise<string>;
+  metadata(path: string): Metadata;
+  coverAndLyrics(path: string): WorkerCoverAndLyrics | CoverAndLyrics;
+  isTrackLoadable(path: string): boolean;
+  searchLyrics(artist: string, title: string): string;
 }
 
 export class MetadataHelper extends WorkerPoolAdapter<Methods> {

@@ -38,8 +38,8 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   }
 
   const selections = requests.slice(0, 25).map(request => ({
-    label: truncate(request.metadata?.tags?.title || parsePath(request.path).name, { length: 100 }),
-    description: request.metadata?.tags?.title ? truncate(request.metadata?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined,
+    label: truncate(request.extra?.tags?.title || parsePath(request.path).name, { length: 100 }),
+    description: request.extra?.tags?.title ? truncate(request.extra?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined,
     value: request.rid.toString(36),
   }));
 

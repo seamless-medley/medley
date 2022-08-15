@@ -1,30 +1,47 @@
 import type { Metadata } from '@seamless-medley/medley';
-import { Track } from '../track';
+import { MusicIdendifier } from '../track';
 import { BaseCache } from './base';
 
-interface Methods {
-  get(trackId: string): Promise<Metadata>;
-  set(trackId: string, data: Metadata, ttl: number): Promise<void>;
-  del(trackId: string): Promise<void>;
-}
+// TODO: Use real database (MikroORM maybe? or just use MongoDB?)
 
+interface Methods {
+  get(musicId: string): Promise<Metadata | undefined>;
+  set(musicId: string, data: Metadata, ttl: number): Promise<void>;
+  del(musicId: string): Promise<void>;
+}
 export class MetadataCache extends BaseCache<Methods> {
-  async get(trackId: string, refresh = false) {
-    const metadata = await this.exec('get', trackId);
+  async get(musicId: string, refresh = false) {
+    const metadata = await this.exec('get', musicId);
 
     if (metadata && refresh) {
-      this.exec('set', trackId, metadata, this.makeTTL());
+      this.set(musicId, metadata);
     }
 
     return metadata;
   }
 
-  async persist(track: Track<any>, metadata: Metadata | undefined) {
+  async set(musicId: string, metadata: Metadata) {
+    return this.exec('set', musicId, metadata, this.makeTTL());
+  }
+
+  async del(musicId: string) {
+    return this.exec('del', musicId);
+  }
+
+  async persist({ id, musicId }: MusicIdendifier, metadata: Metadata | undefined) {
     if (!metadata) {
-      await this.exec('del', track.id);
+      this.del(id);
+
+      if (musicId) {
+        this.del(musicId);
+      }
+
       return;
     }
 
-    await this.exec('set', track.id, metadata, this.makeTTL());
+    await this.set(id, metadata);
+    if (musicId) {
+      await this.set(musicId, metadata);
+    }
   }
 }

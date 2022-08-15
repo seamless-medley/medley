@@ -4,11 +4,12 @@ const { noop, omit } = require('lodash');
 const workerpool = require('workerpool');
 const MiniSearch = require('minisearch');
 
-/** @typedef {import('minisearch').default<TrackIndex>} Search */
+/** @typedef {import('minisearch').default<TrackDocument>} Search */
 /** @typedef {import('minisearch').Query} Query */
 /** @typedef {import('minisearch').SearchOptions} MiniSearchOptions */
+/** @typedef {import('minisearch').SearchResult} SearchResult */
 /** @typedef {import('./search').SearchOptions} SearchOptions */
-/** @typedef {import('./search').TrackIndex} TrackIndex */
+/** @typedef {import('./search').TrackDocument} TrackDocument */
 
 /** @type {Map<string, Search>} */
 const instances = new Map();
@@ -16,9 +17,11 @@ const instances = new Map();
 /**
  *
  * @param {string} id
+ * @returns {Search}
  */
 function acquire(id) {
   if (instances.has(id)) {
+    // @ts-ignore
     return instances.get(id);
   }
 
@@ -39,7 +42,7 @@ function acquire(id) {
 /**
  *
  * @param {string} id
- * @param {TrackIndex} track
+ * @param {TrackDocument} track
  */
 function add(id, track) {
   acquire(id).add(track);
@@ -48,9 +51,10 @@ function add(id, track) {
 /**
  *
  * @param {string} id
- * @param {TrackIndex[]} tracks
+ * @param {TrackDocument[]} tracks
  */
 function removeAll(id, tracks) {
+  console.log('[search_worker]: removeAll', tracks);
   acquire(id).removeAll(tracks);
 }
 
@@ -59,6 +63,7 @@ function removeAll(id, tracks) {
  * @param {string} id
  * @param {Query} query
  * @param {SearchOptions | undefined} searchOptions
+ * @returns {SearchResult[]}
  */
 function search(id, query, searchOptions) {
   return acquire(id).search(query, searchOptions)
@@ -71,7 +76,7 @@ function search(id, query, searchOptions) {
  * @param {SearchOptions | undefined} options
  */
 function autoSuggest(id, queryString, options) {
-  const { narrow } = options;
+  const { narrow } = options ?? {};
 
   /** @type {MiniSearchOptions} */
   const miniSearchOptions = omit(options, 'narrow');

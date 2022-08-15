@@ -520,7 +520,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private handleTrackStarted = (station: Station) => async (trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
-    if (trackPlay.track.metadata?.kind === TrackKind.Insertion) {
+    if (trackPlay.track.extra?.kind === TrackKind.Insertion) {
       return;
     }
 

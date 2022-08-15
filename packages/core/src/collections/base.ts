@@ -1,16 +1,25 @@
 import { createHash } from 'crypto';
 import EventEmitter from "events";
-import _, { castArray, chain, find, findIndex, partition, reject, sample, shuffle, sortBy } from "lodash";
+import _, { castArray, chain, find, findIndex, partition, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
-import { TrackIdCache } from '../cache';
 import { createLogger } from '../logging';
-import { MetadataHelper } from '../metadata';
-import { Track } from "../track";
+import { MusicIdendifier, Track } from "../track";
 import { moveArrayElements } from '../utils';
 
-export type TrackCollectionOptions<T extends Track<any>> = {
-  trackIdCache?: TrackIdCache;
+export interface TrackActuator<Intermediate> {
+  lookup(path: string): Promise<MusicIdendifier | undefined>;
+  actuate(path: string): Promise<Intermediate | undefined>;
+  generateMusicId(path: string, intermediate?: Intermediate): Promise<MusicIdendifier['musicId'] | undefined>;
+  saveIdentifier(path: string, identifier: MusicIdendifier): Promise<void>;
+  saveIntermediate(path: string, identifier: MusicIdendifier, intermediate: Intermediate): Promise<void>;
+}
 
+export type TrackCollectionOptions<T extends Track<any, CE>, CE = never> = {
+  trackActuator?: TrackActuator<any>;
+
+  /**
+   * Called when new tracks are added to the collection
+   */
   tracksMapper?: (tracks: T[]) => Promise<T[]>;
 
   reshuffleEvery?: number;
@@ -21,27 +30,25 @@ export type TrackCollectionOptions<T extends Track<any>> = {
    * @default append
    */
   newTracksAddingMode?: 'prepend' | 'append';
-
-  useISRCAsTrackId?: boolean;
 }
 
-export type TrackPeek<T extends Track<any>> = {
+export type TrackPeek<T extends Track<any, CE>, CE = never> = {
   index: number;
   track: T;
 }
-export class TrackCollection<T extends Track<any>, M = never> extends EventEmitter {
+export class TrackCollection<T extends Track<any, CE>, CE = never> extends EventEmitter {
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];
   protected trackIdMap: Map<string, T> = new Map();
 
-  metadata?: M;
+  extra?: CE;
 
   protected logger = createLogger({
     name: `collection/${this.id}`
   });
 
-  constructor(readonly id: string, public options: TrackCollectionOptions<T> = {}) {
+  constructor(readonly id: string, public options: TrackCollectionOptions<T, CE> = {}) {
     super();
     this.afterConstruct();
   }
@@ -57,40 +64,41 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     }
   }
 
-  private async computeTrackId(path: string): Promise<string> {
-    const isrc = (this.options.useISRCAsTrackId !== false)
-      ? (await MetadataHelper.metadata(path)).isrc?.trim()
-      : undefined;
-
-    return isrc ? isrc : createHash('md5').update(normalizePath(path)).digest('base64');
-  }
-
   protected async getTrackId(path: string): Promise<string> {
-    const cache = this.options.trackIdCache;
-
-    let shouldPersist = false;
-    let trackId: string | undefined = undefined;
-
-    if (cache) {
-      trackId = await cache.get(path);
-    }
-
-    if (!trackId) {
-      trackId = await this.computeTrackId(path);
-      shouldPersist = true;
-    }
-
-    if (cache && shouldPersist) {
-      cache.set(path, trackId);
-    }
-
-    return trackId;
+    return createHash('md5').update(normalizePath(path)).digest('base64');
   }
 
   protected async createTrack(path: string): Promise<T> {
+    const { trackActuator } = this.options;
+
+    let identifier = await trackActuator?.lookup(path);
+
+    let { id, musicId } = identifier ?? {};
+
+    if (!id) {
+      id = await this.getTrackId(path);
+    }
+
+    let intermediate: any;
+
+    if (!identifier) {
+      intermediate = await trackActuator?.actuate(path);
+      musicId = await trackActuator?.generateMusicId(path, intermediate);
+    }
+
+    if (identifier?.id !== id || identifier?.musicId !== musicId) {
+      identifier = { id, musicId };
+      trackActuator?.saveIdentifier(path, identifier);
+    }
+
+    if (intermediate) {
+      trackActuator?.saveIntermediate(path, { id, musicId }, intermediate);
+    }
+
     return {
-      id: await this.getTrackId(path),
+      id,
       path,
+      musicId,
       collection: this
     } as unknown as T;
   }
@@ -107,6 +115,7 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
 
   shift(): T | undefined {
     const track = this.tracks.shift();
+
     if (track) {
       this.trackIdMap.delete(track.id);
     }
@@ -150,19 +159,23 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
   private async addTracks(tracks: T[]) {
     const { tracksMapper } = this.options;
 
-    const fresh = reject(tracks, it => this.trackIdMap.has(it.id));
-    const mapped = await tracksMapper?.(fresh) ?? fresh;
+    const [updatingTracks, freshTracks] = partition(tracks, it => this.trackIdMap.has(it.id));
+    const freshTracksMapped = await tracksMapper?.(freshTracks) ?? freshTracks;
 
-    if (mapped.length) {
-      const [a, b] = (this.options.newTracksAddingMode === 'prepend') ? [mapped, this.tracks] : [this.tracks, mapped];
+    if (freshTracksMapped.length) {
+      const [a, b] = (this.options.newTracksAddingMode === 'prepend') ? [freshTracksMapped, this.tracks] : [this.tracks, freshTracksMapped];
 
       this.tracks = a.concat(b);
 
-      for (const track of mapped) {
+      for (const track of freshTracksMapped) {
         this.trackIdMap.set(track.id, track);
       }
 
-      this.emit('tracksAdd', mapped);
+      this.emit('tracksAdd', freshTracksMapped);
+    }
+
+    if (updatingTracks.length) {
+      this.emit('tracksUpdate', updatingTracks);
     }
   }
 
@@ -172,7 +185,6 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
 
     for (const { id, path } of removed) {
       this.trackIdMap.delete(id);
-      this.options.trackIdCache?.del(path);
     }
 
     this.emit('tracksRemove', removed);
@@ -239,7 +251,7 @@ export class TrackCollection<T extends Track<any>, M = never> extends EventEmitt
     return sample(this.tracks);
   }
 
-  peek(from: number = 0, n: number): TrackPeek<T>[] {
+  peek(from: number = 0, n: number): TrackPeek<T, CE>[] {
     const max = this.tracks.length - 1;
     const sib = Math.floor((n - 1) / 2);
 

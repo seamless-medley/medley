@@ -4,7 +4,7 @@ import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex } from "@seamless-medley/medley";
-import { Crate, CrateSequencer, TrackValidator, TrackVerifier } from "../crate";
+import { Crate, CrateSequencer, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
@@ -18,13 +18,13 @@ export enum TrackKind {
   Insertion
 }
 
-export type BoomBoxMetadata = {
+export type BoomBoxTrackExtra = {
   tags?: Metadata;
   maybeCoverAndLyrics?: Promise<CoverAndLyrics>;
   kind: TrackKind;
 }
 
-export type BoomBoxTrack = Track<BoomBoxMetadata>;
+export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
 export type BoomBoxTrackPlay = TrackPlay<BoomBoxTrack>;
 export type BoomBoxCrate = Crate<BoomBoxTrack>;
 
@@ -200,23 +200,23 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path);
 
-  private verifyTrack: TrackVerifier<BoomBoxMetadata> = async (track) => {
+  private verifyTrack: TrackVerifier<BoomBoxTrackExtra> = async (track): Promise<TrackVerifierResult<BoomBoxTrackExtra>> => {
     try {
-      const musicMetadata = track.metadata?.tags ?? (await helper.fetchMetadata(track, this.metadataCache, true)).metadata;
+      const metadata = track.extra?.tags ?? (await helper.fetchMetadata(track, this.metadataCache, true)).metadata;
 
-      const boomBoxMetadata: BoomBoxMetadata = {
+      const boombooxExtra: BoomBoxTrackExtra = {
         kind: TrackKind.Normal,
-        ...track.metadata,
-        tags: musicMetadata
+        ...track.extra,
+        tags: metadata
       }
 
       const playedArtists = flatten(this.artistHistory).map(toLower);
-      const currentArtists = getArtists(boomBoxMetadata).map(toLower);
+      const currentArtists = getArtists(boombooxExtra).map(toLower);
       const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));
 
       return {
         shouldPlay: !dup,
-        metadata: !dup ? boomBoxMetadata : undefined
+        extra: !dup ? boombooxExtra : undefined
       }
     }
     catch {
@@ -225,7 +225,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     return {
       shouldPlay: true,
-      metadata: undefined
+      extra: undefined
     };
   }
 
@@ -260,8 +260,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       lastRequestTime: new Date()
     };
 
-    requested.metadata = {
-      ...requested.metadata,
+    requested.extra = {
+      ...requested.extra,
       kind: TrackKind.Request
     }
 
@@ -385,16 +385,16 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     // build cover and lyrics metadata
     const { track } = trackPlay;
-    const { metadata } = track;
+    const { extra } = track;
 
-    if (metadata && metadata.kind !== TrackKind.Insertion) {
-      if (!metadata.maybeCoverAndLyrics) {
-        metadata.maybeCoverAndLyrics = helper.coverAndLyrics(trackPlay.track.path);
+    if (extra && extra.kind !== TrackKind.Insertion) {
+      if (!extra.maybeCoverAndLyrics) {
+        extra.maybeCoverAndLyrics = helper.coverAndLyrics(trackPlay.track.path);
       }
 
-      if (isRequestTrack(track) && !track.original.metadata?.maybeCoverAndLyrics) {
-        track.original.metadata = {
-          ...metadata,
+      if (isRequestTrack(track) && !track.original.extra?.maybeCoverAndLyrics) {
+        track.original.extra = {
+          ...extra,
           kind: TrackKind.Normal
         };
       }
@@ -411,11 +411,11 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     }
 
     // clean up memory holding the cover and lyrics
-    if (trackPlay.track?.metadata) {
-      trackPlay.track.metadata.maybeCoverAndLyrics = undefined;
+    if (trackPlay.track?.extra) {
+      trackPlay.track.extra.maybeCoverAndLyrics = undefined;
 
-      if (isRequestTrack(trackPlay.track) && trackPlay.track.original.metadata?.maybeCoverAndLyrics) {
-        trackPlay.track.original.metadata.maybeCoverAndLyrics = undefined;
+      if (isRequestTrack(trackPlay.track) && trackPlay.track.original.extra?.maybeCoverAndLyrics) {
+        trackPlay.track.original.extra.maybeCoverAndLyrics = undefined;
       }
     }
 
@@ -425,7 +425,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   private deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
     this.decks[deck].playing = true;
 
-    const kind = trackPlay.track.metadata?.kind;
+    const kind = trackPlay.track.extra?.kind;
 
     if (kind === undefined || kind === TrackKind.Insertion) {
       return;
@@ -454,9 +454,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     }
 
     if (noDuplicatedArtist > 0) {
-      const { metadata } = trackPlay.track;
-      if (metadata) {
-        this.artistHistory.push(getArtists(metadata));
+      const { extra } = trackPlay.track;
+      if (extra) {
+        this.artistHistory.push(getArtists(extra));
 
         while (this.artistHistory.length > noDuplicatedArtist) {
           this.artistHistory.shift();
@@ -468,7 +468,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   private deckFinished: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
     this.decks[deck].playing = false;
 
-    const kind = trackPlay.track.metadata?.kind;
+    const kind = trackPlay.track.extra?.kind;
 
     if (kind === undefined || kind === TrackKind.Insertion) {
       return;
@@ -485,7 +485,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       }
     }
 
-    if (trackPlay.track.metadata?.kind === TrackKind.Insertion) {
+    if (trackPlay.track.extra?.kind === TrackKind.Insertion) {
       return;
     }
 
@@ -520,16 +520,16 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 }
 
-function getArtists(metadata: BoomBoxMetadata): string[] {
-  if (!metadata.tags) {
+function getArtists(extra: BoomBoxTrackExtra): string[] {
+  if (!extra.tags) {
     return [];
   }
 
-  return uniq(metadata.tags.artist.split(/[/;,]/)).map(trim);
+  return uniq(extra.tags.artist.split(/[/;,]/)).map(trim);
 }
 
 export function getTrackBanner(track: BoomBoxTrack) {
-  const tags = track.metadata?.tags;
+  const tags = track.extra?.tags;
   const info: string[] = [];
 
   if (tags?.artist) {

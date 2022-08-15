@@ -17,7 +17,7 @@ import {
   SweeperInsertionRule,
   TrackKind
 } from "./playout";
-import { MetadataCache, TrackIdCache } from "./cache";
+import { MetadataCache, MusicIdentifierCache } from "./cache";
 import { MetadataHelper } from "./metadata";
 
 export enum PlayState {
@@ -66,8 +66,8 @@ export type StationOptions = {
   requestSweepers?: TrackCollection<BoomBoxTrack>;
 
   // BoomBox
-  trackIdCache?: TrackIdCache;
-  metadataCache?: MetadataCache;
+  musicIdentifierCache: MusicIdentifierCache;
+  metadataCache: MetadataCache;
   maxTrackHistory?: number;
   noDuplicatedArtist?: number;
   duplicationSimilarity?: number;
@@ -142,7 +142,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     }
 
-    this.library = new MusicLibrary(this.id, this, options.metadataCache, options.trackIdCache);
+    this.library = new MusicLibrary(this.id, this, options.metadataCache, options.musicIdentifierCache);
 
     // Create boombox
     const boombox = new BoomBox<RequestAudience>({
@@ -206,15 +206,15 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
     if (requestSweepers) {
 
-      const currentKind = this.boombox.trackPlay?.track.metadata?.kind;
+      const currentKind = this.boombox.trackPlay?.track.extra?.kind;
 
       if (currentKind !== TrackKind.Request) {
         const sweeper = requestSweepers.shift();
 
         if (sweeper && await MetadataHelper.isTrackLoadable(sweeper.path)) {
-          if (sweeper.metadata?.kind === undefined) {
-            sweeper.metadata = {
-              ...sweeper.metadata,
+          if (sweeper.extra?.kind === undefined) {
+            sweeper.extra = {
+              ...sweeper.extra,
               kind: TrackKind.Insertion
             }
           }
@@ -276,9 +276,9 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       if (this.intros) {
         const intro = this.intros.shift();
         if (intro) {
-          if (intro.metadata?.kind === undefined) {
-            intro.metadata = {
-              ...intro.metadata,
+          if (intro.extra?.kind === undefined) {
+            intro.extra = {
+              ...intro.extra,
               kind: TrackKind.Insertion
             }
           }

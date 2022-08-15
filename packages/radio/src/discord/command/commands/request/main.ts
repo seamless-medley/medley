@@ -1,4 +1,4 @@
-import { BoomBoxTrack, createLogger, MusicLibraryMetadata, Station } from "@seamless-medley/core";
+import { BoomBoxTrack, createLogger, MusicLibraryExtra, Station } from "@seamless-medley/core";
 import {
   Message,
   ActionRowBuilder,
@@ -86,8 +86,8 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   };
 
   const selections = results.map<Selection>(track => {
-    const label = truncate(track.metadata?.tags?.title || parsePath(track.path).name, { length: 100 });
-    const description = track.metadata?.tags?.title ? truncate(track.metadata?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined;
+    const label = truncate(track.extra?.tags?.title || parsePath(track.path).name, { length: 100 });
+    const description = track.extra?.tags?.title ? truncate(track.extra?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined;
 
     return {
       label,
@@ -115,13 +115,13 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   }
 
   // By collection
-  distrill(sel => (sel.collection.metadata as unknown as MusicLibraryMetadata<Station>)?.descriptor.description ?? sel.collection.id);
+  distrill(sel => (sel.collection.extra as unknown as MusicLibraryExtra<Station>)?.descriptor.description ?? sel.collection.id);
 
   // By file extension
   distrill(sel => extname(sel.track.path.toUpperCase()).substring(1));
 
   // By album
-  distrill(sel => sel.track.metadata?.tags?.album);
+  distrill(sel => sel.track.extra?.tags?.album);
 
   for (const sel of selections) {
     const distrillations = uniq(sel.distillations.filter(Boolean));
@@ -211,7 +211,9 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     })
     .catch((e) => {
       onGoing.delete(runningKey);
-      logger.error(e);
+      if (!done) {
+        logger.error(e);
+      }
     });
   }
 }

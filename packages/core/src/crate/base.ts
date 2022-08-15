@@ -4,8 +4,8 @@ import { TrackCollection } from "../collections/base";
 import { Track } from "../track";
 import { createLogger, Logger } from '../logging';
 
-export type CrateSourceWithWeight<T extends Track<any>, M = never> = {
-  collection: TrackCollection<T, M>;
+export type CrateSourceWithWeight<T extends Track<any>, E = never> = {
+  collection: TrackCollection<T, E>;
   weight: number;
 }
 
@@ -18,9 +18,9 @@ export type CrateLimitValue = number | 'all';
 
 export type CrateLimit = CrateLimitValue | (() => CrateLimitValue);
 
-export type CrateOptions<T extends Track<any>, M = never> = {
+export type CrateOptions<T extends Track<any>, E = never> = {
   id: string;
-  sources: CrateSourceWithWeight<T, M>[];
+  sources: CrateSourceWithWeight<T, E>[];
 
   chance?: Chanceable;
 
@@ -28,10 +28,10 @@ export type CrateOptions<T extends Track<any>, M = never> = {
   max?: number;
 }
 
-export class Crate<T extends Track<any>, M = never> {
+export class Crate<T extends Track<any>, E = never> {
   readonly id: string;
 
-  private _sources: TrackCollection<T, M>[] = [];
+  private _sources: TrackCollection<T, E>[] = [];
   private sourceWeights: number[] = [];
 
   limit: CrateLimit;
@@ -41,7 +41,7 @@ export class Crate<T extends Track<any>, M = never> {
 
   protected logger: Logger;
 
-  constructor(options: CrateOptions<T, M>) {
+  constructor(options: CrateOptions<T, E>) {
     this.id = options.id
 
     this.chance = options.chance;
@@ -60,7 +60,7 @@ export class Crate<T extends Track<any>, M = never> {
     return this._sources;
   }
 
-  updateSources(newSources: CrateSourceWithWeight<T, M>[]) {
+  updateSources(newSources: CrateSourceWithWeight<T, E>[]) {
     this._sources = newSources.map(s => s.collection);
     this.sourceWeights = newSources.map(s => s.weight);
   }

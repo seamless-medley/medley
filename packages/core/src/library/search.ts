@@ -13,24 +13,28 @@ export type SearchOptions = Omit<MiniSearchOptions, 'filter' | 'boostDocument' |
   };
 }
 
-export type TrackIndex = {
+export type TrackDocument = {
   id: string;
+  path: string;
   artist?: string;
   title?: string;
 }
 
+export type TrackDocumentFields = keyof TrackDocument;
+
 interface Methods {
-  add(id: string, track: TrackIndex): Promise<void>;
-  removeAll(id: string, tracks: TrackIndex[]): Promise<void>;
-  search(id: string, query: Query, searchOptions?: SearchOptions): Promise<SearchResult>;
-  autoSuggest(id: string, queryString: string, searchOptions?: SearchOptions): Promise<Suggestion[]>;
+  add(id: string, track: TrackDocument): void;
+  removeAll(id: string, tracks: TrackDocument[]): void;
+  search(id: string, query: Query, searchOptions?: SearchOptions): SearchResult[];
+  autoSuggest(id: string, queryString: string, searchOptions?: SearchOptions): Suggestion[];
 }
 
-function indexOf(track: BoomBoxTrack): TrackIndex {
+function documentOf(track: BoomBoxTrack): TrackDocument {
   return {
     id: track.id,
-    artist: track.metadata?.tags?.artist,
-    title: track.metadata?.tags?.title
+    path: track.path,
+    artist: track.extra?.tags?.artist,
+    title: track.extra?.tags?.title
   }
 }
 
@@ -47,11 +51,11 @@ export class SearchEngine extends WorkerPoolAdapter<Methods> {
   }
 
   async add(track: BoomBoxTrack) {
-    return this.exec('add', this.id, indexOf(track));
+    return this.exec('add', this.id, documentOf(track));
   }
 
   async removeAll(tracks: BoomBoxTrack[]) {
-    await this.exec('removeAll', this.id, tracks.map(indexOf));
+    await this.exec('removeAll', this.id, tracks.map(documentOf));
   }
 
   async search(query: Query, searchOptions?: SearchOptions) {

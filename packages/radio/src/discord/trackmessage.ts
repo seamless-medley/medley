@@ -4,7 +4,7 @@ import {
   BoomBoxTrackPlay,
   isRequestTrack,
   Metadata,
-  MusicLibraryMetadata,
+  MusicLibraryExtra,
   Station,
   extractAudienceGroup,
   AudienceType
@@ -56,12 +56,12 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
     .setColor('Random')
     .setTitle(requestedBy?.length ? 'Playing your request' : 'Playing');
 
-  const { metadata } = track;
+  const { extra } = track;
 
   let coverImage: AttachmentBuilder | undefined;
 
-  if (metadata) {
-    const { tags, maybeCoverAndLyrics } = metadata;
+  if (extra) {
+    const { tags, maybeCoverAndLyrics } = extra;
     if (tags) {
       const { title } = tags;
 
@@ -98,8 +98,8 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
     embed.setDescription(parsePath(track.path).name);
   }
 
-  if (track.collection.metadata) {
-    const { descriptor: { description }, owner: station } = track.collection.metadata as MusicLibraryMetadata<Station>;
+  if (track.collection.extra) {
+    const { descriptor: { description }, owner: station } = track.collection.extra as MusicLibraryExtra<Station>;
 
     embed.addFields(
       { name: 'Collection', value: description ?? track.collection.id },

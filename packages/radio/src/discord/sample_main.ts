@@ -1,4 +1,4 @@
-import { breath, createLogger, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, SweeperRule, TrackCollection, TrackIdCache } from "@seamless-medley/core";
+import { breath, createLogger, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, SweeperRule, TrackCollection, MusicIdentifierCache } from "@seamless-medley/core";
 import { MetadataCache } from "@seamless-medley/core";
 import _, { noop, shuffle } from "lodash";
 import { MedleyAutomaton } from "./automaton";
@@ -11,7 +11,7 @@ process.on('unhandledRejection', (e) => {
   console.error('Rejection', e);
 });
 
-type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers'> & {
+type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'metadataCache' | 'musicIdentifierCache'> & {
   intros?: string[];
   requestSweepers?: string[];
 }
@@ -142,16 +142,16 @@ async function main() {
 
   logger.info('Initializing');
 
-  const trackIdCache = new TrackIdCache();
-  await trackIdCache.init({
+  const musicIdentifierCache = new MusicIdentifierCache();
+  await musicIdentifierCache.init({
     ttls: [
       7 * 24 * 60 * 60 * 1000,
       10 * 24 * 60 * 60 * 1000
     ],
     store: {
       type: 'sqlite',
-      path: 'trackid.db',
-      table: 'trackids'
+      path: 'musicid.db',
+      table: 'musicids'
     }
   });
 
@@ -190,7 +190,7 @@ async function main() {
         description: config.description,
         intros,
         requestSweepers,
-        trackIdCache,
+        musicIdentifierCache,
         metadataCache
       });
 

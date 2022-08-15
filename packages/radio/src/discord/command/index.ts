@@ -102,15 +102,17 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
       }
     }
     catch (e) {
-      if (e instanceof CommandError) {
-        if (isReplyable(interaction)) {
+      logger.prettyError(e as Error);
+
+      if (isReplyable(interaction)) {
+        if (e instanceof CommandError) {
           deny(interaction, `Command Error: ${e.message}`, undefined, true);
+          return;
         }
 
+        deny(interaction, 'Internal Error', undefined, true);
         return;
       }
-
-      logger.error('Interaction Error', e);
     }
   }
 }
