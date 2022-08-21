@@ -2,6 +2,7 @@ import { random } from "lodash";
 import { WorkerPoolAdapter } from "../worker_pool_adapter";
 import { CacheOptions } from "./types";
 
+/** @deprecated */
 export abstract class BaseCache<Methods> extends WorkerPoolAdapter<Methods> {
   constructor() {
     super(__dirname + '/worker.js', {});

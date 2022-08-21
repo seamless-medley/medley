@@ -2,13 +2,13 @@ import type { Metadata } from '@seamless-medley/medley';
 import { MusicIdendifier } from '../track';
 import { BaseCache } from './base';
 
-// TODO: Use real database (MikroORM maybe? or just use MongoDB?)
-
 interface Methods {
   get(musicId: string): Promise<Metadata | undefined>;
   set(musicId: string, data: Metadata, ttl: number): Promise<void>;
   del(musicId: string): Promise<void>;
 }
+
+/** @deprecated */
 export class MetadataCache extends BaseCache<Methods> {
   async get(musicId: string, refresh = false) {
     const metadata = await this.exec('get', musicId);

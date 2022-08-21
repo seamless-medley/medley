@@ -8,6 +8,7 @@ interface Methods {
   del(path: string): Promise<void>;
 }
 
+/** @deprecated */
 export class MusicIdentifierCache extends BaseCache<Methods> {
   async get(path: string) {
     return this.exec('get', normalizePath(path));
