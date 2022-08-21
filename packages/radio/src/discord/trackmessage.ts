@@ -70,7 +70,7 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
       }
 
       for (const tag of ['artist', 'album', 'genre']) {
-        const val = get<Metadata, keyof Metadata, ''>(tags,
+        const val = get<typeof tags, keyof Metadata, ''>(tags,
           tag as keyof Metadata,
           ''
         ).toString();

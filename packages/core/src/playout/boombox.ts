@@ -8,9 +8,9 @@ import { Crate, CrateSequencer, TrackValidator, TrackVerifier, TrackVerifierResu
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
-import { MetadataCache } from '../cache';
 import { createLogger, Logger } from '../logging';
 import { MetadataHelper } from '../metadata';
+import { MusicDb } from '../library/music_db';
 
 export enum TrackKind {
   Normal,
@@ -19,7 +19,7 @@ export enum TrackKind {
 }
 
 export type BoomBoxTrackExtra = {
-  tags?: Metadata;
+  tags?: Partial<Metadata>;
   maybeCoverAndLyrics?: Promise<CoverAndLyrics>;
   kind: TrackKind;
 }
@@ -67,7 +67,7 @@ type BoomBoxOptions<Requester = any> = {
   queue: Queue<BoomBoxTrack>;
   crates: BoomBoxCrate[];
 
-  metadataCache?: MetadataCache;
+  db?: MusicDb;
 
   /**
    * Initalize artist history
@@ -115,7 +115,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   readonly medley: Medley<BoomBoxTrack>;
   readonly queue: Queue<BoomBoxTrack>;
-  readonly metadataCache?: MetadataCache;
+
+  readonly musicDb?: MusicDb;
 
   private readonly onInsertRequestTrack?: OnInsertRequestTrack<Requester>;
 
@@ -143,7 +144,6 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     //
     this.medley = options.medley;
     this.queue = options.queue;
-    this.metadataCache = options.metadataCache;
     //
     this.medley.on('enqueueNext', this.enqueue);
     this.medley.on('loaded', this.deckLoaded);
@@ -202,7 +202,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private verifyTrack: TrackVerifier<BoomBoxTrackExtra> = async (track): Promise<TrackVerifierResult<BoomBoxTrackExtra>> => {
     try {
-      const metadata = track.extra?.tags ?? (await helper.fetchMetadata(track, this.metadataCache, true)).metadata;
+      const metadata = track.extra?.tags ?? (await helper.fetchMetadata(track, this.musicDb, true)).metadata;
 
       const boombooxExtra: BoomBoxTrackExtra = {
         kind: TrackKind.Normal,
@@ -525,7 +525,7 @@ function getArtists(extra: BoomBoxTrackExtra): string[] {
     return [];
   }
 
-  return uniq(extra.tags.artist.split(/[/;,]/)).map(trim);
+  return uniq(extra.tags.artist?.split(/[/;,]/)).map(trim);
 }
 
 export function getTrackBanner(track: BoomBoxTrack) {

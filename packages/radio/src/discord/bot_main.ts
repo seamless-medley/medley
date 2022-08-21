@@ -1,6 +1,7 @@
-import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, MusicLibraryDescriptor, SequenceConfig, breath, SweeperRule, MusicIdentifierCache } from "@seamless-medley/core";
-import { MetadataCache } from "@seamless-medley/core";
+import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, MusicLibraryDescriptor, SequenceConfig, breath, SweeperRule } from "@seamless-medley/core";
 import _, { noop, shuffle } from "lodash";
+import { MongoClient } from "mongodb";
+import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton } from "./automaton";
 
 process.on('uncaughtException', (e) => {
@@ -11,7 +12,7 @@ process.on('unhandledRejection', (e) => {
   console.error('Unhandled Rejection', e);
 });
 
-type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'metadataCache' | 'musicIdentifierCache'> & {
+type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicIdentifierCache' | 'musicDb'> & {
   intros?: string[];
   requestSweepers?: string[];
 }
@@ -143,31 +144,7 @@ async function main() {
 
   logger.info('Initializing');
 
-  const musicIdentifierCache = new MusicIdentifierCache();
-  await musicIdentifierCache.init({
-    ttls: [
-      7 * 24 * 60 * 60 * 1000,
-      10 * 24 * 60 * 60 * 1000
-    ],
-    store: {
-      type: 'sqlite',
-      path: 'trackid.db',
-      table: 'trackids'
-    }
-  });
-
-  const metadataCache = new MetadataCache();
-  await metadataCache.init({
-    ttls: [
-      10 * 24 * 60 * 60 * 1000,
-      15 * 24 * 60 * 60 * 1000
-    ],
-    store: {
-      type: 'sqlite',
-      path: 'metadata.db',
-      table: 'tracks'
-    }
-  });
+  const client = new MongoClient('mongodb://root:example@localhost:27017');
 
   const stations = await Promise.all(
     storedConfigs.stations.map(config => new Promise<Station>(async (resolve) => {
@@ -193,8 +170,7 @@ async function main() {
         intros,
         requestSweepers,
         followCrateAfterRequestTrack: config.followCrateAfterRequestTrack,
-        musicIdentifierCache,
-        metadataCache
+        musicDb: new MongoMusicDb(client.db('medley'))
       });
 
       for (const desc of musicCollections) {

@@ -2,6 +2,7 @@ import { TrackInfo } from "@seamless-medley/medley";
 import { Crate } from "./crate";
 import { TrackCollection } from "./collections";
 
+/** @deprecated */
 export type MusicIdendifier = {
   id: Track<any>['id'];
   musicId?: Track<any>['musicId'];

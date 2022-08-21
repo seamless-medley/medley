@@ -1,21 +1,15 @@
 import { createHash } from 'crypto';
 import EventEmitter from "events";
-import _, { castArray, chain, find, findIndex, partition, sample, shuffle, sortBy } from "lodash";
+import _, { castArray, chain, find, findIndex, omit, partition, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
-import { MusicIdendifier, Track } from "../track";
+import { Track } from "../track";
 import { moveArrayElements } from '../utils';
 
-export interface TrackActuator<Intermediate> {
-  lookup(path: string): Promise<MusicIdendifier | undefined>;
-  actuate(path: string): Promise<Intermediate | undefined>;
-  generateMusicId(path: string, intermediate?: Intermediate): Promise<MusicIdendifier['musicId'] | undefined>;
-  saveIdentifier(path: string, identifier: MusicIdendifier): Promise<void>;
-  saveIntermediate(path: string, identifier: MusicIdendifier, intermediate: Intermediate): Promise<void>;
-}
+export type TrackCreator<T extends Track<any, any>> = (path: string) => Promise<Omit<T, 'collection'> | undefined>;
 
 export type TrackCollectionOptions<T extends Track<any, CE>, CE = never> = {
-  trackActuator?: TrackActuator<any>;
+  trackCreator?: TrackCreator<T>;
 
   /**
    * Called when new tracks are added to the collection
@@ -69,38 +63,21 @@ export class TrackCollection<T extends Track<any, CE>, CE = never> extends Event
   }
 
   protected async createTrack(path: string): Promise<T> {
-    const { trackActuator } = this.options;
+    const { trackCreator } = this.options;
 
-    let identifier = await trackActuator?.lookup(path);
+    const createdTrack = await trackCreator?.(path);
 
-    let { id, musicId } = identifier ?? {};
+    type NT = Track<any, CE>;
+    type MutableTrack = { -readonly [P in keyof NT]: NT[P] };
 
-    if (!id) {
-      id = await this.getTrackId(path);
-    }
-
-    let intermediate: any;
-
-    if (!identifier) {
-      intermediate = await trackActuator?.actuate(path);
-      musicId = await trackActuator?.generateMusicId(path, intermediate);
-    }
-
-    if (identifier?.id !== id || identifier?.musicId !== musicId) {
-      identifier = { id, musicId };
-      trackActuator?.saveIdentifier(path, identifier);
-    }
-
-    if (intermediate) {
-      trackActuator?.saveIntermediate(path, { id, musicId }, intermediate);
-    }
-
-    return {
-      id,
+    const track: MutableTrack = {
+      id: createdTrack?.id ?? await this.getTrackId(path),
       path,
-      musicId,
-      collection: this
-    } as unknown as T;
+      collection: this as any,
+      ...omit(createdTrack, 'id', 'path'),
+    };
+
+    return track as T;
   }
 
   get length(): number {

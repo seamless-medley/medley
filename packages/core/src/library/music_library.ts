@@ -1,15 +1,12 @@
 import _, { castArray, noop } from 'lodash';
 import normalizePath from 'normalize-path';
-import { TrackActuator, TrackCollectionOptions, WatchTrackCollection } from '../collections';
+import { TrackCreator, TrackCollectionOptions, WatchTrackCollection } from '../collections';
 import { createLogger } from '../logging';
-import { MetadataCache } from '../cache';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
 import { SearchEngine, Query, TrackDocumentFields } from './search';
 import { MetadataHelper } from '../metadata';
-import { Metadata } from '@seamless-medley/medley';
-import { MusicIdentifierCache } from '../cache/musicid';
-import { MusicIdendifier } from '../track';
+import { MusicDb } from './music_db';
 
 export type MusicLibraryDescriptor = {
   id: string;
@@ -31,31 +28,38 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
   private collectionPaths = new Map<string, string>();
 
-  constructor(readonly id: string, readonly owner: O, readonly metadataCache: MetadataCache, readonly musicIdentifierCache: MusicIdentifierCache) {
+  constructor(
+    readonly id: string,
+    readonly owner: O,
+    readonly musicDb: MusicDb
+  ) {
     super();
   }
 
-  private trackActuator: TrackActuator<Metadata> = {
-    lookup: (path: string) => this.musicIdentifierCache.get(path),
+  private trackCreator: TrackCreator<BoomBoxTrack> = async (path: string) => {
+    const fromDb = await this.musicDb.findByPath(path);
 
-    actuate: (path: string) => helper.metadata(path),
-
-    generateMusicId: async (path: string, metadata?: Metadata) => metadata?.isrc,
-
-    saveIdentifier: async (path: string, identifier: MusicIdendifier) => {
-      this.musicIdentifierCache?.set(path, identifier);
-    },
-
-    saveIntermediate: async (path: string, identifier: MusicIdendifier, metadata: Metadata) => {
-      this.metadataCache?.persist(identifier, metadata);
+    if (!fromDb) {
+      this.logger.debug('Not found', path);
+      return;
     }
+
+    const { trackId: id, isrc: musicId, ...tags } = fromDb;
+
+    return {
+      id,
+      path,
+      musicId,
+      extra: {
+        kind: TrackKind.Normal,
+        tags
+      }
+    } as unknown as BoomBoxTrack;
   }
 
   private handleTrackRemoval = (tracks: BoomBoxTrack[]) => {
-    if (this.musicIdentifierCache) {
-      for (const { path } of tracks) {
-        this.musicIdentifierCache.del(path);
-      }
+    for (const { id } of tracks) {
+      this.musicDb.delete(id);
     }
 
     this.searchEngine.removeAll(tracks);
@@ -74,7 +78,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     super.remove(...collections);
   }
 
-
   private async indexTracks(collection: WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>, tracks: BoomBoxTrack[], done: () => void) {
     if (tracks.length <= 0) {
       done();
@@ -84,17 +87,18 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     const [track, ...remainings] = tracks;
 
     if (!track.extra?.tags) {
-      await helper.fetchMetadata(track, this.metadataCache)
+      await helper.fetchMetadata(track, this.musicDb)
         .then(async ({ metadata: tags }) => {
+          track.musicId = tags.isrc,
           track.extra = {
             tags,
             kind: TrackKind.Normal
           };
-
-          this.searchEngine.add(track);
         })
         .catch(e => this.logger.error(e));
     }
+
+    this.searchEngine.add(track);
 
     setTimeout(() => this.indexTracks(collection, remainings, done), 0);
   }
@@ -109,7 +113,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         {
           newTracksAddingMode: descriptor.newTracksAddingMode,
           reshuffleEvery: descriptor.reshuffleEvery,
-          trackActuator: this.trackActuator
+          trackCreator: this.trackCreator
         }
       );
 
@@ -126,6 +130,10 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
       newCollection.on('tracksAdd', (tracks: BoomBoxTrack[]) => {
         this.indexTracks(newCollection, tracks, noop);
+      });
+
+      newCollection.on('tracksUpdate', async (tracks: BoomBoxTrack[]) => {
+        // TODO: Update metadata in track object, database and search engine
       });
 
 
@@ -173,51 +181,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         return track;
       }
     }
-  }
-
-  /**
-   * @deprecated
-   */
-  private async buildCache(progressCallback?: (progress: number, outOf: number) => any): Promise<number> {
-    return new Promise((resolve) => {
-      const cache = this.metadataCache;
-      if (!cache) {
-        resolve(0);
-        return;
-      }
-
-      progressCallback?.(-1, -1);
-
-      let allTracks: BoomBoxTrack[] = [];
-
-      for (const collection of this) {
-        allTracks = allTracks.concat(collection.all());
-      }
-
-      const total = allTracks.length;
-      progressCallback?.(0, total);
-
-      const process = (tracks: BoomBoxTrack[]) => {
-        if (tracks.length <= 0) {
-          progressCallback?.(total, total);
-          resolve(total);
-          return;
-        }
-
-        const [track, ...remainings] = tracks;
-
-        const metadata = track.extra?.tags;
-
-        if (metadata) {
-          cache.persist(track, metadata).catch(noop);
-        }
-
-        progressCallback?.(total - remainings.length, total);
-        setTimeout(() => process(remainings), 0);
-      }
-
-      process(allTracks);
-    });
   }
 
   async search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): Promise<BoomBoxTrack[]> {
