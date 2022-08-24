@@ -11,71 +11,57 @@ const MiniSearch = require('minisearch');
 /** @typedef {import('./search').SearchOptions} SearchOptions */
 /** @typedef {import('./search').TrackDocument} TrackDocument */
 
-/** @type {Map<string, Search>} */
-const instances = new Map();
-
+/** @type {Search} */
+let miniSearch;
 /**
  *
- * @param {string} id
  * @returns {Search}
  */
-function acquire(id) {
-  if (instances.has(id)) {
-    // @ts-ignore
-    return instances.get(id);
+function acquire() {
+  if (!miniSearch) {
+    const fields = ['artist', 'title'];
+
+    // @ts-expect-error
+    miniSearch = new MiniSearch({
+      fields,
+      storeFields: fields
+    });
   }
-
-  const fields = ['artist', 'title'];
-
-  /** @type {Search} */
-  // @ts-expect-error
-  const miniSearch = new MiniSearch({
-    fields,
-    storeFields: fields
-  });
-
-  instances.set(id, miniSearch);
 
   return miniSearch;
 }
 
 /**
- *
- * @param {string} id
  * @param {TrackDocument} track
  */
-function add(id, track) {
-  acquire(id).add(track);
+function add(track) {
+  acquire().add(track);
 }
 
 /**
  *
- * @param {string} id
  * @param {TrackDocument[]} tracks
  */
-function removeAll(id, tracks) {
-  console.log('[search_worker]: removeAll', tracks);
-  acquire(id).removeAll(tracks);
+function removeAll(tracks) {
+  acquire().removeAll(tracks);
 }
 
 /**
  *
- * @param {string} id
  * @param {Query} query
  * @param {SearchOptions | undefined} searchOptions
  * @returns {SearchResult[]}
  */
-function search(id, query, searchOptions) {
-  return acquire(id).search(query, searchOptions)
+function search(query, searchOptions) {
+  return acquire().search(query, searchOptions)
 }
 
 /**
  *
- * @param {string} id
  * @param {string} queryString
  * @param {SearchOptions | undefined} options
  */
-function autoSuggest(id, queryString, options) {
+function autoSuggest(queryString, options) {
   const { narrow } = options ?? {};
 
   /** @type {MiniSearchOptions} */
@@ -90,7 +76,7 @@ function autoSuggest(id, queryString, options) {
     }
   }
 
-  return acquire(id).autoSuggest(queryString, miniSearchOptions);
+  return acquire().autoSuggest(queryString, miniSearchOptions);
 }
 
 workerpool.worker({

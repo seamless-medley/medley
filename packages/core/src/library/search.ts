@@ -23,10 +23,10 @@ export type TrackDocument = {
 export type TrackDocumentFields = keyof TrackDocument;
 
 interface Methods {
-  add(id: string, track: TrackDocument): void;
-  removeAll(id: string, tracks: TrackDocument[]): void;
-  search(id: string, query: Query, searchOptions?: SearchOptions): SearchResult[];
-  autoSuggest(id: string, queryString: string, searchOptions?: SearchOptions): Suggestion[];
+  add(track: TrackDocument): void;
+  removeAll(tracks: TrackDocument[]): void;
+  search(query: Query, searchOptions?: SearchOptions): SearchResult[];
+  autoSuggest(queryString: string, searchOptions?: SearchOptions): Suggestion[];
 }
 
 function documentOf(track: BoomBoxTrack): TrackDocument {
@@ -41,8 +41,6 @@ function documentOf(track: BoomBoxTrack): TrackDocument {
 export class SearchEngine extends WorkerPoolAdapter<Methods> {
   private static counter = 0;
 
-  private id = (SearchEngine.counter++).toString(36);
-
   constructor() {
     super(__dirname + '/search_worker.js', {
       minWorkers: 1,
@@ -51,18 +49,18 @@ export class SearchEngine extends WorkerPoolAdapter<Methods> {
   }
 
   async add(track: BoomBoxTrack) {
-    return this.exec('add', this.id, documentOf(track));
+    return this.exec('add', documentOf(track));
   }
 
   async removeAll(tracks: BoomBoxTrack[]) {
-    await this.exec('removeAll', this.id, tracks.map(documentOf));
+    await this.exec('removeAll', tracks.map(documentOf));
   }
 
   async search(query: Query, searchOptions?: SearchOptions) {
-    return this.exec('search', this.id, query, searchOptions);
+    return this.exec('search', query, searchOptions);
   }
 
   async autoSuggest(queryString: string, searchOptions?: SearchOptions) {
-    return this.exec('autoSuggest', this.id, queryString, searchOptions);
+    return this.exec('autoSuggest', queryString, searchOptions);
   }
 }
