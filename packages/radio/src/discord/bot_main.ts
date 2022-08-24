@@ -144,7 +144,13 @@ async function main() {
 
   logger.info('Initializing');
 
-  const client = new MongoClient('mongodb://root:example@localhost:27017');
+  const musicDb = new MongoMusicDb({
+    url: 'mongodb://root:example@localhost:27017',
+    database: 'medley',
+    ttls: [60 * 60 * 24 * 7, 60 * 60 * 24 * 12]
+  });
+
+  await musicDb.init();
 
   const stations = await Promise.all(
     storedConfigs.stations.map(config => new Promise<Station>(async (resolve) => {
@@ -170,7 +176,7 @@ async function main() {
         intros,
         requestSweepers,
         followCrateAfterRequestTrack: config.followCrateAfterRequestTrack,
-        musicDb: new MongoMusicDb(client.db('medley'))
+        musicDb
       });
 
       for (const desc of musicCollections) {
