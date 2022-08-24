@@ -36,7 +36,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     super();
   }
 
-  private trackCreator: TrackCreator<BoomBoxTrack> = async (path: string) => {
+  private trackCreator: TrackCreator<BoomBoxTrack> = async (path) => {
     const fromDb = await this.musicDb.findByPath(path);
 
     if (!fromDb) {
@@ -54,7 +54,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         kind: TrackKind.Normal,
         tags
       }
-    } as unknown as BoomBoxTrack;
+    }
   }
 
   private handleTrackRemoval = (tracks: BoomBoxTrack[]) => {
@@ -214,8 +214,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     }
 
     const result = await this.searchEngine.search({ queries, combineWith: 'OR' }, { prefix: true, fuzzy: 0.2 });
-
-    console.log('search result', result.length);
 
     const chain = _(result)
       .sortBy([s => -s.score, 'title'])

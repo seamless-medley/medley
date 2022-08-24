@@ -24,7 +24,7 @@ export abstract class BaseCache<Methods> extends WorkerPoolAdapter<Methods> {
     for (const worker of pool.workers as any[]) {
       await worker.exec('configure', [{
         ...options,
-        ttl: this.ttls[0]
+        ttls: this.ttls
       }]);
     }
   }
