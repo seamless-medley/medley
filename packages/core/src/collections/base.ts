@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import EventEmitter from "events";
-import _, { castArray, chain, find, findIndex, omit, partition, sample, shuffle, sortBy } from "lodash";
+import { castArray, chain, chunk, find, findIndex, omit, partition, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
@@ -127,8 +127,13 @@ export class TrackCollection<T extends Track<any, CE>, CE = never> extends Event
       .uniq()
       .value();
 
-    const immediateTracks = await Promise.all(validPaths.map(p => this.createTrack(p)));
-    await this.addTracks(immediateTracks);
+    const immediateTracks: T[] = [];
+
+    for (const group of chunk(validPaths, 500)) {
+      const created = await Promise.all(group.map(p => this.createTrack(p)));
+      await this.addTracks(created);
+      immediateTracks.push(...created);
+    }
 
     return immediateTracks;
   }
