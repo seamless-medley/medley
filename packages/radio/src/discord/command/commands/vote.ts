@@ -1,4 +1,4 @@
-import { RequestAudience, AudienceType, getTrackBanner, makeRequestAudience, RequestTrack, TrackPeek } from "@seamless-medley/core";
+import { Audience, AudienceType, getTrackBanner, makeAudience, RequestTrack, TrackPeek } from "@seamless-medley/core";
 import { CommandInteraction, Message, EmbedBuilder, MessageReaction, } from "discord.js";
 import { chain, isEqual, keyBy, sampleSize, take } from "lodash";
 import * as emojis from "../../emojis";
@@ -11,7 +11,7 @@ const declaration: SubCommandLikeOption = {
   description: 'Vote for songs'
 }
 
-type Nominatee = TrackPeek<RequestTrack<RequestAudience>> & {
+type Nominatee = TrackPeek<RequestTrack<Audience>> & {
   banner: string;
   votes: number,
   // TODO: voters
@@ -100,7 +100,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       }
     }
 
-    const handleNewRequest = async (peek: TrackPeek<RequestTrack<RequestAudience>>) => {
+    const handleNewRequest = async (peek: TrackPeek<RequestTrack<Audience>>) => {
       if (nominatees.length >= 20) {
         // Discord allows 20 reactions per message
         return;
@@ -158,7 +158,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
             contributors = contributors.concat(userIds);
 
-            const audienceMaker = makeRequestAudience(AudienceType.Discord, guildId);
+            const audienceMaker = makeAudience(AudienceType.Discord, guildId);
 
             request.track.requestedBy = chain(request.track.requestedBy)
               .concat(userIds.map(audienceMaker))

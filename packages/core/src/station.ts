@@ -92,14 +92,15 @@ export enum AudienceType {
 
 export type AudienceGroupId = `${AudienceType}$${string}`;
 
-export type RequestAudience = {
+
+export type Audience = {
   group: AudienceGroupId;
   id: string;
 }
 
 export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
   ready: () => void;
-  requestTrackAdded: (track: TrackPeek<RequestTrack<RequestAudience>>) => void;
+  requestTrackAdded: (track: TrackPeek<RequestTrack<Audience>>) => void;
 }
 
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
@@ -110,7 +111,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   readonly queue: Queue<BoomBoxTrack>;
   readonly medley: Medley<BoomBoxTrack>;
 
-  private boombox: BoomBox<RequestAudience>;
+  private boombox: BoomBox<Audience>;
 
   readonly library: MusicLibrary<Station>;
 
@@ -148,7 +149,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     );
 
     // Create boombox
-    const boombox = new BoomBox<RequestAudience>({
+    const boombox = new BoomBox<Audience>({
       id: this.id,
       medley: this.medley,
       queue: this.queue,
@@ -203,7 +204,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.emit('trackFinished', trackPlay);
   }
 
-  private handleRequestTrack = async (track: RequestTrack<RequestAudience>) => {
+  private handleRequestTrack = async (track: RequestTrack<Audience>) => {
     const { requestSweepers } = this;
 
     if (requestSweepers) {
@@ -425,7 +426,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
-  async request(trackId: BoomBoxTrack['id'], requestedBy: RequestAudience) {
+  async request(trackId: BoomBoxTrack['id'], requestedBy: Audience) {
     const track = this.findTrackById(trackId);
     if (!track) {
       return false;
@@ -462,7 +463,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.sortRequests();
   }
 
-  getRequestsOf(requester: RequestAudience) {
+  getRequestsOf(requester: Audience) {
     return this.boombox.getRequestsOf(requester);
   }
 
@@ -608,7 +609,7 @@ export const extractAudienceGroup = (id: AudienceGroupId) => {
   }
 }
 
-export const makeRequestAudience = curry((type: AudienceType, groupId: string, id: string): RequestAudience => ({
+export const makeAudience = curry((type: AudienceType, groupId: string, id: string): Audience => ({
   group: makeAudienceGroup(type, groupId),
   id
 }));

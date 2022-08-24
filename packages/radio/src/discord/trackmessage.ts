@@ -1,5 +1,5 @@
 import {
-  RequestAudience,
+  Audience,
   BoomBoxTrack,
   BoomBoxTrackPlay,
   isRequestTrack,
@@ -48,7 +48,7 @@ export type TrackMessage = {
 }
 
 export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrackPlay, actualTrack?: BoomBoxTrack): Promise<TrackMessage> {
-  const requested = isRequestTrack<RequestAudience>(trackPlay.track) ? trackPlay.track : undefined;
+  const requested = isRequestTrack<Audience>(trackPlay.track) ? trackPlay.track : undefined;
   const requestedBy = requested?.requestedBy;
   const track  = actualTrack ?? requested?.original ?? trackPlay.track;
 

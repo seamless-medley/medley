@@ -1,4 +1,4 @@
-import { getTrackBanner, RequestTrack, TrackPeek, Station, RequestAudience } from "@seamless-medley/core";
+import { getTrackBanner, RequestTrack, TrackPeek, Station, Audience } from "@seamless-medley/core";
 import {
   BaseInteraction,
   CommandInteraction,
@@ -89,7 +89,7 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
   }
 }
 
-const previewTrack = ({ index, track }: TrackPeek<RequestTrack<RequestAudience>>, padding: number, focus: number | undefined) => {
+const previewTrack = ({ index, track }: TrackPeek<RequestTrack<Audience>>, padding: number, focus: number | undefined) => {
   const label = padStart(`${focus === index ? '+ ' : ''}${index + 1}`, padding);
   return `${label}: ${getTrackBanner(track)} [${track.priority || 0}]`;
 }
