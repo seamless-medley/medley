@@ -28,6 +28,7 @@ export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
 export type BoomBoxTrackPlay = TrackPlay<BoomBoxTrack>;
 export type BoomBoxCrate = Crate<BoomBoxTrack>;
 
+/** @deprecated TODO: Deprecate */
 export type TrackRecord = {
   trackPlay: BoomBoxTrackPlay;
   playedTime: Date;
@@ -164,7 +165,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.sequencer.on('rescue', (scanned, ignored) => {
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
       this.logger.debug('Rescue, removing', n, 'artist history entries');
-      this.artistHistory = this.artistHistory.slice(n);
+      this.artistHistory = this.artistHistory.slice(n); // TODO: Splice?
     });
   }
 
@@ -442,12 +443,14 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     const { maxTrackHistory, noDuplicatedArtist } = this.options;
 
+    // FIXME: Deprecate trackHistory
     if (maxTrackHistory > 0) {
       this.trackHistory.push({
         trackPlay,
         playedTime: new Date()
       });
 
+      // TODO: Splice? -maxTrackHistory
       while (this.trackHistory.length > maxTrackHistory) {
         this.trackHistory.shift();
       }
@@ -458,6 +461,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       if (extra) {
         this.artistHistory.push(getArtists(extra));
 
+        // TODO: Splice? -noDuplicatedArtist
         while (this.artistHistory.length > noDuplicatedArtist) {
           this.artistHistory.shift();
         }
