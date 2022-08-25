@@ -18,6 +18,7 @@ import {
   TrackKind
 } from "./playout";
 import { MetadataHelper } from "./metadata";
+import { SearchQuery, SearchQueryField, SearchQueryKey } from "./library/search";
 
 export enum PlayState {
   Idle = 'idle',
@@ -111,9 +112,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   readonly queue: Queue<BoomBoxTrack>;
   readonly medley: Medley<BoomBoxTrack>;
 
-  private boombox: BoomBox<Audience>;
+  private readonly boombox: BoomBox<Audience>;
+
+  private readonly musicDb: MusicDb;
 
   readonly library: MusicLibrary<Station>;
+
 
   intros?: TrackCollection<BoomBoxTrack>;
   requestSweepers?: TrackCollection<BoomBoxTrack>;
@@ -142,10 +146,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     }
 
+    this.musicDb = options.musicDb;
+
     this.library = new MusicLibrary(
       this.id,
       this,
-      options.musicDb
+      this.musicDb
     );
 
     // Create boombox
@@ -417,12 +423,22 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.library.findTrackById(id);
   }
 
-  search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number) {
-    // TODO: Search history
-    return this.library.search(q, limit);
+  async search(q: SearchQuery, limit?: number) {
+    const result = await this.library.search(q, limit);
+
+    if (result.length) {
+      this.musicDb.searchHistory.add(q);
+    }
+
+    return result;
   }
 
-  autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string) {
+  async autoSuggest(q: string, field?: SearchQueryField, narrowBy?: SearchQueryField, narrowTerm?: string) {
+    if (!q) {
+      const recent = await this.musicDb.searchHistory.recentItems(field ?? 'query');
+      return recent.map(([term]) => term);
+    }
+
     return this.library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 

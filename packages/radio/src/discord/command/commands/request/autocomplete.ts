@@ -10,7 +10,7 @@ export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteIn
 
   const forArtistOrTitleField = ['artist', 'title'].includes(name);
 
-  const searchField = forArtistOrTitleField ? name : undefined;
+  const searchField = forArtistOrTitleField ? name as SearchQueryField : undefined;
   const narrowBy = forArtistOrTitleField ? (name !== 'artist' ? 'artist' : 'title') : undefined;
   const narrowTerm = narrowBy ? interaction.options.getString(narrowBy) : undefined;
 

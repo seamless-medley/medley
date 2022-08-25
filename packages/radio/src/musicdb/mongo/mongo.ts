@@ -1,11 +1,5 @@
-import { MusicDb, MusicTrack } from "@seamless-medley/core";
+import { MusicDb, MusicTrack, SearchHistory, TrackHistory } from "@seamless-medley/core";
 import { WorkerPoolAdapter } from "@seamless-medley/core/src/worker_pool_adapter";
-import { random } from "lodash";
-import { Collection, Db, MongoClient } from "mongodb";
-
-// TODO: Make use of worker
-
-type ExpiryMusicTrack = MusicTrack & { expires: number };
 
 export type Options = {
   url: string;
@@ -19,7 +13,15 @@ export type Options = {
    ttls?: [min: number, max: number];
 }
 
-export class MongoMusicDb extends WorkerPoolAdapter<MusicDb> implements MusicDb {
+type PrefixRemap<Prefix extends string, T> = {
+  [name in keyof T as `${Prefix}${string & name}`]: T[name];
+}
+
+type WorkerMethods = MusicDb &
+  PrefixRemap<'search_', SearchHistory> &
+  PrefixRemap<'track_', TrackHistory>
+
+export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
   constructor(private options: Options) {
     super(__dirname + '/worker.js', {});
 
@@ -52,4 +54,20 @@ export class MongoMusicDb extends WorkerPoolAdapter<MusicDb> implements MusicDb 
   async delete(trackId: string): Promise<void> {
     return this.exec('delete', trackId);
   }
+
+  private readonly _searchHistory: SearchHistory = {
+    add: async (query) => {
+      return this.exec('search_add', query);
+    },
+
+    recentItems: async (key) => {
+      return this.exec('search_recentItems', key);
+    }
+  }
+
+  get searchHistory() {
+    return this._searchHistory;
+  }
+
+  // TODO: TrackHistory
 }

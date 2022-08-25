@@ -13,6 +13,12 @@ export type SearchOptions = Omit<MiniSearchOptions, 'filter' | 'boostDocument' |
   };
 }
 
+export type SearchQueryField = 'artist' | 'title';
+
+export type SearchQueryKey = SearchQueryField | 'query';
+
+export type SearchQuery = Record<SearchQueryKey, string | null>;
+
 export type TrackDocument = {
   id: string;
   path: string;
