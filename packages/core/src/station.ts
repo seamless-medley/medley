@@ -75,6 +75,7 @@ export type StationOptions = {
   followCrateAfterRequestTrack?: boolean;
 }
 
+/** @deprecated */
 export type SweeperConfig = {
   from?: string[];
   to?: string[];
@@ -83,7 +84,7 @@ export type SweeperConfig = {
   path: string;
 }
 
-// TODO: Union with SweeperInsertionRule
+/** @deprecated */
 export type SweeperRule = SweeperConfig;
 
 export enum AudienceType {
@@ -392,9 +393,9 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   /** @deprecated Rewrite this */
   updateSweeperRules(configs: SweeperRule[]) {
-    const collectPath = () => this.boombox.sweeperInsertionRules.map(r => r.collection.id); // TODO: Store path in metadata
+    const collectIds = () => this.boombox.sweeperInsertionRules.map(r => r.collection.id); // TODO: Store path in extra?
 
-    const oldPaths = collectPath();
+    const oldIds = collectIds();
 
     this.boombox.sweeperInsertionRules = configs.map<SweeperInsertionRule>(({ from, to, path }) => {
       if (!this.sweepers.has(path)) {
@@ -410,12 +411,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     });
 
-    const newPaths = collectPath();
-    const removedPaths = difference(oldPaths, newPaths);
+    const newIds = collectIds();
+    const removedIds = difference(oldIds, newIds);
 
-    for (const path of removedPaths) {
-      this.sweepers.get(path)?.unwatchAll();
-      this.sweepers.delete(path);
+    for (const id of removedIds) {
+      this.sweepers.get(id)?.unwatchAll();
+      this.sweepers.delete(id);
     }
   }
 
