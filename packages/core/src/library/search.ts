@@ -21,7 +21,6 @@ export type SearchQuery = Record<SearchQueryKey, string | null>;
 
 export type TrackDocument = {
   id: string;
-  path: string;
   artist?: string;
   title?: string;
 }
@@ -38,15 +37,12 @@ interface Methods {
 function documentOf(track: BoomBoxTrack): TrackDocument {
   return {
     id: track.id,
-    path: track.path,
     artist: track.extra?.tags?.artist,
     title: track.extra?.tags?.title
   }
 }
 
 export class SearchEngine extends WorkerPoolAdapter<Methods> {
-  private static counter = 0;
-
   constructor() {
     super(__dirname + '/search_worker.js', {
       minWorkers: 1,

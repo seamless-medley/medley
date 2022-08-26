@@ -1,12 +1,16 @@
 import { SearchQueryField } from "@seamless-medley/core";
 import { ApplicationCommandOptionChoiceData, AutocompleteInteraction } from "discord.js";
-import _ from "lodash";
+import { chain } from "lodash";
 import { InteractionHandlerFactory } from "../../type";
-import { guildStationGuard } from "../../utils";
 
 export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteInteraction> = (automaton) => async (interaction) => {
-  // FIXME: Don't use guard here, it throws an exception
-  const { station } = guildStationGuard(automaton, interaction);
+  const { guildId } = interaction;
+  const station = guildId ? automaton.getTunedStation(guildId) : undefined;
+
+  if (!station) {
+    interaction.respond([]);
+    return;
+  }
 
   const { name, value } = interaction.options.getFocused(true);
 
@@ -18,7 +22,7 @@ export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteIn
 
   const suggestions = await station.autoSuggest(`${value}`, searchField, narrowTerm ? narrowBy : undefined, narrowTerm || undefined);
 
-  const completions = _(suggestions)
+  const completions = chain(suggestions)
       .take(25)
       .map<ApplicationCommandOptionChoiceData>(s => ({ name: s, value: s }))
       .value()

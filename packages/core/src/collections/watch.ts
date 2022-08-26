@@ -39,7 +39,11 @@ export class WatchTrackCollection<T extends Track<any>, E = never> extends Track
 
   private handleFilesRemoval = debounce(() => {
     const removed = this.removeBy(({ id }) => this.removedIds.has(id));
-    this.logger.info('Removed', removed.length, 'tracks');
+
+    if (removed.length) {
+      this.logger.info('Removed', removed.length, 'tracks');
+    }
+
     this.removedIds.clear();
   }, 2000);
 
