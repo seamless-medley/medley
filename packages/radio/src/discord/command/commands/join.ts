@@ -63,7 +63,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 
   await reply(interaction, `Joining ${channelToJoin}`);
 
-  if (!state.textChannelId) {
+  if (!state.textChannelId && myPermissions?.has(PermissionsBitField.Flags.SendMessages)) {
     state.textChannelId = interaction.channelId;
   }
 
