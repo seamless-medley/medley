@@ -56,12 +56,12 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
   }
 
   private readonly _searchHistory: SearchHistory = {
-    add: async (query) => {
-      return this.exec('search_add', query);
+    add: async (stationId, query) => {
+      return this.exec('search_add', stationId, query);
     },
 
-    recentItems: async (key) => {
-      return this.exec('search_recentItems', key);
+    recentItems: async (stationId, key) => {
+      return this.exec('search_recentItems', stationId, key);
     }
   }
 
@@ -69,5 +69,19 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
     return this._searchHistory;
   }
 
-  // TODO: TrackHistory
+  private readonly _trackHistory: TrackHistory = {
+    add: async (stationId, track, max) => {
+      if (max > 0) {
+        return this.exec('track_add', stationId, track, max);
+      }
+    },
+
+    getAll: async (stationId) => {
+      return this.exec('track_getAll', stationId);
+    }
+  }
+
+  get trackHistory() {
+    return this._trackHistory;
+  }
 }

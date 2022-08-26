@@ -1,19 +1,25 @@
 import type { Metadata } from "@seamless-medley/medley";
+import type { TrackRecord } from "../playout";
+import type { Station } from "../station";
 import type { SearchQuery, SearchQueryKey } from "./search";
 
 export type RecentSearch = [term: string, count: number, timestamp: Date];
 
+type StationId = Station['id'];
 export interface SearchHistory {
-  add(query: SearchQuery): Promise<void>;
+  add(stationId: StationId, query: SearchQuery & { resultCount?: number }): Promise<void>;
 
-  recentItems(key: SearchQueryKey, limit?: number): Promise<RecentSearch[]>;
+  recentItems(stationId: StationId, key: SearchQueryKey, limit?: number): Promise<RecentSearch[]>;
 }
 
-// TODO: TrackHistory
-export interface TrackHistory {
-  // add(track: any): Promise<void>;
+export type TimestampedTrackRecord = TrackRecord & {
+  playedTime: Date;
+}
 
-  // getAll(): Promise<any[]>;
+export interface TrackHistory {
+  add(stationId: StationId, record: TimestampedTrackRecord, max: number): Promise<void>;
+
+  getAll(stationId: StationId): Promise<TimestampedTrackRecord[]>;
 }
 
 export interface MusicDb {
@@ -29,7 +35,7 @@ export interface MusicDb {
 
   get searchHistory(): SearchHistory;
 
-  // get trackHistory(): TrackHistory;
+  get trackHistory(): TrackHistory;
 }
 
 export interface MusicTrack extends Partial<Metadata> {

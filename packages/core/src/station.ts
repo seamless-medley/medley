@@ -15,10 +15,11 @@ import {
   BoomBoxTrackPlay,
   RequestTrack,
   SweeperInsertionRule,
-  TrackKind
+  TrackKind,
+  trackRecordOf
 } from "./playout";
 import { MetadataHelper } from "./metadata";
-import { SearchQuery, SearchQueryField, SearchQueryKey } from "./library/search";
+import { SearchQuery, SearchQueryField } from "./library/search";
 
 export enum PlayState {
   Idle = 'idle',
@@ -68,7 +69,12 @@ export type StationOptions = {
   // BoomBox
   musicDb: MusicDb;
 
+  /**
+   * Number of maximum track history
+   * @default 20
+   */
   maxTrackHistory?: number;
+
   noDuplicatedArtist?: number;
   duplicationSimilarity?: number;
 
@@ -125,6 +131,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   followCrateAfterRequestTrack: boolean;
 
+  maxTrackHistory: number = 20;
+
   private audiences: Map<AudienceGroupId, Map<string, any>> = new Map();
 
   private logger: Logger;
@@ -161,7 +169,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       medley: this.medley,
       queue: this.queue,
       crates: [],
-      maxTrackHistory: options.maxTrackHistory,
       noDuplicatedArtist: options.noDuplicatedArtist,
       duplicationSimilarity: options.duplicationSimilarity,
       onInsertRequestTrack: this.handleRequestTrack
@@ -173,10 +180,17 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     boombox.on('trackActive', this.handleTrackActive);
     boombox.on('trackFinished', this.handleTrackFinished);
 
+    this.musicDb.trackHistory
+      .getAll(this.id)
+      .then((records) => {
+        boombox.artistHistory = records.map(r => r.artists);
+      });
+
     this.boombox = boombox;
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
     this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? false;
+    this.maxTrackHistory = options.maxTrackHistory || 20;
   }
 
   get availableAudioDevices() {
@@ -201,6 +215,11 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private handleTrackStarted = (trackPlay: BoomBoxTrackPlay, lastTrack?: BoomBoxTrackPlay) => {
     this.emit('trackStarted', trackPlay, lastTrack);
+
+    this.musicDb.trackHistory.add(this.id, {
+      ...trackRecordOf(trackPlay.track),
+      playedTime: new Date()
+    }, this.maxTrackHistory);
   }
 
   private handleTrackActive = (trackPlay: BoomBoxTrackPlay) => {
@@ -271,8 +290,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.boombox.trackPlay;
   }
 
-  get trackHistory() {
-    return this.boombox.trackHistory;
+  async trackHistory() {
+    return this.musicDb.trackHistory.getAll(this.id);
   }
 
   skip() {
@@ -427,17 +446,18 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   async search(q: SearchQuery, limit?: number) {
     const result = await this.library.search(q, limit);
 
-    if (result.length) {
-      this.musicDb.searchHistory.add(q);
-    }
+    this.musicDb.searchHistory.add(this.id, { ...q, resultCount: result.length });
 
     return result;
   }
 
   async autoSuggest(q: string, field?: SearchQueryField, narrowBy?: SearchQueryField, narrowTerm?: string) {
     if (!q) {
-      const recent = await this.musicDb.searchHistory.recentItems(field ?? 'query');
-      return recent.map(([term]) => term);
+      const recent = await this.musicDb.searchHistory.recentItems(this.id, field ?? 'query');
+
+      if (recent.length) {
+        return recent.map(([term]) => term);
+      }
     }
 
     return this.library.autoSuggest(q, field, narrowBy, narrowTerm);

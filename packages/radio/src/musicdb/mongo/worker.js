@@ -6,6 +6,8 @@ const { random } = require('lodash');
 /** @typedef {import('@seamless-medley/core').MusicTrack} MusicTrack */
 /** @typedef {import('@seamless-medley/core').SearchHistory} SearchHistory */
 /** @typedef {import('@seamless-medley/core').SearchQuery} SearchQuery */
+/** @typedef {import('@seamless-medley/core').TrackHistory} TrackHistory */
+/** @typedef {import('@seamless-medley/core').TimestampedTrackRecord} TimestampedTrackRecord */
 /** @typedef {import('./mongo').Options} Options */
 
 /** @type {MongoClient} */
@@ -19,6 +21,9 @@ let musics;
 
 /** @type {Collection<SearchQuery>} */
 let searchHistory;
+
+/** @type {Collection<TimestampedTrackRecord>} */
+let trackHistory;
 
 /** @type {[min: number, max: number]} */
 let ttls = [
@@ -47,9 +52,18 @@ async function configure(options) {
 
   searchHistory = db.collection('searchHistory');
   await searchHistory.createIndexes([
+    { key: { stationId: 1 }},
     { key: { artist: 1 } },
     { key: { title: 1 } },
-    { key: { query: 1 } }
+    { key: { query: 1 } },
+    { key: { timestamp: -1 } },
+    { key: { resultCount: 1 } }
+  ]);
+
+  trackHistory = db.collection('trackHistory');
+  await trackHistory.createIndexes([
+    { key: { stationId: 1 } },
+    { key: { playedTime: 1 } }
   ]);
 }
 
@@ -104,9 +118,10 @@ const _delete = async (trackId) => {
 /**
  * @type {SearchHistory['add']}
  */
-const search_add = async (query) => {
+const search_add = async (stationId, query) => {
   await searchHistory.insertOne({
     ...query,
+    stationId,
     timestamp: new Date
   });
 }
@@ -114,13 +129,14 @@ const search_add = async (query) => {
 /**
  * @type {SearchHistory['recentItems']}
  */
-const search_recentItems = async(key, $limit) => {
+const search_recentItems = async(stationId, key, $limit) => {
   const field = `$${key}`;
 
   /** @type {import('mongodb').Document[]} */
   const pipelines = [
     {
       $match: {
+        stationId,
         resultCount: { $gt: 0 }
       }
     },
@@ -175,7 +191,43 @@ const search_recentItems = async(key, $limit) => {
   return result;
 }
 
-// TODO: TrackHistory
+/**
+ * @type {TrackHistory['add']}
+ */
+ const track_add = async(stationId, record, max) => {
+  if (!max) {
+    return;
+  }
+
+  await trackHistory.insertOne({
+    stationId,
+    ...record
+  });
+
+  const count = await trackHistory.countDocuments({ stationId });
+
+  if (count > max) {
+    const deleteCount = max - count;
+
+    const ids = await trackHistory.find({ stationId })
+      .sort('playedTime', 'asc')
+      .limit(deleteCount)
+      .map(doc => doc._id)
+      .toArray();
+
+    await trackHistory.deleteMany({
+      _id: { $in: ids }
+    })
+  }
+ }
+
+ /**
+  * @type {TrackHistory['getAll']}
+  */
+ const track_getAll = async (stationId) => await trackHistory.find({ stationId })
+    .sort('playedTime', 'asc')
+    .map(({ _id, ...record }) => record)
+    .toArray();
 
 workerpool.worker({
   configure,
@@ -185,5 +237,7 @@ workerpool.worker({
   update,
   delete: _delete,
   search_add,
-  search_recentItems
+  search_recentItems,
+  track_add,
+  track_getAll
 })

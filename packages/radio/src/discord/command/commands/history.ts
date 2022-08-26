@@ -1,4 +1,4 @@
-import { getTrackBanner } from "@seamless-medley/core";
+import { formatSongBanner } from "@seamless-medley/core";
 import { CommandInteraction } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard } from "../utils";
@@ -12,17 +12,19 @@ const declaration: SubCommandLikeOption = {
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
   const { station } = guildStationGuard(automaton, interaction);
 
-  if (station.trackHistory.length <= 0) {
+  const trackHistory = await station.trackHistory();
+
+  if (trackHistory.length <= 0) {
     interaction.reply('No track history');
     return;
   }
 
   let length = 0;
   const lines: string[] = [];
-  const history = [...station.trackHistory].reverse();
+  const history = [...trackHistory].reverse();
 
-  for (const { playedTime, trackPlay: { track }  } of history) {
-    const banner = getTrackBanner(track);
+  for (const { playedTime, ...record } of history) {
+    const banner = formatSongBanner(record.artists, record.title);
 
     const line = `> **[**<t:${Math.trunc(playedTime.valueOf() / 1000)}:T>**]**: ${banner}`;
 

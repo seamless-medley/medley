@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import _, { flatten, matches, some, toLower, trim, uniq, without } from "lodash";
+import _, { castArray, flatten, matches, some, toLower, trim, uniq, without } from "lodash";
 import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
@@ -11,6 +11,13 @@ import { SweeperInserter } from "./sweeper";
 import { createLogger, Logger } from '../logging';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from '../library/music_db';
+
+export type TrackRecord = {
+  trackId: string;
+  title?: string;
+  artists: string[];
+  isrc?: string;
+}
 
 export enum TrackKind {
   Normal,
@@ -27,12 +34,6 @@ export type BoomBoxTrackExtra = {
 export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
 export type BoomBoxTrackPlay = TrackPlay<BoomBoxTrack>;
 export type BoomBoxCrate = Crate<BoomBoxTrack>;
-
-/** @deprecated TODO: Deprecate */
-export type TrackRecord = {
-  trackPlay: BoomBoxTrackPlay;
-  playedTime: Date;
-}
 
 export type RequestTrack<Requester> = BoomBoxTrack & {
   rid: number;
@@ -71,17 +72,6 @@ type BoomBoxOptions<Requester = any> = {
   db?: MusicDb;
 
   /**
-   * Initalize artist history
-   */
-  artistHistory?: string[][];
-
-  /**
-   * Number of maximum track history
-   * @default 20
-   */
-  maxTrackHistory?: number;
-
-  /**
    * Number of tracks to be kept to be check for duplication
    * Default value is 50
    * `false` means no duplication check should be done
@@ -110,7 +100,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   readonly id: string;
   readonly sequencer: CrateSequencer<BoomBoxTrack>;
 
-  options: Required<Pick<BoomBoxOptions<Requester>, 'maxTrackHistory' | 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
+  options: Required<Pick<BoomBoxOptions<Requester>, 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
 
   private decks = Array(3).fill(0).map<DeckInfo>(() => ({ playing: false, active: false })) as [DeckInfo, DeckInfo, DeckInfo];
 
@@ -121,9 +111,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private readonly onInsertRequestTrack?: OnInsertRequestTrack<Requester>;
 
-  private artistHistory: string[][];
-
-  readonly trackHistory: TrackRecord[] = [];
+  artistHistory: string[][] = [];
 
   private logger: Logger;
 
@@ -137,11 +125,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     this.options = {
       noDuplicatedArtist: options.noDuplicatedArtist || 50,
-      duplicationSimilarity: options.duplicationSimilarity || 0.8,
-      maxTrackHistory: options.maxTrackHistory || 20
+      duplicationSimilarity: options.duplicationSimilarity || 0.8
     };
-    //
-    this.artistHistory = [...options.artistHistory || []];
     //
     this.medley = options.medley;
     this.queue = options.queue;
@@ -165,7 +150,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.sequencer.on('rescue', (scanned, ignored) => {
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
       this.logger.debug('Rescue, removing', n, 'artist history entries');
-      this.artistHistory = this.artistHistory.slice(n); // TODO: Splice?
+      this.artistHistory = this.artistHistory.slice(n);
     });
   }
 
@@ -441,30 +426,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     this.emit('trackStarted', trackPlay, lastTrack);
 
-    const { maxTrackHistory, noDuplicatedArtist } = this.options;
+    const { noDuplicatedArtist } = this.options;
 
-    // FIXME: Deprecate trackHistory
-    if (maxTrackHistory > 0) {
-      this.trackHistory.push({
-        trackPlay,
-        playedTime: new Date()
-      });
-
-      // TODO: Splice? -maxTrackHistory
-      while (this.trackHistory.length > maxTrackHistory) {
-        this.trackHistory.shift();
-      }
-    }
-
-    if (noDuplicatedArtist > 0) {
+    if (noDuplicatedArtist) {
       const { extra } = trackPlay.track;
       if (extra) {
         this.artistHistory.push(getArtists(extra));
-
-        // TODO: Splice? -noDuplicatedArtist
-        while (this.artistHistory.length > noDuplicatedArtist) {
-          this.artistHistory.shift();
-        }
+        this.artistHistory = this.artistHistory.splice(-noDuplicatedArtist);
       }
     }
   }
@@ -524,27 +492,45 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 }
 
-function getArtists(extra: BoomBoxTrackExtra): string[] {
-  if (!extra.tags) {
+const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).map(trim);
+
+export function getArtists(extra?: BoomBoxTrackExtra): string[] {
+  if (!extra?.tags?.artist) {
     return [];
   }
 
-  return uniq(extra.tags.artist?.split(/[/;,]/)).map(trim);
+  return extractArtists(extra.tags.artist);
 }
 
 export function getTrackBanner(track: BoomBoxTrack) {
   const tags = track.extra?.tags;
+  const info = formatSongBanner(getArtists(track.extra), tags?.title);
+  return info ? info : parsePath(track.path).name;
+}
+
+export function formatSongBanner(artists: string[] | string | undefined, title: string | undefined): string | undefined {
   const info: string[] = [];
 
-  if (tags?.artist) {
-    info.push(tags.artist);
+  if (artists) {
+    info.push(castArray(artists).join(','));
   }
 
-  if (tags?.title) {
-    info.push(tags.title);
+  if (title) {
+    info.push(title);
   }
 
-  return info.length ? info.join(' - ') : parsePath(track.path).name;
+  return info.length ? info.join(' - ') : undefined;
+}
+
+export function trackRecordOf(track: BoomBoxTrack): TrackRecord {
+  const { extra } = track;
+
+  return {
+    trackId: track.id,
+    title: extra?.tags?.title,
+    artists: extra ? getArtists(extra) : [],
+    isrc: extra?.tags?.isrc
+  }
 }
 
 const trackHelper = new MetadataHelper();
