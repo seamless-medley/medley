@@ -105,7 +105,6 @@ const _delete = async (trackId) => {
  * @type {SearchHistory['add']}
  */
 const search_add = async (query) => {
-  // TODO: Timestamp?
   await searchHistory.insertOne({
     ...query,
     timestamp: new Date
@@ -118,7 +117,13 @@ const search_add = async (query) => {
 const search_recentItems = async(key, $limit) => {
   const field = `$${key}`;
 
+  /** @type {import('mongodb').Document[]} */
   const pipelines = [
+    {
+      $match: {
+        resultCount: { $gt: 0 }
+      }
+    },
     { $unwind: field },
     {
       $group: {
@@ -128,20 +133,28 @@ const search_recentItems = async(key, $limit) => {
       }
     },
     {
-      $sort: {
-        timestamp: -1,
-        count: -1
-      }
-    },
-    {
       $project: {
         _id: 0,
         count: 1,
-        timestamp: 1,
-        [key]: "$_id"
+        [key]: "$_id",
+        timebin: {
+          $dateTrunc: {
+            date: "$timestamp",
+            unit: "minute",
+            binSize: 15
+          }
+        },
+        timestamp: 1
+      }
+    },
+    {
+      $sort: {
+        timebin: -1,
+        count: -1,
+        timestamp: -1
       }
     }
-  ]
+  ];
 
   if ($limit) {
     pipelines.push({ $limit });
