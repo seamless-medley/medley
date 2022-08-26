@@ -123,6 +123,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = never> extends Event
   async add(paths: string | string[]): Promise<T[]> {
     const validPaths = chain(paths)
       .castArray()
+      .map(p => normalizePath(p))
       .filter(p => /\.(mp3|flac|wav|ogg|aiff)$/i.test(p))
       .uniq()
       .value();
