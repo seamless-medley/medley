@@ -40,7 +40,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     const fromDb = await this.musicDb.findByPath(path);
 
     if (!fromDb) {
-      this.logger.debug('Not found', path);
       return;
     }
 

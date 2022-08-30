@@ -81,18 +81,6 @@ export type StationOptions = {
   followCrateAfterRequestTrack?: boolean;
 }
 
-/** @deprecated */
-export type SweeperConfig = {
-  from?: string[];
-  to?: string[];
-
-  /** @deprecated Use TrackCollection instead */
-  path: string;
-}
-
-/** @deprecated */
-export type SweeperRule = SweeperConfig;
-
 export enum AudienceType {
   Discord = 'discord',
   Icy = 'icy'
@@ -408,35 +396,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return 0;
   }
 
-  private sweepers: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
-
-  /** @deprecated Rewrite this */
-  updateSweeperRules(configs: SweeperRule[]) {
-    const collectIds = () => this.boombox.sweeperInsertionRules.map(r => r.collection.id); // TODO: Store path in extra?
-
-    const oldIds = collectIds();
-
-    this.boombox.sweeperInsertionRules = configs.map<SweeperInsertionRule>(({ from, to, path }) => {
-      if (!this.sweepers.has(path)) {
-        const collection = new WatchTrackCollection<BoomBoxTrack>(path).watch(`${normalizePath(path)}/**/*`);
-        collection.shuffle();
-        this.sweepers.set(path, collection);
-      }
-
-      return {
-        from,
-        to,
-        collection: this.sweepers.get(path)!
-      }
-    });
-
-    const newIds = collectIds();
-    const removedIds = difference(oldIds, newIds);
-
-    for (const id of removedIds) {
-      this.sweepers.get(id)?.unwatchAll();
-      this.sweepers.delete(id);
-    }
+  set sweeperInsertionRules(rules: SweeperInsertionRule[]) {
+    this.boombox.sweeperInsertionRules = rules;
   }
 
   findTrackById(id: BoomBoxTrack['id']) {

@@ -88,6 +88,10 @@ const findByISRC = (musicId) => find(musicId, 'isrc');
  * @returns {Promise<MusicTrack | undefined>}
  */
 async function find(value, by) {
+  if (!musics) {
+    throw new Error('Not initialized');
+  }
+
   const found = await musics.findOne({
     [by]: value,
     expires: { $gte: Date.now() }

@@ -1,4 +1,5 @@
 import type { Metadata } from "@seamless-medley/medley";
+import normalizePath from "normalize-path";
 import type { TrackRecord } from "../playout";
 import type { Station } from "../station";
 import type { SearchQuery, SearchQueryKey } from "./search";
@@ -41,4 +42,59 @@ export interface MusicDb {
 export interface MusicTrack extends Partial<Metadata> {
   trackId: string;
   path: string;
+}
+
+/**
+ * INTERNAL USE ONLY
+ */
+export class InMemoryMusicDb implements MusicDb {
+  private tracks = new Map<string, MusicTrack>();
+
+  async findById(trackId: string) {
+    return this.tracks.get(trackId);
+  }
+
+  async findByPath(path: string) {
+    return this.findById(normalizePath(path));
+  }
+
+  async findByISRC(musicId: string) {
+    return undefined;
+  }
+
+  async update(trackId: string, update: Omit<MusicTrack, "trackId">) {
+    const existing = this.tracks.get(trackId) ?? {};
+    this.tracks.set(trackId, {
+      ...existing,
+      ...update
+    } as MusicTrack)
+  }
+
+  async delete(trackId: string){
+    this.tracks.delete(trackId);
+  }
+
+  get searchHistory(): SearchHistory {
+    return this._searchHistory;
+  }
+
+  get trackHistory(): TrackHistory {
+    return this._trackHistory;
+  }
+
+  private readonly _searchHistory: SearchHistory = {
+    async add(stationId, query) {
+
+    },
+
+    recentItems: async (stationId, key, limit?) => []
+  }
+
+  private readonly _trackHistory: TrackHistory = {
+    async add(stationId, record, max) {
+
+    },
+
+    getAll: async (stationId) => []
+  }
 }

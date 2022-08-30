@@ -1,5 +1,8 @@
-import { MusicLibraryDescriptor } from "./library";
-import { SequenceConfig, Station, SweeperRule } from "./station";
+import normalizePath from "normalize-path";
+import { TrackCollection, WatchTrackCollection } from "./collections";
+import { InMemoryMusicDb, MusicLibraryDescriptor } from "./library";
+import { BoomBoxTrack, SweeperInsertionRule } from "./playout";
+import { SequenceConfig, Station } from "./station";
 import { breath } from "./utils";
 
 process.on('uncaughtException', (e) => {
@@ -45,34 +48,36 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid11', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
 ];
 
-const sweeperRules: SweeperRule[] = [
+const makeSweeperRule = (type: string) => new WatchTrackCollection(type).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+
+const sweeperRules: SweeperInsertionRule[] = [
   {
     to: moods.sad,
-    path: 'E:\\medley-drops\\to_blue'
+    collection: makeSweeperRule('to_blue')
   },
   {
     from: moods.sad,
     to: moods.easy,
-    path: 'E:\\medley-drops\\blue_to_easy'
+    collection: makeSweeperRule('blue_to_easy')
   },
   {
     from: moods.sad,
     to: moods.up,
-    path: 'E:\\medley-drops\\blue_to_up'
+    collection: makeSweeperRule('blue_to_up')
   },
   {
     from: moods.easy,
     to: moods.up,
-    path: 'E:\\medley-drops\\easy_to_up'
+    collection: makeSweeperRule('easy_to_up')
   },
   {
     from: moods.up,
     to: moods.easy,
-    path: 'E:\\medley-drops\\up_to_easy'
+    collection: makeSweeperRule('up_to_easy')
   },
   { // Fresh
     to: ['new-released'],
-    path: 'E:\\medley-drops\\fresh'
+    collection: makeSweeperRule('fresh')
   }
 ];
 
@@ -81,7 +86,8 @@ async function main() {
   const station = new Station({
     id: 'default',
     name: 'Default station',
-    useNullAudioDevice: false
+    useNullAudioDevice: false,
+    musicDb: new InMemoryMusicDb()
   });
 
   for (const desc of musicCollections) {
@@ -91,7 +97,7 @@ async function main() {
   }
 
   station.updateSequence(sequences);
-  station.updateSweeperRules(sweeperRules || []);
+  station.sweeperInsertionRules = sweeperRules;
 
   station.start();
 

@@ -1,6 +1,6 @@
-import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, MusicLibraryDescriptor, SequenceConfig, breath, SweeperRule } from "@seamless-medley/core";
+import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, MusicLibraryDescriptor, SequenceConfig, breath, SweeperInsertionRule, BoomBoxTrack, WatchTrackCollection } from "@seamless-medley/core";
 import _, { noop, shuffle } from "lodash";
-import { MongoClient } from "mongodb";
+import normalizePath from 'normalize-path';
 import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton } from "./automaton";
 
@@ -61,36 +61,38 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid11', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
 ];
 
-const sweeperRules: SweeperRule[] = [
+const makeSweeperRule = (type: string) => new WatchTrackCollection(type).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+
+const sweeperRules: SweeperInsertionRule[] = [
   {
     to: moods.sad,
-    path: 'E:\\medley-drops\\to_blue'
+    collection: makeSweeperRule('to_blue')
   },
   {
     from: moods.sad,
     to: moods.easy,
-    path: 'E:\\medley-drops\\blue_to_easy'
+    collection: makeSweeperRule('blue_to_easy')
   },
   {
     from: moods.sad,
     to: moods.up,
-    path: 'E:\\medley-drops\\blue_to_up'
+    collection: makeSweeperRule('blue_to_up')
   },
   {
     from: moods.easy,
     to: moods.up,
-    path: 'E:\\medley-drops\\easy_to_up'
+    collection: makeSweeperRule('easy_to_up')
   },
   {
     from: moods.up,
     to: moods.easy,
-    path: 'E:\\medley-drops\\up_to_easy'
+    collection: makeSweeperRule('up_to_easy')
   },
   { // Fresh
     to: ['new-released'],
-    path: 'E:\\medley-drops\\fresh'
+    collection: makeSweeperRule('fresh')
   }
-]
+];
 
 const storedConfigs: StoredConfig = {
   stations: [
@@ -186,7 +188,7 @@ async function main() {
       }
 
       station.updateSequence(sequences);
-      station.updateSweeperRules(sweeperRules || []);
+      station.sweeperInsertionRules = sweeperRules;
 
       resolve(station);
 
