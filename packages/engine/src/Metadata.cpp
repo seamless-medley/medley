@@ -97,6 +97,7 @@ void medley::Metadata::readFromFile(const File& file)
     title = "";
     artist = "";
     album = "";
+    isrc = "";
 
     auto filetype = utils::getFileTypeFromFileName(file);
 
@@ -239,16 +240,15 @@ void medley::Metadata::CoverAndLyrics::readID3V2(const File& f, bool readCover, 
         if (readCover) {
             auto frameMap = tag.frameListMap();
             const auto it = frameMap.find("APIC");
-            if ((it == frameMap.end()) || it->second.isEmpty()) {
-                return;
-            }
 
-            const auto frames = it->second;
-            for (const auto frame : frames) {
-                const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
-                if (apic && apic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
-                    cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
-                    break;
+            if ((it != frameMap.end()) && !it->second.isEmpty()) {
+                const auto frames = it->second;
+                for (const auto frame : frames) {
+                    const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
+                    if (apic && apic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
+                        cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
+                        break;
+                    }
                 }
             }
         }
