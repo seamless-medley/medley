@@ -13,7 +13,7 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::fadeOut>("fadeOut"),
         InstanceMethod<&Medley::seek>("seek"),
         InstanceMethod<&Medley::seekFractional>("seekFractional"),
-        InstanceMethod<&Medley::getMetadata>("getMetadata"),
+        InstanceMethod<&Medley::getDeckMetadata>("getDeckMetadata"),
         //
         InstanceMethod<&Medley::requestAudioStream>("*$reqAudio"),
         InstanceMethod<&Medley::reqAudioConsume>("*$reqAudio$consume"),
@@ -368,7 +368,7 @@ void Medley::setReplayGainBoost(const CallbackInfo& info, const Napi::Value& val
     engine->setReplayGainBoost(value.ToNumber().FloatValue());
 }
 
-Napi::Value Medley::getMetadata(const CallbackInfo& info) {
+Napi::Value Medley::getDeckMetadata(const CallbackInfo& info) {
     auto env = info.Env();
 
     if (info.Length() < 1) {

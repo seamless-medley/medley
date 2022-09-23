@@ -214,7 +214,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
 
   getAudioDevice(): AudioDeviceDescriptor;
 
-  getMetadata(index: DeckIndex): Metadata;
+  getDeckMetadata(index: DeckIndex): Metadata;
 
   async requestAudioStream(options?: RequestAudioOptions): Promise<RequestAudioStreamResult>;
 
