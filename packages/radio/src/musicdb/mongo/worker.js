@@ -40,7 +40,7 @@ async function configure(options) {
     ttls = options.ttls;
   }
 
-  client = new MongoClient(options.url);
+  client = new MongoClient(options.url, options.connectionOptions);
   db = client.db(options.database);
 
   musics = db.collection('musics');

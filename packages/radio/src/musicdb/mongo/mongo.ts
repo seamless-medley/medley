@@ -1,8 +1,11 @@
 import { MusicDb, MusicTrack, SearchHistory, TrackHistory } from "@seamless-medley/core";
 import { WorkerPoolAdapter } from "@seamless-medley/core/src/worker_pool_adapter";
+import { MongoClientOptions } from "mongodb";
 
 export type Options = {
   url: string;
+
+  connectionOptions?: MongoClientOptions;
 
   database: string;
 
@@ -22,17 +25,19 @@ type WorkerMethods = MusicDb &
   PrefixRemap<'track_', TrackHistory>
 
 export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
-  constructor(private options: Options) {
+  constructor() {
     super(__dirname + '/worker.js', {});
 
     this.preSpawn();
   }
 
-  async init() {
+  async init(options: Options): Promise<this> {
     const pool = (this.pool as any);
     for (const worker of pool.workers as any[]) {
-      await worker.exec('configure', [this.options]);
+      await worker.exec('configure', [options]);
     }
+
+    return this;
   }
 
   async findById(trackId: string): Promise<MusicTrack | undefined> {
