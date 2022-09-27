@@ -2,15 +2,16 @@ import { TrackInfo } from "@seamless-medley/medley";
 import { Crate } from "./crate";
 import { TrackCollection } from "./collections";
 
-export interface Track<M, CM = never> extends TrackInfo {
-  readonly collection: TrackCollection<Track<M>, CM>;
+export interface Track<E, CE = never> extends TrackInfo {
+  readonly collection: TrackCollection<Track<E>, CE>;
   /**
    * The current crate it was fetched from
    */
-  crate?: Crate<Track<M>, CM>;
+  crate?: Crate<Track<E>, CE>;
   readonly id: string;
   readonly path: string;
-  metadata?: M;
+  musicId?: string;
+  extra?: E;
 }
 
-export type TrackMetadata<T> = T extends Track<infer M> ? M : never;
+export type TrackExtra<T> = T extends Track<infer E> ? E : never;

@@ -71,6 +71,7 @@ public:
     const juce::String& getTitle() const { return title; }
     const juce::String& getArtist() const { return artist; }
     const juce::String& getAlbum() const { return album; }
+    const juce::String& getISRC() const { return isrc; }
     float getTrackGain() const { return trackGain; }
     double getCueIn() const { return cueIn; }
     double getCueOut() const { return cueOut; }
@@ -85,6 +86,7 @@ private:
     juce::String title;
     juce::String artist;
     juce::String album;
+    juce::String isrc;
     float trackGain = 0.0f;
     double cueIn = -1.0;
     double cueOut = -1.0;

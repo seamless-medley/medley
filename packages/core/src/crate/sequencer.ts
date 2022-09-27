@@ -2,7 +2,7 @@ import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
 import _, { isObjectLike, isString, uniqBy } from "lodash";
 import { TrackCollection } from "../collections";
-import { Track, TrackMetadata } from "../track";
+import { Track, TrackExtra } from "../track";
 import { Crate } from "./base";
 import { createLogger } from "../logging";
 import { moveArrayIndexes } from "../utils";
@@ -16,21 +16,21 @@ export type TrackValidator = {
   (path: string): Promise<boolean>;
 }
 
-export type TrackVerifier<M> = {
-  (track: Track<M>): Promise<TrackVerifierResult<M>>;
+export type TrackVerifier<E> = {
+  (track: Track<E>): Promise<TrackVerifierResult<E>>;
 }
 
-export type TrackVerifierResult<M> = {
+export type TrackVerifierResult<E> = {
   shouldPlay: boolean;
-  metadata?: M;
+  extra?: E;
 }
 
-export type CrateSequencerOptions<M> = {
+export type CrateSequencerOptions<E> = {
   trackValidator?: TrackValidator;
-  trackVerifier?: TrackVerifier<M>;
+  trackVerifier?: TrackVerifier<E>;
 }
 
-export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (EventEmitter as new () => TypedEventEmitter<CrateSequencerEvents>) {
+export class CrateSequencer<T extends Track<E>, E = TrackExtra<T>> extends (EventEmitter as new () => TypedEventEmitter<CrateSequencerEvents>) {
   private _playCounter = 0;
   private _crateIndex = 0;
   private _lastCrate: Crate<T> | undefined;
@@ -39,7 +39,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     name: `sequencer/${this.id}`
   })
 
-  constructor(readonly id: string, private _crates: Crate<T>[], private options: CrateSequencerOptions<M> = {}) {
+  constructor(readonly id: string, private _crates: Crate<T>[], private options: CrateSequencerOptions<E> = {}) {
     super();
   }
 
@@ -51,7 +51,7 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
     return isObjectLike(o) && ((o as Crate<any>).sources[0] instanceof TrackCollection);
   }
 
-  private isMetadata(o: any): o is M {
+  private isExtra(o: any): o is E {
     return isObjectLike(o);
   }
 
@@ -109,15 +109,15 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
             const track = await crate.next(trackValidator);
 
             if (track) {
-              const { shouldPlay, metadata } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, metadata: undefined };
+              const { shouldPlay, extra } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, extra: undefined };
 
               if (shouldPlay) {
                 this._playCounter++;
 
-                track.crate = crate as unknown as Crate<Track<M>>;
+                track.crate = crate as unknown as Crate<Track<E>>;
 
-                if (this.isMetadata(metadata)) {
-                  track.metadata = metadata;
+                if (this.isExtra(extra)) {
+                  track.extra = extra;
                 }
 
                 this.logger.debug('Next track (', this._playCounter, '/', crate.max, ') =>', track.path);
@@ -233,8 +233,10 @@ export class CrateSequencer<T extends Track<M>, M = TrackMetadata<T>> extends (E
   }
 
   moveCrates(newPosition: number, ...cratesOrIds: Array<Crate<T>['id'] | Crate<T>>) {
-    const toMove = cratesOrIds.map(w => this.crates.findIndex(c => c.id === (isString(w) ? w : w.id)));
-    moveArrayIndexes(this._crates, newPosition, ...toMove);
+    this.alterCrates(() => {
+      const toMove = cratesOrIds.map(w => this.crates.findIndex(c => c.id === (isString(w) ? w : w.id)));
+      moveArrayIndexes(this._crates, newPosition, ...toMove);
+    });
   }
 
 

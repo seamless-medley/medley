@@ -1,7 +1,9 @@
-import { MusicLibraryDescriptor, SequenceConfig, Station, SweeperRule } from "@seamless-medley/core";
+import { BoomBoxTrack, MusicLibraryDescriptor, SequenceConfig, Station, SweeperInsertionRule, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
 import http from 'http';
 import express from 'express';
+import normalizePath from 'normalize-path';
 import { createIcyAdapter } from "./streaming";
+import { MongoMusicDb } from "./musicdb/mongo";
 
 process.on('uncaughtException', (e) => {
 
@@ -47,53 +49,42 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid11', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
 ];
 
-const sweeperRules: SweeperRule[] = [
+const sweepers = new Map<string, TrackCollection<BoomBoxTrack>>(
+  ['to_blue', 'blue_to_easy', 'blue_to_up', 'easy_to_up', 'up_to_easy', 'fresh'].map(id => {
+    return [id, new WatchTrackCollection(id).watch(normalizePath(`E:\\medley-drops\\${id}/**/*`))]
+  })
+);
+
+const sweeperRules: SweeperInsertionRule[] = [
   {
     to: moods.sad,
-    path: 'E:\\medley-drops\\to_blue'
+    collection: sweepers.get('to_blue')!
   },
   {
     from: moods.sad,
     to: moods.easy,
-    path: 'E:\\medley-drops\\blue_to_easy'
+    collection: sweepers.get('blue_to_easy')!
   },
   {
     from: moods.sad,
     to: moods.up,
-    path: 'E:\\medley-drops\\blue_to_up'
+    collection: sweepers.get('blue_to_up')!
   },
   {
     from: moods.easy,
     to: moods.up,
-    path: 'E:\\medley-drops\\easy_to_up'
-  },
-  {
-    to: moods.love,
-    path: 'E:\\medley-drops\\up_to_easy'
+    collection: sweepers.get('easy_to_up')!
   },
   {
     from: moods.up,
     to: moods.easy,
-    path: 'E:\\medley-drops\\up_to_easy'
+    collection: sweepers.get('up_to_easy')!
   },
   { // Fresh
     to: ['new-released'],
-    path: 'E:\\medley-drops\\fresh'
+    collection: sweepers.get('fresh')!
   }
 ]
-
-const station = new Station({
-  id: 'default',
-  name: 'Default station',
-  useNullAudioDevice: true,
-});
-
-for (const desc of musicCollections) {
-  station.library.addCollection(desc);
-}
-
-station.updateSequence(sequences);
-station.updateSweeperRules(sweeperRules);
 
 async function main() {
   const app = express();
@@ -105,19 +96,38 @@ async function main() {
     console.log('Listening on', port);
   });
 
-  station.once('ready', async () => {
-    const source = await createIcyAdapter(station, {
-      outputFormat: 'mp3',
-      bitrate: 128
-    });
-
-    if (source) {
-      app.get('/test', source.handler);
-    }
-
-    station.playIfHasAudiences();
+  const musicDb = new MongoMusicDb({
+    url: 'mongodb://root:example@localhost:27017',
+    database: 'medley',
+    ttls: [60 * 60 * 24 * 7, 60 * 60 * 24 * 12]
   });
 
+  await musicDb.init();
+
+  const station = new Station({
+    id: 'default',
+    name: 'Default station',
+    useNullAudioDevice: true,
+    musicDb
+  });
+
+  for (const desc of musicCollections) {
+    await station.library.addCollection(desc);
+  }
+
+  station.updateSequence(sequences);
+  station.sweeperInsertionRules = sweeperRules;
+
+  const source = await createIcyAdapter(station, {
+    outputFormat: 'mp3',
+    bitrate: 128
+  });
+
+  if (source) {
+    app.get('/test', source.handler);
+  }
+
+  station.playIfHasAudiences();
 }
 
 main();

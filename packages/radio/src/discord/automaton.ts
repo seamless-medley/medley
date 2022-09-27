@@ -393,7 +393,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
   private handleVoiceStateUpdate = async (oldState: VoiceState, newState: VoiceState) => {
     const guildId = newState.guild.id;
-    const state = this.ensureGuildState(guildId);
+    const guildState = this.ensureGuildState(guildId);
 
     const station = this.getTunedStation(guildId);
 
@@ -410,18 +410,18 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       if (channelChange === 'leave') {
         // Me Leaving
         station?.removeAudiencesForGroup(audienceGroup);
-        state.voiceChannelId = undefined;
+        guildState.voiceChannelId = undefined;
         return;
       }
 
-      if (newState.channelId !== state.voiceChannelId) {
+      if (newState.channelId !== guildState.voiceChannelId) {
         // Me Just joined or moved, collecting...
 
-        state.voiceChannelId = newState.channelId || undefined;
-        state.serverMuted = !!newState.serverMute;
+        guildState.voiceChannelId = newState.channelId || undefined;
+        guildState.serverMuted = !!newState.serverMute;
 
         if (station) {
-          if (state.serverMuted) {
+          if (guildState.serverMuted) {
             station.removeAudiencesForGroup(audienceGroup);
           } else {
             this.updateStationAudiences(station, newState.channel!);
@@ -432,10 +432,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       }
 
       if (oldState.serverMute != newState.serverMute) {
-        state.serverMuted = !!newState.serverMute;
+        guildState.serverMuted = !!newState.serverMute;
 
         if (station) {
-          if (state.serverMuted) {
+          if (guildState.serverMuted) {
             station.removeAudiencesForGroup(audienceGroup);
           } else {
             this.updateStationAudiences(station, newState.channel!);
@@ -451,15 +451,19 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return;
     }
 
-    if (!state.voiceChannelId) {
+    if (!guildState.voiceChannelId) {
       // Me not in a room, ignoring...
+      return;
+    }
+
+    if (guildState.serverMuted) {
       return;
     }
 
     // state change is originated from other member that is in the same room as me.
 
     if (channelChange === 'leave') {
-      if (oldState.channelId !== state.voiceChannelId) {
+      if (oldState.channelId !== guildState.voiceChannelId) {
         // is not leaving my channel
         return;
       }
@@ -470,7 +474,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
 
     if (channelChange === 'join' || channelChange === 'move') {
-      if (newState.channelId === state.voiceChannelId) {
+      if (newState.channelId === guildState.voiceChannelId) {
         if (!newState.deaf) {
           // User has joined or moved into
           station?.addAudiences(audienceGroup, newState.member.id);
@@ -479,7 +483,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
         return;
       }
 
-      if (oldState.channelId === state.voiceChannelId) {
+      if (oldState.channelId === guildState.voiceChannelId) {
         // User has moved away
         station?.removeAudience(audienceGroup, newState.member.id);
         return;
@@ -490,7 +494,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
 
     // No channel change
-    if (oldState.deaf !== newState.deaf && newState.channelId === state.voiceChannelId) {
+    if (oldState.deaf !== newState.deaf && newState.channelId === guildState.voiceChannelId) {
       if (!newState.deaf) {
         station?.addAudiences(audienceGroup, newState.member.id);
       } else {
@@ -500,19 +504,23 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private handleGuildCreate = async (guild: Guild) => {
-    // Invited into
+    // Invited to
+    this.logger.info(`Invited to ${guild.name}`);
 
     this.ensureGuildState(guild.id)
     this.registerCommands(guild.id);
+
+    guild?.systemChannel?.send('Greetings :notes:, use `/medley join` command to invite me to a voice channel');
   }
 
   private handleGuildDelete = async (guild: Guild) => {
     // Removed from
+    this.logger.info(`Removed from ${guild.name}`);
     this._guildStates.delete(guild.id);
   }
 
   private handleTrackStarted = (station: Station) => async (trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
-    if (trackPlay.track.metadata?.kind === TrackKind.Insertion) {
+    if (trackPlay.track.extra?.kind === TrackKind.Insertion) {
       return;
     }
 

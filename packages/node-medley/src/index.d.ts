@@ -8,10 +8,6 @@ export interface TrackInfo {
    * Path to the physical file.
    */
   readonly path: string;
-
-  readonly cueInPosition?: number;
-
-  readonly cueOutPosition?: number;
 }
 
 export type TrackDescriptor<T extends TrackInfo> = string | T;
@@ -308,6 +304,7 @@ export type Metadata = {
   title: string;
   artist: string;
   album: string;
+  isrc: string;
   trackGain: number;
 }
 

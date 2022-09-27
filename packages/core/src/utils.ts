@@ -15,7 +15,7 @@ export function weightedSample<T>(list: T[], weights: number[]) {
       let selectedIndex: number | undefined;
       let lastIndex: number | undefined = undefined;
 
-      for (let [index, weight] of weights.entries()) {
+      for (const [index, weight] of weights.entries()) {
         total += weight;
 
         if (weight > 0) {

@@ -3,7 +3,7 @@ import { CommandInteraction, Message, ActionRowBuilder, ButtonBuilder, SelectMen
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, reply, makeHighlightedMessage, HighlightTextType } from "../utils";
-import { AudienceType, isRequestTrack, makeRequestAudience } from '@seamless-medley/core';
+import { AudienceType, isRequestTrack, makeAudience } from '@seamless-medley/core';
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -18,7 +18,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
   await interaction.deferReply();
 
-  const requests = station.getRequestsOf(makeRequestAudience(AudienceType.Discord, guildId, interaction.user.id));
+  const requests = station.getRequestsOf(makeAudience(AudienceType.Discord, guildId, interaction.user.id));
 
   if (requests.length < 1) {
     reply(interaction, {
@@ -38,8 +38,8 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   }
 
   const selections = requests.slice(0, 25).map(request => ({
-    label: truncate(request.metadata?.tags?.title || parsePath(request.path).name, { length: 100 }),
-    description: request.metadata?.tags?.title ? truncate(request.metadata?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined,
+    label: truncate(request.extra?.tags?.title || parsePath(request.path).name, { length: 100 }),
+    description: request.extra?.tags?.title ? truncate(request.extra?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined,
     value: request.rid.toString(36),
   }));
 

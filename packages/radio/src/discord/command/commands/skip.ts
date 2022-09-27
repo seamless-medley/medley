@@ -1,4 +1,4 @@
-import { AudienceType, extractAudienceGroup, isRequestTrack, RequestAudience } from "@seamless-medley/core";
+import { AudienceType, extractAudienceGroup, isRequestTrack, Audience } from "@seamless-medley/core";
 import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
@@ -24,9 +24,16 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
     PermissionsBitField.Flags.MoveMembers
   ]);
 
+  const state = automaton.getGuildState(guildId);
+
+  if (!state?.voiceChannelId) {
+    await deny(interaction, 'Not in a voice channel');
+    return;
+  }
+
   const { trackPlay } = station;
 
-  if (trackPlay && isRequestTrack<RequestAudience>(trackPlay.track)) {
+  if (trackPlay && isRequestTrack<Audience>(trackPlay.track)) {
     let canSkip = automaton.owners.includes(interaction.user.id);
 
     if (!canSkip) {

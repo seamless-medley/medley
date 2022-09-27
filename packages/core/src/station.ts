@@ -5,7 +5,7 @@ import _, { curry, difference, isFunction, random, sample, shuffle, sortBy } fro
 import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek, WatchTrackCollection } from "./collections";
 import { Chanceable, Crate, CrateLimit } from "./crate";
-import { Library, MusicLibrary, MusicLibraryDescriptor } from "./library";
+import { Library, MusicDb, MusicLibrary } from "./library";
 import { createLogger, Logger } from "./logging";
 import {
   BoomBox,
@@ -13,12 +13,13 @@ import {
   BoomBoxEvents,
   BoomBoxTrack,
   BoomBoxTrackPlay,
-  MetadataCache,
-  MetadataHelper,
   RequestTrack,
   SweeperInsertionRule,
-  TrackKind
+  TrackKind,
+  trackRecordOf
 } from "./playout";
+import { MetadataHelper } from "./metadata";
+import { SearchQuery, SearchQueryField } from "./library/search";
 
 export enum PlayState {
   Idle = 'idle',
@@ -63,30 +64,22 @@ export type StationOptions = {
 
   intros?: TrackCollection<BoomBoxTrack>;
 
-  /** @deprecated */
-  sweeperRules?: SweeperRule[];
-
   requestSweepers?: TrackCollection<BoomBoxTrack>;
 
   // BoomBox
-  metadataCache?: MetadataCache;
+  musicDb: MusicDb;
+
+  /**
+   * Number of maximum track history
+   * @default 20
+   */
   maxTrackHistory?: number;
+
   noDuplicatedArtist?: number;
   duplicationSimilarity?: number;
 
   followCrateAfterRequestTrack?: boolean;
 }
-
-export type SweeperConfig = {
-  from?: string[];
-  to?: string[];
-
-  /** @deprecated Use TrackCollection instead */
-  path: string;
-}
-
-// TODO: Union with SweeperInsertionRule
-export type SweeperRule = SweeperConfig;
 
 export enum AudienceType {
   Discord = 'discord',
@@ -95,14 +88,15 @@ export enum AudienceType {
 
 export type AudienceGroupId = `${AudienceType}$${string}`;
 
-export type RequestAudience = {
+
+export type Audience = {
   group: AudienceGroupId;
   id: string;
 }
 
 export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
   ready: () => void;
-  requestTrackAdded: (track: TrackPeek<RequestTrack<RequestAudience>>) => void;
+  requestTrackAdded: (track: TrackPeek<RequestTrack<Audience>>) => void;
 }
 
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
@@ -113,14 +107,19 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   readonly queue: Queue<BoomBoxTrack>;
   readonly medley: Medley<BoomBoxTrack>;
 
-  private boombox: BoomBox<RequestAudience>;
+  private readonly boombox: BoomBox<Audience>;
+
+  private readonly musicDb: MusicDb;
 
   readonly library: MusicLibrary<Station>;
+
 
   intros?: TrackCollection<BoomBoxTrack>;
   requestSweepers?: TrackCollection<BoomBoxTrack>;
 
   followCrateAfterRequestTrack: boolean;
+
+  maxTrackHistory: number = 20;
 
   private audiences: Map<AudienceGroupId, Map<string, any>> = new Map();
 
@@ -144,20 +143,20 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     }
 
-    this.library = new MusicLibrary(this.id, this, options.metadataCache);
-    this.library.once('ready', () => {
-      this.logger.info('Ready');
-      this.emit('ready');
-    });
+    this.musicDb = options.musicDb;
+
+    this.library = new MusicLibrary(
+      this.id,
+      this,
+      this.musicDb
+    );
 
     // Create boombox
-    const boombox = new BoomBox<RequestAudience>({
+    const boombox = new BoomBox<Audience>({
       id: this.id,
       medley: this.medley,
       queue: this.queue,
       crates: [],
-      metadataCache: options.metadataCache,
-      maxTrackHistory: options.maxTrackHistory,
       noDuplicatedArtist: options.noDuplicatedArtist,
       duplicationSimilarity: options.duplicationSimilarity,
       onInsertRequestTrack: this.handleRequestTrack
@@ -169,10 +168,17 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     boombox.on('trackActive', this.handleTrackActive);
     boombox.on('trackFinished', this.handleTrackFinished);
 
+    this.musicDb.trackHistory
+      .getAll(this.id)
+      .then((records) => {
+        boombox.artistHistory = records.map(r => r.artists);
+      });
+
     this.boombox = boombox;
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
     this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? false;
+    this.maxTrackHistory = options.maxTrackHistory || 20;
   }
 
   get availableAudioDevices() {
@@ -197,6 +203,11 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private handleTrackStarted = (trackPlay: BoomBoxTrackPlay, lastTrack?: BoomBoxTrackPlay) => {
     this.emit('trackStarted', trackPlay, lastTrack);
+
+    this.musicDb.trackHistory.add(this.id, {
+      ...trackRecordOf(trackPlay.track),
+      playedTime: new Date()
+    }, this.maxTrackHistory);
   }
 
   private handleTrackActive = (trackPlay: BoomBoxTrackPlay) => {
@@ -207,20 +218,20 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.emit('trackFinished', trackPlay);
   }
 
-  private handleRequestTrack = async (track: RequestTrack<RequestAudience>) => {
+  private handleRequestTrack = async (track: RequestTrack<Audience>) => {
     const { requestSweepers } = this;
 
     if (requestSweepers) {
 
-      const currentKind = this.boombox.trackPlay?.track.metadata?.kind;
+      const currentKind = this.boombox.trackPlay?.track.extra?.kind;
 
       if (currentKind !== TrackKind.Request) {
         const sweeper = requestSweepers.shift();
 
         if (sweeper && await MetadataHelper.isTrackLoadable(sweeper.path)) {
-          if (sweeper.metadata?.kind === undefined) {
-            sweeper.metadata = {
-              ...sweeper.metadata,
+          if (sweeper.extra?.kind === undefined) {
+            sweeper.extra = {
+              ...sweeper.extra,
               kind: TrackKind.Insertion
             }
           }
@@ -267,8 +278,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.boombox.trackPlay;
   }
 
-  get trackHistory() {
-    return this.boombox.trackHistory;
+  async trackHistory() {
+    return this.musicDb.trackHistory.getAll(this.id);
   }
 
   skip() {
@@ -282,9 +293,9 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       if (this.intros) {
         const intro = this.intros.shift();
         if (intro) {
-          if (intro.metadata?.kind === undefined) {
-            intro.metadata = {
-              ...intro.metadata,
+          if (intro.extra?.kind === undefined) {
+            intro.extra = {
+              ...intro.extra,
               kind: TrackKind.Insertion
             }
           }
@@ -385,51 +396,35 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return 0;
   }
 
-  private sweepers: Map<string, WatchTrackCollection<BoomBoxTrack>> = new Map();
-
-  /** @deprecated Rewrite this */
-  updateSweeperRules(configs: SweeperRule[]) {
-    const collectPath = () => this.boombox.sweeperInsertionRules.map(r => r.collection.id); // TODO: Store path in metadata
-
-    const oldPaths = collectPath();
-
-    this.boombox.sweeperInsertionRules = configs.map<SweeperInsertionRule>(({ from, to, path }) => {
-      if (!this.sweepers.has(path)) {
-        const collection = new WatchTrackCollection<BoomBoxTrack>(path).watch(`${normalizePath(path)}/**/*`);
-        collection.shuffle();
-        this.sweepers.set(path, collection);
-      }
-
-      return {
-        from,
-        to,
-        collection: this.sweepers.get(path)!
-      }
-    });
-
-    const newPaths = collectPath();
-    const removedPaths = difference(oldPaths, newPaths);
-
-    for (const path of removedPaths) {
-      this.sweepers.get(path)?.unwatchAll();
-      this.sweepers.delete(path);
-    }
+  set sweeperInsertionRules(rules: SweeperInsertionRule[]) {
+    this.boombox.sweeperInsertionRules = rules;
   }
 
   findTrackById(id: BoomBoxTrack['id']) {
     return this.library.findTrackById(id);
   }
 
-  search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number) {
-    // TODO: Search history
-    return this.library.search(q, limit);
+  async search(q: SearchQuery, limit?: number) {
+    const result = await this.library.search(q, limit);
+
+    this.musicDb.searchHistory.add(this.id, { ...q, resultCount: result.length });
+
+    return result;
   }
 
-  autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string) {
+  async autoSuggest(q: string, field?: SearchQueryField, narrowBy?: SearchQueryField, narrowTerm?: string) {
+    if (!q) {
+      const recent = await this.musicDb.searchHistory.recentItems(this.id, field ?? 'query');
+
+      if (recent.length) {
+        return recent.map(([term]) => term);
+      }
+    }
+
     return this.library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
-  async request(trackId: BoomBoxTrack['id'], requestedBy: RequestAudience) {
+  async request(trackId: BoomBoxTrack['id'], requestedBy: Audience) {
     const track = this.findTrackById(trackId);
     if (!track) {
       return false;
@@ -466,7 +461,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.sortRequests();
   }
 
-  getRequestsOf(requester: RequestAudience) {
+  getRequestsOf(requester: Audience) {
     return this.boombox.getRequestsOf(requester);
   }
 
@@ -612,7 +607,7 @@ export const extractAudienceGroup = (id: AudienceGroupId) => {
   }
 }
 
-export const makeRequestAudience = curry((type: AudienceType, groupId: string, id: string): RequestAudience => ({
+export const makeAudience = curry((type: AudienceType, groupId: string, id: string): Audience => ({
   group: makeAudienceGroup(type, groupId),
   id
 }));

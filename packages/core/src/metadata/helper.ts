@@ -1,10 +1,14 @@
-import workerpool, { WorkerPool, WorkerPoolOptions } from 'workerpool';
+import { WorkerPoolOptions } from 'workerpool';
 import type { CoverAndLyrics, Metadata } from '@seamless-medley/medley';
-import { MetadataCache } from './cache';
-import { Track } from '../../track';
-import { WorkerPoolAdapter } from '../../worker_pool_adapter';
+import { Track } from '../track';
+import { WorkerPoolAdapter } from '../worker_pool_adapter';
+import { MusicDb } from '../library/music_db';
+import { omitBy } from 'lodash/fp';
+import { negate } from 'lodash';
 
 let instance: MetadataHelper;
+
+const falsy = negate(Boolean);
 
 type WorkerCoverAndLyrics = Omit<CoverAndLyrics, 'cover'> & {
   cover: Uint8Array | {
@@ -15,23 +19,23 @@ type WorkerCoverAndLyrics = Omit<CoverAndLyrics, 'cover'> & {
 
 export type FetchResult = {
   hit: boolean;
-  metadata: Metadata;
+  metadata: Partial<Metadata>;
 }
 
 interface Methods {
-  metadata(path: string): Promise<Metadata>;
-  coverAndLyrics(path: string): Promise<WorkerCoverAndLyrics | CoverAndLyrics>;
-  isTrackLoadable(path: string): Promise<boolean>;
-  searchLyrics(artist: string, title: string): Promise<string>;
+  metadata(path: string): Partial<Metadata>;
+  coverAndLyrics(path: string): WorkerCoverAndLyrics | CoverAndLyrics;
+  isTrackLoadable(path: string): boolean;
+  searchLyrics(artist: string, title: string): string;
 }
 
 export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   constructor(workerType?: WorkerPoolOptions['workerType']) {
-    super(__dirname + '/metadata_worker.js', { workerType });
+    super(__dirname + '/worker.js', { workerType });
   }
 
   async metadata(path: string) {
-    return this.exec('metadata', path);
+    return await this.exec('metadata', path).then(omitBy(falsy));
   }
 
   async coverAndLyrics(path: string): Promise<CoverAndLyrics> {
@@ -47,14 +51,14 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     }
   }
 
-  async fetchMetadata(track: Track<any>, cache: MetadataCache | undefined, refresh = false): Promise<FetchResult> {
-    const cached = await cache?.get(track.id, refresh);
+  async fetchMetadata(track: Track<any>, musicDb: MusicDb | undefined, refresh = false): Promise<FetchResult> {
+    const cached = await musicDb?.findById(track.id);
     if (cached) {
-      return { hit: true, metadata: cached };
+      return { hit: true, metadata: cached }
     }
 
     const fresh = await this.metadata(track.path);
-    cache?.persist(track, fresh);
+    musicDb?.update(track.id, { ...fresh, path: track.path });
 
     return { hit: false, metadata: fresh };
   }
@@ -83,8 +87,8 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     return this.getDefaultInstance().coverAndLyrics(path);
   }
 
-  static fetchMetadata(track: Track<any>, cache: MetadataCache | undefined, refresh = false) {
-    return this.getDefaultInstance().fetchMetadata(track, cache, refresh);
+  static fetchMetadata(track: Track<any>, musicDb: MusicDb | undefined, refresh = false) {
+    return this.getDefaultInstance().fetchMetadata(track, musicDb, refresh);
   }
 
   static isTrackLoadable(path: string) {

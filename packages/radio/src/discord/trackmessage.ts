@@ -1,10 +1,10 @@
 import {
-  RequestAudience,
+  Audience,
   BoomBoxTrack,
   BoomBoxTrackPlay,
   isRequestTrack,
   Metadata,
-  MusicLibraryMetadata,
+  MusicLibraryExtra,
   Station,
   extractAudienceGroup,
   AudienceType
@@ -48,7 +48,7 @@ export type TrackMessage = {
 }
 
 export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrackPlay, actualTrack?: BoomBoxTrack): Promise<TrackMessage> {
-  const requested = isRequestTrack<RequestAudience>(trackPlay.track) ? trackPlay.track : undefined;
+  const requested = isRequestTrack<Audience>(trackPlay.track) ? trackPlay.track : undefined;
   const requestedBy = requested?.requestedBy;
   const track  = actualTrack ?? requested?.original ?? trackPlay.track;
 
@@ -56,12 +56,12 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
     .setColor('Random')
     .setTitle(requestedBy?.length ? 'Playing your request' : 'Playing');
 
-  const { metadata } = track;
+  const { extra } = track;
 
   let coverImage: AttachmentBuilder | undefined;
 
-  if (metadata) {
-    const { tags, maybeCoverAndLyrics } = metadata;
+  if (extra) {
+    const { tags, maybeCoverAndLyrics } = extra;
     if (tags) {
       const { title } = tags;
 
@@ -70,7 +70,7 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
       }
 
       for (const tag of ['artist', 'album', 'genre']) {
-        const val = get<Metadata, keyof Metadata, ''>(tags,
+        const val = get<typeof tags, keyof Metadata, ''>(tags,
           tag as keyof Metadata,
           ''
         ).toString();
@@ -98,8 +98,8 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
     embed.setDescription(parsePath(track.path).name);
   }
 
-  if (track.collection.metadata) {
-    const { descriptor: { description }, owner: station } = track.collection.metadata as MusicLibraryMetadata<Station>;
+  if (track.collection.extra) {
+    const { descriptor: { description }, owner: station } = track.collection.extra as MusicLibraryExtra<Station>;
 
     embed.addFields(
       { name: 'Collection', value: description ?? track.collection.id },

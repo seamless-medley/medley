@@ -1,6 +1,7 @@
-import { breath, createLogger, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, TrackCollection } from "@seamless-medley/core";
-import { MetadataCache } from "@seamless-medley/core";
+import { BoomBoxTrack, breath, createLogger, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, SweeperInsertionRule, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
 import _, { noop, shuffle } from "lodash";
+import normalizePath from 'normalize-path';
+import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton } from "./automaton";
 
 process.on('uncaughtException', (e) => {
@@ -11,7 +12,7 @@ process.on('unhandledRejection', (e) => {
   console.error('Rejection', e);
 });
 
-type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers'> & {
+type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicDb'> & {
   intros?: string[];
   requestSweepers?: string[];
 }
@@ -62,6 +63,39 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid11', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 4] } }
 ];
 
+const makeSweeperRule = (type: string) => new WatchTrackCollection(type).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+
+const sweeperRules: SweeperInsertionRule[] = [
+  {
+    to: moods.sad,
+    collection: makeSweeperRule('to_blue')
+  },
+  {
+    from: moods.sad,
+    to: moods.easy,
+    collection: makeSweeperRule('blue_to_easy')
+  },
+  {
+    from: moods.sad,
+    to: moods.up,
+    collection: makeSweeperRule('blue_to_up')
+  },
+  {
+    from: moods.easy,
+    to: moods.up,
+    collection: makeSweeperRule('easy_to_up')
+  },
+  {
+    from: moods.up,
+    to: moods.easy,
+    collection: makeSweeperRule('up_to_easy')
+  },
+  { // Fresh
+    to: ['new-released'],
+    collection: makeSweeperRule('fresh')
+  }
+];
+
 const storedConfigs: StoredConfig = {
   stations: [
     {
@@ -71,38 +105,6 @@ const storedConfigs: StoredConfig = {
       // intros: [
       //   'E:\\medley-drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3',
       // ],
-
-
-      sweeperRules: [
-        {
-          to: moods.sad,
-          path: 'E:\\medley-drops\\to_blue'
-        },
-        {
-          from: moods.sad,
-          to: moods.easy,
-          path: 'E:\\medley-drops\\blue_to_easy'
-        },
-        {
-          from: moods.sad,
-          to: moods.up,
-          path: 'E:\\medley-drops\\blue_to_up'
-        },
-        {
-          from: moods.easy,
-          to: moods.up,
-          path: 'E:\\medley-drops\\easy_to_up'
-        },
-        {
-          from: moods.up,
-          to: moods.easy,
-          path: 'E:\\medley-drops\\up_to_easy'
-        },
-        { // Fresh
-          to: ['new-released'],
-          path: 'E:\\medley-drops\\fresh'
-        }
-      ],
 
       requestSweepers: [
         'E:\\medley-drops\\your\\Music Radio Creative - Playing All Your Requests.mp3',
@@ -143,14 +145,13 @@ async function main() {
 
   logger.info('Initializing');
 
-  const cache = new MetadataCache();
-  await cache.init({
-    store: {
-      type: 'sqlite',
-      path: 'metadata.db',
-      table: 'tracks'
-    }
+  const musicDb = new MongoMusicDb({
+    url: 'mongodb://root:example@localhost:27017',
+    database: 'medley',
+    ttls: [60 * 60 * 24 * 7, 60 * 60 * 24 * 12]
   });
+
+  await musicDb.init();
 
   const stations = await Promise.all(
     storedConfigs.stations.map(config => new Promise<Station>(async (resolve) => {
@@ -174,7 +175,7 @@ async function main() {
         description: config.description,
         intros,
         requestSweepers,
-        metadataCache: cache
+        musicDb
       });
 
       for (const desc of musicCollections) {
@@ -184,7 +185,7 @@ async function main() {
       }
 
       station.updateSequence(sequences);
-      station.updateSweeperRules(config.sweeperRules || []);
+      station.sweeperInsertionRules = sweeperRules;
 
       resolve(station);
 

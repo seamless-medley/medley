@@ -12,7 +12,7 @@ import { stat } from "fs/promises";
 type WatchCallback<F = typeof watch> = F extends (pathName: any, options: any, callback: infer CB) => any ? CB : never;
 
 // A track collection capable of watching for changes in file system directory
-export class WatchTrackCollection<T extends Track<any>, M = never> extends TrackCollection<T, M> {
+export class WatchTrackCollection<T extends Track<any>, E = never> extends TrackCollection<T, E> {
   constructor(id: string, options: TrackCollectionOptions<T> = {}) {
     super(id, {
       tracksMapper: async (tracks) => shuffle(tracks),
@@ -39,7 +39,11 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
 
   private handleFilesRemoval = debounce(() => {
     const removed = this.removeBy(({ id }) => this.removedIds.has(id));
-    this.logger.info('Removed', removed.length, 'tracks');
+
+    if (removed.length) {
+      this.logger.info('Removed', removed.length, 'tracks');
+    }
+
     this.removedIds.clear();
   }, 2000);
 
@@ -54,7 +58,7 @@ export class WatchTrackCollection<T extends Track<any>, M = never> extends Track
     }
 
     if (event === 'remove') {
-      this.removedIds.add(this.computePathId(path));
+      this.removedIds.add(await this.getTrackId(path));
       this.handleFilesRemoval();
       return;
     }

@@ -13,32 +13,36 @@ export type SearchOptions = Omit<MiniSearchOptions, 'filter' | 'boostDocument' |
   };
 }
 
-export type TrackIndex = {
+export type SearchQueryField = 'artist' | 'title';
+
+export type SearchQueryKey = SearchQueryField | 'query';
+
+export type SearchQuery = Record<SearchQueryKey, string | null>;
+
+export type TrackDocument = {
   id: string;
   artist?: string;
   title?: string;
 }
 
+export type TrackDocumentFields = keyof TrackDocument;
+
 interface Methods {
-  add(id: string, track: TrackIndex): Promise<void>;
-  removeAll(id: string, tracks: TrackIndex[]): Promise<void>;
-  search(id: string, query: Query, searchOptions?: SearchOptions): Promise<SearchResult>;
-  autoSuggest(id: string, queryString: string, searchOptions?: SearchOptions): Promise<Suggestion[]>;
+  add(track: TrackDocument): void;
+  removeAll(tracks: TrackDocument[]): void;
+  search(query: Query, searchOptions?: SearchOptions): SearchResult[];
+  autoSuggest(queryString: string, searchOptions?: SearchOptions): Suggestion[];
 }
 
-function indexOf(track: BoomBoxTrack): TrackIndex {
+function documentOf(track: BoomBoxTrack): TrackDocument {
   return {
     id: track.id,
-    artist: track.metadata?.tags?.artist,
-    title: track.metadata?.tags?.title
+    artist: track.extra?.tags?.artist,
+    title: track.extra?.tags?.title
   }
 }
 
 export class SearchEngine extends WorkerPoolAdapter<Methods> {
-  private static counter = 0;
-
-  private id = (SearchEngine.counter++).toString(36);
-
   constructor() {
     super(__dirname + '/search_worker.js', {
       minWorkers: 1,
@@ -47,18 +51,18 @@ export class SearchEngine extends WorkerPoolAdapter<Methods> {
   }
 
   async add(track: BoomBoxTrack) {
-    return this.exec('add', this.id, indexOf(track));
+    return this.exec('add', documentOf(track));
   }
 
   async removeAll(tracks: BoomBoxTrack[]) {
-    await this.exec('removeAll', this.id, tracks.map(indexOf));
+    await this.exec('removeAll', tracks.map(documentOf));
   }
 
   async search(query: Query, searchOptions?: SearchOptions) {
-    return this.exec('search', this.id, query, searchOptions);
+    return this.exec('search', query, searchOptions);
   }
 
   async autoSuggest(queryString: string, searchOptions?: SearchOptions) {
-    return this.exec('autoSuggest', this.id, queryString, searchOptions);
+    return this.exec('autoSuggest', queryString, searchOptions);
   }
 }
