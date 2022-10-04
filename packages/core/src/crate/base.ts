@@ -28,10 +28,10 @@ export type CrateOptions<T extends Track<any>, E = never> = {
   max?: number;
 }
 
-export class Crate<T extends Track<any>, E = never> {
+export class Crate<T extends Track<any>, CE = never> {
   readonly id: string;
 
-  private _sources: TrackCollection<T, E>[] = [];
+  private _sources: TrackCollection<T, CE>[] = [];
   private sourceWeights: number[] = [];
 
   limit: CrateLimit;

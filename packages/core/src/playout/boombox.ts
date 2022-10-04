@@ -40,7 +40,7 @@ export type RequestTrack<Requester> = BoomBoxTrack & {
   priority?: number;
   requestedBy: Requester[];
   lastRequestTime?: Date;
-  original: BoomBoxTrack; // Store the original track as a RequestTrack is likely to be a shallow
+  original: BoomBoxTrack; // Store the original track as a RequestTrack is likely to be a clone
 }
 
 export type OnInsertRequestTrack<R> = (track: RequestTrack<R>) => Promise<void>;
@@ -396,7 +396,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       active: false
     }
 
-    // clean up memory holding the cover and lyrics
+    // clean up memory holding the cover, lyrics and extra
     if (trackPlay.track?.extra) {
       trackPlay.track.extra.maybeCoverAndLyrics = undefined;
 
