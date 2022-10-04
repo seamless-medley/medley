@@ -22,7 +22,7 @@ async function main() {
   });
 
   m.on('loaded', (deck) => {
-    console.log('Loaded', deck, m.getMetadata(deck));
+    console.log('Loaded', deck, m.getDeckMetadata(deck));
   });
 
   m.on('unloaded', (deck) => {

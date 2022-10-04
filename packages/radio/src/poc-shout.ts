@@ -116,7 +116,7 @@ station.once('ready', async () => {
     .catch(noop);
   }
 
-  station.on('trackActive', trackPlay => {
+  station.on('trackActive', (deckIndex, trackPlay) => {
     currentTrackPlay = trackPlay;
     postMetadata();
   });

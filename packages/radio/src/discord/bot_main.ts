@@ -1,6 +1,8 @@
-import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, MusicLibraryDescriptor, SequenceConfig, breath, SweeperInsertionRule, BoomBoxTrack, WatchTrackCollection } from "@seamless-medley/core";
+import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, MusicLibraryDescriptor, SequenceConfig, breath, SweeperInsertionRule, BoomBoxTrack, WatchTrackCollection, Medley, parseLyrics, DeckIndex } from "@seamless-medley/core";
+import axios from "axios";
 import _, { noop, shuffle } from "lodash";
 import normalizePath from 'normalize-path';
+import { basename } from "path";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton } from "./automaton";
 
@@ -23,7 +25,8 @@ type StoredConfig = {
 }
 
 const moods = {
-  up: ['upbeat', 'bright', 'groovy'],
+  bright: ['bright'],
+  up: ['upbeat', 'groovy'],
   easy: ['lovesong', 'chill'],
   sad: ['lonely', 'brokenhearted', 'hurt']
 }
@@ -56,12 +59,15 @@ const sequences: SequenceConfig[] = [
     limit: { by: 'upto', upto: 1 }
   },
   { crateId: 'guid8', collections: [ { id: 'brokenhearted' }], limit: { by: 'range', range: [1, 2] } },
+  { crateId: 'guid8_1', collections: [ { id: 'hurt' }], chance: [1, 2], limit: { by: 'upto', upto: 1 } },
   { crateId: 'guid9', collections: [ { id: 'lonely' }], limit: { by: 'range', range: [1, 2] } },
   { crateId: 'guid10', collections: [ { id: 'lovesong' }], limit: { by: 'upto', upto: 2 } },
   { crateId: 'guid11', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
 ];
 
-const makeSweeperRule = (type: string) => new WatchTrackCollection(type).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+const makeSweeperRule = (type: string) => new WatchTrackCollection(type, {
+  trackCreator: async (path) => ({ id: basename(path), path })
+}).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
 
 const sweeperRules: SweeperInsertionRule[] = [
   {
@@ -79,14 +85,12 @@ const sweeperRules: SweeperInsertionRule[] = [
     collection: makeSweeperRule('blue_to_up')
   },
   {
-    from: moods.easy,
     to: moods.up,
-    collection: makeSweeperRule('easy_to_up')
+    collection: makeSweeperRule('to_up')
   },
   {
-    from: moods.up,
-    to: moods.easy,
-    collection: makeSweeperRule('up_to_easy')
+    from: [...moods.up, ...moods.bright],
+    collection: makeSweeperRule('from_up')
   },
   { // Fresh
     to: ['new-released'],
@@ -219,7 +223,7 @@ async function main() {
 
     automaton.once('ready', () => resolve(automaton));
 
-    await automaton.login().catch(noop);
+    await automaton.login();
     return automaton;
   })));
 

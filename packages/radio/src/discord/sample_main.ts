@@ -1,6 +1,8 @@
-import { BoomBoxTrack, breath, createLogger, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, SweeperInsertionRule, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
+import { breath, createLogger, DeckIndex, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, SweeperInsertionRule, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
+import axios from "axios";
 import _, { noop, shuffle } from "lodash";
 import normalizePath from 'normalize-path';
+import { basename } from "path";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton } from "./automaton";
 
@@ -12,7 +14,7 @@ process.on('unhandledRejection', (e) => {
   console.error('Rejection', e);
 });
 
-type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicDb'> & {
+type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicIdentifierCache' | 'musicDb'> & {
   intros?: string[];
   requestSweepers?: string[];
 }
@@ -23,7 +25,8 @@ type StoredConfig = {
 }
 
 const moods = {
-  up: ['upbeat', 'bright', 'groovy'],
+  bright: ['bright'],
+  up: ['upbeat', 'groovy'],
   easy: ['lovesong', 'chill'],
   sad: ['lonely', 'brokenhearted', 'hurt']
 }
@@ -39,16 +42,15 @@ const musicCollections: (MusicLibraryDescriptor & { auxiliary?: boolean })[] = [
   { id: 'upbeat', description:'Upbeat', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
   { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released' },
   { id: 'thai', auxiliary: true, description:'Thai', path: 'M:\\Repository\\th' },
-  { id: 'inter', auxiliary: true, description:'inter', path: 'M:\\Repository\\inter' },
 ];
 
 const sequences: SequenceConfig[] = [
   { crateId: 'guid1', collections: [ { id: 'new-released' }], limit: { by: 'one-of', list: [1, 1, 1, 2] } },
   { crateId: 'guid2', collections: [ { id: 'bright' }], limit: { by: 'upto', upto: 2 } },
-  { crateId: 'guid3', collections: [ { id: 'groovy' }], limit: 1 },
+  { crateId: 'guid3', collections: [ { id: 'groovy' }], chance: [1, 3], limit: 1 },
   { crateId: 'guid4', collections: [ { id: 'upbeat' }], chance: [2, 8], limit: { by: 'range', range: [1, 2] } },
-  { crateId: 'guid5', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 3] } },
-  { crateId: 'guid6', collections: [ { id: 'lovesong' }], limit: { by: 'range', range: [2, 3] } },
+  { crateId: 'guid5', collections: [ { id: 'chill' }], limit: { by: 'upto', upto: 2 } },
+  { crateId: 'guid6', collections: [ { id: 'lovesong' }], limit: { by: 'range', range: [0, 2] } },
   { crateId: 'guid7',
     collections: [
       { id: 'lonely', weight: 1 },
@@ -60,10 +62,12 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid8_1', collections: [ { id: 'hurt' }], chance: [1, 2], limit: { by: 'upto', upto: 1 } },
   { crateId: 'guid9', collections: [ { id: 'lonely' }], limit: { by: 'range', range: [1, 2] } },
   { crateId: 'guid10', collections: [ { id: 'lovesong' }], limit: { by: 'upto', upto: 2 } },
-  { crateId: 'guid11', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 4] } }
+  { crateId: 'guid11', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
 ];
 
-const makeSweeperRule = (type: string) => new WatchTrackCollection(type).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+const makeSweeperRule = (type: string) => new WatchTrackCollection(type, {
+  trackCreator: async (path) => ({ id: basename(path), path })
+}).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
 
 const sweeperRules: SweeperInsertionRule[] = [
   {
@@ -81,14 +85,12 @@ const sweeperRules: SweeperInsertionRule[] = [
     collection: makeSweeperRule('blue_to_up')
   },
   {
-    from: moods.easy,
     to: moods.up,
-    collection: makeSweeperRule('easy_to_up')
+    collection: makeSweeperRule('to_up')
   },
   {
-    from: moods.up,
-    to: moods.easy,
-    collection: makeSweeperRule('up_to_easy')
+    from: [...moods.up, ...moods.bright],
+    collection: makeSweeperRule('from_up')
   },
   { // Fresh
     to: ['new-released'],
@@ -102,6 +104,7 @@ const storedConfigs: StoredConfig = {
       id: 'default',
       name: 'Today FM',
       description: 'Various genres',
+      followCrateAfterRequestTrack: true,
       // intros: [
       //   'E:\\medley-drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3',
       // ],

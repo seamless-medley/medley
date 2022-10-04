@@ -3,7 +3,7 @@ import express from 'express';
 import { SocketServer, SocketServerController } from './socket';
 import { MusicLibrary } from '@seamless-medley/core';
 
-const lib = new MusicLibrary('lib1', undefined);
+// const lib = new MusicLibrary('lib1', undefined);
 
 async function run() {
   const app = express();
@@ -20,5 +20,3 @@ async function run() {
 }
 
 run();
-
-// TODO: TrackCollection should be stored globally but separated by its kind
