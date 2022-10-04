@@ -66,7 +66,7 @@ export type MedleyAutomatonOptions = {
 type StationLink = {
   station: Station;
   audioRequest: RequestAudioStreamResult;
-  audioResource: AudioResource;
+  audioResource: AudioResource<RequestAudioStreamResult>;
   audioPlayer: AudioPlayer;
   voiceConnection?: VoiceConnection;
 }
@@ -142,6 +142,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     this.client.on('error', (error) => {
       this.logger.error('Automaton Error', error);
+    });
+
+    this.client.on('shardError', (error) => {
+      this.logger.error('Shard error', error)
     });
 
     this.client.on('ready', this.handleClientReady);
@@ -225,7 +229,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
 
     const exciter = createExciter(await selectedStation.requestAudioStream({
-      bufferSize: 48000 * 5.0,
+      bufferSize: 48000 * 0.5,
       buffering: 960, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
       preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
       // discord voice only accept 48KHz sample rate, 16 bit per sample
@@ -282,13 +286,13 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private async detune(guildId: Guild['id']) {
-    const { stationLink }  = this._guildStates.get(guildId) ?? { };
+    const state = this._guildStates.get(guildId);
 
-    if (!stationLink) {
+    if (!state?.stationLink) {
       return;
     }
 
-    const { station, audioRequest } = stationLink;
+    const { station, audioRequest } = state.stationLink;
 
     station.medley.deleteAudioStream(audioRequest.id);
     station.removeAudiencesForGroup(makeAudienceGroup(guildId));
@@ -373,7 +377,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     await Promise.all(guilds.map((guild: OAuth2Guild) => {
       this.ensureGuildState(guild.id);
-      return this.registerCommands(guild.id);
+      return this.registerCommands(guild);
     }));
 
     this.logger.info('Ready');
@@ -507,8 +511,8 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     // Invited to
     this.logger.info(`Invited to ${guild.name}`);
 
-    this.ensureGuildState(guild.id)
-    this.registerCommands(guild.id);
+    this.ensureGuildState(guild.id);
+    this.registerCommands(guild);
 
     guild?.systemChannel?.send('Greetings :notes:, use `/medley join` command to invite me to a voice channel');
   }
@@ -713,18 +717,18 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     return results;
   }
 
-  async registerCommands(guildId: string) {
+  async registerCommands(guild: Guild | OAuth2Guild) {
     const client = new RestClient({ version: '9' }).setToken(this.botToken);
 
     try {
       await client.put(
-        Routes.applicationGuildCommands(this.clientId, guildId),
+        Routes.applicationGuildCommands(this.clientId, guild.id),
         {
           body: [createCommandDeclarations(this.baseCommand || 'medley')]
         }
       );
 
-      this.logger.info('Registered commands with guild id:', guildId);
+      this.logger.info('Registered commands with guild id:', guild.id, `(${guild.name})`);
     }
     catch (e) {
       this.logger.error('Error registering command', e);
