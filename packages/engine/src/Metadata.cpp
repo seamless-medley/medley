@@ -263,6 +263,12 @@ void medley::Metadata::CoverAndLyrics::readID3V2(const File& f, bool readCover, 
                         break;
                     }
                 }
+
+                if (cover.getData().isEmpty() && frames.size()) {
+                    if (const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frames[0])) {
+                        cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
+                    }
+                }
             }
         }
 
