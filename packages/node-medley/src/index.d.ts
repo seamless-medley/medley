@@ -132,14 +132,6 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
 
   get paused(): boolean;
 
-  get duration(): number;
-
-  /**
-   * The playing position of the current track in seconds.
-   */
-  get position(): number;
-  set position(time: number);
-
   /**
    * Audio volume in linear scale, `0` = silent, `1` = 0dBFS
    */
@@ -215,6 +207,8 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   getAudioDevice(): AudioDeviceDescriptor;
 
   getDeckMetadata(index: DeckIndex): Metadata;
+
+  getDeckPositions(index: DeckIndex): DeckPositions;
 
   async requestAudioStream(options?: RequestAudioOptions): Promise<RequestAudioStreamResult>;
 
@@ -312,4 +306,20 @@ export type CoverAndLyrics = {
   cover: Buffer;
   coverMimeType: string;
   lyrics: string;
+}
+
+export type DeckPositions = {
+  current: number;
+
+  duration: number;
+
+  /**
+   * First audible position
+   */
+  first: number;
+
+  /**
+   * Last audible position
+   */
+  last: number;
 }

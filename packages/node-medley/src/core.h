@@ -65,12 +65,6 @@ public:
 
     Napi::Value paused(const CallbackInfo& info);
 
-    Napi::Value duration(const CallbackInfo& info);
-
-    Napi::Value getPosition(const CallbackInfo& info);
-
-    void setPosition(const CallbackInfo& info, const Napi::Value& value);
-
     Napi::Value getVolume(const CallbackInfo& info);
 
     void setVolume(const CallbackInfo& info, const Napi::Value& value);
@@ -98,6 +92,8 @@ public:
     Napi::Value getAudioDevice(const CallbackInfo& info);
 
     Napi::Value getDeckMetadata(const CallbackInfo& info);
+
+    Napi::Value getDeckPositions(const CallbackInfo& info);
 
     Napi::Value requestAudioStream(const CallbackInfo& info);
 
