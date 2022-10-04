@@ -38,12 +38,7 @@ export class WatchTrackCollection<T extends Track<any>, E = never> extends Track
   private storeNewFiles = debounce(() => this.add(this.fetchNewPaths()), 2000);
 
   private handleFilesRemoval = debounce(() => {
-    const removed = this.removeBy(({ id }) => this.removedIds.has(id));
-
-    if (removed.length) {
-      this.logger.info('Removed', removed.length, 'tracks');
-    }
-
+    this.removeBy(({ id }) => this.removedIds.has(id));
     this.removedIds.clear();
   }, 2000);
 
@@ -65,15 +60,13 @@ export class WatchTrackCollection<T extends Track<any>, E = never> extends Track
   }
 
   watch(pattern: string): this {
-    this.scan(pattern)
-      .then(() => {
-        const normalized = normalizePath(pattern);
-        const recursively = { recursive: true };
-        //
-        const watcher = watch(globParent(normalized), recursively, this.watchHandler);
-        this.watchingPatterns.set(normalized, watcher);
-      })
-      .then(() => this.becomeReady());
+    const normalized = normalizePath(pattern);
+
+    if (!this.watchingPatterns.has(normalized)) {
+      this.scan(normalized)
+        .then(() => this.watchingPatterns.set(normalized, watch(globParent(normalized), { recursive: true }, this.watchHandler)))
+        .then(() => this.becomeReady());
+    }
 
     return this;
   }

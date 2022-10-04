@@ -77,7 +77,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     super.remove(...collections);
   }
 
-  private async indexTracks(collection: WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>, tracks: BoomBoxTrack[], done: () => void) {
+  private async indexTracks(tracks: BoomBoxTrack[], done: () => void) {
     if (tracks.length <= 0) {
       done();
       return;
@@ -85,8 +85,12 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
     const [track, ...remainings] = tracks;
 
-    if (!track.extra?.tags) {
-      await helper.fetchMetadata(track, this.musicDb)
+    this.indexTrack(track).then(() => this.indexTracks(remainings, done));
+  }
+
+  private async indexTrack(track: BoomBoxTrack, force: boolean = false) {
+    if (force || !track.extra?.tags) {
+      await helper.fetchMetadata(track, this.musicDb, force)
         .then(async ({ metadata: tags }) => {
           track.musicId = tags.isrc,
           track.extra = {
@@ -98,8 +102,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     }
 
     this.searchEngine.add(track);
-
-    setTimeout(() => this.indexTracks(collection, remainings, done), 0);
   }
 
   addCollection(descriptor: MusicLibraryDescriptor, onceReady?: () => void): Promise<WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>> {
@@ -127,12 +129,14 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         resolve(newCollection);
       });
 
-      newCollection.on('tracksAdd', (tracks: BoomBoxTrack[]) => {
-        this.indexTracks(newCollection, tracks, noop);
-      });
+      newCollection.on('tracksAdd', (tracks: BoomBoxTrack[]) => this.indexTracks(tracks, noop));
 
       newCollection.on('tracksUpdate', async (tracks: BoomBoxTrack[]) => {
-        // TODO: Update metadata in track object, database and search engine
+        await this.searchEngine.removeAll(tracks);
+
+        for (const track of tracks) {
+          await this.indexTrack(track, true);
+        }
       });
 
 
@@ -224,8 +228,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
   }
 
   async autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string): Promise<string[]> {
-    const nt = narrowTerm?.toLowerCase();
-
     if (!q && field === 'title' && narrowBy === 'artist' && narrowTerm) {
       // Start showing title suggestion for a known artist
       const tracks = await this.search({
@@ -237,6 +239,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       return _(tracks).map(t => t.extra?.tags?.title).filter(_.isString).uniq().value();
     }
 
+    const nt = narrowTerm?.toLowerCase();
     const narrow = (narrowBy && nt)
       ? ({
         by: narrowBy,

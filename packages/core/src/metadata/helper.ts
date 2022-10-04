@@ -52,9 +52,11 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   }
 
   async fetchMetadata(track: Track<any>, musicDb: MusicDb | undefined, refresh = false): Promise<FetchResult> {
-    const cached = await musicDb?.findById(track.id);
-    if (cached) {
-      return { hit: true, metadata: cached }
+    if (!refresh) {
+      const cached = await musicDb?.findById(track.id);
+      if (cached) {
+        return { hit: true, metadata: cached }
+      }
     }
 
     const fresh = await this.metadata(track.path);

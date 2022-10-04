@@ -399,9 +399,14 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     // clean up memory holding the cover, lyrics and extra
     if (trackPlay.track?.extra) {
       trackPlay.track.extra.maybeCoverAndLyrics = undefined;
+      trackPlay.track.extra = undefined;
 
-      if (isRequestTrack(trackPlay.track) && trackPlay.track.original.extra?.maybeCoverAndLyrics) {
-        trackPlay.track.original.extra.maybeCoverAndLyrics = undefined;
+      if (isRequestTrack(trackPlay.track)) {
+        if (trackPlay.track.original.extra?.maybeCoverAndLyrics) {
+          trackPlay.track.original.extra.maybeCoverAndLyrics = undefined;
+        }
+
+        trackPlay.track.original.extra = undefined;
       }
     }
 
