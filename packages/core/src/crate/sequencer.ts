@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
-import _, { isObjectLike, isString, uniqBy } from "lodash";
+import _, { clamp, isObjectLike, isString, uniqBy } from "lodash";
 import { TrackCollection } from "../collections";
 import { Track, TrackExtra } from "../track";
 import { Crate } from "./base";
@@ -85,20 +85,16 @@ export class CrateSequencer<T extends Track<E>, E = TrackExtra<T>> extends (Even
         for (const source of crate.sources) {
           scanned += source.length;
           for (let i = 0; i < source.length; i++) {
-            // Latching is active
-            if (this.latchFor > 0) {
-              this.latchCount++;
 
-              if (this.latchCount > this.latchFor) {
-                this.latchCount = 0;
-                this.latchFor = 0;
-
-                // Stop searching for next track and flow to the next crate
-                break;
-              }
+            if (this.latchFor && this.latchCount >= this.latchFor) {
+              // Ends latching
+              this.logger.debug('LATCH ENDED');
+              this.latchCount = 0;
+              this.latchFor = 0;
             }
 
-            if ((this._playCounter + 1) > crate.max) {
+            // Check the _playCounter only if the latching is not active
+            if ((this.latchFor === 0) && (this._playCounter + 1) > crate.max) {
               // Stop searching for next track and flow to the next crate
               this._lastCrate = undefined;
               break;
@@ -112,12 +108,19 @@ export class CrateSequencer<T extends Track<E>, E = TrackExtra<T>> extends (Even
               const { shouldPlay, extra } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, extra: undefined };
 
               if (shouldPlay) {
-                this._playCounter++;
+                ++this._playCounter;
 
-                track.crate = crate as unknown as Crate<Track<E>>;
+                track.sequencing.crate = crate as unknown as Crate<Track<E>>;
+                track.sequencing.playOrder = [this._playCounter, crate.max];
+                track.sequencing.latch = undefined;
+                track.extra = this.isExtra(extra) ? extra : undefined;
 
-                if (this.isExtra(extra)) {
-                  track.extra = extra;
+                if (this.latchFor > 0) {
+                  ++this.latchCount;
+
+                  this.logger.debug('LATCH INC', this.latchCount, this.latchFor);
+
+                  track.sequencing.latch = [this.latchCount, this.latchFor];
                 }
 
                 this.logger.debug('Next track (', this._playCounter, '/', crate.max, ') =>', track.path);
@@ -239,13 +242,15 @@ export class CrateSequencer<T extends Track<E>, E = TrackExtra<T>> extends (Even
     });
   }
 
-
-  // TODO: Test this
   private latchFor: number = 0;
   private latchCount: number = 0;
 
-  latch(n: number) {
-    this.latchFor = isNaN(n) ? 0 : Math.max(0, n);
-    this.latchCount = 0;
+  latch(n?: number) {
+    if (n !== undefined) {
+      this.latchFor = isNaN(n) ? 0 : Math.max(0, n);
+      this.latchCount = 0;
+    }
+
+    return [this.latchCount, this.latchFor] as [count: number, total: number];
   }
 }

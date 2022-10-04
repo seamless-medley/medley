@@ -19,7 +19,8 @@ import {
   EmbedBuilder,
   MessageActionRowComponentBuilder,
   MessageOptions,
-  MessageEditOptions
+  MessageEditOptions,
+  APIEmbedField
 } from "discord.js";
 
 import { capitalize,
@@ -100,11 +101,18 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
 
   if (track.collection.extra) {
     const { descriptor: { description }, owner: station } = track.collection.extra as MusicLibraryExtra<Station>;
+    const { latch } = track.sequencing;
 
-    embed.addFields(
-      { name: 'Collection', value: description ?? track.collection.id },
-      { name: 'Station', value: station.name }
-    );
+    const fields: APIEmbedField[] = [];
+
+    fields.push({ name: 'Collection', value: description ?? track.collection.id });
+    if (latch) {
+      const [count, max] = latch;
+      fields.push({ name: 'Latch', value: `${count} of ${max}`, inline: true });
+    }
+    fields.push({ name: 'Station', value: station.name });
+
+    embed.addFields(fields);
   }
 
   const requesters = (requestedBy || [])

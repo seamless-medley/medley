@@ -369,6 +369,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.moveCrates(newPosition, ...cratesOrIds);
   }
 
+  get crates() {
+    return this.boombox.crates;
+  }
+
   private sequenceLimit(limit: SequenceLimit): CrateLimit  {
     if (typeof limit === 'number') {
       return limit;
@@ -545,6 +549,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   get audienceGroups() {
     return Array.from(this.audiences.keys());
+  }
+
+  latch(n?: number) {
+    return this.boombox.latch(n);
   }
 }
 

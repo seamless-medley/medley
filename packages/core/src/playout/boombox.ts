@@ -343,13 +343,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
         this.emit('currentCollectionChange', currentCollection, nextCollection, trasitingFromRequestTrack);
       }
 
-      if (this._currentCrate !== nextTrack.crate) {
+      if (this._currentCrate !== nextTrack.sequencing.crate) {
 
-        if (this._currentCrate && nextTrack.crate) {
-          this.emit('currentCrateChange', this._currentCrate, nextTrack.crate);
+        if (this._currentCrate && nextTrack.sequencing.crate) {
+          this.emit('currentCrateChange', this._currentCrate, nextTrack.sequencing.crate);
         }
 
-        this._currentCrate = nextTrack.crate;
+        this._currentCrate = nextTrack.sequencing.crate;
       }
 
       addToQueue(nextTrack);
@@ -489,6 +489,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   set crateIndex(newIndex: number) {
     this.sequencer.crateIndex = newIndex;
+  }
+
+  latch(n?: number) {
+    return this.sequencer.latch(n);
   }
 }
 

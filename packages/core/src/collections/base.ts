@@ -6,7 +6,7 @@ import { createLogger } from '../logging';
 import { Track } from "../track";
 import { moveArrayElements } from '../utils';
 
-export type TrackCreator<T extends Track<any, any>> = (path: string) => Promise<Omit<T, 'collection'> | undefined>;
+export type TrackCreator<T extends Track<any, any>> = (path: string) => Promise<Omit<T, 'collection' | 'sequencing'> | undefined>;
 
 export type TrackCollectionOptions<T extends Track<any, CE>, CE = never> = {
   trackCreator?: TrackCreator<T>;
@@ -74,6 +74,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = never> extends Event
       id: createdTrack?.id ?? await this.getTrackId(path),
       path,
       collection: this as any,
+      sequencing: {},
       ...omit(createdTrack, 'id', 'path'),
     };
 
