@@ -302,6 +302,7 @@ export type Metadata = {
   album: string;
   isrc: string;
   trackGain: number;
+  bpm: number;
 }
 
 export type CoverAndLyrics = {

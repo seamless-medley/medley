@@ -399,6 +399,11 @@ Napi::Value Medley::getDeckMetadata(const CallbackInfo& info) {
     result.Set("album", metadata.getAlbum().toRawUTF8());
     result.Set("isrc", metadata.getISRC().toRawUTF8());
     result.Set("trackGain", metadata.getTrackGain());
+    result.Set("bpm", metadata.getBeatsPerMinute());
+
+    return result;
+}
+
 Napi::Value Medley::getDeckPositions(const CallbackInfo& info) {
     auto env = info.Env();
 

@@ -139,6 +139,18 @@ bool medley::Metadata::readID3V2(const File& f)
         for (const auto pFrame : tsrcFrames) {
             if (pFrame) {
                 isrc = pFrame->toString().toCWString();
+                break;
+            }
+        }
+    }
+
+    const auto& tbpmFrames = tag.frameListMap()["TBPM"];
+    if (!tbpmFrames.isEmpty()) {
+        for (const auto pFrame : tbpmFrames) {
+            if (pFrame) {
+                juce::String bpm = pFrame->toString().toCWString();
+                this->bpm = bpm.getFloatValue();
+                break;
             }
         }
     }
@@ -243,6 +255,7 @@ void medley::Metadata::CoverAndLyrics::readID3V2(const File& f, bool readCover, 
 
             if ((it != frameMap.end()) && !it->second.isEmpty()) {
                 const auto frames = it->second;
+
                 for (const auto frame : frames) {
                     const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
                     if (apic && apic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
