@@ -1,9 +1,8 @@
 import EventEmitter from "events";
-import normalizePath from 'normalize-path';
 import { DeckIndex, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
-import _, { curry, difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
+import _, { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
-import { TrackCollection, TrackPeek, WatchTrackCollection } from "./collections";
+import { TrackCollection, TrackPeek } from "./collections";
 import { Chanceable, Crate, CrateLimit } from "./crate";
 import { Library, MusicDb, MusicLibrary } from "./library";
 import { createLogger, Logger } from "./logging";
@@ -75,7 +74,7 @@ export type StationOptions = {
    */
   maxTrackHistory?: number;
 
-  noDuplicatedArtist?: number;
+  noDuplicatedArtist?: number | false;
   duplicationSimilarity?: number;
 
   followCrateAfterRequestTrack?: boolean;
@@ -119,7 +118,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   followCrateAfterRequestTrack: boolean;
 
-  maxTrackHistory: number = 20;
+  maxTrackHistory: number = 50;
 
   private audiences: Map<AudienceGroupId, Map<string, any>> = new Map();
 
@@ -131,6 +130,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.id = options.id;
     this.name = options.name;
     this.description = options.description;
+    this.intros = options.intros;
+    this.requestSweepers = options.requestSweepers;
+    this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? false;
+    this.maxTrackHistory = options.maxTrackHistory || 50;
 
     this.logger = createLogger({ name: `station/${this.id}`});
 
@@ -157,7 +160,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       medley: this.medley,
       queue: this.queue,
       crates: [],
-      noDuplicatedArtist: options.noDuplicatedArtist,
+      noDuplicatedArtist: options.noDuplicatedArtist !== false ? Math.max(options.noDuplicatedArtist ?? 0, this.maxTrackHistory) : false,
       duplicationSimilarity: options.duplicationSimilarity,
       onInsertRequestTrack: this.handleRequestTrack
     });
@@ -175,10 +178,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       });
 
     this.boombox = boombox;
-    this.intros = options.intros;
-    this.requestSweepers = options.requestSweepers;
-    this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? false;
-    this.maxTrackHistory = options.maxTrackHistory || 20;
   }
 
   get availableAudioDevices() {
@@ -242,7 +241,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     }
 
-    // TODO: Fix this
     if (this.followCrateAfterRequestTrack) {
       const indices = this.boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
 
@@ -417,7 +415,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 
   async autoSuggest(q: string, field?: SearchQueryField, narrowBy?: SearchQueryField, narrowTerm?: string) {
-    if (!q) {
+    if (!q && !narrowBy) {
       const recent = await this.musicDb.searchHistory.recentItems(this.id, field ?? 'query');
 
       if (recent.length) {
