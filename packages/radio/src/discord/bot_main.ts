@@ -1,6 +1,5 @@
-import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, MusicLibraryDescriptor, SequenceConfig, breath, SweeperInsertionRule, BoomBoxTrack, WatchTrackCollection, Medley, parseLyrics, DeckIndex } from "@seamless-medley/core";
-import axios from "axios";
-import _, { noop, shuffle } from "lodash";
+import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, MusicLibraryDescriptor, SequenceConfig, breath, SweeperInsertionRule, WatchTrackCollection } from "@seamless-medley/core";
+import _, { shuffle } from "lodash";
 import normalizePath from 'normalize-path';
 import { basename } from "path";
 import { MongoMusicDb } from "../musicdb/mongo";

@@ -1,5 +1,4 @@
-import { breath, createLogger, DeckIndex, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, SweeperInsertionRule, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
-import axios from "axios";
+import { breath, createLogger, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, SweeperInsertionRule, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
 import _, { noop, shuffle } from "lodash";
 import normalizePath from 'normalize-path';
 import { basename } from "path";
