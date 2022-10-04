@@ -571,7 +571,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       status: TrackMessageStatus.Played,
       title: 'Played',
       showSkip: false,
-      showLyrics: true
+      showLyrics: false
     }
   );
 
@@ -665,7 +665,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
             title: 'Skipped',
             status: TrackMessageStatus.Skipped,
             showSkip: false,
-            showLyrics: true
+            showLyrics: false
           }
         );
       }
