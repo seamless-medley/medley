@@ -52,8 +52,8 @@
     "mongodb": "^4.9.0",
     "normalize-path": "^3.0.0",
     "opusscript": "^0.0.8",
-    "socket.io": "^4.4.0",
-    "socket.io-client": "^4.5.1",
+    "socket.io": "^4.5.2",
+    "socket.io-client": "^4.5.2",
     "tslog": "^3.3.2",
     "workerpool": "6.2.0"
   },
