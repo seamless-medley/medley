@@ -197,12 +197,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.emit('trackQueued', track);
   }
 
-  private handleTrackLoaded = (trackPlay: BoomBoxTrackPlay) => {
-    this.emit('trackLoaded', trackPlay);
+  private handleTrackLoaded = (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => {
+    this.emit('trackLoaded', deck, trackPlay);
   }
 
-  private handleTrackStarted = (trackPlay: BoomBoxTrackPlay, lastTrack?: BoomBoxTrackPlay) => {
-    this.emit('trackStarted', trackPlay, lastTrack);
+  private handleTrackStarted = (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrack?: BoomBoxTrackPlay) => {
+    this.emit('trackStarted', deck, trackPlay, lastTrack);
 
     this.musicDb.trackHistory.add(this.id, {
       ...trackRecordOf(trackPlay.track),
@@ -210,12 +210,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }, this.maxTrackHistory);
   }
 
-  private handleTrackActive = (trackPlay: BoomBoxTrackPlay) => {
-    this.emit('trackActive', trackPlay);
+  private handleTrackActive = (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => {
+    this.emit('trackActive', deck, trackPlay);
   }
 
-  private handleTrackFinished = (trackPlay: BoomBoxTrackPlay) => {
-    this.emit('trackFinished', trackPlay);
+  private handleTrackFinished = (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => {
+    this.emit('trackFinished', deck, trackPlay);
   }
 
   private handleRequestTrack = async (track: RequestTrack<Audience>) => {

@@ -185,20 +185,22 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
   fadeOut(): void;
 
   /**
-   * Seek, this has the same effect as setting `position` property.
+   * Seek the main deck
    * @param time in seconds
+   * @param index Deck index, omit to seek on the main deck
    */
-  seek(time: number): void;
+  seek(time: number, index?: DeckIndex): void;
 
   /**
    * Seek
    * @param fraction
+   * @param index Deck index, omit to seek on the main deck
    *
    * @example
    * seek(0) - Seek to the beginning.
    * seek(0.5) - Seek to the middle of a track.
    */
-  seekFractional(fraction: number): void;
+  seekFractional(fraction: number, index?: DeckIndex): void;
 
   getAvailableDevices(): AudioDeviceTypeInfo[];
 

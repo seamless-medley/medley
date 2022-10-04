@@ -89,6 +89,8 @@ public:
 
     inline Deck& getDeck3() const { return *decks[2]; }
 
+    Deck* getDeck(int index = -1) const;
+
     Deck* getMainDeck() const;
 
     Deck* getNextDeck(Deck* from);
@@ -121,13 +123,13 @@ public:
 
     inline bool isPaused() const { return mixer.isPaused(); }
 
-    void setPositionFractional(double fraction);
+    void setPositionFractional(double fraction, int deckIndex = -1);
 
-    void setPosition(double time);
+    void setPosition(double time, int deckIndex = -1);
 
-    double getDuration() const;
+    double getDuration(int deckIndex = -1) const;
 
-    double getPositionInSeconds() const;
+    double getPositionInSeconds(int deckIndex = -1) const;
 
     double getMinimumLeadingToFade() const { return minimumLeadingToFade; }
 

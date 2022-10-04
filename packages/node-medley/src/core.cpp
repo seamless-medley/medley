@@ -276,11 +276,25 @@ void Medley::fadeOut(const CallbackInfo& info) {
 }
 
 void Medley::seek(const CallbackInfo& info) {
-    engine->setPosition(info[0].ToNumber().DoubleValue());
+    int deckIndex = -1;
+    if (info.Length() > 1) {
+        if (info[1].IsNumber()) {
+            deckIndex = (int)info[1].ToNumber() & 3;
+        }
+    }
+
+    engine->setPosition(info[0].ToNumber().DoubleValue(), deckIndex);
 }
 
 void Medley::seekFractional(const CallbackInfo& info) {
-    engine->setPositionFractional(info[0].ToNumber().DoubleValue());
+    int deckIndex = -1;
+    if (info.Length() > 1) {
+        if (info[1].IsNumber()) {
+            deckIndex = (int)info[1].ToNumber() & 3;
+        }
+    }
+
+    engine->setPositionFractional(info[0].ToNumber().DoubleValue(), deckIndex);
 }
 
 Napi::Value Medley::level(const CallbackInfo& info) {

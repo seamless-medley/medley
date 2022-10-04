@@ -103,16 +103,16 @@ bool Medley::togglePause(bool fade) {
     return !mixer.togglePause(fade);
 }
 
-void Medley::setPosition(double time) {
-    if (auto deck = getMainDeck()) {
+void Medley::setPosition(double time, int deckIndex) {
+    if (auto deck = getDeck(deckIndex)) {
         deck->setPosition(time);
         updateTransition(deck);
     }
 }
 
-void Medley::setPositionFractional(double fraction)
+void Medley::setPositionFractional(double fraction, int deckIndex)
 {
-    if (auto deck = getMainDeck()) {
+    if (auto deck = getDeck(deckIndex)) {
         deck->setPositionFractional(fraction);
         updateTransition(deck);
     }
@@ -160,18 +160,18 @@ void Medley::interceptAudio(const AudioSourceChannelInfo& info)
     audioCallback->audioData(info);
 }
 
-double Medley::getDuration() const
+double Medley::getDuration(int deckIndex) const
 {
-    if (auto deck = getMainDeck()) {
+    if (auto deck = getDeck(deckIndex)) {
         return deck->getDuration();
     }
 
     return 0.0;
 }
 
-double Medley::getPositionInSeconds() const
+double Medley::getPositionInSeconds(int deckIndex) const
 {
-    if (auto deck = getMainDeck()) {
+    if (auto deck = getDeck(deckIndex)) {
         return deck->getPosition();
     }
 
@@ -287,7 +287,8 @@ Deck* Medley::getAvailableDeck() {
     return nullptr;
 }
 
-Deck* Medley::getNextDeck(Deck* from) {
+Deck* Medley::getNextDeck(Deck* from)
+{
     if (from == nullptr) {
         from = getMainDeck();
     }
@@ -319,6 +320,11 @@ Deck* Medley::getPreviousDeck(Deck* from)
     }
 
     return decks[2];
+}
+
+Deck* Medley::getDeck(int index) const
+{
+    return index == -1 ? getMainDeck() : decks[index];
 }
 
 inline String Medley::getDeckName(Deck& deck) {

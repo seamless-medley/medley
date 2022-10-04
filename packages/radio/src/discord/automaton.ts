@@ -519,7 +519,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this._guildStates.delete(guild.id);
   }
 
-  private handleTrackStarted = (station: Station) => async (trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
+  private handleTrackStarted = (station: Station) => async (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
     if (trackPlay.track.extra?.kind === TrackKind.Insertion) {
       return;
     }
@@ -553,7 +553,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
   }
 
-  private handleTrackActive = async (trackPlay: BoomBoxTrackPlay) => delay(() => this.updateTrackMessage(trackPlay,
+  private handleTrackActive = async (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => delay(() => this.updateTrackMessage(trackPlay,
     async () => true,
     {
       showSkip: true,
@@ -561,7 +561,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
   ), 1000);
 
-  private handleTrackFinished = async (trackPlay: BoomBoxTrackPlay) => this.updateTrackMessage(trackPlay,
+  private handleTrackFinished = async (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => this.updateTrackMessage(trackPlay,
     async msg => msg.status < TrackMessageStatus.Played,
     {
       status: TrackMessageStatus.Played,
