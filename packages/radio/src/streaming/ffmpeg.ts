@@ -1,13 +1,13 @@
 import { ChildProcessByStdio, spawn } from "child_process";
-import path from "ffmpeg-static";
+import ffmpegPath from "ffmpeg-static";
 import { createInterface } from "readline";
-import internal from "stream";
+import { Readable, Writable } from "stream";
 
-export type FFmpegChildProcess = ChildProcessByStdio<internal.Writable, internal.Readable, internal.Readable>;
+export type FFmpegChildProcess = ChildProcessByStdio<Writable, Readable, Readable>;
 
 export const spawnFFmpeg = (args: string[]): FFmpegChildProcess => spawn(
-  path,
-  ['-hide_banner'].concat(args),
+  ffmpegPath,
+  ['-hide_banner', ...args],
   { stdio: [ null, null, null ] }
 );
 
@@ -149,8 +149,6 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
   const { min, max = 30_000 } = options.respawnDelay ?? {};
   let respawnAttempts = 0;
 
-  console.log(min, max);
-
   const delay = () => (min && min <= max)
     ? new Promise(resolve => setTimeout(resolve, Math.min(max, min * Math.pow(1.097, ++respawnAttempts))))
     : Promise.resolve();
@@ -159,8 +157,8 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
     unwatch();
 
     timer = setInterval(() => {
-      const diff = Date.now() - lastProgress;
-      if (diff >= 1000) {
+      const Δ = Date.now() - lastProgress;
+      if (Δ >= 1000) {
         unwatch();
         running = false;
         stalled = true;

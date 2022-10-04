@@ -1,7 +1,16 @@
-import { AudienceType, BoomBoxTrackPlay, getTrackBanner, makeAudienceGroup, RequestAudioStreamResult, Station } from "@seamless-medley/core";
+import {
+  AudienceType,
+  BoomBoxEvents,
+  BoomBoxTrackPlay,
+  getTrackBanner,
+  makeAudienceGroup,
+  RequestAudioStreamResult,
+  Station
+} from "@seamless-medley/core";
+
 import { RequestHandler } from "express";
 import { OutgoingHttpHeaders } from "http";
-import _, { isUndefined, noop, omitBy, over } from "lodash";
+import { first, last, noop, isUndefined, omitBy, } from "lodash";
 import { PassThrough, pipeline, Transform } from "stream";
 import { createFFmpegOverseer } from "../ffmpeg";
 import { Adapter, AdapterOptions, audioFormatToAudioType, mimeTypes } from "../types";
@@ -34,7 +43,6 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
     return;
   }
 
-  let stopped = false;
   let audioRequest!: RequestAudioStreamResult;
 
   const outlet = new PassThrough();
@@ -62,8 +70,6 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
         format: sampleFormat
       });
 
-      stopped = false;
-
       pipeline(audioRequest.stream, process.stdin, noop);
 
       process.stdout.on('data', buffer => outlet.write(buffer));
@@ -79,7 +85,7 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
     }
   }
 
-  function handleTrackActive(trackPlay: BoomBoxTrackPlay) {
+  const handleTrackActive: BoomBoxEvents['trackActive'] = (deckIndex, trackPlay) => {
     currentTrackPlay = trackPlay;
 
     const metadata = getIcyMetadata();
@@ -116,7 +122,6 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
       currentTrackPlay = station.trackPlay;
 
       const transformers: Transform[] = [];
-
       const mux = new MetadataMux(needMetadata ? metadataInterval : 0);
       multiplexers.add(mux);
 
@@ -126,21 +131,26 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
         transformers[i].pipe(transformers[i + 1]);
       }
 
-      const first = _.first(transformers)!;
-      const last = _.last(transformers)!;
+      const valve = {
+        in: transformers.at(0)!,
+        out: transformers.at(-1)!
+      }
 
-      outlet.pipe(first);
-      last.pipe(res);
+      const transport = (buffer: Buffer) => res.write(buffer);
+
+      valve.out.on('data', transport);
+      outlet.pipe(valve.in);
 
       req.socket.on('close', () => {
         multiplexers.delete(mux);
 
+        outlet.unpipe(valve.in);
+
+        valve.out.off('data', transport);
+
         for (let i = 0; i < transformers.length - 1; i++) {
           transformers[i].unpipe(transformers[i + 1]);
         }
-
-        outlet.unpipe(first);
-        last.unpipe(res);
 
         const paused = station.removeAudience(audienceGroup, audienceId);
         if (paused) {
@@ -152,8 +162,8 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
         'Connection': 'close',
         'Content-Type': mimeTypes[outputFormat],
         'Cache-Control': 'no-cache, no-store',
-        'Server': 'medley',
-        'X-Powered-By': 'medley',
+        'Server': 'Medley',
+        'X-Powered-By': 'Medley',
         'icy-name': station.name,
         'icy-description': station.description,
         'icy-sr': sampleRate,
@@ -173,8 +183,6 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
     },
 
     stop() {
-      stopped = true;
-
       station.deleteAudioStream(audioRequest.id);
       overseer.stop();
       outlet.end();
