@@ -41,7 +41,7 @@ export class Crate<T extends Track<any>, CE = never> {
 
   protected logger: Logger;
 
-  constructor(options: CrateOptions<T, E>) {
+  constructor(options: CrateOptions<T, CE>) {
     this.id = options.id
 
     this.chance = options.chance;
@@ -60,7 +60,7 @@ export class Crate<T extends Track<any>, CE = never> {
     return this._sources;
   }
 
-  updateSources(newSources: CrateSourceWithWeight<T, E>[]) {
+  updateSources(newSources: CrateSourceWithWeight<T, CE>[]) {
     this._sources = newSources.map(s => s.collection);
     this.sourceWeights = newSources.map(s => s.weight);
   }
