@@ -1,4 +1,4 @@
-import _, { castArray, noop } from 'lodash';
+import { castArray, chain, isString, noop } from 'lodash';
 import normalizePath from 'normalize-path';
 import { TrackCreator, TrackCollectionOptions, WatchTrackCollection } from '../collections';
 import { createLogger } from '../logging';
@@ -86,7 +86,8 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
     const [track, ...remainings] = tracks;
 
-    this.indexTrack(track).then(() => this.indexTracks(remainings, done));
+    await this.indexTrack(track);
+    this.indexTracks(remainings, done);
   }
 
   private async indexTrack(track: BoomBoxTrack, force: boolean = false) {
@@ -95,7 +96,8 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         .then(async ({ metadata: tags }) => {
           track.musicId = tags.isrc,
           track.extra = {
-            tags,
+            ...track.extra,
+            tags: result.metadata,
             kind: TrackKind.Normal
           };
         })
@@ -219,13 +221,13 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
 
     const result = await this.searchEngine.search({ queries, combineWith: 'OR' }, { prefix: true, fuzzy: 0.2 });
 
-    const chain = _(result)
+    const chained = chain(result)
       .sortBy([s => -s.score, 'title'])
       .map(s => this.findTrackById(s.id))
       .filter((t): t is BoomBoxTrack => t !== undefined)
       .uniqBy(t => t.path)
 
-    return (limit ? chain.take(limit) : chain).value();
+    return (limit ? chained.take(limit) : chained).value();
   }
 
   async autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string): Promise<string[]> {
@@ -237,7 +239,11 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         query: null
       });
 
-      return _(tracks).map(t => t.extra?.tags?.title).filter(_.isString).uniq().value();
+      return chain(tracks)
+        .map(t => t.extra?.tags?.title)
+        .filter(isString)
+        .uniq()
+        .value();
     }
 
     const nt = narrowTerm?.toLowerCase();
