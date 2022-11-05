@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import _, { castArray, flatten, matches, some, toLower, trim, uniq, without } from "lodash";
+import { castArray, flatten, matches, some, toLower, trim, uniq, without } from "lodash";
 import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
@@ -206,8 +206,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
         extra: !dup ? boombooxExtra : undefined
       }
     }
-    catch {
-
+    catch (e: unknown) {
+      this.logger.debug('Error in verifyTrack()', (e as Error).message);
     }
 
     return {

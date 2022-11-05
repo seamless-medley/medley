@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import { DeckIndex, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
-import _, { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
+import { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek } from "./collections";
 import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
@@ -11,7 +11,6 @@ import {
   BoomBoxCrate,
   BoomBoxEvents,
   BoomBoxTrack,
-  BoomBoxTrackPlay,
   RequestTrack,
   SweeperInsertionRule,
   TrackKind,

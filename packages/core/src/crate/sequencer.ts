@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
-import _, { clamp, isObjectLike, isString, uniqBy } from "lodash";
+import { chain, isObjectLike, isString } from "lodash";
 import { TrackCollection } from "../collections";
 import { Track, TrackExtra, TrackExtraOf } from "../track";
 import { Crate } from "./base";
@@ -178,7 +178,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
     // no valid track in any crates
     if (ignored === scanned && scanned > 0) {
       // Rescue, tracks were found but none was allowed to play
-      this.logger.debug('Tracks were found but none was allowed to play, rescuing...');
+      this.logger.debug('Tracks were found but none were allowed to play, rescuing...');
       this.emit('rescue', scanned, ignored);
     }
 
@@ -247,7 +247,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
 
   addCrates(...crates: Crate<T>[]) {
     this.alterCrates(() => {
-      this._crates = _(this._crates)
+      this._crates = chain(this._crates)
         .push(...crates)
         .uniqBy(c => c.id)
         .value();

@@ -1,5 +1,3 @@
-/// <reference path="../types.d.ts" />
-
 import { REST as RestClient } from "@discordjs/rest";
 import { Routes, OAuth2Scopes, PermissionFlagsBits } from "discord-api-types/v10";
 
@@ -20,19 +18,19 @@ import {
   BaseGuildVoiceChannel, Client, Guild,
   GatewayIntentBits, Message,
   OAuth2Guild,
-  Snowflake, VoiceBasedChannel, VoiceState, ChannelType, PermissionsBitField
+  Snowflake, VoiceBasedChannel, VoiceState, ChannelType, PermissionsBitField, ButtonBuilder
 } from "discord.js";
 
 import {
   BoomBoxTrack,
   BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
   Station,
-  createLogger, Logger, decibelsToGain, makeAudienceGroup as makeStationAudienceGroup, AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex
+  createLogger, Logger, decibelsToGain, makeAudienceGroup as makeStationAudienceGroup, AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents
 } from "@seamless-medley/core";
 
 import type TypedEventEmitter from 'typed-emitter';
 
-import { delay } from "lodash";
+import _, { delay } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
@@ -52,8 +50,8 @@ export type MedleyAutomatonOptions = {
   owners?: Snowflake[];
 
   /**
-   * Initial audio gain, default to -15dBFS (Appx 0.178)
-   * @default -15dBFS
+   * Initial audio gain, default to -12dBFS
+   * @default -12dBFS
    */
    initialGain?: number;
 
@@ -136,7 +134,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this.clientId = options.clientId;
     this.owners = options.owners || [];
     this.maxTrackMessages = options.maxTrackMessages ?? 3;
-    this.initialGain = options.initialGain ?? decibelsToGain(-15);
+    this.initialGain = options.initialGain ?? decibelsToGain(-12);
     this.baseCommand = options.baseCommand || 'medley';
 
     this.client = new Client({
