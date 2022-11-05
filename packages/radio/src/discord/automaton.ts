@@ -229,7 +229,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
 
     const exciter = createExciter(await selectedStation.requestAudioStream({
-      bufferSize: 48000 * 0.5,
+      bufferSize: 48000 * 2.5, // This should be large enough to hold PCM data while waiting for node stream to comsume
       buffering: 960, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
       preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
       // discord voice only accept 48KHz sample rate, 16 bit per sample

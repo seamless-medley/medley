@@ -36,8 +36,7 @@ class BufferredEncoder extends Transform {
       this.buffer = this.buffer.slice(blocksProcessed * requiredBytes);
     }
 
-    // Keep encoded packets in queue at least for 240ms
-    while (this.packets.length > 12) {
+    while (this.packets.length > 6) {
       this.push(this.packets.shift());
     }
 
@@ -45,10 +44,19 @@ class BufferredEncoder extends Transform {
   }
 }
 
+// export const createExciter = (source: RequestAudioStreamResult) => createAudioResource(
+//   pipeline([source.stream, new BufferredEncoder()], () => void undefined) as any as Readable,
+//   {
+//     inputType: StreamType.Opus,
+//     metadata: source
+//   }
+// );
+
+// This uses prism-media directly
 export const createExciter = (source: RequestAudioStreamResult) => createAudioResource(
-  pipeline([source.stream, new BufferredEncoder()], () => void undefined) as any as Readable,
+  source.stream,
   {
-    inputType: StreamType.Opus,
+    inputType: StreamType.Raw,
     metadata: source
   }
 );
