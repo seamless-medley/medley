@@ -1,9 +1,9 @@
-import _, { clamp, reject, some } from "lodash";
+import { chain, clamp, findIndex, flatMap, max, reject, some } from "lodash";
 
 export type LyricLine = {
   time: number;
   text: string;
-  // far?: boolean; // TODO: calculate far flag from BPM and gap between lines
+  far?: boolean; // TODO: calculate far flag from BPM and gap between lines
 }
 
 export type Timeline = LyricLine[];
@@ -80,15 +80,15 @@ function parseLine(line: string): MaybeLine {
 export function parseLyrics(s: string): Lyrics {
   const lines = s.replace(/\r\n/g, "\n").split(/\n/).map(parseLine);
 
-  const infos = _(lines)
+  const infos = chain(lines)
     .flatMap(line => line?.infos ?? [])
     .groupBy(([key]) => key)
     .mapValues(list => list.map(([, val]) => val))
     .value();
 
-  const offset = _.max((infos.offset || []).map(Number)) || 0;
+  const offset = max((infos.offset || []).map(Number)) || 0;
 
-  const timeline = _.flatMap<MaybeLine, LyricLine | undefined>(lines, line => {
+  const timeline = flatMap<MaybeLine, LyricLine | undefined>(lines, line => {
     if (line === undefined) {
       return;
     }
@@ -100,7 +100,7 @@ export function parseLyrics(s: string): Lyrics {
   if (some(timeline, isLyricLine)) {
     let index = 0;
     while (index < timeline.length) {
-      const nextIndex = _.findIndex(timeline, isLyricLine, index + 1);
+      const nextIndex = findIndex(timeline, isLyricLine, index + 1);
 
       if (nextIndex < 0) {
         break;
@@ -123,14 +123,14 @@ export function parseLyrics(s: string): Lyrics {
         const idlingTime = Math.min(current.time + 6000, next.time);
         const duration = (next.time - idlingTime) / gaps;
         // interpolate time between gaps
-        const newTimes = _.map(Array(gaps), (t, i) => current.time + (i * duration));
+        const newTimes = Array(gaps).fill(0).map((t, i) => current.time + (i * duration));
 
-        let fillers = _(newTimes)
+        let fillers = chain(newTimes)
           .map(time => ({ time: clamp(time, idlingTime, next.time), text: '' }))
           .sortBy('time')
           .value()
 
-        const dups = _(fillers)
+        const dups = chain(fillers)
           .filter(f => f.text === '')
           .groupBy('time')
           .omitBy(group => group.length <= 1)
@@ -149,7 +149,7 @@ export function parseLyrics(s: string): Lyrics {
     }
   }
 
-  const finalTimeline = _(timeline)
+  const finalTimeline = chain(timeline)
     .filter(isLyricLine)
     .sortBy('time')
     .dropRightWhile(line => line.time >= 59940000 || /^\*{3}.*\*{3}$/.test(line.text))

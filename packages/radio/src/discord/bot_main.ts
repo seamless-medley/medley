@@ -1,5 +1,5 @@
 import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, MusicLibraryDescriptor, SequenceConfig, breath, SweeperInsertionRule, WatchTrackCollection } from "@seamless-medley/core";
-import _, { shuffle } from "lodash";
+import { shuffle } from "lodash";
 import normalizePath from 'normalize-path';
 import { basename } from "path";
 import { MongoMusicDb } from "../musicdb/mongo";
@@ -39,7 +39,7 @@ const musicCollections: (MusicLibraryDescriptor & { auxiliary?: boolean })[] = [
   { id: 'lonely', description:'Lonely', path: 'D:\\vittee\\Google Drive\\musics\\lonely' },
   { id: 'lovesong', description:'Love Song', path: 'D:\\vittee\\Google Drive\\musics\\lovesong' },
   { id: 'upbeat', description:'Upbeat', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
-  { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released' },
+  { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released', disableLatch: true },
   { id: 'thai', auxiliary: true, description:'Thai', path: 'M:\\Repository\\th' },
 ];
 
@@ -100,8 +100,8 @@ const sweeperRules: SweeperInsertionRule[] = [
 const storedConfigs: StoredConfig = {
   stations: [
     {
-      id: 'default',
-      name: 'Today FM',
+      id: 'default-dev',
+      name: 'Today FM (Dev)',
       description: 'Various genres',
       followCrateAfterRequestTrack: true,
       intros: [
@@ -114,18 +114,10 @@ const storedConfigs: StoredConfig = {
         'E:\\medley-drops\\your\\Music Radio Creative - Simply Made for You.mp3'
       ]
     },
-    // {
-    //   id: 'thai',
-    //   name: 'Thai',
-    //   musicCollections: [
-    //     // { id: 'thai', description:'Thai', path: 'M:\\Repository\\th\\Blackhead\\Lossless' },
-    //     { id: 'thai', auxiliary: true, description: 'Thai', path: 'M:\\Repository\\th' },
-    //     // { id: 'thai', path: 'E:\\medley-xx' }
-    //   ],
-    //   sequences: [
-    //     { crateId: 'thai', collections: [ { id: 'thai' }], limit: 'all' }
-    //   ]
-    // }
+    {
+      id: 'station2-dev',
+      name: 'Station 2'
+    }
   ],
   automatons: [
     {

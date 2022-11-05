@@ -1,5 +1,5 @@
 import { breath, createLogger, MusicLibraryDescriptor, SequenceConfig, Station, StationOptions, StationRegistry, SweeperInsertionRule, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
-import _, { noop, shuffle } from "lodash";
+import { shuffle } from "lodash";
 import normalizePath from 'normalize-path';
 import { basename } from "path";
 import { MongoMusicDb } from "../musicdb/mongo";
@@ -41,6 +41,7 @@ const musicCollections: (MusicLibraryDescriptor & { auxiliary?: boolean })[] = [
   { id: 'upbeat', description:'Upbeat', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
   { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released' },
   { id: 'thai', auxiliary: true, description:'Thai', path: 'M:\\Repository\\th' },
+  { id: 'inter', auxiliary: true, description:'International', path: 'M:\\Repository\\inter' },
 ];
 
 const sequences: SequenceConfig[] = [
@@ -214,7 +215,7 @@ async function main() {
 
     automaton.once('ready', () => resolve(automaton));
 
-    await automaton.login().catch(noop);
+    await automaton.login();
     return automaton;
   })));
 
