@@ -8,7 +8,7 @@ import { createLogger } from "../logging";
 import { moveArrayIndexes } from "../utils";
 
 export interface CrateSequencerEvents {
-  change: (crate: Crate<Track<any>>) => void;
+  change: (crate: Crate<Track<any>>, oldCrate?: Crate<Track<any>>) => void;
   rescue: (scanned: number, ignore: number) => void;
 }
 
@@ -34,6 +34,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
   private _playCounter = 0;
   private _crateIndex = 0;
   private _lastCrate: Crate<T> | undefined;
+  private _currentCollection: TrackCollection<T, any> | undefined;
 
   private logger = createLogger({
     name: `sequencer/${this.id}`
@@ -68,6 +69,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
 
       if (this.isCrate(crate)) {
         if (this._lastCrate !== crate) {
+          const oldCrate = this._lastCrate;
           this._lastCrate = crate;
 
           const selected = await crate.select();
@@ -79,7 +81,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
 
           this.logger.debug('Changed to crate', crate.id);
 
-          this.emit('change', crate as unknown as Crate<Track<any>>);
+          this.emit('change', crate as unknown as Crate<Track<E>>, oldCrate as unknown as Crate<Track<E>>);
         }
 
         for (const source of crate.sources) {
@@ -109,6 +111,8 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
 
               if (shouldPlay) {
                 ++this._playCounter;
+
+                this._currentCollection = track.collection as unknown as TrackCollection<T, any> ;
 
                 track.sequencing.crate = crate as unknown as Crate<Track<E>>;
                 track.sequencing.playOrder = [this._playCounter, crate.max];
