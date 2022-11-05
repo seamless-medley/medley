@@ -8,6 +8,17 @@ export interface TrackInfo {
    * Path to the physical file.
    */
   readonly path: string;
+
+  /**
+   * Start position of the track
+   */
+  readonly cueInPosition?: number;
+
+  /**
+   * Stop position of the track
+   */
+  readonly cueOutPosition?: number;
+
   /**
    * Disable lead-in of the next track, useful for jingle/sweeper transition
    *
