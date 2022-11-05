@@ -29,6 +29,7 @@ export type BoomBoxTrackExtra = {
   tags?: Partial<Metadata>;
   maybeCoverAndLyrics?: Promise<CoverAndLyrics>;
   kind: TrackKind;
+  source?: string;
 }
 
 export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
@@ -339,7 +340,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       const trasitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
       const collectionChange = currentCollection?.id !== nextCollection.id;
 
-      if (currentCollection && nextCollection && (trasitingFromRequestTrack || collectionChange)) {
+      if (currentCollection && nextCollection && (collectionChange)) {
         this.emit('currentCollectionChange', currentCollection, nextCollection, trasitingFromRequestTrack);
       }
 

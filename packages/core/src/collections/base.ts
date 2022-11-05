@@ -26,6 +26,8 @@ export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = {
   newTracksAddingMode?: 'prepend' | 'append';
 
   disableLatch?: boolean;
+
+  noFollowOnRequest?: boolean;
 }
 
 export type TrackPeek<T extends Track<any, CE>, CE = any> = {

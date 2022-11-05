@@ -77,6 +77,10 @@ export type StationOptions = {
   noDuplicatedArtist?: number | false;
   duplicationSimilarity?: number;
 
+  /**
+   * Whether to follow crate on a requested track
+   * @default true
+   */
   followCrateAfterRequestTrack?: boolean;
 }
 
@@ -132,7 +136,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.description = options.description;
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
-    this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? false;
+    this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? true;
     this.maxTrackHistory = options.maxTrackHistory || 50;
 
     this.logger = createLogger({ name: `station/${this.id}`});
@@ -251,15 +255,19 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     }
 
-    if (this.followCrateAfterRequestTrack) {
-      const indices = this.boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
+    if (this.followCrateAfterRequestTrack && !track.collection.options.noFollowOnRequest) {
+      if (!this.isLatchActive) {
+        const indices = this.boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
 
-      const a = indices.slice(0, this.boombox.crateIndex);
-      const b = indices.slice(this.boombox.crateIndex);
+        const a = indices.slice(0, this.boombox.crateIndex);
+        const b = indices.slice(this.boombox.crateIndex);
 
-      const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
-      if (located) {
-        this.boombox.crateIndex = located.index;
+        const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
+        if (located) {
+          this.boombox.crateIndex = located.index;
+        }
+      } else {
+        this.logger.debug('followCrateAfterRequestTrack is enabled, but a latching session is active');
       }
     }
   }
