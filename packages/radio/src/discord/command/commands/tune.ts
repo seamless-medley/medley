@@ -11,6 +11,7 @@ import {
   ComponentType,
   MessageActionRowComponentBuilder
 } from "discord.js";
+import { stubTrue } from "lodash";
 
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
@@ -25,7 +26,9 @@ const declaration: SubCommandLikeOption = {
 const handleStationSelection = async (automaton: MedleyAutomaton, interaction: SelectMenuInteraction) => {
   permissionGuard(interaction.memberPermissions, [
     PermissionsBitField.Flags.ManageChannels,
-    PermissionsBitField.Flags.ManageGuild
+    PermissionsBitField.Flags.ManageGuild,
+    PermissionsBitField.Flags.MuteMembers,
+    PermissionsBitField.Flags.MoveMembers
   ]);
 
   const guildId = guildIdGuard(interaction);
@@ -33,10 +36,20 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
   const { values: [stationId] } = interaction;
 
   if (stationId) {
-    const ok = await automaton.tune(guildId, automaton.stations.get(stationId));
+    await interaction.deferUpdate();
+
+    const station = automaton.stations.get(stationId)!;
+
+    reply(interaction, {
+      content: `Tuning into ${station.name}`,
+      components: [],
+      embeds: []
+    });
+
+    const ok = await automaton.tune(guildId, station);
 
     if (ok) {
-      await interaction.update({
+      await reply(interaction, {
         content: null,
         components: [],
         embeds: [
@@ -50,7 +63,7 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
       return true;
     }
 
-    await interaction.update({
+    await reply(interaction, {
       content: makeHighlightedMessage('Could not tune into that station', HighlightTextType.Red),
       components: []
     });
@@ -104,13 +117,13 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     let done = false;
 
     const collector = selector.createMessageComponentCollector({
-      componentType: ComponentType.SelectMenu,
+      // componentType: ComponentType.SelectMenu,
       time: 30_000
     });
 
     collector.on('collect', async i => {
       if (i.user.id !== issuer) {
-        i.reply({
+        reply(i, {
           content: `Sorry, this selection is for <@${issuer}> only`,
           ephemeral: true
         })
@@ -119,9 +132,20 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
 
       done = true;
       collector.stop();
-      //
-      const ok = await handleStationSelection(automaton, i);
-      await onDone?.(ok);
+
+      if (i.customId === 'tune' && i.componentType === ComponentType.SelectMenu) {
+        const ok = await handleStationSelection(automaton, i).catch(stubTrue);
+        await onDone?.(ok);
+        return;
+      }
+
+      if (i.customId === 'cancel_tune') {
+        if (selector.deletable) {
+          selector.delete();
+        }
+
+        return;
+      }
     });
 
     collector.on('end', () => {
@@ -132,24 +156,6 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
         });
       }
     });
-
-    selector.awaitMessageComponent({
-      componentType: ComponentType.Button,
-      filter: (i) => {
-        i.deferUpdate();
-        return i.customId === 'cancel_tune' && i.user.id === issuer;
-      },
-      time: 60_000
-    })
-    .then(() => {
-      done = true;
-      collector.stop();
-
-      if (selector.deletable) {
-        selector.delete();
-      }
-    })
-    .catch(() => void undefined);
   }
 }
 

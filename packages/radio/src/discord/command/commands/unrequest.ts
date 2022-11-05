@@ -124,7 +124,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       }
     });
 
-    selector.awaitMessageComponent({
+    await selector.awaitMessageComponent({
       componentType: ComponentType.Button,
       filter: i => {
         i.deferUpdate();

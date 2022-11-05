@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, EmbedBuilder, PermissionsBitField } from "discord.js";
 import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { deny, guildIdGuard, HighlightTextType, makeHighlightedMessage, permissionGuard, reply, warn } from "../utils";
+import { deny, guildIdGuard, permissionGuard, reply, warn } from "../utils";
 import { createStationSelector } from "./tune";
 
 const declaration: SubCommandLikeOption = {
@@ -21,7 +21,9 @@ const declaration: SubCommandLikeOption = {
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   permissionGuard(interaction.memberPermissions, [
     PermissionsBitField.Flags.ManageChannels,
-    PermissionsBitField.Flags.ManageGuild
+    PermissionsBitField.Flags.ManageGuild,
+    PermissionsBitField.Flags.MuteMembers,
+    PermissionsBitField.Flags.MoveMembers
   ]);
 
   const channel = interaction.options.getChannel('channel');
@@ -98,12 +100,12 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
       createStationSelector(automaton, interaction, async (tuned) => {
         if (tuned) {
           if ((await automaton.join(channelToJoin)).status !== 'joined') {
-            interaction.followUp(makeHighlightedMessage('Could not tune and join', HighlightTextType.Red));
+            deny(interaction, 'Could not tune and join');
             return;
           }
         }
 
-        interaction.followUp({
+        reply(interaction, {
           content: null,
           embeds: [createEmbed()]
         });
