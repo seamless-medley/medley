@@ -3,8 +3,7 @@ import type { CoverAndLyrics, Metadata } from '@seamless-medley/medley';
 import { Track } from '../track';
 import { WorkerPoolAdapter } from '../worker_pool_adapter';
 import { MusicDb } from '../library/music_db';
-import { omitBy } from 'lodash/fp';
-import { negate } from 'lodash';
+import { omitBy, negate } from 'lodash/fp';
 
 let instance: MetadataHelper;
 
@@ -34,21 +33,41 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     super(__dirname + '/worker.js', { workerType });
   }
 
-  async metadata(path: string) {
-    return await this.exec('metadata', path).then(omitBy(falsy));
+  private ongoingTasks = new Map<string, Promise<any>>;
+
+  private async runIfNeeded(key: string, executor: () => Promise<any>, ttl: number = 1000): Promise<any> {
+    const ongoingTasks = this.ongoingTasks;
+
+    if (ongoingTasks.has(key)) {
+      return ongoingTasks.get(key) as ReturnType<typeof executor>;
+    }
+
+    const promise = new Promise((resolve, reject) => void executor()
+      .then(resolve)
+      .catch(reject))
+      .finally(() => void setTimeout(() => ongoingTasks.delete(key), ttl));
+
+    ongoingTasks.set(key, promise);
+    return promise;
+  }
+
+  async metadata(path: string): Promise<Partial<Metadata>> {
+    return this.runIfNeeded(`metadata:${path}`, async () => this.exec('metadata', path).then(omitBy(falsy)))
   }
 
   async coverAndLyrics(path: string): Promise<CoverAndLyrics> {
-    const result = await this.exec('coverAndLyrics', path);
+    return this.runIfNeeded(`coverAndLyrics:${path}`, async () => {
+      const result = await this.exec('coverAndLyrics', path);
 
-    if (Buffer.isBuffer(result.cover)) {
-      return result as CoverAndLyrics;
-    }
+      if (Buffer.isBuffer(result.cover)) {
+        return result as CoverAndLyrics;
+      }
 
-    return {
-      ...result,
-      cover: Buffer.from(isUint8Array(result.cover) ? result.cover : result.cover.data)
-    }
+      return {
+        ...result,
+        cover: Buffer.from(isUint8Array(result.cover) ? result.cover : result.cover.data)
+      }
+    })
   }
 
   async fetchMetadata(track: Track<any>, musicDb: MusicDb | undefined, refresh = false): Promise<FetchResult> {
@@ -66,11 +85,11 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   }
 
   async isTrackLoadable(path: string) {
-    return this.exec('isTrackLoadable', path);
+    return this.runIfNeeded(`isTrackLoadable:${path}`, async () => this.exec('isTrackLoadable', path), 500);
   }
 
   async searchLyrics(artist: string, title: string) {
-    return this.exec('searchLyrics', artist, title);
+    return this.runIfNeeded(`searchLyrics:${artist}:${title}`, async () => this.exec('searchLyrics', artist, title));
   }
 
   static getDefaultInstance() {
