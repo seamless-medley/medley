@@ -448,6 +448,8 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
 
     calculateTransition();
 
+    disableNextTrackLeadIn = trackToScan->getDisableNextTrackLeadIn();
+
     if (trailingDuration > 0) {
         log(String::formatted(
             "Scanned - trailing@%.2f/%.2f duration=%.2f",

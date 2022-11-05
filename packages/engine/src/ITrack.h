@@ -13,6 +13,8 @@ public:
 
     virtual double getCueOutPosition() { return -1.0; }
 
+    virtual bool getDisableNextTrackLeadIn() { return false; }
+
     using Ptr = ReferenceCountedObjectPtr<ITrack>;
 };
 

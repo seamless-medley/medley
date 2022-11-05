@@ -43,6 +43,10 @@ public:
         return cueOut;
     }
 
+    bool getDisableNextTrackLeadIn() override {
+        return disableNextLeadIn;
+    }
+
     inline Napi::ObjectReference& getObjectRef() {
         return ref;
     }
@@ -77,10 +81,14 @@ private:
         if (!cueOutPosition.IsUndefined() && !cueOutPosition.IsNull()) {
             cueOut = cueOutPosition.ToNumber().DoubleValue();
         }
+
+        auto disableNextLeadIn = ref.Get("disableNextLeadIn");
+        this->disableNextLeadIn = disableNextLeadIn.ToBoolean().Value();
     }
 
     Napi::ObjectReference ref;
     File file;
     double cueIn = -1.0;
     double cueOut = -1.0;
+    bool disableNextLeadIn = false;
 };

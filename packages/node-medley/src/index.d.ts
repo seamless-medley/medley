@@ -8,6 +8,13 @@ export interface TrackInfo {
    * Path to the physical file.
    */
   readonly path: string;
+  /**
+   * Disable lead-in of the next track, useful for jingle/sweeper transition
+   *
+   * The lead-in is the position where it is considered as the start singing point,
+   * usually presented in a track which has smooth beginning.
+   */
+  readonly disableNextLeadIn?: boolean;
 }
 
 export type TrackDescriptor<T extends TrackInfo> = string | T;

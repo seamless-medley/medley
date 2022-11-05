@@ -119,7 +119,10 @@ export class SweeperInserter {
         }
       }
 
-      this.boombox.queue.add(insertion);
+      this.boombox.queue.add({
+        ...insertion,
+        disableNextLeadIn: true
+      });
     }
   }
 }

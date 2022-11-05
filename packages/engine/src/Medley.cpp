@@ -133,7 +133,7 @@ void Medley::updateTransition(Deck* deck) {
             auto nextDeck = getNextDeck(d);
             if (nextDeck->isTrackLoaded()) {
                 auto first = nextDeck->getFirstAudiblePosition();
-                auto leadingDuration = nextDeck->getLeadingDuration();
+                auto leadingDuration = !d->disableNextTrackLeadIn ? nextDeck->getLeadingDuration() : 0.0;
 
                 auto nextDeckStart = transitionStartPos - leadingDuration;
                 auto nextDeckPosition = jmax(position - nextDeckStart + first, first);
@@ -497,7 +497,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                             _pNextTransition->fader.start(_position, tep, 0.0f, 1.0f, fadingFactor * 0.5f);
                         }
                         else {
-                            auto leadIn = nd->getLeadingDuration();
+                            auto leadIn = !cd->disableNextTrackLeadIn ? nd->getLeadingDuration() : 0.0;
                             auto fadeInStart = jmax(0.0, tsp - leadIn);
                             _pNextTransition->fader.start(fadeInStart, fadeInStart + leadIn, 0.25f, 1.0f, fadingFactor);
                         }
@@ -531,8 +531,9 @@ void Medley::doTransition(Deck* deck, double position) {
 
     if (pTransition->state >= DeckTransitionState::NextIsReady && nextDeck->isTrackLoaded()) {
         auto lastAudible = deck->getLastAudiblePosition();
-        auto leadingDuration = nextDeck->getLeadingDuration();
+        auto leadingDuration = !deck->disableNextTrackLeadIn ? nextDeck->getLeadingDuration() : 0.0;
         auto nextDeckStart = (transitionStartPos - leadingDuration) - 0.05 /* Correct clock drift caused by playhead timer */;
+        auto hasLongLeadIn = leadingDuration >= minimumLeadingToFade;
 
         if (nextDeckStart > lastAudible) {
             nextDeckStart = lastAudible - 0.01;
@@ -548,7 +549,7 @@ void Medley::doTransition(Deck* deck, double position) {
                 nextDeck->setPosition(nextDeck->getFirstAudiblePosition());
 
                 if (forceFadingOut > 0) {
-                    if (leadingDuration >= minimumLeadingToFade) {
+                    if (hasLongLeadIn) {
                         nextDeck->setPosition(nextDeck->getFirstAudiblePosition() + leadingDuration - minimumLeadingToFade);
                     }
                 }
@@ -563,7 +564,7 @@ void Medley::doTransition(Deck* deck, double position) {
 
                         decksTransition[nextDeck->index].fader.start(position, transitionEndPos, 0.25f, 1.0f, fadingFactor);
                     }
-                    else if (leadingDuration >= minimumLeadingToFade) {
+                    else if (hasLongLeadIn) {
                         auto fadeInStart = jmax(0.0, transitionStartPos - leadingDuration);
                         decksTransition[nextDeck->index].fader.start(fadeInStart, fadeInStart + leadingDuration, 0.25f, 1.0f, fadingFactor);
                     }
@@ -577,14 +578,14 @@ void Medley::doTransition(Deck* deck, double position) {
             // Fade in next
             auto newVolume = 1.0f;
 
-            if (leadingDuration > minimumLeadingToFade) {
+            if (hasLongLeadIn) {
                 if (position >= decksTransition[nextDeck->index].fader.getTimeStart()) {
                     newVolume = decksTransition[nextDeck->index].fader.update(position);
                 }
                 else {
                     newVolume = decksTransition[nextDeck->index].fader.getFrom();
                 }
-            };
+            }
 
             if (newVolume != nextDeck->getVolume()) {
                 //nextDeck->log(String::formatted("Fading in: %.2f", newVolume));

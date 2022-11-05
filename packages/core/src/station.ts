@@ -242,7 +242,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
             }
           }
 
-          this.queue.add(sweeper);
+          this.queue.add({
+            ...sweeper,
+            disableNextLeadIn: true
+          });
           requestSweepers.push(sweeper);
         }
       }
@@ -305,7 +308,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
             }
           }
 
-          this.queue.add(intro);
+          this.queue.add({
+            ...intro,
+            disableNextLeadIn: true
+          });
           this.intros.push(intro);
         }
       }
