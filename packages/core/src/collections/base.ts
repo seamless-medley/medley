@@ -24,6 +24,8 @@ export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = {
    * @default append
    */
   newTracksAddingMode?: 'prepend' | 'append';
+
+  disableLatch?: boolean;
 }
 
 export type TrackPeek<T extends Track<any, CE>, CE = any> = {
@@ -86,6 +88,10 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends EventEm
 
   get ready(): boolean {
     return this._ready;
+  }
+
+  get latchDisabled(): boolean {
+    return this.options.disableLatch === true;
   }
 
   private shiftCounter = 0;

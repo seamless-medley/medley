@@ -117,6 +117,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         {
           newTracksAddingMode: descriptor.newTracksAddingMode,
           reshuffleEvery: descriptor.reshuffleEvery,
+          disableLatch: descriptor.disableLatch,
           trackCreator: this.trackCreator
         }
       );

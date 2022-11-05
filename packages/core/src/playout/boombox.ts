@@ -4,7 +4,7 @@ import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex } from "@seamless-medley/medley";
-import { Crate, CrateSequencer, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
+import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
@@ -493,8 +493,20 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.sequencer.crateIndex = newIndex;
   }
 
-  latch(n?: number) {
-    return this.sequencer.latch(n);
+  latch(options?: LatchOptions<BoomBoxTrack>) {
+    return this.sequencer.latch(options);
+  }
+
+  isKnownCollection(collection: TrackCollection<BoomBoxTrack>): boolean {
+    return this.sequencer.isKnownCollection(collection);
+  }
+
+  get isLatchActive(): boolean {
+    return this.sequencer.activeLatch !== undefined;
+  }
+
+  get allLatches(): LatchSession<BoomBoxTrack>[] {
+    return this.sequencer.allLatches;
   }
 }
 

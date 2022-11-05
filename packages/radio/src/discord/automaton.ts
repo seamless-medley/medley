@@ -89,6 +89,14 @@ export type JoinResult = {
   station: Station;
 }
 
+export type UpdateTrackMessageOptions = {
+  status?: TrackMessageStatus;
+  title?: string;
+  showLyrics?: boolean;
+  showMore?: boolean;
+  showSkip?: boolean;
+}
+
 export interface AutomatonEvents {
   ready: () => void;
 }
@@ -152,12 +160,13 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this.client.on('guildCreate', this.handleGuildCreate);
     this.client.on('guildDelete', this.handleGuildDelete);
     this.client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
-    this.client.on('interactionCreate', createInteractionHandler(this.baseCommand, this));
+    this.client.on('interactionCreate', createInteractionHandler(this));
 
     for (const station of stations) {
       station.on('trackStarted', this.handleTrackStarted(station));
       station.on('trackActive', this.handleTrackActive);
       station.on('trackFinished', this.handleTrackFinished);
+      station.on('currentCollectionChange', this.handleCollectionChange(station));
     }
   }
 
@@ -523,7 +532,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this._guildStates.delete(guild.id);
   }
 
-  private handleTrackStarted = (station: Station) => async (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
+  private handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
     if (trackPlay.track.extra?.kind === TrackKind.Insertion) {
       return;
     }
@@ -555,75 +564,122 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
         }
       }
     }
+
+    this.updateTrackMessage(async (msg) => {
+      if (msg.trackPlay.uuid !== trackPlay.uuid) {
+        return {
+          showLyrics: false,
+          showMore: false,
+          showSkip: false
+        }
+      }
+    });
   }
 
-  private handleTrackActive = async (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => delay(() => this.updateTrackMessage(trackPlay,
-    async () => true,
-    {
-      showSkip: true,
-      showLyrics: true
-    }
-  ), 1000);
+  private handleTrackActive: StationEvents['trackActive'] = async (deck, trackPlay) => {
+    delay(() => {
+      this.updateTrackMessage(async (msg) => {
+        const show = msg.trackPlay.uuid === trackPlay.uuid;
 
-  private handleTrackFinished = async (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => this.updateTrackMessage(trackPlay,
-    async msg => msg.status < TrackMessageStatus.Played,
-    {
-      status: TrackMessageStatus.Played,
-      title: 'Played',
-      showSkip: false,
-      showLyrics: false
-    }
-  );
-
-  private async updateTrackMessage(
-    trackPlay: BoomBoxTrackPlay,
-    predicate: (msg: TrackMessage) => Promise<boolean>,
-    options: {
-      status?: TrackMessageStatus;
-      title?: string;
-      showSkip?: boolean;
-      showLyrics?: boolean;
-    }
-  ) {
-    for (const state of this._guildStates.values()) {
-      const msg = state.trackMessages.find(msg => msg.trackPlay.uuid === trackPlay.uuid);
-
-      if (msg) {
-        if (await predicate(msg)) {
-          const { status: newStatus, title: newTitle, showSkip, showLyrics } = options;
-
-          if (newStatus) {
-            msg.status = newStatus;
-          }
-
-          if (newTitle) {
-            msg.embed.setTitle(newTitle);
-          }
-
-          const changed = !!newStatus || !!newTitle || showSkip || showLyrics;
-
-          if (changed) {
-            const { sentMessage } = msg;
-
-            if (sentMessage?.editable) {
-              const { embeds, components } = trackMessageToMessageOptions({
-                ...msg,
-                buttons: {
-                  lyric: showLyrics ? msg.buttons.lyric : undefined,
-                  skip: showSkip ? msg.buttons.skip : undefined
-                }
-              });
-
-              sentMessage.edit({ embeds, components });
-            }
-          }
+        return  {
+          showSkip: show,
+          showLyrics: show,
+          showMore: show
         }
+      })
+    }, 1000);
+  }
+
+  private handleTrackFinished: StationEvents['trackFinished'] = async (deck, trackPlay) => {
+    this.updateTrackMessage(async (msg) => {
+      if (msg.trackPlay.uuid !== trackPlay.uuid || msg.status >= TrackMessageStatus.Played) {
+        return;
+      }
+
+      return {
+        status: TrackMessageStatus.Played,
+        title: 'Played',
+        showMore: false,
+        showSkip: false,
+        showLyrics: false
+      }
+    });
+  }
+
+  private handleCollectionChange = (station: Station): StationEvents['currentCollectionChange'] => async(oldCollection) => {
+    this.updateTrackMessage(
+      async (msg) =>  {
+        if (msg.station !== station) {
+          return;
+        }
+
+        if (msg.status !== TrackMessageStatus.Playing) {
+          return;
+        }
+
+        return {
+          showMore: msg.trackPlay.track.collection.id !== oldCollection.id,
+          showSkip: true,
+          showLyrics: true
+        }
+      }
+    )
+  }
+
+  async updateTrackMessage(predicate: (msg: TrackMessage) => Promise<UpdateTrackMessageOptions | undefined>) {
+    let count = 0;
+
+    for (const state of this._guildStates.values()) {
+      for (const msg of state.trackMessages) {
+        const options = await predicate(msg);
+
+        if (options === undefined) {
+          continue;
+        }
+
+        const { status: newStatus, title: newTitle, showMore, showSkip, showLyrics } = options;
+
+        if (newStatus) {
+          msg.status = newStatus;
+        }
+
+        if (newTitle) {
+          msg.embed.setTitle(newTitle);
+        }
+
+        const { sentMessage, buttons } = msg;
+
+        if (!sentMessage?.editable) {
+          continue;
+        }
+
+        const { embeds, components } = trackMessageToMessageOptions({
+          ...msg,
+          buttons: {
+            more: showMore ? buttons.more : undefined,
+            lyric: showLyrics ? buttons.lyric : undefined,
+            skip: showSkip ? buttons.skip : undefined
+          }
+        });
+
+
+
+        await new Promise<any>((resolve) => {
+          const doEdit = () => sentMessage.edit({ embeds, components }).then(resolve);
+
+          if (count++ < 30) {
+            doEdit()
+          } else {
+            setTimeout(doEdit, 500);
+          }
+        });
       }
     }
   }
 
   async removeLyricsButton(trackId: BoomBoxTrack['id']) {
     for (const state of this._guildStates.values()) {
+      const currentCollectionId = state.stationLink?.station.trackPlay?.track?.collection?.id;
 
       const messages = state.trackMessages.filter(msg => msg.trackPlay.track.id === trackId);
       for (const msg of messages) {
@@ -632,12 +688,17 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
         const showSkipButton = msg.status < TrackMessageStatus.Played;
 
         const { sentMessage } = msg;
+
+        const showMore = currentCollectionId !== undefined
+          && currentCollectionId === msg.trackPlay.track.collection.id;
+
         if (sentMessage?.editable) {
           const { embeds, components } = trackMessageToMessageOptions({
             ...msg,
             buttons: {
               lyric: undefined,
-              skip: showSkipButton ? msg.buttons.skip : undefined
+              more: showMore ? msg.buttons.more : undefined,
+              skip: showSkipButton ? msg.buttons.skip : undefined,
             }
           });
 
@@ -659,13 +720,18 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
       if (trackPlay) {
         this.updateTrackMessage(
-          trackPlay,
-          async () => true,
-          {
-            title: 'Skipped',
-            status: TrackMessageStatus.Skipped,
-            showSkip: false,
-            showLyrics: false
+          async (msg) => {
+            if (trackPlay.uuid !== msg.trackPlay.uuid) {
+              return;
+            }
+
+            return {
+              title: 'Skipped',
+              status: TrackMessageStatus.Skipped,
+              showSkip: false,
+              showMore: false,
+              showLyrics: false
+            }
           }
         );
       }
@@ -689,7 +755,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
       const state = this._guildStates.get(guildId);
 
-      if (state) {
+      if (state?.stationLink?.station === station) {
         const guild = this.client.guilds.cache.get(guildId);
         const { voiceChannelId, textChannelId } = state;
 
@@ -703,7 +769,8 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
             ...trackMsg,
             buttons: {
               lyric: trackMsg.buttons.lyric,
-              skip: undefined
+              more: undefined,
+              skip: undefined,
             }
           });
 

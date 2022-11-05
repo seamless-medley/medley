@@ -1,5 +1,5 @@
 import { TrackInfo } from "@seamless-medley/medley";
-import { Crate } from "./crate";
+import { Crate, LatchSession } from "./crate";
 import { TrackCollection } from "./collections";
 
 export interface Track<E extends TrackExtra, CE = any> extends TrackInfo {
@@ -25,7 +25,10 @@ export type TrackSequencing<T extends Track<any, CE>, CE> = {
 
   playOrder?: [count: number, max: number];
 
-  latch?: [count: number, max: number];
+  latch?: {
+    order: number;
+    session: LatchSession<T, CE>;
+  }
 }
 
 export type TrackExtraOf<T> = T extends Track<infer E> ? E : never;

@@ -6,6 +6,7 @@ import { Track, TrackExtra, TrackExtraOf } from "../track";
 import { Crate } from "./base";
 import { createLogger } from "../logging";
 import { moveArrayIndexes } from "../utils";
+import { randomUUID } from "crypto";
 
 export interface CrateSequencerEvents {
   change: (crate: Crate<Track<any>>, oldCrate?: Crate<Track<any>>) => void;
@@ -28,6 +29,27 @@ export type TrackVerifierResult<E> = {
 export type CrateSequencerOptions<E extends TrackExtra> = {
   trackValidator?: TrackValidator;
   trackVerifier?: TrackVerifier<E>;
+}
+
+export type LatchSession<T extends Track<any, CE>, CE = any> = {
+  uuid: string;
+  count: number;
+  max: number;
+  collection: TrackCollection<T>;
+}
+
+type LatchWithLength = {
+  increase?: false;
+  length: number;
+}
+
+type LatchIncrement = {
+  increase: true;
+}
+
+export type LatchOptions<T extends Track<any, CE>, CE = any> = (LatchWithLength | LatchIncrement) & {
+  collection?: TrackCollection<T>;
+  important?: boolean;
 }
 
 export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtraOf<T>> extends (EventEmitter as new () => TypedEventEmitter<CrateSequencerEvents>) {
@@ -87,24 +109,32 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
         for (const source of crate.sources) {
           scanned += source.length;
           for (let i = 0; i < source.length; i++) {
-
-            if (this.latchFor && this.latchCount >= this.latchFor) {
-              // Ends latching
-              this.logger.debug('LATCH ENDED');
-              this.latchCount = 0;
-              this.latchFor = 0;
+            {
+              if (this.activeLatch && this.activeLatch.count>= this.activeLatch.max) {
+                // Ends latching
+                this.removeActiveLatch();
+              }
             }
 
+            const { activeLatch } = this;
+
             // Check the _playCounter only if the latching is not active
-            if ((this.latchFor === 0) && (this._playCounter + 1) > crate.max) {
+            if (activeLatch === undefined && (this._playCounter + 1) > crate.max) {
               // Stop searching for next track and flow to the next crate
+              // With _lastCrate being undefined will cause the selection process to kick in again
               this._lastCrate = undefined;
               break;
             }
 
             const { trackValidator, trackVerifier } = this.options;
 
-            const track = await crate.next(trackValidator);
+            const latchingCollection = activeLatch?.collection;
+
+            if (latchingCollection) {
+              this.logger.debug('Using collection', latchingCollection.id, 'for latching');
+            }
+
+            const track = await crate.next(trackValidator, latchingCollection);
 
             if (track) {
               const { shouldPlay, extra } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, extra: undefined };
@@ -119,12 +149,13 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
                 track.sequencing.latch = undefined;
                 track.extra = this.isExtra(extra) ? extra : undefined;
 
-                if (this.latchFor > 0) {
-                  ++this.latchCount;
+                if (activeLatch) {
+                  activeLatch.count++;
 
-                  this.logger.debug('LATCH INC', this.latchCount, this.latchFor);
-
-                  track.sequencing.latch = [this.latchCount, this.latchFor];
+                  track.sequencing.latch = {
+                    session: activeLatch as unknown as LatchSession<Track<E>>,
+                    order: activeLatch.count
+                  }
                 }
 
                 this.logger.debug('Next track (', this._playCounter, '/', crate.max, ') =>', track.path);
@@ -246,15 +277,98 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
     });
   }
 
-  private latchFor: number = 0;
-  private latchCount: number = 0;
+  isKnownCollection(collection: TrackCollection<T>): boolean {
+    return this._crates.find(c => c.sources.includes(collection)) !== undefined;
+  }
 
-  latch(n?: number) {
-    if (n !== undefined) {
-      this.latchFor = isNaN(n) ? 0 : Math.max(0, n);
-      this.latchCount = 0;
+  private latchSessions: LatchSession<T>[] = [];
+
+  get activeLatch(): LatchSession<T> | undefined {
+    return this.latchSessions.at(0);
+  }
+
+  get latestLatch(): LatchSession<T> | undefined {
+    return this.latchSessions.at(-1);
+  }
+
+  get allLatches(): LatchSession<T>[] {
+    return [...this.latchSessions];
+  }
+
+  private removeActiveLatch() {
+    if (this.latchSessions.length > 0) {
+      this.latchSessions.shift();
+    }
+  }
+
+  private removeLatch(session: number | LatchSession<T>) {
+    const index = typeof session === 'number' ? session : this.latchSessions.indexOf(session);
+
+    if (index > -1) {
+      const removingSession = this.latchSessions[index];
+      this.latchSessions.splice(index, 1);
+      removingSession.max = 0;
+      return removingSession;
+    }
+  }
+
+  private getLatchSessionFor(collection: TrackCollection<T> | undefined, important?: boolean): LatchSession<T> | undefined {
+    const existingIndex = collection ? this.latchSessions.findIndex(s => s.collection === collection) : -1;
+
+    if (existingIndex > -1) {
+      const existing = this.latchSessions[existingIndex];
+
+      if (important) {
+        this.latchSessions.splice(existingIndex, 1);
+        this.latchSessions.unshift(existing);
+      }
+
+      return existing;
     }
 
-    return [this.latchCount, this.latchFor] as [count: number, total: number];
+    if (!collection || collection.latchDisabled) {
+      return;
+    }
+
+    const newSession: LatchSession<T> = {
+      uuid: randomUUID(),
+      count: 0,
+      max: 0,
+      collection
+    }
+
+    if (important) {
+      this.latchSessions.unshift(newSession);
+    } else {
+      this.latchSessions.push(newSession);
+    }
+
+    return newSession;
+  }
+
+  latch(options?: LatchOptions<T>): LatchSession<T> | undefined {
+    if (options === undefined) {
+      return this.activeLatch;
+    }
+
+    if (!options.increase && options.length === 0) {
+      return this.removeLatch(0);
+    }
+
+    const session = this.getLatchSessionFor(options.collection ?? this._currentCollection, options.important);
+
+    if (!session) {
+      return;
+    }
+
+    session.max = (options.increase)
+      ? session.max + 1
+      : isNaN(options.length) ? session.max : Math.max(0, options.length);
+
+    if (session.max === 0) {
+      this.removeLatch(session);
+    }
+
+    return session;
   }
 }

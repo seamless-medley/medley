@@ -3,7 +3,7 @@ import { DeckIndex, Medley, Queue, RequestAudioOptions } from "@seamless-medley/
 import _, { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek } from "./collections";
-import { Chanceable, Crate, CrateLimit } from "./crate";
+import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
 import { Library, MusicDb, MusicLibrary } from "./library";
 import { createLogger, Logger } from "./logging";
 import {
@@ -93,7 +93,7 @@ export type Audience = {
   id: string;
 }
 
-export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
+export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished' | 'currentCollectionChange'> {
   ready: () => void;
   requestTrackAdded: (track: TrackPeek<RequestTrack<Audience>>) => void;
 }
@@ -170,6 +170,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     boombox.on('trackStarted', this.handleTrackStarted);
     boombox.on('trackActive', this.handleTrackActive);
     boombox.on('trackFinished', this.handleTrackFinished);
+    boombox.on('currentCollectionChange', this.handleCollectionChange);
 
     this.musicDb.trackHistory
       .getAll(this.id)
@@ -192,16 +193,18 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.medley.setAudioDevice(descriptor);
   }
 
-  private handleTrackQueued = (track: BoomBoxTrack) => {
-    this.emit('trackQueued', track);
+  private handleTrackQueued: StationEvents['trackQueued'] = (...args) => {
+    this.emit('trackQueued', ...args);
   }
 
-  private handleTrackLoaded = (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => {
-    this.emit('trackLoaded', deck, trackPlay);
+  private handleTrackLoaded: StationEvents['trackLoaded'] = (...args) => {
+    this.emit('trackLoaded', ...args);
   }
 
-  private handleTrackStarted = (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrack?: BoomBoxTrackPlay) => {
-    this.emit('trackStarted', deck, trackPlay, lastTrack);
+  private handleTrackStarted: StationEvents['trackStarted'] = (...args) => {
+    this.emit('trackStarted', ...args);
+
+    const [, trackPlay] = args;
 
     this.musicDb.trackHistory.add(this.id, {
       ...trackRecordOf(trackPlay.track),
@@ -209,12 +212,16 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }, this.maxTrackHistory);
   }
 
-  private handleTrackActive = (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => {
-    this.emit('trackActive', deck, trackPlay);
+  private handleTrackActive: StationEvents['trackActive'] = (...args) => {
+    this.emit('trackActive', ...args);
   }
 
-  private handleTrackFinished = (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => {
-    this.emit('trackFinished', deck, trackPlay);
+  private handleTrackFinished: StationEvents['trackFinished'] = (...args) => {
+    this.emit('trackFinished', ...args);
+  }
+
+  private handleCollectionChange: StationEvents['currentCollectionChange'] = (...args) => {
+    this.emit('currentCollectionChange', ...args);
   }
 
   private handleRequestTrack = async (track: RequestTrack<Audience>) => {
@@ -428,6 +435,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   async request(trackId: BoomBoxTrack['id'], requestedBy: Audience) {
     const track = this.findTrackById(trackId);
+
     if (!track) {
       return false;
     }
@@ -549,8 +557,20 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return Array.from(this.audiences.keys());
   }
 
-  latch(n?: number) {
-    return this.boombox.latch(n);
+  latch(options?: LatchOptions<BoomBoxTrack>) {
+    return this.boombox.latch(options);
+  }
+
+  isCollectionLatchable(collection: TrackCollection<BoomBoxTrack>): boolean {
+    return !collection.latchDisabled && this.boombox.isKnownCollection(collection);
+  }
+
+  get isLatchActive(): boolean {
+    return this.boombox.isLatchActive;
+  }
+
+  get allLatches(): LatchSession<BoomBoxTrack>[] {
+    return this.boombox.allLatches;
   }
 }
 

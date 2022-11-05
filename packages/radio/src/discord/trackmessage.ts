@@ -25,7 +25,7 @@ import {
 } from "discord.js";
 
 import { capitalize,
-  isEmpty, get } from "lodash";
+  isEmpty, get, sample } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from 'path';
 
@@ -44,7 +44,8 @@ export type TrackMessage = {
   coverImage?: AttachmentBuilder;
   buttons: {
     skip?: ButtonBuilder,
-    lyric?: ButtonBuilder
+    lyric?: ButtonBuilder,
+    more?: ButtonBuilder
   };
   sentMessage?: Message;
   lyricMessage?: Message;
@@ -99,8 +100,6 @@ export async function createTrackMessage(guildId: string, station: Station, trac
       const { cover, coverMimeType } = coverAndLyrics;
 
       if (cover.length) {
-        embed.setColor('Random');
-
         const ext = mime.extension(coverMimeType);
         coverImage = new AttachmentBuilder(cover, { name: `cover.${ext}` });
       }
@@ -120,8 +119,8 @@ export async function createTrackMessage(guildId: string, station: Station, trac
 
     fields.push({ name: 'Collection', value: description ?? track.collection.id });
     if (latch) {
-      const [count, max] = latch;
-      fields.push({ name: 'Latch', value: `${count} of ${max}`, inline: true });
+      const { order, session } = latch;
+      fields.push({ name: 'Latch', value: `${order} of ${session.max}`, inline: true });
     }
     fields.push({ name: 'Station', value: station.name });
 
@@ -157,6 +156,14 @@ export async function createTrackMessage(guildId: string, station: Station, trac
     .setStyle(ButtonStyle.Danger)
     .setCustomId(`skip:${trackPlay.uuid}`);
 
+  const moreButton = station.isCollectionLatchable(trackPlay.track.collection)
+    ? new ButtonBuilder()
+      .setLabel('More Like This')
+      .setEmoji(sample(['❤️', '🧡', '💛', '💕', '💓', '💗', '💖', '💘', '💝'])!)
+      .setStyle(ButtonStyle.Primary)
+      .setCustomId(`latch:${trackPlay.track.collection.id}`)
+    : undefined;
+
   return {
     station,
     trackPlay,
@@ -165,7 +172,8 @@ export async function createTrackMessage(guildId: string, station: Station, trac
     coverImage,
     buttons: {
       lyric: lyricButton,
-      skip: skipButton
+      skip: skipButton,
+      more: moreButton
     }
   };
 }
@@ -175,15 +183,19 @@ export type TrackMessageOptions = Pick<MessageOptions & MessageEditOptions, 'emb
 export function trackMessageToMessageOptions<T>(msg: TrackMessage): TrackMessageOptions {
   const { embed, coverImage, buttons } = msg;
 
-  const { lyric, skip } = buttons;
+  const { lyric, skip, more } = buttons;
 
   let actionRow: ActionRowBuilder<MessageActionRowComponentBuilder> | undefined = undefined;
 
-  if (lyric || skip) {
+  if (lyric || skip || more) {
     actionRow = new ActionRowBuilder();
 
     if (lyric) {
       actionRow.addComponents(lyric);
+    }
+
+    if (more) {
+      actionRow.addComponents(more);
     }
 
     if (skip) {
