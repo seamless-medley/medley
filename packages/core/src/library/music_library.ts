@@ -12,7 +12,8 @@ export type MusicLibraryDescriptor = {
   id: string;
   path: string;
   description?: string;
-} & Pick<TrackCollectionOptions<any>, 'reshuffleEvery' | 'newTracksAddingMode'>;
+  auxiliary?: boolean;
+} & Omit<TrackCollectionOptions<any>, 'trackCreator' | 'trackMapper'>;
 
 export type MusicLibraryExtra<O> = {
   descriptor: MusicLibraryDescriptor;

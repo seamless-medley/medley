@@ -2,7 +2,7 @@ import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
 import _, { clamp, isObjectLike, isString, uniqBy } from "lodash";
 import { TrackCollection } from "../collections";
-import { Track, TrackExtra } from "../track";
+import { Track, TrackExtra, TrackExtraOf } from "../track";
 import { Crate } from "./base";
 import { createLogger } from "../logging";
 import { moveArrayIndexes } from "../utils";
@@ -16,7 +16,7 @@ export type TrackValidator = {
   (path: string): Promise<boolean>;
 }
 
-export type TrackVerifier<E> = {
+export type TrackVerifier<E extends TrackExtra> = {
   (track: Track<E>): Promise<TrackVerifierResult<E>>;
 }
 
@@ -25,12 +25,12 @@ export type TrackVerifierResult<E> = {
   extra?: E;
 }
 
-export type CrateSequencerOptions<E> = {
+export type CrateSequencerOptions<E extends TrackExtra> = {
   trackValidator?: TrackValidator;
   trackVerifier?: TrackVerifier<E>;
 }
 
-export class CrateSequencer<T extends Track<E>, E = TrackExtra<T>> extends (EventEmitter as new () => TypedEventEmitter<CrateSequencerEvents>) {
+export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtraOf<T>> extends (EventEmitter as new () => TypedEventEmitter<CrateSequencerEvents>) {
   private _playCounter = 0;
   private _crateIndex = 0;
   private _lastCrate: Crate<T> | undefined;

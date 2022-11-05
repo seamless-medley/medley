@@ -4,7 +4,7 @@ import { TrackCollection } from "../collections/base";
 import { Track } from "../track";
 import { createLogger, Logger } from '../logging';
 
-export type CrateSourceWithWeight<T extends Track<any>, E = never> = {
+export type CrateSourceWithWeight<T extends Track<any, E>, E = any> = {
   collection: TrackCollection<T, E>;
   weight: number;
 }
@@ -18,7 +18,7 @@ export type CrateLimitValue = number | 'all';
 
 export type CrateLimit = CrateLimitValue | (() => CrateLimitValue);
 
-export type CrateOptions<T extends Track<any>, E = never> = {
+export type CrateOptions<T extends Track<any, E>, E = any> = {
   id: string;
   sources: CrateSourceWithWeight<T, E>[];
 
@@ -28,7 +28,7 @@ export type CrateOptions<T extends Track<any>, E = never> = {
   max?: number;
 }
 
-export class Crate<T extends Track<any>, CE = never> {
+export class Crate<T extends Track<any, CE>, CE = any> {
   readonly id: string;
 
   private _sources: TrackCollection<T, CE>[] = [];

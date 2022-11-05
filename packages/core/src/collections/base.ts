@@ -6,10 +6,10 @@ import { createLogger } from '../logging';
 import { Track } from "../track";
 import { moveArrayElements } from '../utils';
 
-export type TrackCreator<T extends Track<any, any>> = (path: string) => Promise<Omit<T, 'collection' | 'sequencing'> | undefined>;
+export type TrackCreator<T extends Track<any, CE>, CE = any> = (path: string) => Promise<Omit<T, 'collection' | 'sequencing'> | undefined>;
 
-export type TrackCollectionOptions<T extends Track<any, CE>, CE = never> = {
-  trackCreator?: TrackCreator<T>;
+export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = {
+  trackCreator?: TrackCreator<T, CE>;
 
   /**
    * Called when new tracks are added to the collection
@@ -26,11 +26,11 @@ export type TrackCollectionOptions<T extends Track<any, CE>, CE = never> = {
   newTracksAddingMode?: 'prepend' | 'append';
 }
 
-export type TrackPeek<T extends Track<any, CE>, CE = never> = {
+export type TrackPeek<T extends Track<any, CE>, CE = any> = {
   index: number;
   track: T;
 }
-export class TrackCollection<T extends Track<any, CE>, CE = never> extends EventEmitter {
+export class TrackCollection<T extends Track<any, CE>, CE = any> extends EventEmitter {
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];
@@ -69,22 +69,15 @@ export class TrackCollection<T extends Track<any, CE>, CE = never> extends Event
       return existingTrack;
     }
 
-    const { trackCreator } = this.options;
+    const createdTrack = await this.options.trackCreator?.(path);
 
-    const createdTrack = await trackCreator?.(path);
-
-    type NT = Track<any, CE>;
-    type MutableTrack = { -readonly [P in keyof NT]: NT[P] };
-
-    const track: MutableTrack = {
+    return {
       id: createdTrack?.id ?? generatedId,
       path,
-      collection: this as any,
+      collection: this as unknown as T['collection'],
       sequencing: {},
       ...omit(createdTrack, 'id', 'path'),
-    };
-
-    return track as T;
+    } as T;
   }
 
   get length(): number {

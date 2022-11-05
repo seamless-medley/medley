@@ -2,10 +2,10 @@ import { TrackInfo } from "@seamless-medley/medley";
 import { Crate } from "./crate";
 import { TrackCollection } from "./collections";
 
-export interface Track<E, CE = never> extends TrackInfo {
-  readonly collection: TrackCollection<Track<E>, CE>;
+export interface Track<E extends TrackExtra, CE = any> extends TrackInfo {
+  readonly collection: TrackCollection<Track<E, CE>, CE>;
 
-  sequencing: TrackSequencing<E, CE>;
+  sequencing: TrackSequencing<Track<E, CE>, CE>;
 
   readonly id: string;
   readonly path: string;
@@ -13,15 +13,19 @@ export interface Track<E, CE = never> extends TrackInfo {
   extra?: E;
 }
 
-export type TrackSequencing<E, CE> = {
+export type TrackExtra = {
+  source?: string;
+}
+
+export type TrackSequencing<T extends Track<any, CE>, CE> = {
   /**
    * The current crate it was fetched from
    */
-  crate?: Crate<Track<E>, CE>;
+  crate?: Crate<T, CE>;
 
   playOrder?: [count: number, max: number];
 
   latch?: [count: number, max: number];
 }
 
-export type TrackExtra<T> = T extends Track<infer E> ? E : never;
+export type TrackExtraOf<T> = T extends Track<infer E> ? E : never;
