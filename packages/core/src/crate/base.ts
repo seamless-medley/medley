@@ -97,8 +97,8 @@ export class Crate<T extends Track<any, CE>, CE = any> {
     return true;
   }
 
-  async next(validator?: (path: string) => Promise<boolean>): Promise<T | undefined> {
-    const source = weightedSample(this._sources, this.sourceWeights);
+  async next(validator?: (path: string) => Promise<boolean>, intendedCollection?: TrackCollection<T, CE>): Promise<T | undefined> {
+    const source = intendedCollection ?? weightedSample(this._sources, this.sourceWeights);
 
     if (!source) {
       return;
