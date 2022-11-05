@@ -9,6 +9,7 @@ import {
   extractAudienceGroup,
   AudienceType
 } from "@seamless-medley/core";
+import { MetadataHelper } from "@seamless-medley/core/src/metadata";
 
 import {
   Message,
@@ -36,6 +37,7 @@ export enum TrackMessageStatus {
 }
 
 export type TrackMessage = {
+  station: Station;
   trackPlay: BoomBoxTrackPlay;
   status: TrackMessageStatus;
   embed: EmbedBuilder;
@@ -48,26 +50,35 @@ export type TrackMessage = {
   lyricMessage?: Message;
 }
 
-export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrackPlay, actualTrack?: BoomBoxTrack): Promise<TrackMessage> {
+export async function createTrackMessage(guildId: string, station: Station, trackPlay: BoomBoxTrackPlay): Promise<TrackMessage> {
   const requested = isRequestTrack<Audience>(trackPlay.track) ? trackPlay.track : undefined;
   const requestedBy = requested?.requestedBy;
-  const track  = actualTrack ?? requested?.original ?? trackPlay.track;
+
+  // Find the best track object by looking up the maybeCoverAndLyrics in which is already defined
+  // If none was found, fallback to the track object from BoomBoxTrackPlay
+  const track = [requested?.original, trackPlay.track]
+      .find((t): t is BoomBoxTrack => t?.extra?.maybeCoverAndLyrics !== undefined)
+      ?? requested?.original ?? trackPlay.track;
+
 
   const embed = new EmbedBuilder()
     .setColor('Random')
     .setTitle(requestedBy?.length ? 'Playing your request' : 'Playing');
 
   const { extra } = track;
+  let shouldUseTrackPath = true;
 
   let coverImage: AttachmentBuilder | undefined;
 
   if (extra) {
-    const { tags, maybeCoverAndLyrics } = extra;
+    const { tags } = extra;
+
     if (tags) {
       const { title } = tags;
 
       if (title) {
         embed.setDescription(`> ${title}`);
+        shouldUseTrackPath = false;
       }
 
       for (const tag of ['artist', 'album', 'genre']) {
@@ -82,7 +93,7 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
       }
     }
 
-    const coverAndLyrics = await maybeCoverAndLyrics;
+    const coverAndLyrics = await (extra.maybeCoverAndLyrics ?? MetadataHelper.coverAndLyrics(track.path));
 
     if (coverAndLyrics) {
       const { cover, coverMimeType } = coverAndLyrics;
@@ -95,7 +106,9 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
       }
 
     }
-  } else {
+  }
+
+  if (shouldUseTrackPath) {
     embed.setDescription(parsePath(track.path).name);
   }
 
@@ -145,6 +158,7 @@ export async function createTrackMessage(guildId: string, trackPlay: BoomBoxTrac
     .setCustomId(`skip:${trackPlay.uuid}`);
 
   return {
+    station,
     trackPlay,
     status: TrackMessageStatus.Playing,
     embed,

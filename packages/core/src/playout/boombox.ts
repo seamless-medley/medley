@@ -211,7 +211,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     return {
       shouldPlay: true,
-      extra: undefined
+      extra: track.extra
     };
   }
 
@@ -370,7 +370,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     }
 
     // build cover and lyrics metadata
-    const { track } = trackPlay;
+    const trackFromCollection = trackPlay.track.collection.fromId(trackPlay.track.id);
+    const track = trackFromCollection ?? trackPlay.track;
+
     const { extra } = track;
 
     if (extra && extra.kind !== TrackKind.Insertion) {
@@ -399,14 +401,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     // clean up memory holding the cover, lyrics and extra
     if (trackPlay.track?.extra) {
       trackPlay.track.extra.maybeCoverAndLyrics = undefined;
-      trackPlay.track.extra = undefined;
 
-      if (isRequestTrack(trackPlay.track)) {
-        if (trackPlay.track.original.extra?.maybeCoverAndLyrics) {
-          trackPlay.track.original.extra.maybeCoverAndLyrics = undefined;
-        }
-
-        trackPlay.track.original.extra = undefined;
+      if (isRequestTrack(trackPlay.track) && trackPlay.track.original.extra?.maybeCoverAndLyrics) {
+        trackPlay.track.original.extra.maybeCoverAndLyrics = undefined;
       }
     }
 

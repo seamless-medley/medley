@@ -697,7 +697,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           const channel = textChannelId ? guild.channels.cache.get(textChannelId) : undefined;
           const textChannel = channel?.type == ChannelType.GuildText ? channel : undefined;
 
-          const trackMsg = await createTrackMessage(guildId, trackPlay, station.findTrackById(trackPlay.track.id));
+          const trackMsg = await createTrackMessage(guildId, station, trackPlay);
 
           const options = trackMessageToMessageOptions({
             ...trackMsg,
