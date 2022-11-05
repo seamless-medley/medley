@@ -783,17 +783,17 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   async registerCommands(guild: Guild | OAuth2Guild) {
-    const client = new RestClient({ version: '9' }).setToken(this.botToken);
-
     try {
+      this.logger.info('Registering commands with guild id:', guild.id, `(${guild.name})`);
+
+      const client = new RestClient({ version: '10' }).setToken(this.botToken);
+
       await client.put(
         Routes.applicationGuildCommands(this.clientId, guild.id),
         {
           body: [createCommandDeclarations(this.baseCommand || 'medley')]
         }
       );
-
-      this.logger.info('Registered commands with guild id:', guild.id, `(${guild.name})`);
     }
     catch (e) {
       this.logger.error('Error registering command', e);
