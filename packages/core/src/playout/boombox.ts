@@ -52,7 +52,7 @@ export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
 
 export interface BoomBoxEvents {
   sequenceChange: (activeCrate: BoomBoxCrate) => void;
-  currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack>, newCollection: TrackCollection<BoomBoxTrack>, fromRequest: boolean) => void;
+  currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack>, newCollection: TrackCollection<BoomBoxTrack>, ignoreFrom: boolean) => void;
   currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
   trackQueued: (track: BoomBoxTrack) => void;
   trackLoaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
@@ -336,11 +336,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       const currentTrack = this._currentTrackPlay?.track;
       const currentCollection = currentTrack?.collection;
       const nextCollection = nextTrack.collection;
-
-      const trasitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
       const collectionChange = currentCollection?.id !== nextCollection.id;
 
       if (currentCollection && nextCollection && (collectionChange)) {
+        const trasitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
         this.emit('currentCollectionChange', currentCollection, nextCollection, trasitingFromRequestTrack);
       }
 
