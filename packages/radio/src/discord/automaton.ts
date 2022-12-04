@@ -660,10 +660,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           }
         });
 
-
-
         await new Promise<any>((resolve) => {
-          const doEdit = () => sentMessage.edit({ embeds, components }).then(resolve);
+          const doEdit = () => sentMessage.edit({ embeds, components })
+            .then(resolve)
+            .catch(noop);
 
           if (count++ < 30) {
             doEdit()
