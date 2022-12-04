@@ -28,6 +28,8 @@ export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = {
   disableLatch?: boolean;
 
   noFollowOnRequest?: boolean;
+
+  auxiliary?: boolean;
 }
 
 export type TrackPeek<T extends Track<any, CE>, CE = any> = {

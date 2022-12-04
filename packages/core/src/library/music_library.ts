@@ -12,7 +12,6 @@ export type MusicLibraryDescriptor = {
   id: string;
   path: string;
   description?: string;
-  auxiliary?: boolean;
 } & Omit<TrackCollectionOptions<any>, 'trackCreator' | 'trackMapper'>;
 
 export type MusicLibraryExtra<O> = {
