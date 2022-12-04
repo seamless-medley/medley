@@ -92,8 +92,8 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
   private async indexTrack(track: BoomBoxTrack, force: boolean = false) {
     if (force || !track.extra?.tags) {
       await helper.fetchMetadata(track, this.musicDb, force)
-        .then(async ({ metadata: tags }) => {
-          track.musicId = tags.isrc,
+        .then(async (result) => {
+          track.musicId = result.metadata.isrc,
           track.extra = {
             ...track.extra,
             tags: result.metadata,
@@ -114,9 +114,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       const newCollection = new WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>(
         id,
         {
-          newTracksAddingMode: descriptor.newTracksAddingMode,
-          reshuffleEvery: descriptor.reshuffleEvery,
-          disableLatch: descriptor.disableLatch,
+          ...descriptor,
           trackCreator: this.trackCreator
         }
       );
@@ -135,7 +133,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       newCollection.on('tracksAdd', (tracks: BoomBoxTrack[]) => this.indexTracks(tracks, noop));
 
       newCollection.on('tracksUpdate', async (tracks: BoomBoxTrack[]) => {
-        await this.searchEngine.removeAll(tracks);
+        await this.searchEngine.removeAll(tracks).catch(noop);
 
         for (const track of tracks) {
           await this.indexTrack(track, true);
