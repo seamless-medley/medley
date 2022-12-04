@@ -265,8 +265,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
         if (located) {
           this.boombox.crateIndex = located.index;
         }
-      } else {
-        this.logger.debug('followCrateAfterRequestTrack is enabled, but a latching session is active');
       }
     }
   }
