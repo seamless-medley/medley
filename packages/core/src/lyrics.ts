@@ -29,7 +29,7 @@ type MaybeLine = Line | undefined;
 const isLyricLine = (line: any): line is LyricLine => line && 'time' in line;
 
 function parseLine(line: string): MaybeLine {
-  const match = line.match(/(\[.*\])\s*(.*)/);
+  const match = line.match(/(\[[^\]]*\])\s*(.*)/);
   if (!match) {
     return;
   }
