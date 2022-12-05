@@ -1,4 +1,4 @@
-import { isRequestTrack, MusicLibraryExtra } from "@seamless-medley/core";
+import { MusicLibraryExtra } from "@seamless-medley/core";
 import { ButtonInteraction, ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { accept, deny, guildStationGuard, permissionGuard, reply } from "../utils";
@@ -11,8 +11,15 @@ const declaration: SubCommandLikeOption = {
     {
       type: OptionType.Number,
       name: 'count',
-      description: 'Number of tracks for the latch, specify 0 to cancel the latch',
+      description: 'Number of tracks for the latch, specify 0 to cancel',
       min_value: 0,
+      max_value: 20
+    },
+    {
+      type: OptionType.Number,
+      name: 'more',
+      description: 'Number of tracks to increase for the latch',
+      min_value: 1,
       max_value: 20
     }
   ]
@@ -23,18 +30,29 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   const { station } = guildStationGuard(automaton, interaction);
 
   const length = interaction.options.getNumber('count') ?? undefined;
-  const inquire = length === undefined;
+  const increase = interaction.options.getNumber('more') ?? undefined;
 
-  const latching = station.latch(
-    !inquire
-    ? { length }
-    : undefined
-  );
+  const hasLength = length !== undefined;
+  const hasIncrease = increase !== undefined;
+
+  const inquire = !hasLength && !hasIncrease;
+  const exclusiveOption = (hasLength !== hasIncrease);
+
+  if (!inquire && !exclusiveOption) {
+    deny(interaction, 'Please use only one option at a time', undefined, true);
+    return;
+  }
+
+  const latching = (() => {
+    if (inquire) return station.latch(undefined);
+    if (hasLength) return station.latch({ increase: false, length });
+    if (hasIncrease) return station.latch({ increase });
+  })();
 
   if (latching === undefined) {
     inquire
       ? reply(interaction, 'Not latching')
-      : deny(interaction, 'Could not latch');
+      : deny(interaction, 'Latching is not allowed for this track');
 
     return;
   }
@@ -56,7 +74,12 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     return;
   }
 
-  accept(interaction, `OK: Latching collection "${description ?? latching.collection.id }" for ${latching.max} tracks`);
+  if (hasIncrease) {
+    const more = latching.max - latching.count;
+    accept(interaction, `OK: Latching ${more} more tracks from "${description}" collection`)
+  } else {
+    accept(interaction, `OK: Latching collection "${description ?? latching.collection.id }" for ${latching.max} tracks`);
+  }
 }
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, collectionId: string) => {
@@ -77,7 +100,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   }
 
   const latching = station.latch({
-    increase: true,
+    increase: 1,
     important: true,
     collection
   });
@@ -91,7 +114,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   const { descriptor: { description } } = latching.collection.extra as MusicLibraryExtra<any>;
 
   accept(interaction,
-    [`OK: Will play ${more} more like this from "${description}" collection`].join('\n'),
+    `OK: Will play ${more} more like this from "${description}" collection`,
     `@${interaction.user.id}`
   );
 }

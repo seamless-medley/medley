@@ -39,12 +39,12 @@ export type LatchSession<T extends Track<any, CE>, CE = any> = {
 }
 
 type LatchWithLength = {
-  increase?: false;
+  increase: false;
   length: number;
 }
 
 type LatchIncrement = {
-  increase: true;
+  increase: number;
 }
 
 export type LatchOptions<T extends Track<any, CE>, CE = any> = (LatchWithLength | LatchIncrement) & {
@@ -112,6 +112,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
             {
               if (this.activeLatch && this.activeLatch.count>= this.activeLatch.max) {
                 // Ends latching
+                this.logger.debug(`Removing activeLatch because activeLatch.count (${this.activeLatch.count})>= activeLatch.max (${this.activeLatch.max})`)
                 this.removeActiveLatch();
               }
             }
@@ -313,7 +314,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
   }
 
   private getLatchSessionFor(collection: TrackCollection<T> | undefined, important?: boolean): LatchSession<T> | undefined {
-    const existingIndex = collection ? this.latchSessions.findIndex(s => s.collection === collection) : -1;
+    const existingIndex = collection ? this.latchSessions.findIndex(s => s.collection.id === collection.id) : -1;
 
     if (existingIndex > -1) {
       const existing = this.latchSessions[existingIndex];
@@ -351,19 +352,28 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
       return this.activeLatch;
     }
 
-    if (!options.increase && options.length === 0) {
+    if (options.increase === false && options.length === 0) {
       return this.removeLatch(0);
     }
 
-    const session = this.getLatchSessionFor(options.collection ?? this._currentCollection, options.important);
+    const collection = options.collection
+      ?? this.activeLatch?.collection
+      ?? this._currentCollection;
+
+    const session = this.getLatchSessionFor(collection, options.important);
 
     if (!session) {
       return;
     }
 
-    session.max = (options.increase)
-      ? session.max + 1
-      : isNaN(options.length) ? session.max : Math.max(0, options.length);
+    if (options.increase === false) {
+      if (!isNaN(options.length)) {
+        session.max = Math.max(0, options.length);
+        session.count = 0;
+      }
+    } else if (options.increase) {
+      session.max += options.increase;
+    }
 
     if (session.max === 0) {
       this.removeLatch(session);
