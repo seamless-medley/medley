@@ -81,6 +81,14 @@ export type StationOptions = {
    * @default true
    */
   followCrateAfterRequestTrack?: boolean;
+
+  /**
+   * When enabled, a request sweeper will not be inserted
+   * if the conseqcutive tracks are from the same collection
+   *
+   * @default true
+   */
+  noRequestSweeperOnIdenticalCollection?: boolean;
 }
 
 export enum AudienceType {
@@ -121,6 +129,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   followCrateAfterRequestTrack: boolean;
 
+  noRequestSweeperOnIdenticalCollection: boolean;
+
   maxTrackHistory: number = 50;
 
   private audiences: Map<AudienceGroupId, Map<string, any>> = new Map();
@@ -137,6 +147,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.requestSweepers = options.requestSweepers;
     this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? true;
     this.maxTrackHistory = options.maxTrackHistory || 50;
+    this.noRequestSweeperOnIdenticalCollection = options.noRequestSweeperOnIdenticalCollection ?? true;
 
     this.logger = createLogger({ name: `station/${this.id}`});
 
@@ -232,9 +243,13 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
     if (requestSweepers) {
 
-      const currentKind = this.boombox.trackPlay?.track.extra?.kind;
+      const currentTrack =  this.boombox.trackPlay?.track;
 
-      if (currentKind !== TrackKind.Request) {
+      const shouldSweep = this.noRequestSweeperOnIdenticalCollection
+        ? currentTrack?.collection.id !== track.collection.id
+        : true
+
+      if (currentTrack?.extra?.kind !== TrackKind.Request && shouldSweep) {
         const sweeper = requestSweepers.shift();
 
         if (sweeper && await MetadataHelper.isTrackLoadable(sweeper.path)) {
