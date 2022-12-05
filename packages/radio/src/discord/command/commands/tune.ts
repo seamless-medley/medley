@@ -116,10 +116,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
   if (selector instanceof Message) {
     let done = false;
 
-    const collector = selector.createMessageComponentCollector({
-      // componentType: ComponentType.SelectMenu,
-      time: 30_000
-    });
+    const collector = selector.createMessageComponentCollector({ time: 30_000 });
 
     collector.on('collect', async i => {
       if (i.user.id !== issuer) {
@@ -159,7 +156,16 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
   }
 }
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => (interaction) => createStationSelector(automaton, interaction);
+const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => (interaction) => {
+  permissionGuard(interaction.memberPermissions, [
+    PermissionsBitField.Flags.ManageChannels,
+    PermissionsBitField.Flags.ManageGuild,
+    PermissionsBitField.Flags.MuteMembers,
+    PermissionsBitField.Flags.MoveMembers
+  ]);
+
+  return createStationSelector(automaton, interaction);
+}
 
 const descriptor: CommandDescriptor = {
   declaration,
