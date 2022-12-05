@@ -16,7 +16,7 @@ const moods = {
   sad: ['lonely', 'brokenhearted', 'hurt']
 }
 
-const musicCollections: (MusicLibraryDescriptor & { auxiliary?: boolean })[] = [
+const musicCollections: MusicLibraryDescriptor[] = [
   { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
   { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
   { id: 'chill', description:'Chill', path: 'D:\\vittee\\Google Drive\\musics\\chill' },

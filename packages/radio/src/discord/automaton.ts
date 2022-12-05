@@ -30,7 +30,7 @@ import {
 
 import type TypedEventEmitter from 'typed-emitter';
 
-import _, { delay } from "lodash";
+import _, { delay, noop } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
@@ -152,6 +152,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     this.client.on('shardError', (error) => {
       this.logger.error('Shard error', error)
+    });
+
+    this.client.on('warn', message => {
+      this.logger.warn(message);
     });
 
     this.client.on('ready', this.handleClientReady);

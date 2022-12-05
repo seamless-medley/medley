@@ -105,7 +105,7 @@ export type Audience = {
 }
 
 export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished' | 'currentCollectionChange'> {
-  ready: () => void;
+  // ready: () => void;
   requestTrackAdded: (track: TrackPeek<RequestTrack<Audience>>) => void;
 }
 
