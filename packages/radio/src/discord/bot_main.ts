@@ -30,7 +30,7 @@ const moods = {
   sad: ['lonely', 'brokenhearted', 'hurt']
 }
 
-const musicCollections: (MusicLibraryDescriptor & { auxiliary?: boolean })[] = [
+const musicCollections: MusicLibraryDescriptor[] = [
   { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
   { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
   { id: 'chill', description:'Chill', path: 'D:\\vittee\\Google Drive\\musics\\chill' },
@@ -39,7 +39,7 @@ const musicCollections: (MusicLibraryDescriptor & { auxiliary?: boolean })[] = [
   { id: 'lonely', description:'Lonely', path: 'D:\\vittee\\Google Drive\\musics\\lonely' },
   { id: 'lovesong', description:'Love Song', path: 'D:\\vittee\\Google Drive\\musics\\lovesong' },
   { id: 'upbeat', description:'Upbeat', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
-  { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released', disableLatch: true },
+  { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released', disableLatch: true, noFollowOnRequest: true },
   { id: 'thai', auxiliary: true, description:'Thai', path: 'M:\\Repository\\th' },
 ];
 
