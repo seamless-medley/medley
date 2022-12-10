@@ -3,10 +3,10 @@ import { shuffle } from "lodash";
 import normalizePath from 'normalize-path';
 import { basename } from "path";
 import { MongoMusicDb } from "../musicdb/mongo";
-import { MedleyAutomaton } from "./automaton";
+import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
 
 process.on('uncaughtException', (e) => {
-  console.error('Exception', e, e.stack);
+  console.error('Uncaught Exception', e, e.stack);
 });
 
 process.on('unhandledRejection', (e) => {
@@ -20,7 +20,7 @@ type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicI
 
 type StoredConfig = {
   stations: StationConfig[];
-  automatons: any[];
+  automatons: MedleyAutomatonOptions[];
 }
 
 const moods = {
