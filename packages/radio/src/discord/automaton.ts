@@ -266,13 +266,17 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   async login() {
-    this.logger.info('Logging in');
+    await retryable(async () => {
+      this.logger.info('Logging in');
 
-    await this.client.login(this.botToken)
-      .catch(e => {
-        this.logger.error('Error login', e);
-        throw e;
-      });
+      return this.client.login(this.botToken)
+        .catch(e => {
+          this.logger.error('Error login', e);
+          throw e;
+        });
+    }, { wait: 5000 });
+
+    this.logger.debug('Logging in done');
   }
 
   ensureGuildState(guildId: Guild['id']) {
