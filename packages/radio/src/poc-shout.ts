@@ -1,167 +1,135 @@
-import { BoomBoxTrackPlay, getTrackBanner, RequestAudioStreamResult, Station } from "@seamless-medley/core";
-import { pipeline } from "stream";
-import axios from "axios";
-import { createFFmpegOverseer, InfoLine } from "./streaming/ffmpeg";
-import { audioFormatToAudioType } from "./streaming/types";
-import { noop } from "lodash";
+import { MusicLibraryDescriptor, SequenceConfig, Station, SweeperInsertionRule, WatchTrackCollection } from "@seamless-medley/core";
+import normalizePath from "normalize-path";
+import { MongoMusicDb } from "./musicdb/mongo";
+import { basename } from "path";
+import { createShoutAdapter } from "./streaming/shout/adapter";
+import { getFFmpegCaps } from "./streaming/ffmpeg";
 
 process.on('uncaughtException', (e) => {
-
+  console.log('Exception', e);
 });
 
-const station = new Station({
-  id: 'default',
-  name: 'Default station',
-  useNullAudioDevice: true,
-  musicCollections: [
-    { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
-    { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
-    { id: 'chill', description:'Chill', path: 'D:\\vittee\\Google Drive\\musics\\chill' },
-    { id: 'groovy', description:'Groovy', path: 'D:\\vittee\\Google Drive\\musics\\groovy' },
-    { id: 'hurt', description:'Hurt', path: 'D:\\vittee\\Google Drive\\musics\\hurt' },
-    { id: 'lonely', description:'Lonely', path: 'D:\\vittee\\Google Drive\\musics\\lonely' },
-    { id: 'lovesong', description:'Love Song', path: 'D:\\vittee\\Google Drive\\musics\\lovesong' },
-    { id: 'upbeat', description:'Upbeat', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
-    { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released' },
-    // { id: 'thai', auxiliary: true, description:'Thai', path: 'M:\\Repository\\th' },
-  ],
-  sequences: [
-    { crateId: 'guid1', collections: [ { id: 'new-released' }], limit: { by: 'one-of', list: [1, 1, 1, 2] } },
-    { crateId: 'guid2', collections: [ { id: 'bright' }], limit: { by: 'upto', upto: 2 } },
-    { crateId: 'guid3', collections: [ { id: 'groovy' }], limit: 1 },
-    { crateId: 'guid4', collections: [ { id: 'upbeat' }], chance: [2, 8], limit: { by: 'range', range: [1, 2] } },
-    { crateId: 'guid5', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 3] } },
-    { crateId: 'guid6', collections: [ { id: 'lovesong' }], limit: { by: 'range', range: [0, 2] } },
-    { crateId: 'guid7',
-      collections: [
-        { id: 'lonely', weight: 1 },
-        { id: 'brokenhearted', weight: 0.5 }
-      ],
-      limit: { by: 'upto', upto: 1 }
-    },
-    { crateId: 'guid8', collections: [ { id: 'brokenhearted' }], limit: { by: 'range', range: [1, 2] } },
-    { crateId: 'guid9', collections: [ { id: 'lonely' }], limit: { by: 'range', range: [1, 2] } },
-    { crateId: 'guid10', collections: [ { id: 'lovesong' }], limit: { by: 'upto', upto: 2 } },
-    { crateId: 'guid11', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 4] } }
-  ],
-  sweeperRules: [
-    { // Upbeat
-      to: ['upbeat', 'bright'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\up'
-    },
-    { // Easy mood
-      to: ['lovesong', 'bright', 'chill'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\easy'
-    },
-    { // Sad mood
-      to: ['lonely', 'brokenhearted', 'hurt'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\blue'
-    },
-    { // Fresh
-      to: ['new-released'],
-      path: 'D:\\vittee\\Desktop\\test-transition\\drops\\fresh'
-    }
-  ]
-});
+const moods = {
+  bright: ['bright'],
+  up: ['upbeat', 'groovy'],
+  easy: ['lovesong', 'chill'],
+  sad: ['lonely', 'brokenhearted', 'hurt']
+}
 
-station.once('ready', async () => {
-  const sampleRate = 44100;
-  const outputFormat = 'mp3';
-  const bitrate = 128;
-  const sampleFormat = 'FloatLE';
+const musicCollections: MusicLibraryDescriptor[] = [
+  { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
+  { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
+  { id: 'chill', description:'Chill', path: 'D:\\vittee\\Google Drive\\musics\\chill' },
+  { id: 'groovy', description:'Groovy', path: 'D:\\vittee\\Google Drive\\musics\\groovy' },
+  { id: 'hurt', description:'Hurt', path: 'D:\\vittee\\Google Drive\\musics\\hurt' },
+  { id: 'lonely', description:'Lonely', path: 'D:\\vittee\\Google Drive\\musics\\lonely' },
+  { id: 'lovesong', description:'Love Song', path: 'D:\\vittee\\Google Drive\\musics\\lovesong' },
+  { id: 'upbeat', description:'Upbeat', path: 'D:\\vittee\\Google Drive\\musics\\upbeat' },
+  { id: 'new-released', description:'New Released', path: 'D:\\vittee\\Google Drive\\musics\\new-released', disableLatch: true, noFollowOnRequest: true },
+  { id: 'thai', auxiliary: true, description:'Thai', path: 'M:\\Repository\\th' },
+  { id: 'thai', auxiliary: true, description:'Thai', path: 'M:\\Repository\\th' },
+  { id: 'inter', auxiliary: true, description:'International', path: 'M:\\Repository\\inter' },
+];
 
-  const audioType = audioFormatToAudioType(sampleFormat);
+const sequences: SequenceConfig[] = [
+  { crateId: 'guid1', collections: [ { id: 'new-released' }], limit: { by: 'one-of', list: [1, 1, 1, 2] } },
+  { crateId: 'guid2', collections: [ { id: 'bright' }], limit: { by: 'upto', upto: 2 } },
+  { crateId: 'guid3', collections: [ { id: 'groovy' }], chance: [1, 3], limit: 1 },
+  { crateId: 'guid4', collections: [ { id: 'upbeat' }], chance: [2, 8], limit: { by: 'range', range: [1, 2] } },
+  { crateId: 'guid5', collections: [ { id: 'chill' }], limit: { by: 'upto', upto: 2 } },
+  { crateId: 'guid6', collections: [ { id: 'lovesong' }], limit: { by: 'range', range: [0, 2] } },
+  { crateId: 'guid7',
+    collections: [
+      { id: 'lonely', weight: 1 },
+      { id: 'brokenhearted', weight: 0.5 }
+    ],
+    limit: { by: 'upto', upto: 1 }
+  },
+  { crateId: 'guid8', collections: [ { id: 'brokenhearted' }], limit: { by: 'range', range: [1, 2] } },
+  { crateId: 'guid8_1', collections: [ { id: 'hurt' }], chance: [1, 2], limit: { by: 'upto', upto: 1 } },
+  { crateId: 'guid9', collections: [ { id: 'lonely' }], limit: { by: 'range', range: [1, 2] } },
+  { crateId: 'guid10', collections: [ { id: 'lovesong' }], limit: { by: 'upto', upto: 2 } },
+  { crateId: 'guid11', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
+];
 
-  if (!audioType) {
-    return;
+const makeSweeperRule = (type: string) => new WatchTrackCollection(type, {
+  trackCreator: async (path) => ({ id: basename(path), path })
+}).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+
+const sweeperRules: SweeperInsertionRule[] = [
+  {
+    to: moods.sad,
+    collection: makeSweeperRule('to_blue')
+  },
+  {
+    from: moods.sad,
+    to: moods.easy,
+    collection: makeSweeperRule('blue_to_easy')
+  },
+  {
+    from: moods.sad,
+    to: moods.up,
+    collection: makeSweeperRule('blue_to_up')
+  },
+  {
+    to: moods.up,
+    collection: makeSweeperRule('to_up')
+  },
+  {
+    from: [...moods.up, ...moods.bright],
+    collection: makeSweeperRule('from_up')
+  },
+  { // Fresh
+    to: ['new-released'],
+    collection: makeSweeperRule('fresh')
   }
+];
 
-  const args = [
-    '-f', audioType,
-    '-vn',
-    '-ar', `${sampleRate}`,
-    '-ac', '2',
-    '-channel_layout', 'stereo',
-    '-i', '-',
-    '-f', outputFormat,
-    // '-c:a', 'libopus',
-    '-b:a', `${bitrate}k`,
-    '-content_type', 'audio/mpeg',
-    'icecast://othersource:hackmemore@localhost:8000/test'
-  ];
-
-  let stopped = false;
-  let audioRequest!: RequestAudioStreamResult;
-  let currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
-
-  function postMetadata() {
-    if (!currentTrackPlay) {
-      return;
-    }
-
-    axios.get('http://localhost:8000/admin/metadata', {
-      auth: {
-        username: 'othersource',
-        password: 'hackmemore'
-      },
-      params: {
-        mode: 'updinfo',
-        mount: '/test',
-        song: getTrackBanner(currentTrackPlay.track)
-      },
-      headers: {
-        'User-Agent': 'Medley/0.0'
-      }
-    })
-    .catch(noop);
-  }
-
-  station.on('trackActive', (deckIndex, trackPlay) => {
-    currentTrackPlay = trackPlay;
-    postMetadata();
+async function main() {
+  const musicDb = await new MongoMusicDb().init({
+    url: 'mongodb://root:example@localhost:27017',
+    database: 'medley',
+    ttls: [60 * 60 * 24 * 7, 60 * 60 * 24 * 12]
   });
 
-  let lastInfo: InfoLine;
-
-  const overseer = await createFFmpegOverseer({
-    args,
-    respawnDelay: {
-      min: 1000,
-      max: 15000
-    },
-    async afterSpawn(process) {
-      audioRequest = await station.requestAudioStream({
-        sampleRate,
-        format: sampleFormat
-      });
-
-      pipeline(audioRequest.stream, process.stdin, noop);
-    },
-
-    started(error) {
-      if (error) {
-        console.log('Error starting up', error);
-        return;
-      }
-
-      setTimeout(postMetadata, 2000);
-    },
-
-    log(line) {
-      if (line.type === 'info') {
-        lastInfo = line;
-        return;
-      }
-
-      if (line.type === 'error') {
-        console.log('Error', line, lastInfo);
-
-        return;
-      }
-    }
+  const station = new Station({
+    id: 'default',
+    name: 'Default station',
+    useNullAudioDevice: true,
+    musicDb
   });
 
-  // TODO: Add audience
+  for (const desc of musicCollections) {
+    if (!desc.auxiliary) {
+      await station.library.addCollection(desc);
+    }
+  }
+
+  station.updateSequence(sequences);
+  station.sweeperInsertionRules = sweeperRules;
+
+  await createShoutAdapter(station, {
+    ffmpegPath: 'D:\\Tools\\ffmpeg\\bin\\ffmpegx',
+    outputFormat: 'he-aac',
+    icecast: {
+      host: 'localhost',
+      mountpoint: '/test',
+      username: 'othersource',
+      password: 'hackmemore',
+      userAgent: 'Medley/0.0',
+      genre: 'Pop',
+      url: 'https://google.com',
+      description: 'Hello',
+      name: 'My Stream'
+    }
+  });
 
   station.start();
-});
+}
+
+async function ff() {
+  const ok = await getFFmpegCaps('codecs', 'D:\\Tools\\ffmpeg\\bin\\ffmpeg');
+  console.log('RESULT => ', ok);
+}
+
+main();

@@ -10,21 +10,27 @@ import {
 
 import { RequestHandler } from "express";
 import { OutgoingHttpHeaders } from "http";
-import { first, last, noop, isUndefined, omitBy, } from "lodash";
-import { PassThrough, pipeline, Transform } from "stream";
+import { noop, isUndefined, omitBy, } from "lodash";
+import { PassThrough, Readable, Transform, pipeline } from "stream";
 import { createFFmpegOverseer } from "../ffmpeg";
-import { Adapter, AdapterOptions, audioFormatToAudioType, mimeTypes } from "../types";
+import { Adapter, AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
 import { IcyMetadata, MetadataMux } from "./mux";
+
+export const mimeTypes = {
+  mp3: 'audio/mpeg',
+  adts: 'audio/aac'
+}
 
 const outputFormats = ['mp3', 'adts'] as const;
 
-type OutputFormats = typeof outputFormats;
+type OutputFormats = typeof outputFormats[number];
 
-type IcyAdapterOptions = AdapterOptions<OutputFormats[number]> & {
+export type IcyAdapterOptions = AdapterOptions<OutputFormats> & {
   metadataInterval?: number;
 }
 
-type IcyAdapter = Adapter & {
+export type IcyAdapter = Adapter & {
+  readonly outlet: Readable;
   handler: RequestHandler;
 }
 
@@ -191,3 +197,8 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
     }
   }
 }
+
+export class _IcyAdapter extends FFMpegAdapter {
+
+}
+

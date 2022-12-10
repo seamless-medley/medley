@@ -126,7 +126,8 @@ async function main() {
 
   const source = await createIcyAdapter(station, {
     outputFormat: 'mp3',
-    bitrate: 128
+    bitrate: 128,
+    sampleRate: 48000
   });
 
   if (source) {
