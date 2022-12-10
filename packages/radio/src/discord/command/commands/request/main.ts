@@ -12,17 +12,18 @@ import {
   Message,
   ActionRowBuilder,
   ButtonBuilder,
-  SelectMenuBuilder,
   ChatInputCommandInteraction,
   ButtonStyle,
   SelectMenuComponentOptionData,
   MessageActionRowComponentBuilder,
   InteractionReplyOptions,
-  SelectMenuInteraction
+  StringSelectMenuBuilder,
+  StringSelectMenuInteraction
 } from "discord.js";
 
 import { chain, isNull, noop, take, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'path';
+import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
 import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview, reply } from "../../utils";
@@ -97,8 +98,8 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
   const groupedSelections = chain(results)
     .map<Selection>((track) => {
-      const title = truncate(track.extra?.tags?.title || parsePath(track.path).name, { length: 100 });
-      const artist = track.extra?.tags?.artist ? truncate(track.extra.tags.artist || 'Unknown Artist', { length: 100 }) : undefined;
+      const title = track.extra?.tags?.title || parsePath(track.path).name;
+      const artist = track.extra?.tags?.artist ? track.extra.tags.artist : undefined;
 
       return {
         title,
@@ -106,7 +107,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         track
       }
     })
-    .groupBy(({ title, artist = '' }) => `${title}:${artist}`.toLowerCase())
+    .groupBy(({ title, artist = '' }) => createHash('sha256').update(`${title}:${artist}`.toLowerCase()).digest('base64'))
     .value();
 
 
@@ -120,9 +121,13 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     return [true, take(entries, 25).map(([key, grouped]) => {
       const sel = grouped[0];
       const f = grouped.length > 1 ? ` // ${toEmoji(grouped.length.toString())} found` : '';
+
+      const title = (sel.title.length + f.length > 100) ? truncate(sel.title, { length: 100 - f.length }) : sel.title;
+      const artist = sel.artist !== undefined ? truncate(sel.artist, { length: 100 }) : 'Unknown Artist';
+
       return {
-        label: `${sel.title}${f}`,
-        description: sel.artist,
+        label: `${title}${f}`,
+        description: artist,
         value: key
       }
     })];
@@ -139,7 +144,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     components: [
       new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
-          new SelectMenuBuilder()
+          new StringSelectMenuBuilder()
             .setCustomId(isGrouped ? 'request' : 'request:pick')
             .setPlaceholder('Select a result')
             .addOptions(resultSelections)
@@ -169,7 +174,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       }
     }
 
-    const makeRequest = async (interaction: SelectMenuInteraction, trackId: string) => {
+    const makeRequest = async (interaction: StringSelectMenuInteraction, trackId: string) => {
       const ok = await station.request(trackId, makeAudience(AudienceType.Discord, guildId, interaction.user.id));
 
       if (ok === false || ok.index < 0) {
@@ -210,13 +215,17 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       }
 
       if (customId === 'request:cancel') {
-        await stop();
+        await stop(false);
+        collected.update({
+          content: makeHighlightedMessage('Canceled', HighlightTextType.Yellow),
+          components: []
+        })
         return;
       }
 
       collector.resetTimer({ time: 90_000 });
 
-      const isSelectMenu = collected.isSelectMenu();
+      const isSelectMenu = collected.isStringSelectMenu();
 
       if (customId === 'request:back') {
         collected.update({
@@ -252,7 +261,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
           components: [
             new ActionRowBuilder<MessageActionRowComponentBuilder>()
               .addComponents(
-                new SelectMenuBuilder()
+                new StringSelectMenuBuilder()
                   .setCustomId('request:pick')
                   .setPlaceholder('Select a track')
                   .addOptions(trackSelections)
@@ -323,11 +332,15 @@ function makeTrackSelections(choices: Selection[]) {
     )
     .value()
   )
-  .map(({ selection: { title, artist, track }, by }) => {
+  .map(({ selection: { title, artist = 'Unknown Artist', track }, by }) => {
     const collectionName = (track.collection.extra as unknown as MusicLibraryExtra<Station>)?.descriptor.description ?? track.collection.id;
 
+    if (title.length + artist.length + 3 > 100) {
+      title = truncate(title, { length: 100 - artist.length - 3 })
+    }
+
     return {
-      label: `${title} - ${artist ?? 'Unknown Artist'}`,
+      label: `${title} - ${artist}`,
       description: [collectionName, ...by].filter(Boolean).join('/'),
       value: track.id
     }
