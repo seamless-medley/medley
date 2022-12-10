@@ -134,6 +134,8 @@ bool medley::Metadata::readID3V2(const File& f)
     auto& tag = *file.ID3v2Tag();
     readTag(tag);
 
+    // TODO: Original Artist
+
     const auto& tsrcFrames = tag.frameListMap()["TSRC"];
     if (!tsrcFrames.isEmpty()) {
         for (const auto pFrame : tsrcFrames) {
@@ -274,6 +276,7 @@ void medley::Metadata::CoverAndLyrics::readID3V2(const File& f, bool readCover, 
 
         if (readLyrics) {
             lyrics = readFirstUserTextIdentificationFrame(tag, L"LYRICS");
+            // TODO: Unsynchronized Lyrics
         }
     }
 }

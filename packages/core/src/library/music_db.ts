@@ -11,6 +11,7 @@ export interface SearchHistory {
   recentItems(scope: string, key: SearchQueryKey, limit?: number): Promise<SearchRecord[]>;
 
   // TODO: Unmatch items
+  // unmatchItems(scope: string): void;
 }
 
 export type TimestampedTrackRecord = TrackRecord & {

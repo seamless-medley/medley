@@ -11,6 +11,8 @@ import { stat } from "fs/promises";
 
 type WatchCallback<F = typeof watch> = F extends (pathName: any, options: any, callback: infer CB) => any ? CB : never;
 
+// TODO: Extract watch out of this class and make it a mixin
+
 // A track collection capable of watching for changes in file system directory
 export class WatchTrackCollection<T extends Track<any, E>, E = any> extends TrackCollection<T, E> {
   constructor(id: string, options: TrackCollectionOptions<T> = {}) {
