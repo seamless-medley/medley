@@ -33,7 +33,7 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     super(__dirname + '/worker.js', { workerType });
   }
 
-  private ongoingTasks = new Map<string, Promise<any>>;
+  private ongoingTasks = new Map<string, Promise<any>>();
 
   private async runIfNeeded(key: string, executor: () => Promise<any>, ttl: number = 1000): Promise<any> {
     const ongoingTasks = this.ongoingTasks;
