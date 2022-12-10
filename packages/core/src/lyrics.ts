@@ -20,7 +20,7 @@ export type Lyrics = {
 }
 
 
-const attnExpr = /\[([^\]]*)\]/g;
+const tagExpr = /^\s*(\[([^\]]*)\])/;
 const infoExpr = /([^\d:]+):\s*(.*)\s*/;
 const timeExpr = /(\d+):(\d+\.\d+)/;
 
@@ -29,17 +29,12 @@ type MaybeLine = Line | undefined;
 const isLyricLine = (line: any): line is LyricLine => line && 'time' in line;
 
 function parseLine(line: string): MaybeLine {
-  const match = line.match(/(\[[^\]]*\])\s*(.*)/);
-  if (!match) {
-    return;
-  }
-
-  const [, annotation, text] = match;
-
   const tags = [];
-  let m: RegExpExecArray | null;
-  while (m = attnExpr.exec(annotation)) {
-    tags.push(m[1]);
+  let m: RegExpMatchArray | null;
+
+  while (m = line.match(tagExpr)) {
+    tags.push(m[2]);
+    line = line.substring(m[1].length);
   }
 
   const infos: [string, string][] = [];
@@ -73,7 +68,7 @@ function parseLine(line: string): MaybeLine {
   return {
     infos,
     times,
-    text
+    text: line
   }
 }
 
