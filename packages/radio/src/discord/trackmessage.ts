@@ -19,7 +19,6 @@ import {
   ButtonBuilder,
   EmbedBuilder,
   MessageActionRowComponentBuilder,
-  MessageOptions,
   MessageEditOptions,
   APIEmbedField
 } from "discord.js";
@@ -47,7 +46,7 @@ export type TrackMessage = {
     lyric?: ButtonBuilder,
     more?: ButtonBuilder
   };
-  sentMessage?: Message;
+  maybeMessage?: Promise<Message<boolean> | undefined>;
   lyricMessage?: Message;
 }
 
@@ -178,7 +177,7 @@ export async function createTrackMessage(guildId: string, station: Station, trac
   };
 }
 
-export type TrackMessageOptions = Pick<MessageOptions & MessageEditOptions, 'embeds' | 'files' | 'components'> ;
+export type TrackMessageOptions = Pick<MessageEditOptions, 'embeds' | 'files' | 'components'> ;
 
 export function trackMessageToMessageOptions<T>(msg: TrackMessage): TrackMessageOptions {
   const { embed, coverImage, buttons } = msg;

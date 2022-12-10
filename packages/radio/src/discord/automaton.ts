@@ -18,7 +18,7 @@ import {
   BaseGuildVoiceChannel, Client, Guild,
   GatewayIntentBits, Message,
   OAuth2Guild,
-  Snowflake, VoiceBasedChannel, VoiceState, ChannelType, PermissionsBitField, ButtonBuilder
+  Snowflake, VoiceBasedChannel, VoiceState, ChannelType, PermissionsBitField, PartialMessage
 } from "discord.js";
 
 import {
@@ -30,7 +30,6 @@ import {
 
 import type TypedEventEmitter from 'typed-emitter';
 
-import _, { delay, noop } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
@@ -135,7 +134,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this.clientId = options.clientId;
     this.owners = options.owners || [];
     this.maxTrackMessages = options.maxTrackMessages ?? 3;
-    this.initialGain = options.initialGain ?? decibelsToGain(-12);
+    this.initialGain = options.initialGain ?? decibelsToGain(-3);
     this.baseCommand = options.baseCommand || 'medley';
 
     this.client = new Client({
@@ -182,6 +181,9 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this.client.on('guildDelete', this.handleGuildDelete);
     this.client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
     this.client.on('interactionCreate', createInteractionHandler(this));
+
+    this.client.on('messageDelete', this.handleMessageDeletion);
+    this.client.on('messageDeleteBulk', async messages => void messages.mapValues(this.handleMessageDeletion))
 
     for (const station of stations) {
       station.on('trackStarted', this.handleTrackStarted(station));
@@ -344,6 +346,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     const exciter = createExciter({
       source: requestedAudioStream,
+      bitrate: 256_000
     });
 
     // Create discord voice AudioPlayer if neccessary
@@ -656,55 +659,51 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     // Store message for each guild
     for (const [guildId, trackMsg, maybeMessage] of sentMessages) {
       const state = this._guildStates.get(guildId);
-      if (state) {
-        state.trackMessages.push({
-          ...trackMsg,
-          sentMessage: await maybeMessage
-        });
 
-        while (state.trackMessages.length > this.maxTrackMessages) {
-          const oldMsg = state.trackMessages.shift();
-          if (oldMsg) {
-            const { sentMessage, lyricMessage } = oldMsg;
+      if (!state?.voiceChannelId) {
+        continue;
+      }
 
+      state.trackMessages.push({
+        ...trackMsg,
+        maybeMessage
+      });
+
+      if (state.trackMessages.length > this.maxTrackMessages) {
+        const oldMessages = state.trackMessages.splice(0, state.trackMessages.length - this.maxTrackMessages);
+
+        for (const { maybeMessage, lyricMessage } of oldMessages) {
+          maybeMessage?.then((sentMessage) => {
             if (sentMessage?.deletable) {
               sentMessage.delete();
             }
+          });
 
-            if (lyricMessage?.deletable) {
-              lyricMessage.delete();
-            }
+          if (lyricMessage?.deletable) {
+            lyricMessage.delete();
           }
         }
       }
     }
+  }
+
+  private handleTrackActive: StationEvents['trackActive'] = async (deck, trackPlay) => {
+    await waitFor(1000);
 
     this.updateTrackMessage(async (msg) => {
       if (msg.trackPlay.uuid !== trackPlay.uuid) {
-        return {
-          showLyrics: false,
-          showMore: false,
-          showSkip: false
-        }
+        return;
+      }
+
+      return  {
+        showSkip: true,
+        showLyrics: true,
+        showMore: true
       }
     });
   }
 
-  private handleTrackActive: StationEvents['trackActive'] = async (deck, trackPlay) => {
-    delay(() => {
-      this.updateTrackMessage(async (msg) => {
-        const show = msg.trackPlay.uuid === trackPlay.uuid;
-
-        return  {
-          showSkip: show,
-          showLyrics: show,
-          showMore: show
-        }
-      })
-    }, 1000);
-  }
-
-  private handleTrackFinished: StationEvents['trackFinished'] = async (deck, trackPlay) => {
+  private handleTrackFinished: StationEvents['trackFinished'] = (deck, trackPlay) => {
     this.updateTrackMessage(async (msg) => {
       if (msg.trackPlay.uuid !== trackPlay.uuid || msg.status >= TrackMessageStatus.Played) {
         return;
@@ -720,7 +719,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     });
   }
 
-  private handleCollectionChange = (station: Station): StationEvents['currentCollectionChange'] => async(oldCollection) => {
+  private handleCollectionChange = (station: Station): StationEvents['currentCollectionChange'] => (oldCollection) => {
     this.updateTrackMessage(
       async (msg) =>  {
         if (msg.station !== station) {
@@ -738,6 +737,39 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
         }
       }
     )
+  }
+
+  private handleMessageDeletion = (message: Message<boolean> | PartialMessage) => {
+    const { guildId } = message;
+
+    if (!message.inGuild || !guildId) {
+      return;
+    }
+
+    const state = this.getGuildState(guildId);
+
+    if (!state) {
+      return;
+    }
+
+    const { trackMessages } = state;
+
+    for (const trackMessage of [...trackMessages]) {
+      if (message.id === trackMessage.lyricMessage?.id) {
+        trackMessage.lyricMessage = undefined;
+      }
+
+      trackMessage.maybeMessage?.then(sentMessage => {
+        if (sentMessage?.id === message.id)  {
+          trackMessage.maybeMessage = undefined;
+
+          const index = trackMessages.indexOf(trackMessage);
+          if (index > -1) {
+            trackMessages.splice(index, 1);
+          }
+        }
+      });
+    }
   }
 
   async updateTrackMessage(predicate: (msg: TrackMessage) => Promise<UpdateTrackMessageOptions | undefined>) {
@@ -761,32 +793,36 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           msg.embed.setTitle(newTitle);
         }
 
-        const { sentMessage, buttons } = msg;
+        const { maybeMessage, buttons } = msg;
 
-        if (!sentMessage?.editable) {
-          continue;
-        }
-
-        const { embeds, components } = trackMessageToMessageOptions({
-          ...msg,
-          buttons: {
-            more: showMore ? buttons.more : undefined,
-            lyric: showLyrics ? buttons.lyric : undefined,
-            skip: showSkip ? buttons.skip : undefined
+        maybeMessage?.then((sentMessage) => {
+          if (!sentMessage?.editable) {
+            return;
           }
-        });
 
-        await new Promise<any>((resolve) => {
-          const doEdit = () => sentMessage.edit({ embeds, components })
-            .then(resolve)
-            .catch(noop);
+          const { embeds, components } = trackMessageToMessageOptions({
+            ...msg,
+            buttons: {
+              more: showMore ? buttons.more : undefined,
+              lyric: showLyrics ? buttons.lyric : undefined,
+              skip: showSkip ? buttons.skip : undefined
+            }
+          });
 
-          if (count++ < 30) {
-            doEdit()
-          } else {
-            setTimeout(doEdit, 500);
-          }
-        });
+          new Promise(async (resolve) => {
+            const doEdit = () => sentMessage.edit({ embeds, components })
+              .then(resolve)
+              .catch((error) => {
+                this.logger.error('Error updating track message in guild', sentMessage.guild?.name, error);
+              });
+
+            if (count++ >= 3) {
+              await waitFor(200);
+            }
+
+            doEdit();
+          });
+        })
       }
     }
   }
@@ -801,23 +837,25 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
         const showSkipButton = msg.status < TrackMessageStatus.Played;
 
-        const { sentMessage } = msg;
+        const { maybeMessage } = msg;
 
         const showMore = currentCollectionId !== undefined
           && currentCollectionId === msg.trackPlay.track.collection.id;
 
-        if (sentMessage?.editable) {
-          const { embeds, components } = trackMessageToMessageOptions({
-            ...msg,
-            buttons: {
-              lyric: undefined,
-              more: showMore ? msg.buttons.more : undefined,
-              skip: showSkipButton ? msg.buttons.skip : undefined,
-            }
-          });
+        maybeMessage?.then((sentMessage) => {
+          if (sentMessage?.editable) {
+            const { embeds, components } = trackMessageToMessageOptions({
+              ...msg,
+              buttons: {
+                lyric: undefined,
+                more: showMore ? msg.buttons.more : undefined,
+                skip: showSkipButton ? msg.buttons.skip : undefined,
+              }
+            });
 
-          sentMessage.edit({ embeds, components });
-        }
+            sentMessage.edit({ embeds, components });
+          }
+        })
       }
     }
   }
