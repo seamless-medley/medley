@@ -25,7 +25,7 @@ import {
   BoomBoxTrack,
   BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
   Station,
-  createLogger, Logger, decibelsToGain, makeAudienceGroup as makeStationAudienceGroup, AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents
+  createLogger, Logger, decibelsToGain, makeAudienceGroup as makeStationAudienceGroup, AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents, retryable, waitFor
 } from "@seamless-medley/core";
 
 import type TypedEventEmitter from 'typed-emitter';
@@ -121,10 +121,11 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
   private logger: Logger;
 
-  constructor(
-    readonly stations: IReadonlyLibrary<Station>,
-    options: MedleyAutomatonOptions
-  ) {
+  private rejoining = false;
+
+  private shardReady = false;
+
+  constructor(readonly stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
     super();
 
     this.logger = createLogger({ name: `automaton/${options.id}` });
@@ -146,17 +147,35 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       ]
     });
 
+    this.client.on('warn', message => {
+      this.logger.warn('Automaton Warning', message);
+    });
+
     this.client.on('error', (error) => {
       this.logger.error('Automaton Error', error);
     });
 
-    this.client.on('shardError', (error) => {
-      this.logger.error('Shard error', error)
+    this.client.on('shardError', this.handleShardError);
+
+    this.client.on('shardReconnecting', (shardId) => {
+      this.logger.debug('Shard', shardId, 'reconnecting');
+    })
+
+    this.client.on('shardResume', (shardId) => {
+      this.logger.debug('Shard', shardId, 'resume');
+
+      if (!this.shardReady) {
+        this.rejoinVoiceChannels(30);
+      }
+
+      this.shardReady = true;
     });
 
-    this.client.on('warn', message => {
-      this.logger.warn(message);
-    });
+    this.client.on('shardReady', (shardId) => {
+      this.shardReady = true;
+      this.logger.debug('Shard', shardId, 'ready');
+      this.rejoinVoiceChannels(30);
+    })
 
     this.client.on('ready', this.handleClientReady);
     this.client.on('guildCreate', this.handleGuildCreate);
@@ -169,6 +188,76 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       station.on('trackActive', this.handleTrackActive);
       station.on('trackFinished', this.handleTrackFinished);
       station.on('currentCollectionChange', this.handleCollectionChange(station));
+    }
+  }
+
+  private handleShardError = (error: Error, shardId: number) => {
+    this.logger.error('Shard', shardId, 'error', error.message);
+
+    this.shardReady = false;
+    this.rejoining = false;
+    this.removeAllAudiences();
+  }
+
+  private removeAllAudiences(closeConnection?: boolean) {
+    // Remove audiences from all stations
+    for (const [guildId, state] of this._guildStates) {
+      const group = makeAudienceGroup(guildId);
+
+      for (const station of this.stations) {
+        station.removeAudiencesForGroup(group)
+      }
+
+      if (closeConnection && state.stationLink?.voiceConnection) {
+        state.stationLink.voiceConnection.destroy();
+        state.stationLink.voiceConnection = undefined;
+      }
+    }
+  }
+
+  private async rejoinVoiceChannels(timeoutSeconds: number) {
+    if (this.rejoining) {
+      return;
+    }
+
+    const joinTimeout = 5000;
+
+    for (const [guildId, state] of this._guildStates) {
+
+      const { voiceChannelId, stationLink } = state;
+
+      if (!voiceChannelId) {
+        continue;
+      }
+
+      const channel = this.client.channels.cache.get(voiceChannelId);
+
+      if (channel?.type !== ChannelType.GuildVoice) {
+        continue;
+      }
+
+      const voiceConnection = stationLink?.voiceConnection;
+
+      if (!voiceConnection) {
+        continue;
+      }
+
+      this.rejoining = true;
+
+      const retries = Math.ceil(timeoutSeconds * 1000 / (joinTimeout + 1000));
+
+      retryable<JoinResult>(async () => {
+          if (!this.rejoining) {
+            return { status: 'not_joined' }
+          }
+
+          const result = await this.join(channel, joinTimeout);
+
+          this.rejoining = false;
+          this.logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
+
+          return result;
+      }, { retries, wait: 1000 }).then(() => stationLink?.station?.updatePlayState());
     }
   }
 
@@ -336,7 +425,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     return true;
   }
 
-  async join(channel: BaseGuildVoiceChannel): Promise<JoinResult> {
+  async join(channel: BaseGuildVoiceChannel, timeout: number = 5000): Promise<JoinResult> {
     const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
 
     const state = this.ensureGuildState(guildId);
@@ -360,6 +449,11 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return { status: 'no_station' };
     }
 
+    if (stationLink.voiceConnection) {
+      stationLink.voiceConnection.destroy();
+      stationLink.voiceConnection = undefined;
+    }
+
     let voiceConnection = joinVoiceChannel({
       channelId,
       guildId,
@@ -371,12 +465,13 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
 
     try {
-      await entersState(voiceConnection, VoiceConnectionStatus.Ready, 30e3);
+      await entersState(voiceConnection, VoiceConnectionStatus.Ready, timeout);
       voiceConnection.subscribe(stationLink.audioPlayer);
     }
     catch (e) {
       voiceConnection?.destroy();
       voiceConnection = undefined;
+      stationLink.voiceConnection = undefined;
       //
       this.logger.error(e);
       throw e;
@@ -397,8 +492,6 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     this.logger.info('Ready');
     this.emit('ready');
-
-    // TODO: Try to join last voice channel
   }
 
   private updateStationAudiences(station: Station, channel: VoiceBasedChannel) {
@@ -413,8 +506,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   private handleVoiceStateUpdate = async (oldState: VoiceState, newState: VoiceState) => {
     const guildId = newState.guild.id;
     const guildState = this.ensureGuildState(guildId);
-
-    const station = this.getTunedStation(guildId);
+    const station = guildState?.stationLink?.station;
 
     const channelChange = detectVoiceChannelChange(oldState, newState);
     if (channelChange === 'invalid' || !newState.member) {
@@ -423,7 +515,8 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     const audienceGroup = makeAudienceGroup(guildId);
 
-    const isMe = (newState.member.id === this.client.user?.id);
+    const myId = this.client.user?.id;
+    const isMe = (newState.member.id === myId);
 
     if (isMe) {
       if (channelChange === 'leave') {
@@ -479,8 +572,11 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return;
     }
 
-    // state change is originated from other member that is in the same room as me.
+    if (!station) {
+      return;
+    }
 
+    // state change is originated from other member that is in the same room as me.
     if (channelChange === 'leave') {
       if (oldState.channelId !== guildState.voiceChannelId) {
         // is not leaving my channel
@@ -488,15 +584,23 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       }
 
       // is leaving
-      station?.removeAudience(audienceGroup, newState.member.id);
+      station.removeAudience(audienceGroup, newState.member.id);
       return;
     }
 
     if (channelChange === 'join' || channelChange === 'move') {
       if (newState.channelId === guildState.voiceChannelId) {
+        // Check if the bot is actually in this channel
+        const channel = this.client.channels.cache.get(newState.channelId);
+        if (channel?.isVoiceBased() && myId) {
+          if (!channel.members.has(myId)) {
+            return;
+          }
+        }
+
         if (!newState.deaf) {
           // User has joined or moved into
-          station?.addAudiences(audienceGroup, newState.member.id);
+          station.addAudiences(audienceGroup, newState.member.id);
         }
 
         return;
@@ -504,7 +608,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
       if (oldState.channelId === guildState.voiceChannelId) {
         // User has moved away
-        station?.removeAudience(audienceGroup, newState.member.id);
+        station.removeAudience(audienceGroup, newState.member.id);
         return;
       }
 
@@ -515,9 +619,9 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     // No channel change
     if (oldState.deaf !== newState.deaf && newState.channelId === guildState.voiceChannelId) {
       if (!newState.deaf) {
-        station?.addAudiences(audienceGroup, newState.member.id);
+        station.addAudiences(audienceGroup, newState.member.id);
       } else {
-        station?.removeAudience(audienceGroup, newState.member.id);
+        station.removeAudience(audienceGroup, newState.member.id);
       }
     }
   }

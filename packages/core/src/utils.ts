@@ -46,6 +46,8 @@ export const breath = () => waitFor(0);
 
 export const nextTick = () => new Promise<void>(resolve => process.nextTick(resolve));
 
+export const delayed = <T extends () => any, R = ReturnType<T>>(fn: T, wait: number): () => Promise<Awaited<R>> => () => waitFor(wait).then(fn);
+
 export function moveArrayIndexes<T>(list: Array<T>, newPosition: number, ...indexes: number[]): typeof list {
   indexes = uniq(indexes.filter(inRange(0, list.length)));
   newPosition = clamp(newPosition, 0, list.length - indexes.length);
@@ -113,4 +115,39 @@ export function interpolate(sourceValue: number, sourceRange: [min: number, max:
 
 
   return targetMin + (targetLength * progress / sourceLength);
+}
+
+type WaitOption = {
+  wait: number;
+} | {
+  wait?: undefined;
+  factor: number;
+  maxWait: number;
+}
+
+export type RetryOptions = {
+  retries?: number;
+  signal?: AbortSignal;
+} & WaitOption;
+
+export function retryable<R>(fn: () => Promise<R>, options: RetryOptions) {
+  let attempt = 0;
+
+  async function wrapper(n?: number): Promise<R> {
+    try {
+      return await fn();
+    } catch (e) {
+      if (options.signal?.aborted || (n !== undefined && n <= 0)) {
+        throw e;
+      }
+
+      const wait = options.wait ?? Math.min(options.maxWait, Math.pow(options.factor, ++attempt));
+
+      return delayed(() => wrapper(n !== undefined ? n - 1 : n), wait)();
+    }
+  }
+
+  return new Promise<R>((resolve, reject) => {
+    wrapper(options.retries).then(resolve).catch(reject)
+  });
 }
