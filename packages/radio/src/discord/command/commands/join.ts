@@ -43,24 +43,17 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 
   const state = automaton.ensureGuildState(guildId);
 
-  if (state.voiceChannelId === channelToJoin.id) {
-    warn(interaction, 'Already joined');
-    return;
-  }
-
   const me = interaction.guild?.members.me;
   const myPermissions = me ? channelToJoin.permissionsFor(me) : undefined;
 
-  if (myPermissions) {
-    if (!myPermissions.has(PermissionsBitField.Flags.Connect)) {
-      await deny(interaction, 'Could not join: no `connect` permission');
-      return;
-    }
+  if (!myPermissions?.has(PermissionsBitField.Flags.Connect)) {
+    await deny(interaction, 'Could not join: no `connect` permission');
+    return;
+  }
 
-    if (!myPermissions.has(PermissionsBitField.Flags.Speak)) {
-      await deny(interaction, 'Could not join: no `speak` permission');
-      return;
-    }
+  if (!myPermissions?.has(PermissionsBitField.Flags.Speak)) {
+    await deny(interaction, 'Could not join: no `speak` permission');
+    return;
   }
 
   await reply(interaction, `Joining ${channelToJoin}`);

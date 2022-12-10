@@ -4,12 +4,12 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   EmbedBuilder,
-  SelectMenuBuilder,
   PermissionsBitField,
-  SelectMenuInteraction,
   ButtonStyle,
   ComponentType,
-  MessageActionRowComponentBuilder
+  MessageActionRowComponentBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuInteraction
 } from "discord.js";
 import { stubTrue } from "lodash";
 
@@ -23,7 +23,7 @@ const declaration: SubCommandLikeOption = {
   description: 'Tune into a station'
 }
 
-const handleStationSelection = async (automaton: MedleyAutomaton, interaction: SelectMenuInteraction) => {
+const handleStationSelection = async (automaton: MedleyAutomaton, interaction: StringSelectMenuInteraction) => {
   permissionGuard(interaction.memberPermissions, [
     PermissionsBitField.Flags.ManageChannels,
     PermissionsBitField.Flags.ManageGuild,
@@ -96,7 +96,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     components: [
       new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
-          new SelectMenuBuilder()
+          new StringSelectMenuBuilder()
             .setCustomId('tune')
             .setPlaceholder('Select a station')
             .addOptions(listing)

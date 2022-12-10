@@ -2,7 +2,7 @@ import { AudienceType, extractAudienceGroup, isRequestTrack, Audience } from "@s
 import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept, deny, guildStationGuard, permissionGuard, reply } from "../utils";
+import { accept, deny, guildStationGuard, reply } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -16,13 +16,6 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> =
 
 async function handleSkip(automaton: MedleyAutomaton, interaction: CommandInteraction | ButtonInteraction) {
   const { guildId, station } = guildStationGuard(automaton, interaction);
-
-  permissionGuard(interaction.memberPermissions, [
-    PermissionsBitField.Flags.ManageChannels,
-    PermissionsBitField.Flags.ManageGuild,
-    PermissionsBitField.Flags.MuteMembers,
-    PermissionsBitField.Flags.MoveMembers
-  ]);
 
   const state = automaton.getGuildState(guildId);
 
@@ -55,6 +48,18 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
         return;
       }
     }
+  }
+
+  const noPermissions = !interaction.memberPermissions?.any([
+    PermissionsBitField.Flags.ManageChannels,
+    PermissionsBitField.Flags.ManageGuild,
+    PermissionsBitField.Flags.MuteMembers,
+    PermissionsBitField.Flags.MoveMembers
+  ]);
+
+  if (noPermissions) {
+    await deny(interaction, 'You are not allowed to do that', `@${interaction.user.id}`);
+    return;
   }
 
   if (station.paused || !station.playing) {
