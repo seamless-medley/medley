@@ -315,6 +315,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.musicDb.trackHistory.getAll(this.id);
   }
 
+  get isInTransition() {
+    return this.boombox.isInTransition;
+  }
+
   skip() {
     this.medley.fadeOut();
   }

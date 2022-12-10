@@ -167,6 +167,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private _currentCrate: BoomBoxCrate | undefined;
   private _currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
+  private _inTransition = false;
 
   /**
    * Current crate
@@ -177,6 +178,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   get trackPlay() {
     return this._currentTrackPlay;
+  }
+
+  get isInTransition() {
+    return this._inTransition;
   }
 
   getDeckInfo(index: DeckIndex): Readonly<DeckInfo> {
@@ -415,7 +420,14 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     const kind = trackPlay.track.extra?.kind;
 
-    if (kind === undefined || kind === TrackKind.Insertion) {
+    if (kind === TrackKind.Insertion) {
+      this._inTransition = true;
+      return;
+    }
+
+    this._inTransition = false;
+
+    if (kind === undefined) {
       return;
     }
 

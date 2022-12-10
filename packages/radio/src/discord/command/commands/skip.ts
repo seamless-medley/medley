@@ -2,7 +2,7 @@ import { AudienceType, extractAudienceGroup, isRequestTrack, Audience } from "@s
 import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept, deny, guildStationGuard, reply } from "../utils";
+import { accept, deny, guildStationGuard, reply, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -67,15 +67,21 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
     return;
   }
 
-  await accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
-  automaton.skipCurrentSong(guildId);
+  const result = automaton.skipCurrentSong(guildId);
+
+  if (result === true) {
+    await accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
+    return;
+  }
+
+  await warn(interaction, 'Track skipping has been denied');
 }
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, playUuid: string) => {
   const { station } = guildStationGuard(automaton, interaction);
 
   if (station.trackPlay?.uuid !== playUuid) {
-    deny(interaction, 'Could not skip this track', undefined, true);
+    await deny(interaction, 'Could not skip this track', undefined, true);
     return;
   }
 
