@@ -216,6 +216,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 
   private handleTrackStarted: StationEvents['trackStarted'] = (...args) => {
+    this._starting = false;
     this.emit('trackStarted', ...args);
 
     const [, trackPlay] = args;
@@ -284,6 +285,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
         }
       }
     }
+
+    this.boombox.increasePlayCount();
   }
 
   get playing() {
@@ -316,9 +319,13 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.medley.fadeOut();
   }
 
-  private _started = false;
+  private _starting = false;
 
   start() {
+    if (this._starting) {
+      return;
+    }
+
     if (this.playState === PlayState.Idle && this.queue.length === 0) {
       if (this.intros) {
         const intro = this.intros.shift();
@@ -339,22 +346,20 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       }
     }
 
-    if (!this._started) {
-      this._started = true;
+    if (this.playState !== PlayState.Playing) {
+      this._starting = true;
       this.medley.play(false);
-
       this.logger.info('Playing started');
     }
   }
 
   pause() {
     if (!this.medley.paused) {
-      this._started = false;
       this.medley.togglePause(false);
-
       this.logger.info('Playing paused');
     }
 
+    this._starting = false;
   }
 
   async requestAudioStream(options: RequestAudioOptions) {
@@ -521,7 +526,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }
 
     this.audiences.get(groupId)!.set(audienceId, data);
-    this.playIfHasAudiences();
+    return this.playIfHasAudiences();
   }
 
   removeAudience(groupId: AudienceGroupId, audienceId: string) {
@@ -536,7 +541,17 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   updateAudiences(groupId: AudienceGroupId, audiences: [id: string, data: any][]) {
     this.audiences.set(groupId, new Map(audiences));
-    this.playIfHasAudiences();
+    this.updatePlayState();
+  }
+
+  updatePlayState() {
+    if (this.hasAudiences) {
+      this.start();
+    } else {
+      this.pause();
+    }
+
+    return !this.medley.paused;
   }
 
   playIfHasAudiences() {

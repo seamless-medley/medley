@@ -246,8 +246,9 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
     if (queue.count() > 0) {
         if (auto track = queue.fetchNextTrack()) {
             nextDeck->loadTrack(track, deckLoadingHandler);
-            return;
         }
+
+        return;
     }
 
     // Queue is empty, request to fill it with some tracks
@@ -641,14 +642,26 @@ void Medley::setFadingCurve(double curve) {
     updateFadingFactor();
 }
 
-void Medley::play(bool shouldFade)
+bool Medley::play(bool shouldFade)
 {
     if (!isDeckPlaying()) {
-        loadNextTrack(nullptr, true);
+        Deck* loadedDeck = nullptr;
+
+        for (auto deck : decks) {
+            if (deck->isTrackLoading || deck->isTrackLoaded()) {
+                loadedDeck = deck;
+            }
+        }
+
+        if (loadedDeck == nullptr) {
+            loadNextTrack(nullptr, true);
+        }
     }
 
     keepPlaying = true;
     mixer.setPause(false, shouldFade && mixer.isPaused());
+
+    return true;
 }
 
 void Medley::stop(bool shouldFade)

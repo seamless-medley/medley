@@ -243,13 +243,14 @@ void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley:
     });
 }
 
-void Medley::play(const CallbackInfo& info) {
+Napi::Value Medley::play(const CallbackInfo& info) {
     bool shouldFade = true;
     if (info.Length() > 0) {
         shouldFade = info[0].ToBoolean();
     }
 
-    engine->play(shouldFade);
+    auto result = engine->play(shouldFade);
+    return Napi::Boolean::New(info.Env(), result);
 }
 
 void Medley::stop(const CallbackInfo& info) {

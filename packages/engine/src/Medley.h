@@ -101,7 +101,7 @@ public:
 
     void setFadingCurve(double curve);
 
-    void play(bool shouldFade = true);
+    bool play(bool shouldFade = true);
 
     void stop(bool shouldFade = true);
 

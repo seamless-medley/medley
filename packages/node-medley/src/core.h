@@ -45,7 +45,7 @@ public:
 
     void audioData(const AudioSourceChannelInfo& info) override;
 
-    void play(const CallbackInfo& info);
+    Napi::Value play(const CallbackInfo& info);
 
     void stop(const CallbackInfo& info);
 

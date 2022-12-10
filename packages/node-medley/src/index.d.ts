@@ -188,7 +188,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
   /**
    * Start the engine, also clear the `paused` state.
    */
-  play(shouldFade: boolean = true): void;
+  play(shouldFade: boolean = true): boolean;
 
   /**
    * Stop the engine and unload track(s).
