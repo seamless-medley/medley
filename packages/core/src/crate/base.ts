@@ -69,13 +69,11 @@ export class Crate<T extends Track<any, CE>, CE = any> {
     return this._max;
   }
 
-  async select(): Promise<boolean> {
+  async select(force?: boolean): Promise<boolean> {
     const { chance, limit } = this;
 
-    if (chance) {
+    if (!force && chance) {
       const selected = await chance.next();
-
-      this.logger.debug('selected', selected);
 
       if (!selected) {
         this._max = 0;

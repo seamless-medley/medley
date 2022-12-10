@@ -485,12 +485,16 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.sequencer.moveCrates(newPosition, ...cratesOrIds);
   }
 
-  get crateIndex() {
-    return this.sequencer.crateIndex;
+  getCrateIndex() {
+    return this.sequencer.getCrateIndex();
   }
 
-  set crateIndex(newIndex: number) {
-    this.sequencer.crateIndex = newIndex;
+  setCrateIndex(newIndex: number) {
+    this.sequencer.setCrateIndex(newIndex, true);
+  }
+
+  increasePlayCount() {
+    return this.sequencer.increasePlayCount();
   }
 
   latch(options?: LatchOptions<BoomBoxTrack>) {
@@ -502,7 +506,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   }
 
   get isLatchActive(): boolean {
-    return this.sequencer.activeLatch !== undefined;
+    return this.sequencer.getActiveLatch() !== undefined;
   }
 
   get allLatches(): LatchSession<BoomBoxTrack>[] {

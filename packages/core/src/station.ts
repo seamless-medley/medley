@@ -273,12 +273,14 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       if (!this.isLatchActive) {
         const indices = this.boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
 
-        const a = indices.slice(0, this.boombox.crateIndex);
-        const b = indices.slice(this.boombox.crateIndex);
+        const crateIndex = this.boombox.getCrateIndex();
+
+        const a = indices.slice(0, crateIndex);
+        const b = indices.slice(crateIndex);
 
         const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
         if (located) {
-          this.boombox.crateIndex = located.index;
+          this.boombox.setCrateIndex(located.index);
         }
       }
     }
@@ -505,12 +507,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.boombox.unrequest(requestIds);
   }
 
-  get crateIndex() {
-    return this.boombox.crateIndex;
+  getCrateIndex() {
+    return this.boombox.getCrateIndex();
   }
 
-  set crateIndex(newIndex: number) {
-    this.boombox.crateIndex = newIndex;
+  setCrateIndex(newIndex: number) {
+    this.boombox.setCrateIndex(newIndex);
   }
 
   addAudiences(groupId: AudienceGroupId, audienceId: string, data?: any) {
