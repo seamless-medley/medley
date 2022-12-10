@@ -31,6 +31,7 @@ import { parse as parsePath } from 'path';
 export enum TrackMessageStatus {
   Playing,
   Paused,
+  Ending,
   Played,
   Skipped
 }

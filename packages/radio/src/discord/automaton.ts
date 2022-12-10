@@ -650,46 +650,66 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
-    if (trackPlay.track.extra?.kind === TrackKind.Insertion) {
-      return;
-    }
+    if (trackPlay.track.extra?.kind !== TrackKind.Insertion) {
+      const sentMessages = await this.sendTrackPlayForStation(trackPlay, station);
 
-    const sentMessages = await this.sendTrackPlayForStation(trackPlay, station);
+      // Store message for each guild
+      for (const [guildId, trackMsg, maybeMessage] of sentMessages) {
+        const state = this._guildStates.get(guildId);
 
-    // Store message for each guild
-    for (const [guildId, trackMsg, maybeMessage] of sentMessages) {
-      const state = this._guildStates.get(guildId);
+        if (!state?.voiceChannelId) {
+          continue;
+        }
 
-      if (!state?.voiceChannelId) {
-        continue;
-      }
+        state.trackMessages.push({
+          ...trackMsg,
+          maybeMessage
+        });
 
-      state.trackMessages.push({
-        ...trackMsg,
-        maybeMessage
-      });
+        if (state.trackMessages.length > this.maxTrackMessages) {
+          const oldMessages = state.trackMessages.splice(0, state.trackMessages.length - this.maxTrackMessages);
 
-      if (state.trackMessages.length > this.maxTrackMessages) {
-        const oldMessages = state.trackMessages.splice(0, state.trackMessages.length - this.maxTrackMessages);
+          for (const { maybeMessage, lyricMessage } of oldMessages) {
+            maybeMessage?.then((sentMessage) => {
+              if (sentMessage?.deletable) {
+                sentMessage.delete();
+              }
+            });
 
-        for (const { maybeMessage, lyricMessage } of oldMessages) {
-          maybeMessage?.then((sentMessage) => {
-            if (sentMessage?.deletable) {
-              sentMessage.delete();
+            if (lyricMessage?.deletable) {
+              lyricMessage.delete();
             }
-          });
-
-          if (lyricMessage?.deletable) {
-            lyricMessage.delete();
           }
         }
       }
     }
+
+    // Hide all button from old playing track as soon as this new track has started
+    this.updateTrackMessage(async (msg) => {
+      // Skip this track that has just started
+      if (msg.trackPlay.uuid === trackPlay.uuid) {
+        return;
+      }
+
+      // Only if its status is "Playing"
+      if (msg.status !== TrackMessageStatus.Playing) {
+        return;
+      }
+
+      return {
+        status: TrackMessageStatus.Ending,
+        title: 'Ending',
+        showMore: false,
+        showSkip: false,
+        showLyrics: false
+      }
+    });
   }
 
   private handleTrackActive: StationEvents['trackActive'] = async (deck, trackPlay) => {
     await waitFor(1000);
 
+    // Reveal all buttons for this trackPlay
     this.updateTrackMessage(async (msg) => {
       if (msg.trackPlay.uuid !== trackPlay.uuid) {
         return;
@@ -704,7 +724,9 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private handleTrackFinished: StationEvents['trackFinished'] = (deck, trackPlay) => {
+    // Update this trackPlay status to "Played"
     this.updateTrackMessage(async (msg) => {
+      // Only update this trackPlay if it is neither played nor skipped
       if (msg.trackPlay.uuid !== trackPlay.uuid || msg.status >= TrackMessageStatus.Played) {
         return;
       }
@@ -720,13 +742,16 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private handleCollectionChange = (station: Station): StationEvents['currentCollectionChange'] => (oldCollection) => {
+    // Hide "more like this" button for this currently playing track
     this.updateTrackMessage(
       async (msg) =>  {
         if (msg.station !== station) {
           return;
         }
 
-        if (msg.status !== TrackMessageStatus.Playing) {
+        const isEndingOrPlaying = [TrackMessageStatus.Playing, TrackMessageStatus.Ending].includes(msg.status);
+
+        if (!isEndingOrPlaying) {
           return;
         }
 
@@ -810,17 +835,15 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           });
 
           new Promise(async (resolve) => {
-            const doEdit = () => sentMessage.edit({ embeds, components })
-              .then(resolve)
-              .catch((error) => {
-                this.logger.error('Error updating track message in guild', sentMessage.guild?.name, error);
-              });
-
             if (count++ >= 3) {
               await waitFor(200);
             }
 
-            doEdit();
+            sentMessage.edit({ embeds, components })
+              .then(resolve)
+              .catch((error) => {
+                this.logger.error('Error updating track message in guild', sentMessage.guild?.name, error);
+              });
           });
         })
       }
@@ -864,32 +887,41 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     const station = this.getTunedStation(id);
 
     if (!station) {
-      return;
+      return false;
     }
 
-    if (!station.paused && station.playing) {
-      const { trackPlay } = station;
+    if (station.isInTransition) {
+      return false;
+    }
 
-      if (trackPlay) {
-        this.updateTrackMessage(
-          async (msg) => {
-            if (trackPlay.uuid !== msg.trackPlay.uuid) {
-              return;
-            }
+    if (station.paused || !station.playing) {
+      return false;
+    }
 
-            return {
-              title: 'Skipped',
-              status: TrackMessageStatus.Skipped,
-              showSkip: false,
-              showMore: false,
-              showLyrics: false
-            }
-          }
-        );
+    const { trackPlay } = station;
+
+    if (!trackPlay) {
+      return false;
+    }
+
+    this.updateTrackMessage(
+      async (msg) => {
+        if (trackPlay.uuid !== msg.trackPlay.uuid) {
+          return;
+        }
+
+        return {
+          title: 'Skipped',
+          status: TrackMessageStatus.Skipped,
+          showSkip: false,
+          showMore: false,
+          showLyrics: false
+        }
       }
+    );
 
-      station.skip();
-    }
+    station.skip();
+    return true;
   }
 
   /**
