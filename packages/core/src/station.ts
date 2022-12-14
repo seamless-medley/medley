@@ -378,7 +378,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.medley.deleteAudioStream(streamId);
   }
 
-  /** @deprecated Allow direct manipulation */
   updateSequence(sequences: SequenceConfig[]) {
     const crates = sequences.map(
       ({ crateId, collections, chance, limit }, index) => {
@@ -431,16 +430,19 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     const { by } = limit;
 
     if (by === 'upto') {
-      return () => random(1, limit.upto);
+      const upto = () => random(1, limit.upto);
+      return upto;
     }
 
     if (by === 'range') {
       const [min, max] = sortBy(limit.range);
-      return () => random(min, max);
+      const range = () => random(min, max);
+      return range;
     }
 
     if (by === 'sample' || by === 'one-of') {
-      return () => sample(limit.list) ?? 0;
+      const oneOf = () => sample(limit.list) ?? 0;
+      return oneOf;
     }
 
     return 0;
@@ -625,9 +627,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 }
 
+const randomChance = () => random() === 1;
+const always = () => true;
+
 function createChanceable(def: SequenceChance | undefined): Chanceable {
   if (def === 'random') {
-    return { next: () => random() === 1 };
+    return { next: randomChance };
   }
 
   if (isFunction(def)) {
@@ -639,7 +644,7 @@ function createChanceable(def: SequenceChance | undefined): Chanceable {
   }
 
   return {
-    next: () => true,
+    next: always,
     chances: () => [true]
   }
 }
@@ -652,15 +657,15 @@ function chanceOf(n: [yes: number, no: number]): Chanceable {
       .concat(Array(no).fill(false))
   );
 
-  let index = 0;
-
+  let count = 0;
 
   return {
-    next: () => {
-      const v = all[index++];
+    next: function chanceOf() {
+      const v = all.shift();
+      all.push(v);
 
-      if (index >= all.length) {
-        index = 0;
+      if (count >= all.length) {
+        count = 0;
         all = shuffle(all);
       }
 

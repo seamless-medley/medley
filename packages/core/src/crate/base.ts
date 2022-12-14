@@ -73,9 +73,11 @@ export class Crate<T extends Track<any, CE>, CE = any> {
     const { chance, limit } = this;
 
     if (!force && chance) {
+      this.logger.debug('Select by', chance.next, 'chances', JSON.stringify(chance.chances?.()));
       const selected = await chance.next();
 
       if (!selected) {
+        this.logger.debug('Not selected');
         this._max = 0;
         return false;
       }
