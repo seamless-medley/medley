@@ -242,12 +242,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   private handleRequestTrack = async (track: RequestTrack<Audience>) => {
     const { requestSweepers } = this;
 
+    const currentTrack =  this.boombox.trackPlay?.track;
+    let isSameCollection = currentTrack?.collection.id === track.collection.id
+
     if (requestSweepers) {
-
-      const currentTrack =  this.boombox.trackPlay?.track;
-
       const shouldSweep = this.noRequestSweeperOnIdenticalCollection
-        ? currentTrack?.collection.id !== track.collection.id
+        ? !isSameCollection
         : true
 
       if (currentTrack?.extra?.kind !== TrackKind.Request && shouldSweep) {
@@ -280,13 +280,17 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
         const b = indices.slice(crateIndex);
 
         const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
+
         if (located) {
+          isSameCollection = true;
           this.boombox.setCrateIndex(located.index);
         }
       }
     }
 
-    this.boombox.increasePlayCount();
+    if (isSameCollection && this.boombox.isKnownCollection(track.collection)) {
+      this.boombox.increasePlayCount();
+    }
   }
 
   get playing() {
