@@ -8,6 +8,24 @@ export interface TrackInfo {
    * Path to the physical file.
    */
   readonly path: string;
+
+  /**
+   * Start position of the track
+   */
+  readonly cueInPosition?: number;
+
+  /**
+   * Stop position of the track
+   */
+  readonly cueOutPosition?: number;
+
+  /**
+   * Disable lead-in of the next track, useful for jingle/sweeper transition
+   *
+   * The lead-in is the position where it is considered as the start singing point,
+   * usually presented in a track which has smooth beginning.
+   */
+  readonly disableNextLeadIn?: boolean;
 }
 
 export type TrackDescriptor<T extends TrackInfo> = string | T;
@@ -98,7 +116,7 @@ export type DeckListener<T extends TrackInfo> = (deckIndex: DeckIndex, trackPlay
 export type EnqueueCallback = (result: boolean) => void;
 export type EnqueueListener = (done: EnqueueCallback) => void;
 
-export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitter {
+export declare class Medley<T extends TrackInfo = TrackInfo> {
   constructor(queue: Queue<T>);
 
   on(event: DeckEvent, listener: DeckListener<T>): this;
@@ -131,14 +149,6 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   get playing(): boolean;
 
   get paused(): boolean;
-
-  get duration(): number;
-
-  /**
-   * The playing position of the current track in seconds.
-   */
-  get position(): number;
-  set position(time: number);
 
   /**
    * Audio volume in linear scale, `0` = silent, `1` = 0dBFS
@@ -178,7 +188,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   /**
    * Start the engine, also clear the `paused` state.
    */
-  play(shouldFade: boolean = true): void;
+  play(shouldFade: boolean = true): boolean;
 
   /**
    * Stop the engine and unload track(s).
@@ -193,20 +203,22 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
   fadeOut(): void;
 
   /**
-   * Seek, this has the same effect as setting `position` property.
+   * Seek the main deck
    * @param time in seconds
+   * @param index Deck index, omit to seek on the main deck
    */
-  seek(time: number): void;
+  seek(time: number, index?: DeckIndex): void;
 
   /**
    * Seek
    * @param fraction
+   * @param index Deck index, omit to seek on the main deck
    *
    * @example
    * seek(0) - Seek to the beginning.
    * seek(0.5) - Seek to the middle of a track.
    */
-  seekFractional(fraction: number): void;
+  seekFractional(fraction: number, index?: DeckIndex): void;
 
   getAvailableDevices(): AudioDeviceTypeInfo[];
 
@@ -214,7 +226,9 @@ export declare class Medley<T extends TrackInfo = TrackInfo> extends EventEmitte
 
   getAudioDevice(): AudioDeviceDescriptor;
 
-  getMetadata(index: DeckIndex): Metadata;
+  getDeckMetadata(index: DeckIndex): Metadata;
+
+  getDeckPositions(index: DeckIndex): DeckPositions;
 
   async requestAudioStream(options?: RequestAudioOptions): Promise<RequestAudioStreamResult>;
 
@@ -306,10 +320,27 @@ export type Metadata = {
   album: string;
   isrc: string;
   trackGain: number;
+  bpm: number;
 }
 
 export type CoverAndLyrics = {
   cover: Buffer;
   coverMimeType: string;
   lyrics: string;
+}
+
+export type DeckPositions = {
+  current: number;
+
+  duration: number;
+
+  /**
+   * First audible position
+   */
+  first: number;
+
+  /**
+   * Last audible position
+   */
+  last: number;
 }

@@ -1,10 +1,10 @@
 import { parse as parsePath } from 'path';
-import _, { castArray, flatten, matches, some, toLower, trim, uniq, without } from "lodash";
+import { castArray, flatten, matches, some, toLower, trim, uniq, without } from "lodash";
 import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex } from "@seamless-medley/medley";
-import { Crate, CrateSequencer, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
+import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
@@ -29,6 +29,7 @@ export type BoomBoxTrackExtra = {
   tags?: Partial<Metadata>;
   maybeCoverAndLyrics?: Promise<CoverAndLyrics>;
   kind: TrackKind;
+  source?: string;
 }
 
 export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
@@ -40,7 +41,7 @@ export type RequestTrack<Requester> = BoomBoxTrack & {
   priority?: number;
   requestedBy: Requester[];
   lastRequestTime?: Date;
-  original: BoomBoxTrack; // Store the original track as a RequestTrack is likely to be a shallow
+  original: BoomBoxTrack; // Store the original track as a RequestTrack is likely to be a clone
 }
 
 export type OnInsertRequestTrack<R> = (track: RequestTrack<R>) => Promise<void>;
@@ -51,14 +52,14 @@ export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
 
 export interface BoomBoxEvents {
   sequenceChange: (activeCrate: BoomBoxCrate) => void;
-  currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack>, newCollection: TrackCollection<BoomBoxTrack>, fromRequest: boolean) => void;
+  currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack>, newCollection: TrackCollection<BoomBoxTrack>, ignoreFrom: boolean) => void;
   currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
   trackQueued: (track: BoomBoxTrack) => void;
-  trackLoaded: (trackPlay: BoomBoxTrackPlay) => void;
-  trackUnloaded: (trackPlay: BoomBoxTrackPlay) => void;
-  trackStarted: (trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => void;
-  trackActive: (trackPlay: BoomBoxTrackPlay) => void;
-  trackFinished: (trackPlay: BoomBoxTrackPlay) => void;
+  trackLoaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  trackUnloaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  trackStarted: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => void;
+  trackActive: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  trackFinished: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
   error: (error: Error) => void;
 }
 
@@ -166,6 +167,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   private _currentCrate: BoomBoxCrate | undefined;
   private _currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
+  private _inTransition = false;
 
   /**
    * Current crate
@@ -176,6 +178,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   get trackPlay() {
     return this._currentTrackPlay;
+  }
+
+  get isInTransition() {
+    return this._inTransition;
   }
 
   getDeckInfo(index: DeckIndex): Readonly<DeckInfo> {
@@ -205,13 +211,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
         extra: !dup ? boombooxExtra : undefined
       }
     }
-    catch {
-
+    catch (e: unknown) {
+      this.logger.debug('Error in verifyTrack()', (e as Error).message);
     }
 
     return {
       shouldPlay: true,
-      extra: undefined
+      extra: track.extra
     };
   }
 
@@ -335,21 +341,20 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       const currentTrack = this._currentTrackPlay?.track;
       const currentCollection = currentTrack?.collection;
       const nextCollection = nextTrack.collection;
-
-      const trasitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
       const collectionChange = currentCollection?.id !== nextCollection.id;
 
-      if (currentCollection && nextCollection && (trasitingFromRequestTrack || collectionChange)) {
+      if (currentCollection && nextCollection && (collectionChange)) {
+        const trasitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
         this.emit('currentCollectionChange', currentCollection, nextCollection, trasitingFromRequestTrack);
       }
 
-      if (this._currentCrate !== nextTrack.crate) {
+      if (this._currentCrate !== nextTrack.sequencing.crate) {
 
-        if (this._currentCrate && nextTrack.crate) {
-          this.emit('currentCrateChange', this._currentCrate, nextTrack.crate);
+        if (this._currentCrate && nextTrack.sequencing.crate) {
+          this.emit('currentCrateChange', this._currentCrate, nextTrack.sequencing.crate);
         }
 
-        this._currentCrate = nextTrack.crate;
+        this._currentCrate = nextTrack.sequencing.crate;
       }
 
       addToQueue(nextTrack);
@@ -370,7 +375,9 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     }
 
     // build cover and lyrics metadata
-    const { track } = trackPlay;
+    const trackFromCollection = trackPlay.track.collection.fromId(trackPlay.track.id);
+    const track = trackFromCollection ?? trackPlay.track;
+
     const { extra } = track;
 
     if (extra && extra.kind !== TrackKind.Insertion) {
@@ -386,7 +393,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       }
     }
 
-    this.emit('trackLoaded', trackPlay);
+    this.emit('trackLoaded', deck, trackPlay);
   }
 
   private deckUnloaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
@@ -396,7 +403,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       active: false
     }
 
-    // clean up memory holding the cover and lyrics
+    // clean up memory holding the cover, lyrics and extra
     if (trackPlay.track?.extra) {
       trackPlay.track.extra.maybeCoverAndLyrics = undefined;
 
@@ -405,7 +412,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       }
     }
 
-    this.emit('trackUnloaded', trackPlay);
+    this.emit('trackUnloaded', deck, trackPlay);
   }
 
   private deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
@@ -413,7 +420,14 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     const kind = trackPlay.track.extra?.kind;
 
-    if (kind === undefined || kind === TrackKind.Insertion) {
+    if (kind === TrackKind.Insertion) {
+      this._inTransition = true;
+      return;
+    }
+
+    this._inTransition = false;
+
+    if (kind === undefined) {
       return;
     }
 
@@ -424,7 +438,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     const lastTrack = this._currentTrackPlay;
     this._currentTrackPlay = trackPlay;
 
-    this.emit('trackStarted', trackPlay, lastTrack);
+    this.emit('trackStarted', deck, trackPlay, lastTrack);
 
     const { noDuplicatedArtist } = this.options;
 
@@ -446,7 +460,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       return;
     }
 
-    this.emit('trackFinished', trackPlay);
+    this.emit('trackFinished', deck, trackPlay);
   }
 
   private mainDeckChanged: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
@@ -461,7 +475,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       return;
     }
 
-    this.emit('trackActive', trackPlay);
+    this.emit('trackActive', deck, trackPlay);
   }
 
   /**
@@ -483,12 +497,32 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.sequencer.moveCrates(newPosition, ...cratesOrIds);
   }
 
-  get crateIndex() {
-    return this.sequencer.crateIndex;
+  getCrateIndex() {
+    return this.sequencer.getCrateIndex();
   }
 
-  set crateIndex(newIndex: number) {
-    this.sequencer.crateIndex = newIndex;
+  setCrateIndex(newIndex: number) {
+    this.sequencer.setCrateIndex(newIndex, true);
+  }
+
+  increasePlayCount() {
+    return this.sequencer.increasePlayCount();
+  }
+
+  latch(options?: LatchOptions<BoomBoxTrack>) {
+    return this.sequencer.latch(options);
+  }
+
+  isKnownCollection(collection: TrackCollection<BoomBoxTrack>): boolean {
+    return this.sequencer.isKnownCollection(collection);
+  }
+
+  get isLatchActive(): boolean {
+    return this.sequencer.getActiveLatch() !== undefined;
+  }
+
+  get allLatches(): LatchSession<BoomBoxTrack>[] {
+    return this.sequencer.allLatches;
   }
 }
 

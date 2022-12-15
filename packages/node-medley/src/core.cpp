@@ -13,7 +13,8 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::fadeOut>("fadeOut"),
         InstanceMethod<&Medley::seek>("seek"),
         InstanceMethod<&Medley::seekFractional>("seekFractional"),
-        InstanceMethod<&Medley::getMetadata>("getMetadata"),
+        InstanceMethod<&Medley::getDeckMetadata>("getDeckMetadata"),
+        InstanceMethod<&Medley::getDeckPositions>("getDeckPositions"),
         //
         InstanceMethod<&Medley::requestAudioStream>("*$reqAudio"),
         InstanceMethod<&Medley::reqAudioConsume>("*$reqAudio$consume"),
@@ -24,8 +25,6 @@ void Medley::Initialize(Object& exports) {
         InstanceAccessor<&Medley::reduction>("reduction"),
         InstanceAccessor<&Medley::playing>("playing"),
         InstanceAccessor<&Medley::paused>("paused"),
-        InstanceAccessor<&Medley::duration>("duration"),
-        InstanceAccessor<&Medley::getPosition, &Medley::setPosition>("position"),
         InstanceAccessor<&Medley::getVolume, &Medley::setVolume>("volume"),
         InstanceAccessor<&Medley::getFadingCurve, &Medley::setFadingCurve>("fadingCurve"),
         InstanceAccessor<&Medley::getMinimumLeadingToFade, &Medley::setMinimumLeadingToFade>("minimumLeadingToFade"),
@@ -244,13 +243,14 @@ void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley:
     });
 }
 
-void Medley::play(const CallbackInfo& info) {
+Napi::Value Medley::play(const CallbackInfo& info) {
     bool shouldFade = true;
     if (info.Length() > 0) {
         shouldFade = info[0].ToBoolean();
     }
 
-    engine->play(shouldFade);
+    auto result = engine->play(shouldFade);
+    return Napi::Boolean::New(info.Env(), result);
 }
 
 void Medley::stop(const CallbackInfo& info) {
@@ -277,11 +277,25 @@ void Medley::fadeOut(const CallbackInfo& info) {
 }
 
 void Medley::seek(const CallbackInfo& info) {
-    engine->setPosition(info[0].ToNumber().DoubleValue());
+    int deckIndex = -1;
+    if (info.Length() > 1) {
+        if (info[1].IsNumber()) {
+            deckIndex = (int)info[1].ToNumber() & 3;
+        }
+    }
+
+    engine->setPosition(info[0].ToNumber().DoubleValue(), deckIndex);
 }
 
 void Medley::seekFractional(const CallbackInfo& info) {
-    engine->setPositionFractional(info[0].ToNumber().DoubleValue());
+    int deckIndex = -1;
+    if (info.Length() > 1) {
+        if (info[1].IsNumber()) {
+            deckIndex = (int)info[1].ToNumber() & 3;
+        }
+    }
+
+    engine->setPositionFractional(info[0].ToNumber().DoubleValue(), deckIndex);
 }
 
 Napi::Value Medley::level(const CallbackInfo& info) {
@@ -314,18 +328,6 @@ Napi::Value Medley::playing(const CallbackInfo& info) {
 
 Napi::Value Medley::paused(const CallbackInfo& info) {
     return Napi::Boolean::New(info.Env(), engine->isPaused());
-}
-
-Napi::Value Medley::duration(const CallbackInfo& info) {
-    return Napi::Number::New(info.Env(), engine->getDuration());
-}
-
-Napi::Value Medley::getPosition(const CallbackInfo& info) {
-    return Napi::Number::New(info.Env(), engine->getPositionInSeconds());
-}
-
-void Medley::setPosition(const CallbackInfo& info, const Napi::Value& value) {
-    engine->setPosition(value.ToNumber().DoubleValue());
 }
 
 Napi::Value Medley::getVolume(const CallbackInfo& info) {
@@ -368,7 +370,7 @@ void Medley::setReplayGainBoost(const CallbackInfo& info, const Napi::Value& val
     engine->setReplayGainBoost(value.ToNumber().FloatValue());
 }
 
-Napi::Value Medley::getMetadata(const CallbackInfo& info) {
+Napi::Value Medley::getDeckMetadata(const CallbackInfo& info) {
     auto env = info.Env();
 
     if (info.Length() < 1) {
@@ -398,7 +400,38 @@ Napi::Value Medley::getMetadata(const CallbackInfo& info) {
     result.Set("album", metadata.getAlbum().toRawUTF8());
     result.Set("isrc", metadata.getISRC().toRawUTF8());
     result.Set("trackGain", metadata.getTrackGain());
+    result.Set("bpm", metadata.getBeatsPerMinute());
 
+    return result;
+}
+
+Napi::Value Medley::getDeckPositions(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        RangeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto arg1 = info[0];
+    if (!arg1.IsNumber()) {
+        RangeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto index = arg1.ToNumber().Int32Value();
+    if (index < 0 || index >= engine->numDecks) {
+        RangeError::New(env, "Invalid deck " + std::to_string(index)).ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto& deck = (index == 0) ? engine->getDeck1() : (index == 1 ? engine->getDeck2() : engine->getDeck3());
+
+    auto result = Object::New(env);
+    result.Set("current", deck.getPosition());
+    result.Set("duration", deck.getDuration());
+    result.Set("first", deck.getFirstAudiblePosition());
+    result.Set("last", deck.getLastAudiblePosition());
     return result;
 }
 

@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import { CommandInteraction, Message, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle, ComponentType, MessageActionRowComponentBuilder } from "discord.js";
+import { CommandInteraction, Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageActionRowComponentBuilder, StringSelectMenuBuilder } from "discord.js";
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, reply, makeHighlightedMessage, HighlightTextType } from "../utils";
@@ -50,7 +50,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     components: [
       new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
-          new SelectMenuBuilder()
+          new StringSelectMenuBuilder()
             .setCustomId('unrequest')
             .setPlaceholder('Select tracks to cancel')
             .setMinValues(0)
@@ -124,7 +124,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       }
     });
 
-    selector.awaitMessageComponent({
+    await selector.awaitMessageComponent({
       componentType: ComponentType.Button,
       filter: i => {
         i.deferUpdate();

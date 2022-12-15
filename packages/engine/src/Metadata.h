@@ -73,6 +73,7 @@ public:
     const juce::String& getAlbum() const { return album; }
     const juce::String& getISRC() const { return isrc; }
     float getTrackGain() const { return trackGain; }
+    float getBeatsPerMinute() const { return bpm; }
     double getCueIn() const { return cueIn; }
     double getCueOut() const { return cueOut; }
     double getLastAudible() const { return lastAudible; }
@@ -87,6 +88,7 @@ private:
     juce::String artist;
     juce::String album;
     juce::String isrc;
+    float bpm = 0.0f;
     float trackGain = 0.0f;
     double cueIn = -1.0;
     double cueOut = -1.0;

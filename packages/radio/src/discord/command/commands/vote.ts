@@ -52,6 +52,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
   station.requestsEnabled = false;
 
+  // TODO: Show time out
   const createMessageContent = () =>
     chain(nominatees)
       .sortBy(

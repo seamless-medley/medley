@@ -10,12 +10,13 @@ process.on('uncaughtException', (e) => {
 });
 
 const moods = {
-  up: ['upbeat', 'bright', 'groovy'],
+  bright: ['bright'],
+  up: ['upbeat', 'groovy'],
   easy: ['lovesong', 'chill'],
   sad: ['lonely', 'brokenhearted', 'hurt']
 }
 
-const musicCollections: (MusicLibraryDescriptor & { auxiliary?: boolean })[] = [
+const musicCollections: MusicLibraryDescriptor[] = [
   { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
   { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
   { id: 'chill', description:'Chill', path: 'D:\\vittee\\Google Drive\\musics\\chill' },
@@ -66,14 +67,12 @@ const sweeperRules: SweeperInsertionRule[] = [
     collection: makeSweeperRule('blue_to_up')
   },
   {
-    from: moods.easy,
     to: moods.up,
-    collection: makeSweeperRule('easy_to_up')
+    collection: makeSweeperRule('to_up')
   },
   {
-    from: moods.up,
-    to: moods.easy,
-    collection: makeSweeperRule('up_to_easy')
+    from: [...moods.up, ...moods.bright],
+    collection: makeSweeperRule('from_up')
   },
   { // Fresh
     to: ['new-released'],

@@ -6,10 +6,10 @@ import { createLogger } from '../logging';
 import { Track } from "../track";
 import { moveArrayElements } from '../utils';
 
-export type TrackCreator<T extends Track<any, any>> = (path: string) => Promise<Omit<T, 'collection'> | undefined>;
+export type TrackCreator<T extends Track<any, CE>, CE = any> = (path: string) => Promise<Omit<T, 'collection' | 'sequencing'> | undefined>;
 
-export type TrackCollectionOptions<T extends Track<any, CE>, CE = never> = {
-  trackCreator?: TrackCreator<T>;
+export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = {
+  trackCreator?: TrackCreator<T, CE>;
 
   /**
    * Called when new tracks are added to the collection
@@ -24,13 +24,19 @@ export type TrackCollectionOptions<T extends Track<any, CE>, CE = never> = {
    * @default append
    */
   newTracksAddingMode?: 'prepend' | 'append';
+
+  disableLatch?: boolean;
+
+  noFollowOnRequest?: boolean;
+
+  auxiliary?: boolean;
 }
 
-export type TrackPeek<T extends Track<any, CE>, CE = never> = {
+export type TrackPeek<T extends Track<any, CE>, CE = any> = {
   index: number;
   track: T;
 }
-export class TrackCollection<T extends Track<any, CE>, CE = never> extends EventEmitter {
+export class TrackCollection<T extends Track<any, CE>, CE = any> extends EventEmitter {
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];
@@ -62,22 +68,22 @@ export class TrackCollection<T extends Track<any, CE>, CE = never> extends Event
     return createHash('md5').update(normalizePath(path)).digest('base64');
   }
 
-  protected async createTrack(path: string): Promise<T> {
-    const { trackCreator } = this.options;
+  protected async createTrack(path: string, generatedId: string): Promise<T> {
+    const existingTrack = generatedId ? this.fromId(generatedId) : undefined;
 
-    const createdTrack = await trackCreator?.(path);
+    if (existingTrack) {
+      return existingTrack;
+    }
 
-    type NT = Track<any, CE>;
-    type MutableTrack = { -readonly [P in keyof NT]: NT[P] };
+    const createdTrack = await this.options.trackCreator?.(path);
 
-    const track: MutableTrack = {
-      id: createdTrack?.id ?? await this.getTrackId(path),
+    return {
+      id: createdTrack?.id ?? generatedId,
       path,
-      collection: this as any,
+      collection: this as unknown as T['collection'],
+      sequencing: {},
       ...omit(createdTrack, 'id', 'path'),
-    };
-
-    return track as T;
+    } as T;
   }
 
   get length(): number {
@@ -86,6 +92,10 @@ export class TrackCollection<T extends Track<any, CE>, CE = never> extends Event
 
   get ready(): boolean {
     return this._ready;
+  }
+
+  get latchDisabled(): boolean {
+    return this.options.disableLatch === true;
   }
 
   private shiftCounter = 0;
@@ -131,7 +141,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = never> extends Event
     const immediateTracks: T[] = [];
 
     for (const group of chunk(validPaths, 500)) {
-      const created = await Promise.all(group.map(p => this.createTrack(p)));
+      const created = await Promise.all(group.map(async p => await this.createTrack(p, await this.getTrackId(p))));
       await this.addTracks(created);
       immediateTracks.push(...created);
     }
@@ -148,7 +158,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = never> extends Event
     if (freshTracksMapped.length) {
       const [a, b] = (this.options.newTracksAddingMode === 'prepend') ? [freshTracksMapped, this.tracks] : [this.tracks, freshTracksMapped];
 
-      this.tracks = a.concat(b);
+      this.tracks = [...a, ...b];
 
       for (const track of freshTracksMapped) {
         this.trackIdMap.set(track.id, track);

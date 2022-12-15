@@ -1,16 +1,17 @@
 import type { Metadata } from "@seamless-medley/medley";
 import normalizePath from "normalize-path";
 import type { TrackRecord } from "../playout";
-import type { Station } from "../station";
 import type { SearchQuery, SearchQueryKey } from "./search";
 
-export type RecentSearch = [term: string, count: number, timestamp: Date];
+export type SearchRecord = [term: string, count: number, timestamp: Date];
 
-type StationId = Station['id'];
 export interface SearchHistory {
-  add(stationId: StationId, query: SearchQuery & { resultCount?: number }): Promise<void>;
+  add(scope: string, query: SearchQuery & { resultCount?: number }): Promise<void>;
 
-  recentItems(stationId: StationId, key: SearchQueryKey, limit?: number): Promise<RecentSearch[]>;
+  recentItems(scope: string, key: SearchQueryKey, limit?: number): Promise<SearchRecord[]>;
+
+  // TODO: Unmatch items
+  // unmatchItems(scope: string): void;
 }
 
 export type TimestampedTrackRecord = TrackRecord & {
@@ -18,9 +19,9 @@ export type TimestampedTrackRecord = TrackRecord & {
 }
 
 export interface TrackHistory {
-  add(stationId: StationId, record: TimestampedTrackRecord, max: number): Promise<void>;
+  add(scope: string, record: TimestampedTrackRecord, max: number): Promise<void>;
 
-  getAll(stationId: StationId): Promise<TimestampedTrackRecord[]>;
+  getAll(scope: string): Promise<TimestampedTrackRecord[]>;
 }
 
 export interface MusicDb {
@@ -83,18 +84,18 @@ export class InMemoryMusicDb implements MusicDb {
   }
 
   private readonly _searchHistory: SearchHistory = {
-    async add(stationId, query) {
+    async add(scope, query) {
 
     },
 
-    recentItems: async (stationId, key, limit?) => []
+    recentItems: async (scope, key, limit?) => []
   }
 
   private readonly _trackHistory: TrackHistory = {
-    async add(stationId, record, max) {
+    async add(scope, record, max) {
 
     },
 
-    getAll: async (stationId) => []
+    getAll: async (scope) => []
   }
 }

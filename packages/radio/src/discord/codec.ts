@@ -1,9 +1,12 @@
 type Loader = {
-  new(): Codec;
+  new(options?: Partial<CodecOptions>): Codec;
   load: () => boolean;
 }
 
 export type CodecOptions = {
+  /**
+   * Bitrate in bps
+   */
   bitrate: number;
   errorCorrection: boolean;
   packetLossPercentage: number;
@@ -11,8 +14,8 @@ export type CodecOptions = {
 
 const makeCodecOptions = (options?: Partial<CodecOptions>): CodecOptions => ({
   bitrate: options?.bitrate || 128_000,
-  errorCorrection: false,
-  packetLossPercentage: 0
+  errorCorrection: options?.errorCorrection ?? false,
+  packetLossPercentage: options?.packetLossPercentage ?? 0
 })
 
 export abstract class Codec {
@@ -46,14 +49,14 @@ export abstract class Codec {
     this.ctl(4014, percent);
   }
 
-  static create(): Codec {
+  static create(options?: Partial<CodecOptions>): Codec {
     const Ctor = [DiscordOpusCodec, OpusScriptCodec].find(c => c.load()) as Loader | undefined;
 
     if (!Ctor) {
       throw new ReferenceError('Could not find Opus native module');
     }
 
-    return new Ctor();
+    return new Ctor(options);
   }
 }
 

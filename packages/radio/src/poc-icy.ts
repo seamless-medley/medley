@@ -10,7 +10,8 @@ process.on('uncaughtException', (e) => {
 });
 
 const moods = {
-  up: ['upbeat', 'bright', 'groovy'],
+  bright: ['bright'],
+  up: ['upbeat', 'groovy'],
   easy: ['chill'],
   love: ['lovesong'],
   sad: ['lonely', 'brokenhearted', 'hurt']
@@ -49,6 +50,8 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid11', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
 ];
 
+const makeSweeperRule = (type: string) => new WatchTrackCollection(type).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+
 const sweepers = new Map<string, TrackCollection<BoomBoxTrack>>(
   ['to_blue', 'blue_to_easy', 'blue_to_up', 'easy_to_up', 'up_to_easy', 'fresh'].map(id => {
     return [id, new WatchTrackCollection(id).watch(normalizePath(`E:\\medley-drops\\${id}/**/*`))]
@@ -67,11 +70,16 @@ const sweeperRules: SweeperInsertionRule[] = [
   },
   {
     from: moods.sad,
-    to: moods.up,
+    to: [...moods.bright, ...moods.up],
     collection: sweepers.get('blue_to_up')!
   },
   {
     from: moods.easy,
+    to: [...moods.bright, ...moods.up],
+    collection: sweepers.get('easy_to_up')!
+  },
+  {
+    from: moods.bright,
     to: moods.up,
     collection: sweepers.get('easy_to_up')!
   },
@@ -96,13 +104,11 @@ async function main() {
     console.log('Listening on', port);
   });
 
-  const musicDb = new MongoMusicDb({
+  const musicDb = await new MongoMusicDb().init({
     url: 'mongodb://root:example@localhost:27017',
     database: 'medley',
     ttls: [60 * 60 * 24 * 7, 60 * 60 * 24 * 12]
   });
-
-  await musicDb.init();
 
   const station = new Station({
     id: 'default',
@@ -120,7 +126,8 @@ async function main() {
 
   const source = await createIcyAdapter(station, {
     outputFormat: 'mp3',
-    bitrate: 128
+    bitrate: 128,
+    sampleRate: 48000
   });
 
   if (source) {

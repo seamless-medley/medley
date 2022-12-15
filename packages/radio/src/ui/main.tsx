@@ -1,15 +1,35 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 
 import { entangle } from './hashi/atoms';
 import { atom, useAtom } from 'jotai';
 import { Client } from './client';
-import { Button, MantineProvider } from '@mantine/core';
+import { MantineProvider } from '@mantine/core';
+import { RemoteTypes, StubCounter } from '../socket/remote';
+import { range } from 'lodash';
 
 const x = entangle(10);
 const k = atom(10);
 
 const App: React.FC = () => {
+  useEffect(() => {
+    const c = new Client<RemoteTypes>();
+
+    Promise.all(range(0, 10).map(() => c.surrogateOf(StubCounter, 'root', 'test'))).then(surogates => {
+      surogates.map((s, index) => {
+
+        s.onPropertyChange('count', (newValue) => {
+          console.log(`onPropertyChange count`, s, newValue);
+        });
+      });
+    });
+
+    return () => {
+      c.dispose();
+    }
+  }, []);
+
+
   const [value, setValue] = useAtom(x);
 
   return (

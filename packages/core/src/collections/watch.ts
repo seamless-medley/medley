@@ -11,8 +11,7 @@ import { stat } from "fs/promises";
 
 type WatchCallback<F = typeof watch> = F extends (pathName: any, options: any, callback: infer CB) => any ? CB : never;
 
-// A track collection capable of watching for changes in file system directory
-export class WatchTrackCollection<T extends Track<any>, E = never> extends TrackCollection<T, E> {
+export class WatchTrackCollection<T extends Track<any, E>, E = any> extends TrackCollection<T, E> {
   constructor(id: string, options: TrackCollectionOptions<T> = {}) {
     super(id, {
       tracksMapper: async (tracks) => shuffle(tracks),
@@ -38,12 +37,7 @@ export class WatchTrackCollection<T extends Track<any>, E = never> extends Track
   private storeNewFiles = debounce(() => this.add(this.fetchNewPaths()), 2000);
 
   private handleFilesRemoval = debounce(() => {
-    const removed = this.removeBy(({ id }) => this.removedIds.has(id));
-
-    if (removed.length) {
-      this.logger.info('Removed', removed.length, 'tracks');
-    }
-
+    this.removeBy(({ id }) => this.removedIds.has(id));
     this.removedIds.clear();
   }, 2000);
 
@@ -65,15 +59,13 @@ export class WatchTrackCollection<T extends Track<any>, E = never> extends Track
   }
 
   watch(pattern: string): this {
-    this.scan(pattern)
-      .then(() => {
-        const normalized = normalizePath(pattern);
-        const recursively = { recursive: true };
-        //
-        const watcher = watch(globParent(normalized), recursively, this.watchHandler);
-        this.watchingPatterns.set(normalized, watcher);
-      })
-      .then(() => this.becomeReady());
+    const normalized = normalizePath(pattern);
+
+    if (!this.watchingPatterns.has(normalized)) {
+      this.scan(normalized)
+        .then(() => this.watchingPatterns.set(normalized, watch(globParent(normalized), { recursive: true }, this.watchHandler)))
+        .then(() => this.becomeReady());
+    }
 
     return this;
   }
@@ -102,7 +94,7 @@ export class WatchTrackCollection<T extends Track<any>, E = never> extends Track
 
   private async scan(pattern: string) {
     const normalized = normalizePath(pattern);
-    return glob(normalized).then(files => this.add(files))
+    return glob(normalized).then(files => this.add(files));
   }
 
   async rescan() {

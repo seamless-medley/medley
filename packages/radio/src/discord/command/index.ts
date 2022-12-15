@@ -1,5 +1,5 @@
+import { map } from "lodash";
 import { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Interaction, InteractionType } from "discord.js";
-import _ from "lodash";
 import { createLogger } from "@seamless-medley/core";
 import join from "./commands/join";
 import skip from './commands/skip';
@@ -11,6 +11,7 @@ import vote from './commands/vote';
 import message from './commands/message';
 import history from './commands/history';
 import tune from './commands/tune';
+import latch from './commands/latch';
 
 import { Command, CommandError, CommandType, InteractionHandler, SubCommandLikeOption } from "./type";
 import { deny, isReplyable } from "./utils";
@@ -26,11 +27,12 @@ const descriptors = {
   vote,
   message,
   history,
-  tune
+  tune,
+  latch
 }
 
 export const createCommandDeclarations = (name: string = 'medley', description: string = 'Medley'): Command => {
-  const options: SubCommandLikeOption[] = _.map(descriptors, desc => desc.declaration).filter((decl): decl is SubCommandLikeOption => !!decl);
+  const options: SubCommandLikeOption[] = map(descriptors, desc => desc.declaration).filter((decl): decl is SubCommandLikeOption => !!decl);
 
   return {
     name,
@@ -46,8 +48,10 @@ type Handlers = {
   autocomplete?: InteractionHandler<AutocompleteInteraction>;
 }
 
-export const createInteractionHandler = (baseName: string, automaton: MedleyAutomaton) => {
-  const handlers = new Map<string, Handlers>(_.map(descriptors, (desc, name) => [name.toLowerCase(), {
+export const createInteractionHandler = (automaton: MedleyAutomaton) => {
+  const baseCommand = automaton.baseCommand;
+
+  const handlers = new Map<string, Handlers>(map(descriptors, (desc, name) => [name.toLowerCase(), {
     command: desc.createCommandHandler?.(automaton),
     button: desc.createButtonHandler?.(automaton),
     autocomplete: desc.createAutocompleteHandler?.(automaton)
@@ -62,7 +66,7 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
 
     try {
       if (interaction.isChatInputCommand()) {
-        if (interaction.commandName !== baseName) {
+        if (interaction.commandName !== baseCommand) {
           return;
         }
 
@@ -87,7 +91,7 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
       }
 
       if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
-        if (interaction.commandName !== baseName) {
+        if (interaction.commandName !== baseCommand) {
           return;
         }
 
@@ -102,7 +106,7 @@ export const createInteractionHandler = (baseName: string, automaton: MedleyAuto
       }
     }
     catch (e) {
-      logger.prettyError(e as Error);
+      logger.error(e);
 
       if (isReplyable(interaction)) {
         if (e instanceof CommandError) {

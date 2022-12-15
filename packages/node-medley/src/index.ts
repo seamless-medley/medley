@@ -53,9 +53,11 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
     }
   });
 
-  if (options.preFill) {
+  const prefill = options.preFill ?? options.buffering;
+
+  if (prefill) {
     const consumingSize = (options.buffering || sampleRate * 0.01) * bytesPerSample * 2;
-    while (totalSamples() < options.preFill) {
+    while (totalSamples() < prefill) {
       buffers.push(await consume(consumingSize));
     }
   }

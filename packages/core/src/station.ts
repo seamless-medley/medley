@@ -1,10 +1,9 @@
 import EventEmitter from "events";
-import normalizePath from 'normalize-path';
 import { DeckIndex, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
-import _, { curry, difference, isFunction, random, sample, shuffle, sortBy } from "lodash";
+import { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
-import { TrackCollection, TrackPeek, WatchTrackCollection } from "./collections";
-import { Chanceable, Crate, CrateLimit } from "./crate";
+import { TrackCollection, TrackPeek } from "./collections";
+import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
 import { Library, MusicDb, MusicLibrary } from "./library";
 import { createLogger, Logger } from "./logging";
 import {
@@ -12,7 +11,6 @@ import {
   BoomBoxCrate,
   BoomBoxEvents,
   BoomBoxTrack,
-  BoomBoxTrackPlay,
   RequestTrack,
   SweeperInsertionRule,
   TrackKind,
@@ -75,10 +73,22 @@ export type StationOptions = {
    */
   maxTrackHistory?: number;
 
-  noDuplicatedArtist?: number;
+  noDuplicatedArtist?: number | false;
   duplicationSimilarity?: number;
 
+  /**
+   * Whether to follow crate on a requested track
+   * @default true
+   */
   followCrateAfterRequestTrack?: boolean;
+
+  /**
+   * When enabled, a request sweeper will not be inserted
+   * if the conseqcutive tracks are from the same collection
+   *
+   * @default true
+   */
+  noRequestSweeperOnIdenticalCollection?: boolean;
 }
 
 export enum AudienceType {
@@ -94,8 +104,8 @@ export type Audience = {
   id: string;
 }
 
-export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished'> {
-  ready: () => void;
+export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished' | 'currentCollectionChange'> {
+  // ready: () => void;
   requestTrackAdded: (track: TrackPeek<RequestTrack<Audience>>) => void;
 }
 
@@ -119,7 +129,9 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   followCrateAfterRequestTrack: boolean;
 
-  maxTrackHistory: number = 20;
+  noRequestSweeperOnIdenticalCollection: boolean;
+
+  maxTrackHistory: number = 50;
 
   private audiences: Map<AudienceGroupId, Map<string, any>> = new Map();
 
@@ -131,6 +143,11 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.id = options.id;
     this.name = options.name;
     this.description = options.description;
+    this.intros = options.intros;
+    this.requestSweepers = options.requestSweepers;
+    this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? true;
+    this.maxTrackHistory = options.maxTrackHistory || 50;
+    this.noRequestSweeperOnIdenticalCollection = options.noRequestSweeperOnIdenticalCollection ?? true;
 
     this.logger = createLogger({ name: `station/${this.id}`});
 
@@ -157,7 +174,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       medley: this.medley,
       queue: this.queue,
       crates: [],
-      noDuplicatedArtist: options.noDuplicatedArtist,
+      noDuplicatedArtist: options.noDuplicatedArtist !== false ? Math.max(options.noDuplicatedArtist ?? 0, this.maxTrackHistory) : false,
       duplicationSimilarity: options.duplicationSimilarity,
       onInsertRequestTrack: this.handleRequestTrack
     });
@@ -167,6 +184,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     boombox.on('trackStarted', this.handleTrackStarted);
     boombox.on('trackActive', this.handleTrackActive);
     boombox.on('trackFinished', this.handleTrackFinished);
+    boombox.on('currentCollectionChange', this.handleCollectionChange);
 
     this.musicDb.trackHistory
       .getAll(this.id)
@@ -175,10 +193,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       });
 
     this.boombox = boombox;
-    this.intros = options.intros;
-    this.requestSweepers = options.requestSweepers;
-    this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? false;
-    this.maxTrackHistory = options.maxTrackHistory || 20;
   }
 
   get availableAudioDevices() {
@@ -193,16 +207,19 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.medley.setAudioDevice(descriptor);
   }
 
-  private handleTrackQueued = (track: BoomBoxTrack) => {
-    this.emit('trackQueued', track);
+  private handleTrackQueued: StationEvents['trackQueued'] = (...args) => {
+    this.emit('trackQueued', ...args);
   }
 
-  private handleTrackLoaded = (trackPlay: BoomBoxTrackPlay) => {
-    this.emit('trackLoaded', trackPlay);
+  private handleTrackLoaded: StationEvents['trackLoaded'] = (...args) => {
+    this.emit('trackLoaded', ...args);
   }
 
-  private handleTrackStarted = (trackPlay: BoomBoxTrackPlay, lastTrack?: BoomBoxTrackPlay) => {
-    this.emit('trackStarted', trackPlay, lastTrack);
+  private handleTrackStarted: StationEvents['trackStarted'] = (...args) => {
+    this._starting = false;
+    this.emit('trackStarted', ...args);
+
+    const [, trackPlay] = args;
 
     this.musicDb.trackHistory.add(this.id, {
       ...trackRecordOf(trackPlay.track),
@@ -210,22 +227,30 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }, this.maxTrackHistory);
   }
 
-  private handleTrackActive = (trackPlay: BoomBoxTrackPlay) => {
-    this.emit('trackActive', trackPlay);
+  private handleTrackActive: StationEvents['trackActive'] = (...args) => {
+    this.emit('trackActive', ...args);
   }
 
-  private handleTrackFinished = (trackPlay: BoomBoxTrackPlay) => {
-    this.emit('trackFinished', trackPlay);
+  private handleTrackFinished: StationEvents['trackFinished'] = (...args) => {
+    this.emit('trackFinished', ...args);
+  }
+
+  private handleCollectionChange: StationEvents['currentCollectionChange'] = (...args) => {
+    this.emit('currentCollectionChange', ...args);
   }
 
   private handleRequestTrack = async (track: RequestTrack<Audience>) => {
     const { requestSweepers } = this;
 
+    const currentTrack =  this.boombox.trackPlay?.track;
+    let isSameCollection = currentTrack?.collection.id === track.collection.id
+
     if (requestSweepers) {
+      const shouldSweep = this.noRequestSweeperOnIdenticalCollection
+        ? !isSameCollection
+        : true
 
-      const currentKind = this.boombox.trackPlay?.track.extra?.kind;
-
-      if (currentKind !== TrackKind.Request) {
+      if (currentTrack?.extra?.kind !== TrackKind.Request && shouldSweep) {
         const sweeper = requestSweepers.shift();
 
         if (sweeper && await MetadataHelper.isTrackLoadable(sweeper.path)) {
@@ -236,23 +261,35 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
             }
           }
 
-          this.queue.add(sweeper);
+          this.queue.add({
+            ...sweeper,
+            disableNextLeadIn: true
+          });
           requestSweepers.push(sweeper);
         }
       }
     }
 
-    // TODO: Fix this
-    if (this.followCrateAfterRequestTrack) {
-      const indices = this.boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
+    if (this.followCrateAfterRequestTrack && !track.collection.options.noFollowOnRequest) {
+      if (!this.isLatchActive) {
+        const indices = this.boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
 
-      const a = indices.slice(0, this.boombox.crateIndex);
-      const b = indices.slice(this.boombox.crateIndex);
+        const crateIndex = this.boombox.getCrateIndex();
 
-      const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
-      if (located) {
-        this.boombox.crateIndex = located.index;
+        const a = indices.slice(0, crateIndex);
+        const b = indices.slice(crateIndex);
+
+        const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
+
+        if (located) {
+          isSameCollection = true;
+          this.boombox.setCrateIndex(located.index);
+        }
       }
+    }
+
+    if (isSameCollection && this.boombox.isKnownCollection(track.collection)) {
+      this.boombox.increasePlayCount();
     }
   }
 
@@ -282,13 +319,21 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.musicDb.trackHistory.getAll(this.id);
   }
 
+  get isInTransition() {
+    return this.boombox.isInTransition;
+  }
+
   skip() {
     this.medley.fadeOut();
   }
 
-  private _started = false;
+  private _starting = false;
 
   start() {
+    if (this._starting) {
+      return;
+    }
+
     if (this.playState === PlayState.Idle && this.queue.length === 0) {
       if (this.intros) {
         const intro = this.intros.shift();
@@ -300,28 +345,29 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
             }
           }
 
-          this.queue.add(intro);
+          this.queue.add({
+            ...intro,
+            disableNextLeadIn: true
+          });
           this.intros.push(intro);
         }
       }
     }
 
-    if (!this._started) {
-      this._started = true;
+    if (this.playState !== PlayState.Playing) {
+      this._starting = true;
       this.medley.play(false);
-
       this.logger.info('Playing started');
     }
   }
 
   pause() {
     if (!this.medley.paused) {
-      this._started = false;
       this.medley.togglePause(false);
-
       this.logger.info('Playing paused');
     }
 
+    this._starting = false;
   }
 
   async requestAudioStream(options: RequestAudioOptions) {
@@ -332,7 +378,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.medley.deleteAudioStream(streamId);
   }
 
-  /** @deprecated Allow direct manipulation */
   updateSequence(sequences: SequenceConfig[]) {
     const crates = sequences.map(
       ({ crateId, collections, chance, limit }, index) => {
@@ -369,6 +414,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.moveCrates(newPosition, ...cratesOrIds);
   }
 
+  get crates() {
+    return this.boombox.crates;
+  }
+
   private sequenceLimit(limit: SequenceLimit): CrateLimit  {
     if (typeof limit === 'number') {
       return limit;
@@ -381,16 +430,19 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     const { by } = limit;
 
     if (by === 'upto') {
-      return () => random(1, limit.upto);
+      const upto = () => random(1, limit.upto);
+      return upto;
     }
 
     if (by === 'range') {
       const [min, max] = sortBy(limit.range);
-      return () => random(min, max);
+      const range = () => random(min, max);
+      return range;
     }
 
     if (by === 'sample' || by === 'one-of') {
-      return () => sample(limit.list) ?? 0;
+      const oneOf = () => sample(limit.list) ?? 0;
+      return oneOf;
     }
 
     return 0;
@@ -413,7 +465,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 
   async autoSuggest(q: string, field?: SearchQueryField, narrowBy?: SearchQueryField, narrowTerm?: string) {
-    if (!q) {
+    if (!q && !narrowBy) {
       const recent = await this.musicDb.searchHistory.recentItems(this.id, field ?? 'query');
 
       if (recent.length) {
@@ -426,6 +478,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   async request(trackId: BoomBoxTrack['id'], requestedBy: Audience) {
     const track = this.findTrackById(trackId);
+
     if (!track) {
       return false;
     }
@@ -469,12 +522,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.boombox.unrequest(requestIds);
   }
 
-  get crateIndex() {
-    return this.boombox.crateIndex;
+  getCrateIndex() {
+    return this.boombox.getCrateIndex();
   }
 
-  set crateIndex(newIndex: number) {
-    this.boombox.crateIndex = newIndex;
+  setCrateIndex(newIndex: number) {
+    this.boombox.setCrateIndex(newIndex);
   }
 
   addAudiences(groupId: AudienceGroupId, audienceId: string, data?: any) {
@@ -483,7 +536,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }
 
     this.audiences.get(groupId)!.set(audienceId, data);
-    this.playIfHasAudiences();
+    return this.playIfHasAudiences();
   }
 
   removeAudience(groupId: AudienceGroupId, audienceId: string) {
@@ -498,7 +551,17 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   updateAudiences(groupId: AudienceGroupId, audiences: [id: string, data: any][]) {
     this.audiences.set(groupId, new Map(audiences));
-    this.playIfHasAudiences();
+    this.updatePlayState();
+  }
+
+  updatePlayState() {
+    if (this.hasAudiences) {
+      this.start();
+    } else {
+      this.pause();
+    }
+
+    return !this.medley.paused;
   }
 
   playIfHasAudiences() {
@@ -546,11 +609,30 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   get audienceGroups() {
     return Array.from(this.audiences.keys());
   }
+
+  latch(options?: LatchOptions<BoomBoxTrack>) {
+    return this.boombox.latch(options);
+  }
+
+  isCollectionLatchable(collection: TrackCollection<BoomBoxTrack>): boolean {
+    return !collection.latchDisabled && this.boombox.isKnownCollection(collection);
+  }
+
+  get isLatchActive(): boolean {
+    return this.boombox.isLatchActive;
+  }
+
+  get allLatches(): LatchSession<BoomBoxTrack>[] {
+    return this.boombox.allLatches;
+  }
 }
+
+const randomChance = () => random() === 1;
+const always = () => true;
 
 function createChanceable(def: SequenceChance | undefined): Chanceable {
   if (def === 'random') {
-    return { next: () => random() === 1 };
+    return { next: randomChance };
   }
 
   if (isFunction(def)) {
@@ -562,7 +644,7 @@ function createChanceable(def: SequenceChance | undefined): Chanceable {
   }
 
   return {
-    next: () => true,
+    next: always,
     chances: () => [true]
   }
 }
@@ -575,15 +657,15 @@ function chanceOf(n: [yes: number, no: number]): Chanceable {
       .concat(Array(no).fill(false))
   );
 
-  let index = 0;
-
+  let count = 0;
 
   return {
-    next: () => {
-      const v = all[index++];
+    next: function chanceOf() {
+      const v = all.shift();
+      all.push(v);
 
-      if (index >= all.length) {
-        index = 0;
+      if (count >= all.length) {
+        count = 0;
         all = shuffle(all);
       }
 

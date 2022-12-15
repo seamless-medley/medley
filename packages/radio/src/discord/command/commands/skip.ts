@@ -2,7 +2,7 @@ import { AudienceType, extractAudienceGroup, isRequestTrack, Audience } from "@s
 import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept, deny, guildStationGuard, permissionGuard, reply } from "../utils";
+import { accept, deny, guildStationGuard, reply, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -16,13 +16,6 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> =
 
 async function handleSkip(automaton: MedleyAutomaton, interaction: CommandInteraction | ButtonInteraction) {
   const { guildId, station } = guildStationGuard(automaton, interaction);
-
-  permissionGuard(interaction.memberPermissions, [
-    PermissionsBitField.Flags.ManageChannels,
-    PermissionsBitField.Flags.ManageGuild,
-    PermissionsBitField.Flags.MuteMembers,
-    PermissionsBitField.Flags.MoveMembers
-  ]);
 
   const state = automaton.getGuildState(guildId);
 
@@ -57,20 +50,38 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
     }
   }
 
+  const noPermissions = !interaction.memberPermissions?.any([
+    PermissionsBitField.Flags.ManageChannels,
+    PermissionsBitField.Flags.ManageGuild,
+    PermissionsBitField.Flags.MuteMembers,
+    PermissionsBitField.Flags.MoveMembers
+  ]);
+
+  if (noPermissions) {
+    await deny(interaction, 'You are not allowed to do that', `@${interaction.user.id}`);
+    return;
+  }
+
   if (station.paused || !station.playing) {
     await deny(interaction, 'Not currently playing', `@${interaction.user.id}`);
     return;
   }
 
-  await accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
-  automaton.skipCurrentSong(guildId);
+  const result = automaton.skipCurrentSong(guildId);
+
+  if (result === true) {
+    await accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
+    return;
+  }
+
+  await warn(interaction, 'Track skipping has been denied');
 }
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, playUuid: string) => {
   const { station } = guildStationGuard(automaton, interaction);
 
   if (station.trackPlay?.uuid !== playUuid) {
-    deny(interaction, 'Could not skip this track', undefined, true);
+    await deny(interaction, 'Could not skip this track', undefined, true);
     return;
   }
 

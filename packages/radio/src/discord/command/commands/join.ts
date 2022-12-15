@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, EmbedBuilder, PermissionsBitField } from "discord.js";
 import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { deny, guildIdGuard, HighlightTextType, makeHighlightedMessage, permissionGuard, reply, warn } from "../utils";
+import { deny, guildIdGuard, permissionGuard, reply, warn } from "../utils";
 import { createStationSelector } from "./tune";
 
 const declaration: SubCommandLikeOption = {
@@ -21,7 +21,9 @@ const declaration: SubCommandLikeOption = {
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   permissionGuard(interaction.memberPermissions, [
     PermissionsBitField.Flags.ManageChannels,
-    PermissionsBitField.Flags.ManageGuild
+    PermissionsBitField.Flags.ManageGuild,
+    PermissionsBitField.Flags.MuteMembers,
+    PermissionsBitField.Flags.MoveMembers
   ]);
 
   const channel = interaction.options.getChannel('channel');
@@ -41,24 +43,17 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 
   const state = automaton.ensureGuildState(guildId);
 
-  if (state.voiceChannelId === channelToJoin.id) {
-    warn(interaction, 'Already joined');
-    return;
-  }
-
   const me = interaction.guild?.members.me;
   const myPermissions = me ? channelToJoin.permissionsFor(me) : undefined;
 
-  if (myPermissions) {
-    if (!myPermissions.has(PermissionsBitField.Flags.Connect)) {
-      await deny(interaction, 'Could not join: no `connect` permission');
-      return;
-    }
+  if (!myPermissions?.has(PermissionsBitField.Flags.Connect)) {
+    await deny(interaction, 'Could not join: no `connect` permission');
+    return;
+  }
 
-    if (!myPermissions.has(PermissionsBitField.Flags.Speak)) {
-      await deny(interaction, 'Could not join: no `speak` permission');
-      return;
-    }
+  if (!myPermissions?.has(PermissionsBitField.Flags.Speak)) {
+    await deny(interaction, 'Could not join: no `speak` permission');
+    return;
   }
 
   await reply(interaction, `Joining ${channelToJoin}`);
@@ -98,12 +93,12 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
       createStationSelector(automaton, interaction, async (tuned) => {
         if (tuned) {
           if ((await automaton.join(channelToJoin)).status !== 'joined') {
-            interaction.followUp(makeHighlightedMessage('Could not tune and join', HighlightTextType.Red));
+            deny(interaction, 'Could not tune and join');
             return;
           }
         }
 
-        interaction.followUp({
+        reply(interaction, {
           content: null,
           embeds: [createEmbed()]
         });

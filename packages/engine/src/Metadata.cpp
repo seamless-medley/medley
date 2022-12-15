@@ -97,6 +97,7 @@ void medley::Metadata::readFromFile(const File& file)
     title = "";
     artist = "";
     album = "";
+    isrc = "";
 
     auto filetype = utils::getFileTypeFromFileName(file);
 
@@ -133,11 +134,25 @@ bool medley::Metadata::readID3V2(const File& f)
     auto& tag = *file.ID3v2Tag();
     readTag(tag);
 
+    // TODO: Original Artist
+
     const auto& tsrcFrames = tag.frameListMap()["TSRC"];
     if (!tsrcFrames.isEmpty()) {
         for (const auto pFrame : tsrcFrames) {
             if (pFrame) {
                 isrc = pFrame->toString().toCWString();
+                break;
+            }
+        }
+    }
+
+    const auto& tbpmFrames = tag.frameListMap()["TBPM"];
+    if (!tbpmFrames.isEmpty()) {
+        for (const auto pFrame : tbpmFrames) {
+            if (pFrame) {
+                juce::String bpm = pFrame->toString().toCWString();
+                this->bpm = bpm.getFloatValue();
+                break;
             }
         }
     }
@@ -239,22 +254,29 @@ void medley::Metadata::CoverAndLyrics::readID3V2(const File& f, bool readCover, 
         if (readCover) {
             auto frameMap = tag.frameListMap();
             const auto it = frameMap.find("APIC");
-            if ((it == frameMap.end()) || it->second.isEmpty()) {
-                return;
-            }
 
-            const auto frames = it->second;
-            for (const auto frame : frames) {
-                const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
-                if (apic && apic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
-                    cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
-                    break;
+            if ((it != frameMap.end()) && !it->second.isEmpty()) {
+                const auto frames = it->second;
+
+                for (const auto frame : frames) {
+                    const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
+                    if (apic && apic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
+                        cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
+                        break;
+                    }
+                }
+
+                if (cover.getData().isEmpty() && frames.size()) {
+                    if (const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frames[0])) {
+                        cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
+                    }
                 }
             }
         }
 
         if (readLyrics) {
             lyrics = readFirstUserTextIdentificationFrame(tag, L"LYRICS");
+            // TODO: Unsynchronized Lyrics
         }
     }
 }

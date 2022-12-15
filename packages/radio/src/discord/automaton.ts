@@ -1,5 +1,3 @@
-/// <reference path="../types.d.ts" />
-
 import { REST as RestClient } from "@discordjs/rest";
 import { Routes, OAuth2Scopes, PermissionFlagsBits } from "discord-api-types/v10";
 
@@ -20,19 +18,18 @@ import {
   BaseGuildVoiceChannel, Client, Guild,
   GatewayIntentBits, Message,
   OAuth2Guild,
-  Snowflake, VoiceBasedChannel, VoiceState, ChannelType, PermissionsBitField
+  Snowflake, VoiceBasedChannel, VoiceState, ChannelType, PermissionsBitField, PartialMessage
 } from "discord.js";
 
 import {
   BoomBoxTrack,
   BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
   Station,
-  createLogger, Logger, decibelsToGain, makeAudienceGroup as makeStationAudienceGroup, AudienceGroupId, AudienceType, extractAudienceGroup
+  createLogger, Logger, decibelsToGain, makeAudienceGroup as makeStationAudienceGroup, AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents, retryable, waitFor
 } from "@seamless-medley/core";
 
 import type TypedEventEmitter from 'typed-emitter';
 
-import { delay } from "lodash";
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
@@ -52,8 +49,8 @@ export type MedleyAutomatonOptions = {
   owners?: Snowflake[];
 
   /**
-   * Initial audio gain, default to -15dBFS (Appx 0.178)
-   * @default -15dBFS
+   * Initial audio gain, default to -12dBFS
+   * @default -12dBFS
    */
    initialGain?: number;
 
@@ -66,7 +63,7 @@ export type MedleyAutomatonOptions = {
 type StationLink = {
   station: Station;
   audioRequest: RequestAudioStreamResult;
-  audioResource: AudioResource;
+  audioResource: AudioResource<RequestAudioStreamResult>;
   audioPlayer: AudioPlayer;
   voiceConnection?: VoiceConnection;
 }
@@ -87,6 +84,14 @@ export type JoinResult = {
 } | {
   status: 'joined';
   station: Station;
+}
+
+export type UpdateTrackMessageOptions = {
+  status?: TrackMessageStatus;
+  title?: string;
+  showLyrics?: boolean;
+  showMore?: boolean;
+  showSkip?: boolean;
 }
 
 export interface AutomatonEvents {
@@ -115,10 +120,11 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
   private logger: Logger;
 
-  constructor(
-    readonly stations: IReadonlyLibrary<Station>,
-    options: MedleyAutomatonOptions
-  ) {
+  private rejoining = false;
+
+  private shardReady = false;
+
+  constructor(readonly stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
     super();
 
     this.logger = createLogger({ name: `automaton/${options.id}` });
@@ -128,7 +134,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this.clientId = options.clientId;
     this.owners = options.owners || [];
     this.maxTrackMessages = options.maxTrackMessages ?? 3;
-    this.initialGain = options.initialGain ?? decibelsToGain(-15);
+    this.initialGain = options.initialGain ?? decibelsToGain(-3);
     this.baseCommand = options.baseCommand || 'medley';
 
     this.client = new Client({
@@ -140,20 +146,120 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       ]
     });
 
+    this.client.on('warn', message => {
+      this.logger.warn('Automaton Warning', message);
+    });
+
     this.client.on('error', (error) => {
       this.logger.error('Automaton Error', error);
     });
+
+    this.client.on('shardError', this.handleShardError);
+
+    this.client.on('shardReconnecting', (shardId) => {
+      this.logger.debug('Shard', shardId, 'reconnecting');
+    })
+
+    this.client.on('shardResume', (shardId) => {
+      this.logger.debug('Shard', shardId, 'resume');
+
+      if (!this.shardReady) {
+        this.rejoinVoiceChannels(30);
+      }
+
+      this.shardReady = true;
+    });
+
+    this.client.on('shardReady', (shardId) => {
+      this.shardReady = true;
+      this.logger.debug('Shard', shardId, 'ready');
+      this.rejoinVoiceChannels(30);
+    })
 
     this.client.on('ready', this.handleClientReady);
     this.client.on('guildCreate', this.handleGuildCreate);
     this.client.on('guildDelete', this.handleGuildDelete);
     this.client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
-    this.client.on('interactionCreate', createInteractionHandler(this.baseCommand, this));
+    this.client.on('interactionCreate', createInteractionHandler(this));
+
+    this.client.on('messageDelete', this.handleMessageDeletion);
+    this.client.on('messageDeleteBulk', async messages => void messages.mapValues(this.handleMessageDeletion))
 
     for (const station of stations) {
       station.on('trackStarted', this.handleTrackStarted(station));
       station.on('trackActive', this.handleTrackActive);
       station.on('trackFinished', this.handleTrackFinished);
+      station.on('currentCollectionChange', this.handleCollectionChange(station));
+    }
+  }
+
+  private handleShardError = (error: Error, shardId: number) => {
+    this.logger.error('Shard', shardId, 'error', error.message);
+
+    this.shardReady = false;
+    this.rejoining = false;
+    this.removeAllAudiences();
+  }
+
+  private removeAllAudiences(closeConnection?: boolean) {
+    // Remove audiences from all stations
+    for (const [guildId, state] of this._guildStates) {
+      const group = makeAudienceGroup(guildId);
+
+      for (const station of this.stations) {
+        station.removeAudiencesForGroup(group)
+      }
+
+      if (closeConnection && state.stationLink?.voiceConnection) {
+        state.stationLink.voiceConnection.destroy();
+        state.stationLink.voiceConnection = undefined;
+      }
+    }
+  }
+
+  private async rejoinVoiceChannels(timeoutSeconds: number) {
+    if (this.rejoining) {
+      return;
+    }
+
+    const joinTimeout = 5000;
+
+    for (const [guildId, state] of this._guildStates) {
+
+      const { voiceChannelId, stationLink } = state;
+
+      if (!voiceChannelId) {
+        continue;
+      }
+
+      const channel = this.client.channels.cache.get(voiceChannelId);
+
+      if (channel?.type !== ChannelType.GuildVoice) {
+        continue;
+      }
+
+      const voiceConnection = stationLink?.voiceConnection;
+
+      if (!voiceConnection) {
+        continue;
+      }
+
+      this.rejoining = true;
+
+      const retries = Math.ceil(timeoutSeconds * 1000 / (joinTimeout + 1000));
+
+      retryable<JoinResult>(async () => {
+          if (!this.rejoining) {
+            return { status: 'not_joined' }
+          }
+
+          const result = await this.join(channel, joinTimeout);
+
+          this.rejoining = false;
+          this.logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
+
+          return result;
+      }, { retries, wait: 1000 }).then(() => stationLink?.station?.updatePlayState());
     }
   }
 
@@ -162,13 +268,17 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   async login() {
-    this.logger.info('Logging in');
+    await retryable(async () => {
+      this.logger.info('Logging in');
 
-    await this.client.login(this.botToken)
-      .catch(e => {
-        this.logger.error('Error login', e);
-        throw e;
-      });
+      return this.client.login(this.botToken)
+        .catch(e => {
+          this.logger.error('Error login', e);
+          throw e;
+        });
+    }, { wait: 5000 });
+
+    this.logger.debug('Logging in done');
   }
 
   ensureGuildState(guildId: Guild['id']) {
@@ -224,15 +334,20 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return stationLink;
     }
 
-    const exciter = createExciter(await selectedStation.requestAudioStream({
-      bufferSize: 48000 * 5.0,
+    const requestedAudioStream = await selectedStation.requestAudioStream({
+      bufferSize: 48000 * 2.5, // This should be large enough to hold PCM data while waiting for node stream to comsume
       buffering: 960, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
       preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
       // discord voice only accept 48KHz sample rate, 16 bit per sample
       sampleRate: 48000,
       format: 'Int16LE',
       gain: this.initialGain
-    }));
+    })
+
+    const exciter = createExciter({
+      source: requestedAudioStream,
+      bitrate: 256_000
+    });
 
     // Create discord voice AudioPlayer if neccessary
     const audioPlayer = stationLink?.audioPlayer ?? createAudioPlayer({
@@ -282,13 +397,13 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private async detune(guildId: Guild['id']) {
-    const { stationLink }  = this._guildStates.get(guildId) ?? { };
+    const state = this._guildStates.get(guildId);
 
-    if (!stationLink) {
+    if (!state?.stationLink) {
       return;
     }
 
-    const { station, audioRequest } = stationLink;
+    const { station, audioRequest } = state.stationLink;
 
     station.medley.deleteAudioStream(audioRequest.id);
     station.removeAudiencesForGroup(makeAudienceGroup(guildId));
@@ -317,7 +432,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     return true;
   }
 
-  async join(channel: BaseGuildVoiceChannel): Promise<JoinResult> {
+  async join(channel: BaseGuildVoiceChannel, timeout: number = 5000): Promise<JoinResult> {
     const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
 
     const state = this.ensureGuildState(guildId);
@@ -341,6 +456,11 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return { status: 'no_station' };
     }
 
+    if (stationLink.voiceConnection) {
+      stationLink.voiceConnection.destroy();
+      stationLink.voiceConnection = undefined;
+    }
+
     let voiceConnection = joinVoiceChannel({
       channelId,
       guildId,
@@ -352,12 +472,13 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
 
     try {
-      await entersState(voiceConnection, VoiceConnectionStatus.Ready, 30e3);
+      await entersState(voiceConnection, VoiceConnectionStatus.Ready, timeout);
       voiceConnection.subscribe(stationLink.audioPlayer);
     }
     catch (e) {
       voiceConnection?.destroy();
       voiceConnection = undefined;
+      stationLink.voiceConnection = undefined;
       //
       this.logger.error(e);
       throw e;
@@ -373,13 +494,11 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     await Promise.all(guilds.map((guild: OAuth2Guild) => {
       this.ensureGuildState(guild.id);
-      return this.registerCommands(guild.id);
+      return this.registerCommands(guild);
     }));
 
     this.logger.info('Ready');
     this.emit('ready');
-
-    // TODO: Try to join last voice channel
   }
 
   private updateStationAudiences(station: Station, channel: VoiceBasedChannel) {
@@ -394,8 +513,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   private handleVoiceStateUpdate = async (oldState: VoiceState, newState: VoiceState) => {
     const guildId = newState.guild.id;
     const guildState = this.ensureGuildState(guildId);
-
-    const station = this.getTunedStation(guildId);
+    const station = guildState?.stationLink?.station;
 
     const channelChange = detectVoiceChannelChange(oldState, newState);
     if (channelChange === 'invalid' || !newState.member) {
@@ -404,7 +522,8 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
     const audienceGroup = makeAudienceGroup(guildId);
 
-    const isMe = (newState.member.id === this.client.user?.id);
+    const myId = this.client.user?.id;
+    const isMe = (newState.member.id === myId);
 
     if (isMe) {
       if (channelChange === 'leave') {
@@ -460,8 +579,11 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return;
     }
 
-    // state change is originated from other member that is in the same room as me.
+    if (!station) {
+      return;
+    }
 
+    // state change is originated from other member that is in the same room as me.
     if (channelChange === 'leave') {
       if (oldState.channelId !== guildState.voiceChannelId) {
         // is not leaving my channel
@@ -469,15 +591,23 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       }
 
       // is leaving
-      station?.removeAudience(audienceGroup, newState.member.id);
+      station.removeAudience(audienceGroup, newState.member.id);
       return;
     }
 
     if (channelChange === 'join' || channelChange === 'move') {
       if (newState.channelId === guildState.voiceChannelId) {
+        // Check if the bot is actually in this channel
+        const channel = this.client.channels.cache.get(newState.channelId);
+        if (channel?.isVoiceBased() && myId) {
+          if (!channel.members.has(myId)) {
+            return;
+          }
+        }
+
         if (!newState.deaf) {
           // User has joined or moved into
-          station?.addAudiences(audienceGroup, newState.member.id);
+          station.addAudiences(audienceGroup, newState.member.id);
         }
 
         return;
@@ -485,7 +615,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
       if (oldState.channelId === guildState.voiceChannelId) {
         // User has moved away
-        station?.removeAudience(audienceGroup, newState.member.id);
+        station.removeAudience(audienceGroup, newState.member.id);
         return;
       }
 
@@ -496,9 +626,9 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     // No channel change
     if (oldState.deaf !== newState.deaf && newState.channelId === guildState.voiceChannelId) {
       if (!newState.deaf) {
-        station?.addAudiences(audienceGroup, newState.member.id);
+        station.addAudiences(audienceGroup, newState.member.id);
       } else {
-        station?.removeAudience(audienceGroup, newState.member.id);
+        station.removeAudience(audienceGroup, newState.member.id);
       }
     }
   }
@@ -507,8 +637,8 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     // Invited to
     this.logger.info(`Invited to ${guild.name}`);
 
-    this.ensureGuildState(guild.id)
-    this.registerCommands(guild.id);
+    this.ensureGuildState(guild.id);
+    this.registerCommands(guild);
 
     guild?.systemChannel?.send('Greetings :notes:, use `/medley join` command to invite me to a voice channel');
   }
@@ -519,30 +649,32 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this._guildStates.delete(guild.id);
   }
 
-  private handleTrackStarted = (station: Station) => async (trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
-    if (trackPlay.track.extra?.kind === TrackKind.Insertion) {
-      return;
-    }
+  private handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
+    if (trackPlay.track.extra?.kind !== TrackKind.Insertion) {
+      const sentMessages = await this.sendTrackPlayForStation(trackPlay, station);
 
-    const sentMessages = await this.sendTrackPlayForStation(trackPlay, station);
+      // Store message for each guild
+      for (const [guildId, trackMsg, maybeMessage] of sentMessages) {
+        const state = this._guildStates.get(guildId);
 
-    // Store message for each guild
-    for (const [guildId, trackMsg, maybeMessage] of sentMessages) {
-      const state = this._guildStates.get(guildId);
-      if (state) {
+        if (!state?.voiceChannelId) {
+          continue;
+        }
+
         state.trackMessages.push({
           ...trackMsg,
-          sentMessage: await maybeMessage
+          maybeMessage
         });
 
-        while (state.trackMessages.length > this.maxTrackMessages) {
-          const oldMsg = state.trackMessages.shift();
-          if (oldMsg) {
-            const { sentMessage, lyricMessage } = oldMsg;
+        if (state.trackMessages.length > this.maxTrackMessages) {
+          const oldMessages = state.trackMessages.splice(0, state.trackMessages.length - this.maxTrackMessages);
 
-            if (sentMessage?.deletable) {
-              sentMessage.delete();
-            }
+          for (const { maybeMessage, lyricMessage } of oldMessages) {
+            maybeMessage?.then((sentMessage) => {
+              if (sentMessage?.deletable) {
+                sentMessage.delete();
+              }
+            });
 
             if (lyricMessage?.deletable) {
               lyricMessage.delete();
@@ -551,75 +683,176 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
         }
       }
     }
+
+    // Hide all button from old playing track as soon as this new track has started
+    this.updateTrackMessage(async (msg) => {
+      // Skip this track that has just started
+      if (msg.trackPlay.uuid === trackPlay.uuid) {
+        return;
+      }
+
+      // Only if its status is "Playing"
+      if (msg.status !== TrackMessageStatus.Playing) {
+        return;
+      }
+
+      return {
+        status: TrackMessageStatus.Ending,
+        title: 'Ending',
+        showMore: false,
+        showSkip: false,
+        showLyrics: false
+      }
+    });
   }
 
-  private handleTrackActive = async (trackPlay: BoomBoxTrackPlay) => delay(() => this.updateTrackMessage(trackPlay,
-    async () => true,
-    {
-      showSkip: true,
-      showLyrics: true
+  private handleTrackActive: StationEvents['trackActive'] = async (deck, trackPlay) => {
+    await waitFor(1000);
+
+    // Reveal all buttons for this trackPlay
+    this.updateTrackMessage(async (msg) => {
+      if (msg.trackPlay.uuid !== trackPlay.uuid) {
+        return;
+      }
+
+      return  {
+        showSkip: true,
+        showLyrics: true,
+        showMore: true
+      }
+    });
+  }
+
+  private handleTrackFinished: StationEvents['trackFinished'] = (deck, trackPlay) => {
+    // Update this trackPlay status to "Played"
+    this.updateTrackMessage(async (msg) => {
+      // Only update this trackPlay if it is neither played nor skipped
+      if (msg.trackPlay.uuid !== trackPlay.uuid || msg.status >= TrackMessageStatus.Played) {
+        return;
+      }
+
+      return {
+        status: TrackMessageStatus.Played,
+        title: 'Played',
+        showMore: false,
+        showSkip: false,
+        showLyrics: false
+      }
+    });
+  }
+
+  private handleCollectionChange = (station: Station): StationEvents['currentCollectionChange'] => (oldCollection) => {
+    // Hide "more like this" button for this currently playing track
+    this.updateTrackMessage(
+      async (msg) =>  {
+        if (msg.station !== station) {
+          return;
+        }
+
+        const isEndingOrPlaying = [TrackMessageStatus.Playing, TrackMessageStatus.Ending].includes(msg.status);
+
+        if (!isEndingOrPlaying) {
+          return;
+        }
+
+        return {
+          showMore: msg.trackPlay.track.collection.id !== oldCollection.id,
+          showSkip: true,
+          showLyrics: true
+        }
+      }
+    )
+  }
+
+  private handleMessageDeletion = (message: Message<boolean> | PartialMessage) => {
+    const { guildId } = message;
+
+    if (!message.inGuild || !guildId) {
+      return;
     }
-  ), 1000);
 
-  private handleTrackFinished = async (trackPlay: BoomBoxTrackPlay) => this.updateTrackMessage(trackPlay,
-    async msg => msg.status < TrackMessageStatus.Played,
-    {
-      status: TrackMessageStatus.Played,
-      title: 'Played',
-      showSkip: false,
-      showLyrics: true
+    const state = this.getGuildState(guildId);
+
+    if (!state) {
+      return;
     }
-  );
 
-  private async updateTrackMessage(
-    trackPlay: BoomBoxTrackPlay,
-    predicate: (msg: TrackMessage) => Promise<boolean>,
-    options: {
-      status?: TrackMessageStatus;
-      title?: string;
-      showSkip?: boolean;
-      showLyrics?: boolean;
-    }
-  ) {
-    for (const state of this._guildStates.values()) {
-      const msg = state.trackMessages.find(msg => msg.trackPlay.uuid === trackPlay.uuid);
+    const { trackMessages } = state;
 
-      if (msg) {
-        if (await predicate(msg)) {
-          const { status: newStatus, title: newTitle, showSkip, showLyrics } = options;
+    for (const trackMessage of [...trackMessages]) {
+      if (message.id === trackMessage.lyricMessage?.id) {
+        trackMessage.lyricMessage = undefined;
+      }
 
-          if (newStatus) {
-            msg.status = newStatus;
-          }
+      trackMessage.maybeMessage?.then(sentMessage => {
+        if (sentMessage?.id === message.id)  {
+          trackMessage.maybeMessage = undefined;
 
-          if (newTitle) {
-            msg.embed.setTitle(newTitle);
-          }
-
-          const changed = !!newStatus || !!newTitle || showSkip || showLyrics;
-
-          if (changed) {
-            const { sentMessage } = msg;
-
-            if (sentMessage?.editable) {
-              const { embeds, components } = trackMessageToMessageOptions({
-                ...msg,
-                buttons: {
-                  lyric: showLyrics ? msg.buttons.lyric : undefined,
-                  skip: showSkip ? msg.buttons.skip : undefined
-                }
-              });
-
-              sentMessage.edit({ embeds, components });
-            }
+          const index = trackMessages.indexOf(trackMessage);
+          if (index > -1) {
+            trackMessages.splice(index, 1);
           }
         }
+      });
+    }
+  }
+
+  async updateTrackMessage(predicate: (msg: TrackMessage) => Promise<UpdateTrackMessageOptions | undefined>) {
+    let count = 0;
+
+    for (const state of this._guildStates.values()) {
+      for (const msg of state.trackMessages) {
+        const options = await predicate(msg);
+
+        if (options === undefined) {
+          continue;
+        }
+
+        const { status: newStatus, title: newTitle, showMore, showSkip, showLyrics } = options;
+
+        if (newStatus) {
+          msg.status = newStatus;
+        }
+
+        if (newTitle) {
+          msg.embed.setTitle(newTitle);
+        }
+
+        const { maybeMessage, buttons } = msg;
+
+        maybeMessage?.then((sentMessage) => {
+          if (!sentMessage?.editable) {
+            return;
+          }
+
+          const { embeds, components } = trackMessageToMessageOptions({
+            ...msg,
+            buttons: {
+              more: showMore ? buttons.more : undefined,
+              lyric: showLyrics ? buttons.lyric : undefined,
+              skip: showSkip ? buttons.skip : undefined
+            }
+          });
+
+          new Promise(async (resolve) => {
+            if (count++ >= 3) {
+              await waitFor(200);
+            }
+
+            sentMessage.edit({ embeds, components })
+              .then(resolve)
+              .catch((error) => {
+                this.logger.error('Error updating track message in guild', sentMessage.guild?.name, error);
+              });
+          });
+        })
       }
     }
   }
 
   async removeLyricsButton(trackId: BoomBoxTrack['id']) {
     for (const state of this._guildStates.values()) {
+      const currentCollectionId = state.stationLink?.station.trackPlay?.track?.collection?.id;
 
       const messages = state.trackMessages.filter(msg => msg.trackPlay.track.id === trackId);
       for (const msg of messages) {
@@ -627,18 +860,25 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
         const showSkipButton = msg.status < TrackMessageStatus.Played;
 
-        const { sentMessage } = msg;
-        if (sentMessage?.editable) {
-          const { embeds, components } = trackMessageToMessageOptions({
-            ...msg,
-            buttons: {
-              lyric: undefined,
-              skip: showSkipButton ? msg.buttons.skip : undefined
-            }
-          });
+        const { maybeMessage } = msg;
 
-          sentMessage.edit({ embeds, components });
-        }
+        const showMore = currentCollectionId !== undefined
+          && currentCollectionId === msg.trackPlay.track.collection.id;
+
+        maybeMessage?.then((sentMessage) => {
+          if (sentMessage?.editable) {
+            const { embeds, components } = trackMessageToMessageOptions({
+              ...msg,
+              buttons: {
+                lyric: undefined,
+                more: showMore ? msg.buttons.more : undefined,
+                skip: showSkipButton ? msg.buttons.skip : undefined,
+              }
+            });
+
+            sentMessage.edit({ embeds, components });
+          }
+        })
       }
     }
   }
@@ -647,27 +887,41 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     const station = this.getTunedStation(id);
 
     if (!station) {
-      return;
+      return false;
     }
 
-    if (!station.paused && station.playing) {
-      const { trackPlay } = station;
+    if (station.isInTransition) {
+      return false;
+    }
 
-      if (trackPlay) {
-        this.updateTrackMessage(
-          trackPlay,
-          async () => true,
-          {
-            title: 'Skipped',
-            status: TrackMessageStatus.Skipped,
-            showSkip: false,
-            showLyrics: true
-          }
-        );
+    if (station.paused || !station.playing) {
+      return false;
+    }
+
+    const { trackPlay } = station;
+
+    if (!trackPlay) {
+      return false;
+    }
+
+    this.updateTrackMessage(
+      async (msg) => {
+        if (trackPlay.uuid !== msg.trackPlay.uuid) {
+          return;
+        }
+
+        return {
+          title: 'Skipped',
+          status: TrackMessageStatus.Skipped,
+          showSkip: false,
+          showMore: false,
+          showLyrics: false
+        }
       }
+    );
 
-      station.skip();
-    }
+    station.skip();
+    return true;
   }
 
   /**
@@ -685,7 +939,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
       const state = this._guildStates.get(guildId);
 
-      if (state) {
+      if (state?.stationLink?.station === station) {
         const guild = this.client.guilds.cache.get(guildId);
         const { voiceChannelId, textChannelId } = state;
 
@@ -693,13 +947,14 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           const channel = textChannelId ? guild.channels.cache.get(textChannelId) : undefined;
           const textChannel = channel?.type == ChannelType.GuildText ? channel : undefined;
 
-          const trackMsg = await createTrackMessage(guildId, trackPlay, station.findTrackById(trackPlay.track.id));
+          const trackMsg = await createTrackMessage(guildId, station, trackPlay);
 
           const options = trackMessageToMessageOptions({
             ...trackMsg,
             buttons: {
               lyric: trackMsg.buttons.lyric,
-              skip: undefined
+              more: undefined,
+              skip: undefined,
             }
           });
 
@@ -713,18 +968,18 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     return results;
   }
 
-  async registerCommands(guildId: string) {
-    const client = new RestClient({ version: '9' }).setToken(this.botToken);
-
+  async registerCommands(guild: Guild | OAuth2Guild) {
     try {
+      this.logger.info('Registering commands with guild id:', guild.id, `(${guild.name})`);
+
+      const client = new RestClient({ version: '10' }).setToken(this.botToken);
+
       await client.put(
-        Routes.applicationGuildCommands(this.clientId, guildId),
+        Routes.applicationGuildCommands(this.clientId, guild.id),
         {
           body: [createCommandDeclarations(this.baseCommand || 'medley')]
         }
       );
-
-      this.logger.info('Registered commands with guild id:', guildId);
     }
     catch (e) {
       this.logger.error('Error registering command', e);

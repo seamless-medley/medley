@@ -274,6 +274,8 @@ private:
 
     double maximumFadeOutDuration = 3.0;
 
+    bool disableNextTrackLeadIn = false;
+
     bool main = false;
 
     bool fading = false;

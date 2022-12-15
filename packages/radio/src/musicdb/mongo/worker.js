@@ -1,6 +1,6 @@
 const workerpool = require('workerpool');
 const { MongoClient, Db, Collection } = require('mongodb');
-const { random } = require('lodash');
+const { random, omitBy } = require('lodash');
 
 /** @typedef {import('@seamless-medley/core').MusicDb} MusicDb */
 /** @typedef {import('@seamless-medley/core').MusicTrack} MusicTrack */
@@ -40,7 +40,7 @@ async function configure(options) {
     ttls = options.ttls;
   }
 
-  client = new MongoClient(options.url);
+  client = new MongoClient(options.url, options.connectionOptions);
   db = client.db(options.database);
 
   musics = db.collection('musics');
@@ -97,7 +97,11 @@ async function find(value, by) {
     expires: { $gte: Date.now() }
   }, { projection: { _id: 0 }});
 
-  return found ? found : undefined;
+  if (!found) {
+    return;
+  }
+
+  return omitBy(found, (v, p) => ['expires', 'path'].includes(p));
 }
 
 /**

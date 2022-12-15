@@ -2,6 +2,7 @@ import { getTrackBanner, RequestTrack, TrackPeek, Station, Audience } from "@sea
 import {
   BaseInteraction,
   CommandInteraction,
+  InteractionEditReplyOptions,
   InteractionReplyOptions,
   InteractionResponse,
   InteractionType,
@@ -33,9 +34,9 @@ export function makeHighlightedMessage(s: string | (string | undefined)[], type:
     ;
 }
 
-export const reply = async (interaction: ReplyableInteraction, options: string | MessagePayload | InteractionReplyOptions) =>
+export const reply = async (interaction: ReplyableInteraction, options: string | MessagePayload | InteractionReplyOptions | InteractionEditReplyOptions) =>
   !interaction.replied && !interaction.deferred
-    ? interaction.reply(options)
+    ? interaction.reply(options as string | MessagePayload | InteractionReplyOptions)
     : interaction.editReply(options);
 
 type SimpleDeclareFn = (interaction: ReplyableInteraction, s: string, mention?: string, ephemeral?: boolean) => Promise<Message<boolean> | InteractionResponse<boolean>>;
@@ -55,7 +56,7 @@ export const warn: SimpleDeclareFn = (interaction, s, mention?, ephemeral?) =>
   declare(interaction, HighlightTextType.Yellow, s, mention, ephemeral);
 
 export function permissionGuard(permissions: PermissionsBitField | null, perm: PermissionResolvable, checkAdmin: boolean = true) {
-  if (permissions && !permissions?.any(perm, checkAdmin)) {
+  if (permissions && !permissions.any(perm, checkAdmin)) {
     throw new CommandError('Insufficient permissions');
   }
 }

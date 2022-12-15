@@ -1,17 +1,21 @@
+import assert from "assert";
 import { ChildProcessByStdio, spawn } from "child_process";
-import path from "ffmpeg-static";
+import ffmpegPath from "ffmpeg-static";
+import { camelCase } from "lodash";
 import { createInterface } from "readline";
-import internal from "stream";
+import { Readable, Writable } from "stream";
+import { CamelCase } from "type-fest";
 
-export type FFmpegChildProcess = ChildProcessByStdio<internal.Writable, internal.Readable, internal.Readable>;
+export type FFmpegChildProcess = ChildProcessByStdio<Writable, Readable, Readable>;
 
-export const spawnFFmpeg = (args: string[]): FFmpegChildProcess => spawn(
-  path,
-  ['-hide_banner'].concat(args),
+export const spawnFFmpeg = (exePath: string, args: string[]): FFmpegChildProcess => spawn(
+  exePath,
+  ['-hide_banner', ...args],
   { stdio: [ null, null, null ] }
-);
+)
 
 export type FFmpegOverseerOptions = {
+  exePath?: string;
   args: string[];
   respawnDelay?: {
     min: number;
@@ -149,8 +153,6 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
   const { min, max = 30_000 } = options.respawnDelay ?? {};
   let respawnAttempts = 0;
 
-  console.log(min, max);
-
   const delay = () => (min && min <= max)
     ? new Promise(resolve => setTimeout(resolve, Math.min(max, min * Math.pow(1.097, ++respawnAttempts))))
     : Promise.resolve();
@@ -159,8 +161,8 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
     unwatch();
 
     timer = setInterval(() => {
-      const diff = Date.now() - lastProgress;
-      if (diff >= 1000) {
+      const Δ = Date.now() - lastProgress;
+      if (Δ >= 1000) {
         unwatch();
         running = false;
         stalled = true;
@@ -213,9 +215,8 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
           break;
 
         case 'error':
-          console.log(parsed);
-
           if (!running) {
+            stopped = true;
             options?.started?.(new FFMpegOverseerStartupError(parsed.text, lastInfo));
             return;
           }
@@ -235,26 +236,36 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
       return;
     }
 
-    spawning = true;
-    kill();
+    return new Promise<void>(async (resolve, reject) => {
+      spawning = true;
+      kill();
 
-    process = spawnFFmpeg(options.args);
+      process = spawnFFmpeg(options?.exePath ?? ffmpegPath, options.args);
 
-    createInterface(process.stderr).on('line', handleStdErr);
-
-    process.on('exit', () => {
-      running = false;
-
-      unwatch();
-
-      if (!stopped) {
-        delay().then(spawn);
+      if (!process.pid) {
+        process.on('error', err => reject(new FFMpegOverseerStartupError(err.message)));
+        return;
       }
+
+      const stdErrorLine = createInterface(process.stderr);
+
+      stdErrorLine.on('line', handleStdErr);
+
+      process.on('exit', () => {
+        running = false;
+
+        unwatch();
+
+        if (!stopped) {
+          delay().then(spawn);
+        }
+      });
+
+      await options.afterSpawn?.(process);
+
+      spawning = false;
+      resolve();
     });
-
-    await options.afterSpawn?.(process);
-
-    spawning = false;
   }
 
   return {
@@ -268,4 +279,88 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
       return stalled;
     }
   }
+}
+
+type FFMpegCapabilities<C extends keyof CapabilityFlags> = {
+  [name: string]: CapablityInfo<C>;
+}
+
+type CapablityInfo<C extends keyof CapabilityFlags> = {
+  description: string;
+  caps: CapabilityFlags[C];
+}
+
+type Caps<T extends string> = Partial<Record<CamelCase<T>, true>>;
+
+type FormatCaps = Caps<'muxing' | 'demuxing'>;
+type CodecCaps = Caps<'decoding' | 'encoding' | 'video' | 'audio' | 'subtitle' | 'infraFrameOnly' | 'lossy' | 'lossless'>;
+
+type EncoderCaps = Caps<'video' | 'audio' | 'subtitle' | 'frameLevel' | 'sliceLevel' | 'experimental' | 'drawHorizontalBand' | 'directRendering1'>;
+
+type CapabilityFlags = {
+  formats: FormatCaps;
+  codecs: CodecCaps;
+  encoders: EncoderCaps;
+  decoders: EncoderCaps;
+}
+
+export async function getFFmpegCaps<C extends keyof CapabilityFlags>(capsType: C, exePath: string = ffmpegPath) {
+  const process = spawn(exePath, [`-${capsType}`]);
+
+  const lines: string[] = [];
+  createInterface(process.stdout).on('line', line => lines.push(line.trim()));
+
+  return new Promise<FFMpegCapabilities<C>>((resolve) => {
+    process.on('exit', () => {
+      const sep = lines.findIndex(line => line.startsWith('-') && line.endsWith('-'));
+      const heads = lines.slice(1, sep);
+      const listing = lines.slice(sep + 1);
+
+      const flagsTable = heads.reduce((flags, h) => {
+        const [flagString, description] = h.split('=', 2);
+        const index = flagString.split('').findIndex(f => f !== '.');
+        const flag = flagString[index]!;
+
+        flags[index] ??= {};
+
+        flags[index][flag] = camelCase(
+          description
+            .replace(/(supported|codec|compression|multithreading)$/i, '')
+            .replace(/Supports draw_horiz_band/, 'drawHorizontalBand')
+            .replace(/Supports direct rendering method (.+)/, 'directRendering\\1')
+            .replace(/experimental$/, 'experimental')
+            .trim()
+        );
+
+        return flags;
+      }, [] as { [flag: string]: string }[]);
+
+      const listingTable = listing.reduce((v, l) => {
+        const m = l.match(/([^\s]+)\s+([^\s]+)\s+(.+)$/);
+
+        if (!m) {
+          return v;
+        }
+
+        const [, flagString, name, ...description] = m;
+
+        const caps = flagString.split('').reduce((caps, subType, type) => {
+          if (subType in flagsTable[type]) {
+            (caps as any)[flagsTable[type][subType]] = true;
+          }
+
+          return caps;
+        }, {} as CapabilityFlags[C]);
+
+        v[name] = {
+          description: description.join(' '),
+          caps
+        }
+
+        return v
+      }, {} as FFMpegCapabilities<C>);
+
+      resolve(listingTable);
+    });
+  });
 }

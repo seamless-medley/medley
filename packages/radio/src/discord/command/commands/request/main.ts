@@ -1,20 +1,38 @@
-import { BoomBoxTrack, createLogger, MusicLibraryExtra, Station } from "@seamless-medley/core";
+import {
+  AudienceType,
+  BoomBoxTrack,
+  createLogger,
+  getTrackBanner,
+  makeAudience,
+  MusicLibraryExtra,
+  Station
+} from "@seamless-medley/core";
+
 import {
   Message,
   ActionRowBuilder,
   ButtonBuilder,
-  SelectMenuBuilder,
   ChatInputCommandInteraction,
-  ComponentType,
   ButtonStyle,
   SelectMenuComponentOptionData,
-  MessageActionRowComponentBuilder
+  MessageActionRowComponentBuilder,
+  InteractionReplyOptions,
+  StringSelectMenuBuilder,
+  StringSelectMenuInteraction
 } from "discord.js";
-import _, { isNull, truncate, uniq, zip } from "lodash";
+
+import { chain, isNull, noop, take, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'path';
+import { createHash } from 'crypto';
+import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
 import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview, reply } from "../../utils";
-import { handleSelectMenu } from "./selectmenu";
+
+export type Selection = {
+  title: string;
+  artist?: string;
+  track: BoomBoxTrack;
+};
 
 const onGoing = new Set<string>();
 
@@ -44,7 +62,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   const runningKey = `${guildId}:${issuer}`;
 
   if (onGoing.has(runningKey)) {
-    reply(interaction, 'Finish the ealier `request` command, please');
+    reply(interaction, 'Finish the previous `request` command, please');
     return;
   }
 
@@ -54,7 +72,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     artist,
     title,
     query
-  }, 25);
+  }, 100);
 
   if (results.length < 1) {
     const escq = (s: string) => s.replace(/"/g, '\\"');
@@ -78,142 +96,254 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     return;
   }
 
-  type Selection = SelectMenuComponentOptionData & {
-    track: BoomBoxTrack;
-    group: string;
-    distillations: string[];
-    collection: BoomBoxTrack['collection']
-  };
+  const groupedSelections = chain(results)
+    .map<Selection>((track) => {
+      const title = track.extra?.tags?.title || parsePath(track.path).name;
+      const artist = track.extra?.tags?.artist ? track.extra.tags.artist : undefined;
 
-  const selections = results.map<Selection>(track => {
-    const label = truncate(track.extra?.tags?.title || parsePath(track.path).name, { length: 100 });
-    const description = track.extra?.tags?.title ? truncate(track.extra?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined;
+      return {
+        title,
+        artist,
+        track
+      }
+    })
+    .groupBy(({ title, artist = '' }) => createHash('sha256').update(`${title}:${artist}`.toLowerCase()).digest('base64'))
+    .value();
 
-    return {
-      label,
-      description,
-      group: description || '',
-      value: track.id,
-      track,
-      distillations: [],
-      collection: track.collection
+
+  const [isGrouped, resultSelections] = ((): [grouped: boolean, data: SelectMenuComponentOptionData[]] => {
+    const entries = Object.entries(groupedSelections);
+
+    if (entries.length === 1) {
+      return [false, makeTrackSelections(entries[0][1])];
     }
-  });
 
-  function distrill(cb: (sel: Selection) => string | undefined) {
-    _(selections)
-      .groupBy(({ label, description, distillations }) => `${label}:${description}:${uniq(distillations.join('-'))}`.toLowerCase())
-      .pickBy(group => group.length > 1)
-      .forEach(group => {
-        for (const sel of group) {
-          const distrlled = cb(sel);
-          if (distrlled) {
-            sel.distillations.push(distrlled);
-          }
-        }
-      });
-  }
+    return [true, take(entries, 25).map(([key, grouped]) => {
+      const sel = grouped[0];
+      const f = grouped.length > 1 ? ` // ${toEmoji(grouped.length.toString())} found` : '';
 
-  // By collection
-  distrill(sel => (sel.collection.extra as unknown as MusicLibraryExtra<Station>)?.descriptor.description ?? sel.collection.id);
+      const title = (sel.title.length + f.length > 100) ? truncate(sel.title, { length: 100 - f.length }) : sel.title;
+      const artist = sel.artist !== undefined ? truncate(sel.artist, { length: 100 }) : 'Unknown Artist';
 
-  // By file extension
-  distrill(sel => extname(sel.track.path.toUpperCase()).substring(1));
+      return {
+        label: `${title}${f}`,
+        description: artist,
+        value: key
+      }
+    })];
+  })();
 
-  // By album
-  distrill(sel => sel.track.extra?.tags?.album);
+  const cancelButtonBuilder = new ButtonBuilder()
+    .setCustomId('request:cancel')
+    .setLabel('Cancel')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('❌');
 
-  for (const sel of selections) {
-    const distrillations = uniq(sel.distillations.filter(Boolean));
-
-    const distilled = distrillations.length ? ` (${distrillations.map(d => `#${d}`).join(', ')})` : '';
-    sel.description = truncate(sel.description + distilled, { length: 100 });
-  }
-
-  const selector = await reply(interaction, {
+  const searchResultMenu: InteractionReplyOptions = {
     content: 'Search result:',
     components: [
       new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
-          new SelectMenuBuilder()
-            .setCustomId('request')
-            .setPlaceholder('Select a track')
-            .addOptions(selections)
+          new StringSelectMenuBuilder()
+            .setCustomId(isGrouped ? 'request' : 'request:pick')
+            .setPlaceholder('Select a result')
+            .addOptions(resultSelections)
         ),
       new ActionRowBuilder<MessageActionRowComponentBuilder>()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId('cancel_request')
-            .setLabel('Cancel')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('❌')
-        )
-    ],
-    fetchReply: true
-  });
+        .addComponents(cancelButtonBuilder),
+    ]
+  }
+
+  const selector = await reply(interaction, { ...searchResultMenu, fetchReply: true });
 
   if (selector instanceof Message) {
-    onGoing.add(runningKey);
-
+    const collector = selector.createMessageComponentCollector({ time: 90_000 });
     let done = false;
 
-    const collector = selector.createMessageComponentCollector({
-      componentType: ComponentType.SelectMenu,
-      time: 90_000
-    });
+    const stop = async (shouldDelete: boolean = true) => {
+      done = true;
 
-    collector.on('collect', async i => {
-      if (i.user.id !== issuer) {
-        i.reply({
+      if (onGoing.has(runningKey)) {
+        onGoing.delete(runningKey);
+
+        collector.stop();
+
+        if (shouldDelete && selector.deletable) {
+          await selector.delete();
+        }
+      }
+    }
+
+    const makeRequest = async (interaction: StringSelectMenuInteraction, trackId: string) => {
+      const ok = await station.request(trackId, makeAudience(AudienceType.Discord, guildId, interaction.user.id));
+
+      if (ok === false || ok.index < 0) {
+        interaction.update({
+          content: makeHighlightedMessage('Track could not be requested for some reasons', HighlightTextType.Red),
+          components: []
+        });
+        return;
+      }
+
+      const preview = await makeRequestPreview(station, ok.index, ok.index);
+
+      await interaction.update({
+        content: `Request accepted: \`${getTrackBanner(ok.track)}\``,
+        components: []
+      });
+
+      if (preview) {
+        interaction.followUp({
+          content: preview.join('\n')
+        })
+      }
+
+      await stop(false);
+    }
+
+    onGoing.add(runningKey);
+
+    collector.on('collect', async (collected) => {
+      const { customId, user } = collected;
+
+      if (user.id !== issuer) {
+        collected.reply({
           content: `Sorry, this selection is for <@${issuer}> only`,
           ephemeral: true
+        });
+        return;
+      }
+
+      if (customId === 'request:cancel') {
+        await stop(false);
+        collected.update({
+          content: makeHighlightedMessage('Canceled', HighlightTextType.Yellow),
+          components: []
         })
         return;
       }
 
-      done = true;
-      collector.stop();
-      onGoing.delete(runningKey);
+      collector.resetTimer({ time: 90_000 });
 
-      await handleSelectMenu(automaton, i);
+      const isSelectMenu = collected.isStringSelectMenu();
+
+      if (customId === 'request:back') {
+        collected.update({
+          content: searchResultMenu.content,
+          components: searchResultMenu.components
+        });
+
+        return;
+      }
+
+      if (customId === 'request' && isSelectMenu) {
+        const [key] = collected.values;
+        const choices = groupedSelections[key];
+
+        if (!choices?.length) {
+          collected.update({
+            content: makeHighlightedMessage('Invalid request selection', HighlightTextType.Red),
+            components: []
+          });
+
+          return;
+        }
+
+        if (choices.length === 1) {
+          makeRequest(collected, choices[0].track.id);
+          return;
+        }
+
+        const trackSelections = makeTrackSelections(choices);
+
+        collected.update({
+          content: 'Select a track',
+          components: [
+            new ActionRowBuilder<MessageActionRowComponentBuilder>()
+              .addComponents(
+                new StringSelectMenuBuilder()
+                  .setCustomId('request:pick')
+                  .setPlaceholder('Select a track')
+                  .addOptions(trackSelections)
+              ),
+            new ActionRowBuilder<MessageActionRowComponentBuilder>()
+              .addComponents(
+                cancelButtonBuilder,
+                new ButtonBuilder()
+                  .setCustomId('request:back')
+                  .setLabel('Back')
+                  .setStyle(ButtonStyle.Secondary)
+                  .setEmoji('↩')
+              )
+          ]
+        });
+
+        return;
+      }
+
+      if (customId === 'request:pick' && isSelectMenu) {
+        makeRequest(collected, collected.values[0]);
+        return;
+      }
+
+      collected.reply({
+        content: makeHighlightedMessage('Invalid request interaction', HighlightTextType.Red),
+        ephemeral: true
+      });
     });
 
-    collector.on('end', () => {
+    collector.on('end', async () => {
       if (!done && selector.editable) {
-        onGoing.delete(runningKey);
-
-        selector.edit({
+        await selector.edit({
           content: makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
           components: []
-        });
+        })
+        .catch(noop);
       }
-    });
 
-    selector.awaitMessageComponent({
-      componentType: ComponentType.Button,
-      filter: (i) => {
-        i.deferUpdate();
-        return i.customId === 'cancel_request' && i.user.id === issuer;
-      },
-      idle: 90_000
-    })
-    .then(() => {
-      if (!done) {
-        done = true;
-        collector.stop();
-
-        onGoing.delete(runningKey);
-
-        if (selector.deletable) {
-          selector.delete();
-        }
-      }
-    })
-    .catch((e) => {
-      onGoing.delete(runningKey);
-      if (!done) {
-        logger.error(e);
-      }
+      await stop(false);
     });
   }
+}
+
+function makeTrackSelections(choices: Selection[]) {
+  return chain(choices)
+    .groupBy(c => {
+      // Sorting order
+      const { options } = c.track.collection;
+      if (options.auxiliary) return 2;
+      if (options.noFollowOnRequest) return 1;
+      return 0;
+    })
+    .flatMap((auxGroup) => chain(auxGroup)
+      .groupBy(c => c.track.collection.id) // Collection
+      .flatMap((byCollection) => (byCollection.length === 1)
+        ? { by: [], selection: byCollection[0] }
+        : chain(byCollection)
+        .groupBy(c => extname(c.track.path.toUpperCase()).substring(1)) // Extension
+        .flatMap((byExt, ext) => (byExt.length === 1)
+            ? { by: [ext], selection: byExt[0] }
+            : chain(byExt)
+              .groupBy(c => c.track.extra?.tags?.album ?? '') // Album
+              .flatMap((byAlbum, album) => byAlbum.map(selection => ({ by: [ext, album], selection })))
+              .value()
+       )
+       .value()
+    )
+    .value()
+  )
+  .map(({ selection: { title, artist = 'Unknown Artist', track }, by }) => {
+    const collectionName = (track.collection.extra as unknown as MusicLibraryExtra<Station>)?.descriptor.description ?? track.collection.id;
+
+    if (title.length + artist.length + 3 > 100) {
+      title = truncate(title, { length: 100 - artist.length - 3 })
+    }
+
+    return {
+      label: `${title} - ${artist}`,
+      description: [collectionName, ...by].filter(Boolean).join('/'),
+      value: track.id
+    }
+  })
+  .value()
 }

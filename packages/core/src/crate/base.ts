@@ -4,7 +4,7 @@ import { TrackCollection } from "../collections/base";
 import { Track } from "../track";
 import { createLogger, Logger } from '../logging';
 
-export type CrateSourceWithWeight<T extends Track<any>, E = never> = {
+export type CrateSourceWithWeight<T extends Track<any, E>, E = any> = {
   collection: TrackCollection<T, E>;
   weight: number;
 }
@@ -18,7 +18,7 @@ export type CrateLimitValue = number | 'all';
 
 export type CrateLimit = CrateLimitValue | (() => CrateLimitValue);
 
-export type CrateOptions<T extends Track<any>, E = never> = {
+export type CrateOptions<T extends Track<any, E>, E = any> = {
   id: string;
   sources: CrateSourceWithWeight<T, E>[];
 
@@ -28,10 +28,10 @@ export type CrateOptions<T extends Track<any>, E = never> = {
   max?: number;
 }
 
-export class Crate<T extends Track<any>, E = never> {
+export class Crate<T extends Track<any, CE>, CE = any> {
   readonly id: string;
 
-  private _sources: TrackCollection<T, E>[] = [];
+  private _sources: TrackCollection<T, CE>[] = [];
   private sourceWeights: number[] = [];
 
   limit: CrateLimit;
@@ -41,7 +41,7 @@ export class Crate<T extends Track<any>, E = never> {
 
   protected logger: Logger;
 
-  constructor(options: CrateOptions<T, E>) {
+  constructor(options: CrateOptions<T, CE>) {
     this.id = options.id
 
     this.chance = options.chance;
@@ -60,7 +60,7 @@ export class Crate<T extends Track<any>, E = never> {
     return this._sources;
   }
 
-  updateSources(newSources: CrateSourceWithWeight<T, E>[]) {
+  updateSources(newSources: CrateSourceWithWeight<T, CE>[]) {
     this._sources = newSources.map(s => s.collection);
     this.sourceWeights = newSources.map(s => s.weight);
   }
@@ -69,15 +69,15 @@ export class Crate<T extends Track<any>, E = never> {
     return this._max;
   }
 
-  async select(): Promise<boolean> {
+  async select(force?: boolean): Promise<boolean> {
     const { chance, limit } = this;
 
-    if (chance) {
+    if (!force && chance) {
+      this.logger.debug('Select by', chance.next, 'chances', JSON.stringify(chance.chances?.()));
       const selected = await chance.next();
 
-      this.logger.debug('selected', selected);
-
       if (!selected) {
+        this.logger.debug('Not selected');
         this._max = 0;
         return false;
       }
@@ -97,8 +97,8 @@ export class Crate<T extends Track<any>, E = never> {
     return true;
   }
 
-  async next(validator?: (path: string) => Promise<boolean>): Promise<T | undefined> {
-    const source = weightedSample(this._sources, this.sourceWeights);
+  async next(validator?: (path: string) => Promise<boolean>, intendedCollection?: TrackCollection<T, CE>): Promise<T | undefined> {
+    const source = intendedCollection ?? weightedSample(this._sources, this.sourceWeights);
 
     if (!source) {
       return;
