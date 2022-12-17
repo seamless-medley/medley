@@ -791,11 +791,6 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       trackMessage.maybeMessage?.then(sentMessage => {
         if (sentMessage?.id === message.id)  {
           trackMessage.maybeMessage = undefined;
-
-          const index = trackMessages.indexOf(trackMessage);
-          if (index > -1) {
-            trackMessages.splice(index, 1);
-          }
         }
       });
     }
