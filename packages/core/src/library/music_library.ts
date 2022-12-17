@@ -229,19 +229,34 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
   }
 
   async autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string): Promise<string[]> {
-    if (!q && field === 'title' && narrowBy === 'artist' && narrowTerm) {
-      // Start showing title suggestion for a known artist
-      const tracks = await this.search({
-        artist: narrowTerm,
-        title: null,
-        query: null
-      });
+    if (!q && field && narrowTerm && narrowBy) {
+      let tracks: BoomBoxTrack[] | undefined;
 
-      return chain(tracks)
-        .map(t => t.extra?.tags?.title)
-        .filter(isString)
-        .uniq()
-        .value();
+      if (field === 'title' && narrowBy === 'artist') {
+        // Start showing title suggestion for a known artist
+        tracks = await this.search({
+          artist: narrowTerm,
+          title: null,
+          query: null
+        });
+      }
+
+      if (field === 'artist' && narrowBy === 'title') {
+        // Start showing artist suggestion for a known title
+        tracks = await this.search({
+          title: narrowTerm,
+          artist: null,
+          query: null
+        });
+      }
+
+      if (tracks) {
+        return chain(tracks)
+          .map(t => (t.extra?.tags as any)?.[field])
+          .filter(isString)
+          .uniq()
+          .value();
+      }
     }
 
     const nt = narrowTerm?.toLowerCase();
