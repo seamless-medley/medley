@@ -715,6 +715,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
         return;
       }
 
+      if (msg.status >= TrackMessageStatus.Ending) {
+        return;
+      }
+
       return  {
         showSkip: true,
         showLyrics: true,
@@ -749,7 +753,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           return;
         }
 
-        const isEndingOrPlaying = [TrackMessageStatus.Playing, TrackMessageStatus.Ending].includes(msg.status);
+        const isEndingOrPlaying = (msg.status >= TrackMessageStatus.Playing) && (msg.status <= TrackMessageStatus.Ending);
 
         if (!isEndingOrPlaying) {
           return;
@@ -904,6 +908,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return false;
     }
 
+    if (!station.skip()) {
+      return false;
+    }
+
     this.updateTrackMessage(
       async (msg) => {
         if (trackPlay.uuid !== msg.trackPlay.uuid) {
@@ -920,7 +928,6 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       }
     );
 
-    station.skip();
     return true;
   }
 

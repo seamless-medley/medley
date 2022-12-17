@@ -185,7 +185,7 @@ void Medley::setMaximumFadeOutDuration(double value) {
     }
 }
 
-void Medley::fadeOutMainDeck()
+bool Medley::fadeOutMainDeck()
 {
     if (auto deck = getMainDeck()) {
         forceFadingOut++;
@@ -200,7 +200,11 @@ void Medley::fadeOutMainDeck()
             decksTransition[deck->index].fader.start(deck->getTransitionStartPosition(), deck->getTransitionEndPosition() + 0.05, deck->getVolume(), 0.0f, fadingFactor, 0.0f);
             mixer.setPause(false, false);
         }
+
+        return deck != nullptr;
     }
+
+    return false;
 }
 
 void Medley::changeListenerCallback(ChangeBroadcaster* source)

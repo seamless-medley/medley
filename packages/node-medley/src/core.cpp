@@ -272,8 +272,8 @@ Napi::Value Medley::togglePause(const CallbackInfo& info) {
     return Napi::Boolean::New(info.Env(), engine->togglePause(fade));
 }
 
-void Medley::fadeOut(const CallbackInfo& info) {
-    engine->fadeOutMainDeck();
+Napi::Value Medley::fadeOut(const CallbackInfo& info) {
+    return Napi::Boolean::New(info.Env(), engine->fadeOutMainDeck());
 }
 
 void Medley::seek(const CallbackInfo& info) {

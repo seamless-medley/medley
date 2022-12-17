@@ -51,7 +51,7 @@ public:
 
     Napi::Value togglePause(const CallbackInfo& info);
 
-    void fadeOut(const CallbackInfo& info);
+    Napi::Value fadeOut(const CallbackInfo& info);
 
     void seek(const CallbackInfo& info);
 

@@ -200,7 +200,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
   /**
    * Force fading out and unloading of the current track.
    */
-  fadeOut(): void;
+  fadeOut(): boolean;
 
   /**
    * Seek the main deck
