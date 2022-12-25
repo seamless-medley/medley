@@ -8,7 +8,7 @@ import { createLogger } from "../logging";
 import { moveArrayIndexes } from "../utils";
 import { randomUUID } from "crypto";
 
-export interface CrateSequencerEvents {
+export type CrateSequencerEvents = {
   change: (crate: Crate<Track<any>>, oldCrate?: Crate<Track<any>>) => void;
   rescue: (scanned: number, ignore: number) => void;
 }

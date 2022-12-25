@@ -50,7 +50,7 @@ export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
   return !!o && !!o.requestedBy;
 }
 
-export interface BoomBoxEvents {
+export type BoomBoxEvents = {
   sequenceChange: (activeCrate: BoomBoxCrate) => void;
   currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack>, newCollection: TrackCollection<BoomBoxTrack>, ignoreFrom: boolean) => void;
   currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
