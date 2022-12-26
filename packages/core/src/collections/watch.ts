@@ -45,8 +45,6 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
       return;
     }
 
-    console.log('Watch events', events);
-
     const byType = groupBy(events, 'type') as Partial<Record<watcher.EventType, watcher.Event[]>>;
 
     if (byType.delete) {
