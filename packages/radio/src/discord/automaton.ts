@@ -94,7 +94,7 @@ export type UpdateTrackMessageOptions = {
   showSkip?: boolean;
 }
 
-export interface AutomatonEvents {
+export type AutomatonEvents = {
   ready: () => void;
 }
 

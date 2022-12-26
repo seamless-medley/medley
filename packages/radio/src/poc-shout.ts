@@ -52,9 +52,15 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid11', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
 ];
 
-const makeSweeperRule = (type: string) => new WatchTrackCollection(type, {
-  trackCreator: async (path) => ({ id: basename(path), path })
-}).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+const makeSweeperRule = (type: string) => {
+  const collection = new WatchTrackCollection(type, {
+    trackCreator: async (path) => ({ id: basename(path), path })
+  });
+
+  collection.watch(normalizePath(`E:\\medley-drops\\${type}`));
+
+  return collection;
+}
 
 const sweeperRules: SweeperInsertionRule[] = [
   {

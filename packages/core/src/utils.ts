@@ -131,23 +131,27 @@ export type RetryOptions = {
 } & WaitOption;
 
 export function retryable<R>(fn: () => Promise<R>, options: RetryOptions) {
-  let attempt = 0;
+  let attempts = 0;
 
-  async function wrapper(n?: number): Promise<R> {
+  async function wrapper(n?: number): Promise<R | undefined> {
     try {
+      if (options.signal?.aborted) {
+        return;
+      }
+
       return await fn();
     } catch (e) {
-      if (options.signal?.aborted || (n !== undefined && n <= 0)) {
+      if (n !== undefined && n <= 0) {
         throw e;
       }
 
-      const wait = options.wait ?? Math.min(options.maxWait, Math.pow(options.factor, ++attempt));
+      const wait = options.wait ?? Math.min(options.maxWait, Math.pow(options.factor, ++attempts));
 
       return delayed(() => wrapper(n !== undefined ? n - 1 : n), wait)();
     }
   }
 
-  return new Promise<R>((resolve, reject) => {
+  return new Promise<R | undefined>((resolve, reject) => {
     wrapper(options.retries).then(resolve).catch(reject)
   });
 }

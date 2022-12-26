@@ -4,6 +4,7 @@ import express from 'express';
 import normalizePath from 'normalize-path';
 import { createIcyAdapter } from "./streaming";
 import { MongoMusicDb } from "./musicdb/mongo";
+import { basename } from "path";
 
 process.on('uncaughtException', (e) => {
 
@@ -50,49 +51,48 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid11', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
 ];
 
-const makeSweeperRule = (type: string) => new WatchTrackCollection(type).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+const makeSweeperRule = (type: string) => {
+  const collection = new WatchTrackCollection(type, {
+    trackCreator: async (path) => ({ id: basename(path), path })
+  });
 
-const sweepers = new Map<string, TrackCollection<BoomBoxTrack>>(
-  ['to_blue', 'blue_to_easy', 'blue_to_up', 'easy_to_up', 'up_to_easy', 'fresh'].map(id => {
-    return [id, new WatchTrackCollection(id).watch(normalizePath(`E:\\medley-drops\\${id}/**/*`))]
-  })
-);
+  collection.watch(normalizePath(`E:\\medley-drops\\${type}`));
+
+  return collection;
+}
 
 const sweeperRules: SweeperInsertionRule[] = [
   {
     to: moods.sad,
-    collection: sweepers.get('to_blue')!
+    collection: makeSweeperRule('to_blue')
   },
   {
     from: moods.sad,
     to: moods.easy,
-    collection: sweepers.get('blue_to_easy')!
+    collection: makeSweeperRule('blue_to_easy')
   },
   {
     from: moods.sad,
-    to: [...moods.bright, ...moods.up],
-    collection: sweepers.get('blue_to_up')!
-  },
-  {
-    from: moods.easy,
-    to: [...moods.bright, ...moods.up],
-    collection: sweepers.get('easy_to_up')!
-  },
-  {
-    from: moods.bright,
     to: moods.up,
-    collection: sweepers.get('easy_to_up')!
+    collection: makeSweeperRule('blue_to_up')
   },
   {
-    from: moods.up,
-    to: moods.easy,
-    collection: sweepers.get('up_to_easy')!
+    to: moods.up,
+    collection: makeSweeperRule('to_up')
+  },
+  {
+    from: [...moods.up, ...moods.bright],
+    collection: makeSweeperRule('from_up')
   },
   { // Fresh
     to: ['new-released'],
-    collection: sweepers.get('fresh')!
+    collection: makeSweeperRule('fresh')
+  },
+  {
+    from: ['new-released'],
+    collection: makeSweeperRule('fresh')
   }
-]
+];
 
 async function main() {
   const app = express();

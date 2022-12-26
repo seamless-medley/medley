@@ -49,7 +49,7 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid1', collections: [ { id: 'new-released' }], chance: 'random', limit: { by: 'one-of', list: [1, 1, 1, 2] } },
   { crateId: 'guid2', collections: [ { id: 'bright' }], chance: [1, 2], limit: { by: 'upto', upto: 2 } },
   { crateId: 'guid3', collections: [ { id: 'joyful' }], limit: { by: 'upto', upto: 2 } },
-  { crateId: 'guid4', collections: [ { id: 'upbeat' }], chance: [2, 6], limit: { by: 'range', range: [1, 2] } },
+  { crateId: 'guid4', collections: [ { id: 'upbeat' }], chance: [2, 4], limit: { by: 'range', range: [1, 2] } },
   { crateId: 'guid5', collections: [ { id: 'groovy' }], chance: [1, 3], limit: 1 },
   { crateId: 'guid7', collections: [ { id: 'chill' }], limit: { by: 'range', range: [2, 3] } },
   { crateId: 'guid8', collections: [ { id: 'lovesong' }], limit: { by: 'upto', upto: 2 } },
@@ -67,9 +67,15 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid14', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
 ];
 
-const makeSweeperRule = (type: string) => new WatchTrackCollection(type, {
-  trackCreator: async (path) => ({ id: basename(path), path })
-}).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+const makeSweeperRule = (type: string) => {
+  const collection = new WatchTrackCollection(type, {
+    trackCreator: async (path) => ({ id: basename(path), path })
+  });
+
+  collection.watch(normalizePath(`E:\\medley-drops\\${type}`));
+
+  return collection;
+}
 
 const sweeperRules: SweeperInsertionRule[] = [
   {
