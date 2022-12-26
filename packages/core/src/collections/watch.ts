@@ -1,15 +1,13 @@
 import fg from 'fast-glob';
 import mm from 'minimatch';
-import { debounce, shuffle, stubFalse } from "lodash";
+import { debounce, groupBy, noop, shuffle, uniq } from "lodash";
 import normalizePath from "normalize-path";
 import { Track } from "../track";
-import globParent from 'glob-parent';
 import { TrackCollection, TrackCollectionOptions } from "./base";
-import { FSWatcher } from "fs";
-import watch from "node-watch";
 import { stat } from "fs/promises";
 
-type WatchCallback<F = typeof watch> = F extends (pathName: any, options: any, callback: infer CB) => any ? CB : never;
+import watcher, { AsyncSubscription, SubscribeCallback } from '@parcel/watcher';
+import { dirname } from 'path';
 
 export class WatchTrackCollection<T extends Track<any, E>, E = any> extends TrackCollection<T, E> {
   constructor(id: string, options: TrackCollectionOptions<T> = {}) {
@@ -23,13 +21,13 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
 
   }
 
-  private watchingPatterns = new Map<string, FSWatcher>();
+  private subscriptions = new Map<string, AsyncSubscription>();
 
   private newPaths: string[] = [];
   private removedIds = new Set<string>();
 
   private fetchNewPaths() {
-    const result = this.newPaths;
+    const result = uniq(this.newPaths);
     this.newPaths = [];
     return result;
   }
@@ -41,65 +39,133 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
     this.removedIds.clear();
   }, 2000);
 
-  private watchHandler: WatchCallback = async (event, path) => {
-    if (event === 'update') {
-      const isFile = (await stat(path).then(s => s.isFile()).catch(stubFalse));
-      if (isFile) {
-        this.newPaths.push(path);
-        this.storeNewFiles();
+  private handleSubscriptionEvents = (dir: string): SubscribeCallback => async (error, events) => {
+    if (error) {
+      this.logger.error('Error in watcher for dir:', dir, 'Error: ', error);
+      return;
+    }
+
+    console.log('Watch events', events);
+
+    const byType = groupBy(events, 'type') as Partial<Record<watcher.EventType, watcher.Event[]>>;
+
+    if (byType.delete) {
+      this.handlePathDeletion(byType.delete);
+    }
+
+    if (byType.create) {
+      this.handlePathCreation(byType.create);
+    }
+
+    if (byType.update) {
+      this.handlePathUpdate(byType.update);
+    }
+  }
+
+  private async handlePathDeletion(events: watcher.Event[]) {
+    for (let { path } of events) {
+      path = normalizePath(path);
+
+      const files = this.tracks.filter(t => {
+        const n = normalizePath(dirname(t.path));
+        return n === path;
+      });
+
+      if (files.length) {
+        // This is sub-folder deletion
+        for (const { id } of files) {
+          this.removedIds.add(id);
+        }
+
+        continue;
       }
-      return;
-    }
 
-    if (event === 'remove') {
+      // File deletion
       this.removedIds.add(await this.getTrackId(path));
-      this.handleFilesRemoval();
+    }
+
+    this.handleFilesRemoval();
+  }
+
+  private async handlePathCreation(events: watcher.Event[]) {
+    for (let { path } of events) {
+      path = normalizePath(path);
+
+      const stats = await stat(path).catch(() => undefined);
+
+      if (!stats) {
+        continue;
+      }
+
+      if (stats.isDirectory()) {
+        // A sub folder rename results in a single create event, explicitly scan the path now
+        this.scan(path);
+        continue;
+      }
+
+      this.newPaths.push(path);
+    }
+
+    this.storeNewFiles();
+  }
+
+  private async handlePathUpdate(events: watcher.Event[]) {
+    this.newPaths.push(...events.map(e => normalizePath(e.path)));
+    this.storeNewFiles();
+  }
+
+  async watch(dir: string) {
+    const normalized = normalizePath(dir);
+
+    if (!this.subscriptions.has(normalized)) {
+      await this.scan(normalized).catch(noop);
+
+      const subscription = await watcher.subscribe(normalized, this.handleSubscriptionEvents(normalized));
+      this.subscriptions.set(normalized, subscription);
+      this.becomeReady();
+    }
+  }
+
+  unwatch(dir: string, removeTracks: boolean = true) {
+    dir = normalizePath(dir);
+
+    const subscription = this.subscriptions.get(dir);
+    if (subscription) {
+      subscription.unsubscribe();
+      this.subscriptions.delete(dir);
+    }
+
+    if (removeTracks) {
+      this.removeBy(({ path }) => mm(path, dir));
+    }
+  }
+
+  unwatchAll(removeTracks: boolean = true) {
+    for (const dir of this.subscriptions.keys()) {
+      this.unwatch(dir, removeTracks);
+    }
+  }
+
+  private async scan(dir: string) {
+    dir = normalizePath(dir);
+    return glob(`${dir}/**/*`).then(files => this.add(files));
+  }
+
+  async rescan(rewatch?: boolean) {
+    if (!rewatch) {
+      for (const dir of this.subscriptions.keys()) {
+        this.scan(dir);
+      }
+
       return;
     }
-  }
 
-  watch(pattern: string): this {
-    const normalized = normalizePath(pattern);
+    const dirs = this.subscriptions.keys();
 
-    if (!this.watchingPatterns.has(normalized)) {
-      this.scan(normalized)
-        .then(() => this.watchingPatterns.set(normalized, watch(globParent(normalized), { recursive: true }, this.watchHandler)))
-        .then(() => this.becomeReady());
-    }
+    this.unwatchAll(false);
 
-    return this;
-  }
-
-  unwatch(pattern: string) {
-    const normalized = normalizePath(pattern);
-
-    const watcher = this.watchingPatterns.get(pattern);
-    if (watcher) {
-      watcher.close();
-    }
-
-    this.watchingPatterns.delete(normalized);
-    this.removeBy(({ path }) => mm(path, normalized));
-  }
-
-  unwatchAll() {
-    for (const [pattern] of this.watchingPatterns) {
-      this.unwatch(pattern);
-    }
-  }
-
-  get watched() {
-    return Array.from(this.watchingPatterns);
-  }
-
-  private async scan(pattern: string) {
-    const normalized = normalizePath(pattern);
-    return glob(normalized).then(files => this.add(files));
-  }
-
-  async rescan() {
-    for (const [pattern] of this.watched) {
-      await this.scan(pattern);
+    for (const dir of dirs) {
+      this.watch(dir);
     }
   }
 }

@@ -56,6 +56,8 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     }
   }
 
+  private handleTrackAddition = (tracks: BoomBoxTrack[]) => this.indexTracks(tracks, noop);
+
   private handleTrackRemoval = (tracks: BoomBoxTrack[]) => {
     for (const { id } of tracks) {
       this.musicDb.delete(id);
@@ -64,9 +66,17 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     this.searchEngine.removeAll(tracks);
   }
 
+  private handleTrackUpdates = async (tracks: BoomBoxTrack[]) => {
+    await this.searchEngine.removeAll(tracks).catch(noop);
+
+    for (const track of tracks) {
+      await this.indexTrack(track, true);
+    }
+  }
+
   remove(...collections: (string | WatchTrackCollection<BoomBoxTrack>)[]) {
-    for (let col of collections) {
-      const collection =  (typeof col === 'string') ? this.get(col) : col;
+    for (const c of collections) {
+      const collection =  (typeof c === 'string') ? this.get(c) : c;
 
       if (collection) {
         collection.unwatchAll();
@@ -106,8 +116,8 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     this.searchEngine.add(track);
   }
 
-  addCollection(descriptor: MusicLibraryDescriptor, onceReady?: () => void): Promise<WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>> {
-    return new Promise((resolve) => {
+  addCollection(descriptor: MusicLibraryDescriptor, onceReady?: () => void) {
+    return new Promise<WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>>(async (resolve) => {
       const { id } = descriptor;
       const path = normalizePath(descriptor.path);
 
@@ -130,23 +140,15 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         resolve(newCollection);
       });
 
-      newCollection.on('tracksAdd', (tracks: BoomBoxTrack[]) => this.indexTracks(tracks, noop));
-
-      newCollection.on('tracksUpdate', async (tracks: BoomBoxTrack[]) => {
-        await this.searchEngine.removeAll(tracks).catch(noop);
-
-        for (const track of tracks) {
-          await this.indexTrack(track, true);
-        }
-      });
-
 
       ////////////////////////////////////////////////////////
 
       const existing = this.get(id);
 
       if (!existing) {
+        newCollection.on('tracksAdd', this.handleTrackAddition);
         newCollection.on('tracksRemove', this.handleTrackRemoval);
+        newCollection.on('tracksUpdate', this.handleTrackUpdates);
       } else {
         const existingPath = this.collectionPaths.get(id)!;
 
@@ -154,15 +156,18 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         if (existingPath !== path) {
           // Unwatch old path
           existing.unwatchAll();
-          // Detach event handler
+
+          // Detach event handlers
+          existing.off('tracksAdd', this.handleTrackAddition);
           existing.off('tracksRemove', this.handleTrackRemoval);
+          existing.off('tracksUpdate', this.handleTrackUpdates);
         }
       }
 
       this.add(newCollection);
       this.collectionPaths.set(id, path);
 
-      return newCollection.watch(`${path}/**/*`);
+      await newCollection.watch(path);
     });
   }
 

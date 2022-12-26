@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import EventEmitter from "events";
+import type TypedEventEmitter from "typed-emitter";
 import { castArray, chain, chunk, find, findIndex, omit, partition, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
@@ -36,7 +37,15 @@ export type TrackPeek<T extends Track<any, CE>, CE = any> = {
   index: number;
   track: T;
 }
-export class TrackCollection<T extends Track<any, CE>, CE = any> extends EventEmitter {
+
+export type TrackCollectionEvents = {
+  ready: () => void;
+  tracksAdd: (tracks: Track<any, any>[]) => void;
+  tracksRemove: (tracks: Track<any, any>[]) => void;
+  tracksUpdate: (tracks: Track<any, any>[]) => void;
+}
+
+export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventEmitter as new () => TypedEventEmitter<TrackCollectionEvents>) {
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];
@@ -130,11 +139,15 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends EventEm
     return -1;
   }
 
+  static isKnownFileExtension(filename: string) {
+    return /\.(mp3|flac|wav|ogg|aiff)$/i.test(filename);
+  }
+
   async add(paths: string | string[]): Promise<T[]> {
     const validPaths = chain(paths)
       .castArray()
       .map(p => normalizePath(p))
-      .filter(p => /\.(mp3|flac|wav|ogg|aiff)$/i.test(p))
+      .filter(TrackCollection.isKnownFileExtension)
       .uniq()
       .value();
 
@@ -176,7 +189,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends EventEm
     const [removed, remaining] = partition(this.tracks, predicate);
     this.tracks = remaining;
 
-    for (const { id, path } of removed) {
+    for (const { id } of removed) {
       this.trackIdMap.delete(id);
     }
 

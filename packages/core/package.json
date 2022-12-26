@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@parcel/watcher": "^2.0.7",
     "@seamless-medley/medley": "workspace:../node-medley",
     "@types/workerpool": "^6.1.0",
     "fast-glob": "^3.2.7",
@@ -19,14 +20,12 @@
     "minimatch": "5.0.1",
     "minisearch": "^4.0.3",
     "node-gyp-build": "4.3.0",
-    "node-watch": "^0.7.3",
     "normalize-path": "^3.0.0",
     "string-similarity": "^4.0.4",
     "tslog": "^3.3.2",
     "workerpool": "^6.2.0"
   },
   "devDependencies": {
-    "@types/glob-parent": "^5.1.1",
     "@types/lodash": "^4.14.176",
     "@types/minimatch": "^5.1.2",
     "@types/node": "16.11.17",
