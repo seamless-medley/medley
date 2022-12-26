@@ -1,4 +1,4 @@
-import { MusicLibraryDescriptor, SequenceConfig, Station, SweeperInsertionRule, WatchTrackCollection } from "@seamless-medley/core";
+import { MusicCollectionDescriptor, SequenceConfig, Station, SweeperInsertionRule, WatchTrackCollection } from "@seamless-medley/core";
 import normalizePath from "normalize-path";
 import { MongoMusicDb } from "./musicdb/mongo";
 import { basename } from "path";
@@ -16,7 +16,7 @@ const moods = {
   sad: ['lonely', 'brokenhearted', 'hurt']
 }
 
-const musicCollections: MusicLibraryDescriptor[] = [
+const musicCollections: MusicCollectionDescriptor[] = [
   { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
   { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
   { id: 'chill', description:'Chill', path: 'D:\\vittee\\Google Drive\\musics\\chill' },

@@ -1,4 +1,4 @@
-import { BoomBoxTrack, MusicLibraryDescriptor, SequenceConfig, Station, SweeperInsertionRule, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
+import { MusicCollectionDescriptor, SequenceConfig, Station, SweeperInsertionRule, WatchTrackCollection } from "@seamless-medley/core";
 import http from 'http';
 import express from 'express';
 import normalizePath from 'normalize-path';
@@ -18,7 +18,7 @@ const moods = {
   sad: ['lonely', 'brokenhearted', 'hurt']
 }
 
-const musicCollections: MusicLibraryDescriptor[] = [
+const musicCollections: MusicCollectionDescriptor[] = [
   { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
   { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
   { id: 'chill', description:'Chill', path: 'D:\\vittee\\Google Drive\\musics\\chill' },

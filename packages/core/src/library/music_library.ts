@@ -8,14 +8,14 @@ import { SearchEngine, Query, TrackDocumentFields } from './search';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from './music_db';
 
-export type MusicLibraryDescriptor = {
+export type MusicCollectionDescriptor = {
   id: string;
   path: string;
   description?: string;
 } & Omit<TrackCollectionOptions<any>, 'trackCreator' | 'trackMapper'>;
 
 export type MusicLibraryExtra<O> = {
-  descriptor: MusicLibraryDescriptor;
+  descriptor: MusicCollectionDescriptor;
   owner: O;
 }
 
@@ -116,7 +116,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     this.searchEngine.add(track);
   }
 
-  addCollection(descriptor: MusicLibraryDescriptor, onceReady?: () => void) {
+  addCollection(descriptor: MusicCollectionDescriptor, onceReady?: () => void) {
     return new Promise<WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>>(async (resolve) => {
       const { id } = descriptor;
       const path = normalizePath(descriptor.path);
