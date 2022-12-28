@@ -105,14 +105,14 @@ export class Crate<T extends Track<any, CE>, CE = any> {
     }
 
     const item = source.shift();
-    const isValid = (item && validator) ? await validator(item.path) : true;
 
-    if (!isValid || !item) {
-      this.logger.debug('Invalid item');
-      return undefined;
+    if (!item) {
+      return;
     }
 
     source.push(item);
-    return item;
+
+    const isValid = validator ? await validator(item.path) : true;
+    return isValid ? item : undefined;
   }
 }
