@@ -143,7 +143,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
     return /\.(mp3|flac|wav|ogg|aiff)$/i.test(filename);
   }
 
-  async add(paths: string | string[]): Promise<T[]> {
+  private async transform(paths: string[], fn: (tracks: T[]) => Promise<any>) {
     const validPaths = chain(paths)
       .castArray()
       .map(p => normalizePath(p))
@@ -155,34 +155,50 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
 
     for (const group of chunk(validPaths, 500)) {
       const created = await Promise.all(group.map(async p => await this.createTrack(p, await this.getTrackId(p))));
-      await this.addTracks(created);
+      await fn(created);
       immediateTracks.push(...created);
     }
 
     return immediateTracks;
   }
 
+  async add(paths: string[]): Promise<T[]> {
+    return this.transform(paths, async created => this.addTracks(created));
+  }
+
   private async addTracks(tracks: T[]) {
     const { tracksMapper } = this.options;
 
-    const [updatingTracks, freshTracks] = partition(tracks, it => this.trackIdMap.has(it.id));
-    const freshTracksMapped = await tracksMapper?.(freshTracks) ?? freshTracks;
+    const newTracks = tracks.filter(it => !this.trackIdMap.has(it.id));
+    const mapped = await tracksMapper?.(newTracks) ?? newTracks;
 
-    if (freshTracksMapped.length) {
-      const [a, b] = (this.options.newTracksAddingMode === 'prepend') ? [freshTracksMapped, this.tracks] : [this.tracks, freshTracksMapped];
-
-      this.tracks = [...a, ...b];
-
-      for (const track of freshTracksMapped) {
-        this.trackIdMap.set(track.id, track);
-      }
-
-      this.emit('tracksAdd', freshTracksMapped);
+    if (!mapped.length) {
+      return;
     }
 
-    if (updatingTracks.length) {
-      this.emit('tracksUpdate', updatingTracks);
+    const [a, b] = (this.options.newTracksAddingMode === 'prepend') ? [mapped, this.tracks] : [this.tracks, mapped];
+
+    this.tracks = [...a, ...b];
+
+    for (const track of mapped) {
+      this.trackIdMap.set(track.id, track);
     }
+
+    this.logger.debug('New tracks added', mapped.length);
+
+    this.emit('tracksAdd', mapped);
+  }
+
+  async update(paths: string[]) {
+    return this.transform(paths, async updated => {
+      this.logger.debug('Track updated', updated.length);
+      this.emit('tracksUpdate', updated);
+    });
+  }
+
+  clear() {
+    this.tracks = [];
+    this.trackIdMap.clear();
   }
 
   removeBy(predicate: (track: T) => boolean): T[] {
