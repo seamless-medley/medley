@@ -20,9 +20,7 @@ export type MusicLibraryExtra<O> = {
 }
 
 export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>> {
-  private logger = createLogger({
-    name: `library/${this.id}`
-  });
+  private logger = createLogger({ name: `library/${this.id}` });
 
   private searchEngine = new SearchEngine();
 
@@ -140,7 +138,6 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         resolve(newCollection);
       });
 
-
       ////////////////////////////////////////////////////////
 
       const existing = this.get(id);
@@ -167,7 +164,7 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
       this.add(newCollection);
       this.collectionPaths.set(id, path);
 
-      await newCollection.watch(path);
+      newCollection.watch(path);
     });
   }
 
