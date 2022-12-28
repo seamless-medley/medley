@@ -267,18 +267,30 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     return this.client.isReady();
   }
 
+  private loginAbortController: AbortController | undefined;
+
   async login() {
-    await retryable(async () => {
-      this.logger.info('Logging in');
+    this.loginAbortController?.abort();
+    this.loginAbortController = new AbortController();
 
-      return this.client.login(this.botToken)
-        .catch(e => {
-          this.logger.error('Error login', e);
-          throw e;
-        });
-    }, { wait: 5000 });
+    try {
+      const result = await retryable(async () => {
+        this.logger.info('Logging in');
 
-    this.logger.debug('Logging in done');
+        return this.client.login(this.botToken)
+          .catch(e => {
+            this.logger.error('Error login', e);
+            throw e;
+          });
+      }, { wait: 5000, signal: this.loginAbortController.signal });
+
+      if (result !== undefined) {
+        this.logger.debug('Logging in done');
+      }
+    }
+    catch (e) {
+      this.logger.error('Error logging in', e);
+    }
   }
 
   ensureGuildState(guildId: Guild['id']) {
