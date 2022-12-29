@@ -68,7 +68,8 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
 
       this.logger.error('Error in subscription for dir:', normalized, 'marking it for re-subscribing, the error was:', error);
 
-      const info = this.watchInfos.get(normalized)
+      const info = this.watchInfos.get(normalized);
+
       if (info) {
         info.subscription?.unsubscribe();
         info.subscription = undefined;
@@ -76,8 +77,6 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
 
       return;
     }
-
-    console.log('Watch events', events);
 
     const byType = groupBy(events, 'type') as Partial<Record<watcher.EventType, watcher.Event[]>>;
 
@@ -176,6 +175,14 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
     }
   }
 
+  /**
+   * Watch a directory for changes
+   *
+   * Do not use this with filename, just use add() method instead
+   *
+   * Note that adding individual file does not monitor for file changes
+   * and it will be lost when a full re-scan occur
+   */
   async watch(dir: string) {
     const normalized = normalizePath(dir);
 
@@ -183,7 +190,7 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
       return;
     }
 
-    this.logger.debug('Watching', dir);
+    this.logger.debug('Watching', normalized);
 
     await this.scan(normalized);
     await this.subscribeToPath(normalized);
@@ -215,7 +222,7 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
     const files = await glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
 
     if (files !== false) {
-      this.add(files);
+      this.add(shuffle(files));
     }
   }
 
@@ -230,8 +237,11 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
   }
 
   async rewatch() {
+    const dirs = this.watchInfos.keys();
+
     this.unwatchAll(false);
-    for (const dir of this.watchInfos.keys()) {
+
+    for (const dir of dirs) {
       this.watch(dir);
     }
   }
