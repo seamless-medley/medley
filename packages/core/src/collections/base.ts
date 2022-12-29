@@ -1,11 +1,13 @@
 import { createHash } from 'crypto';
 import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
-import { castArray, chain, chunk, find, findIndex, omit, partition, sample, shuffle, sortBy } from "lodash";
+import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, random, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
 import { moveArrayElements } from '../utils';
+
+export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 
 export type TrackCreator<T extends Track<any, CE>, CE = any> = (path: string) => Promise<Omit<T, 'collection' | 'sequencing'> | undefined>;
 
@@ -22,9 +24,9 @@ export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = {
   /**
    * How the new tracks should be added
    *
-   * @default append
+   * @default spread
    */
-  newTracksAddingMode?: 'prepend' | 'append';
+  newTracksAddingMode?: TrackAddingMode;
 
   disableLatch?: boolean;
 
@@ -162,11 +164,11 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
     return immediateTracks;
   }
 
-  async add(paths: string[]): Promise<T[]> {
-    return this.transform(paths, async created => this.addTracks(created));
+  async add(paths: string[], mode?: TrackAddingMode): Promise<T[]> {
+    return this.transform(paths, async created => this.addTracks(created, mode));
   }
 
-  private async addTracks(tracks: T[]) {
+  private async addTracks(tracks: T[], mode?: TrackAddingMode) {
     const { tracksMapper } = this.options;
 
     const newTracks = tracks.filter(it => !this.trackIdMap.has(it.id));
@@ -176,9 +178,27 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
       return;
     }
 
-    const [a, b] = (this.options.newTracksAddingMode === 'prepend') ? [mapped, this.tracks] : [this.tracks, mapped];
+    switch (mode ?? this.options.newTracksAddingMode ?? 'spread') {
+      case 'append':
+        this.tracks.push(...mapped);
+        break;
 
-    this.tracks = [...a, ...b];
+      case 'prepend':
+        this.tracks.unshift(...mapped);
+        break;
+
+      case 'spread':
+        {
+          let index = 0;
+
+          for (const track of mapped) {
+            const width = Math.ceil(this.tracks.length / mapped.length) + 1;
+            index = clamp(random(index, index + width), 0, this.tracks.length - 1);
+            this.tracks.splice(index, 0, track);
+          }
+        }
+        break;
+    }
 
     for (const track of mapped) {
       this.trackIdMap.set(track.id, track);
