@@ -11,6 +11,8 @@ export interface TrackInfo {
 
   /**
    * Start position of the track
+   *
+   * Setting this property will also disable lead-in
    */
   readonly cueInPosition?: number;
 
@@ -20,7 +22,7 @@ export interface TrackInfo {
   readonly cueOutPosition?: number;
 
   /**
-   * Disable lead-in of the next track, useful for jingle/sweeper transition
+   * Disable lead-in of the next track, useful for transiting from jingle/sweeper
    *
    * The lead-in is the position where it is considered as the start singing point,
    * usually presented in a track which has smooth beginning.

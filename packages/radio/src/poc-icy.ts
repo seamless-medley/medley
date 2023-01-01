@@ -100,10 +100,6 @@ async function main() {
   const port = +(process.env.PORT || 4000);
   const server = http.createServer(app);
 
-  server.listen(port, () => {
-    console.log('Listening on', port);
-  });
-
   const musicDb = await new MongoMusicDb().init({
     url: 'mongodb://root:example@localhost:27017',
     database: 'medley',
@@ -132,6 +128,10 @@ async function main() {
 
   if (source) {
     app.get('/test', source.handler);
+
+    server.listen(port, () => {
+      console.log('Listening on', port);
+    });
   }
 
   station.playIfHasAudiences();

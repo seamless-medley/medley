@@ -257,9 +257,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       kind: TrackKind.Request
     }
 
-    const index = this.requests.push(requested);
     return {
-      index,
+      index: this.requests.push(requested),
       track: requested
     }
   }
