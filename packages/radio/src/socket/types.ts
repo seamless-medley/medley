@@ -17,21 +17,20 @@ export type EventEmitterOf<T, Events = PickEvent<T>> = keyof Events extends neve
   off<E extends keyof Events>(event: EventNameOf<E>, listener: Events[E]): ThisType<T>;
 }
 
-type TypedEventsMapOf<T, Events = PickEvent<T>> = {
-  [E in keyof Events]: [EventNameOf<E>, Events[E]];
-}[keyof Events];
-
-export type TypedEventsOf<T, Mapping extends TypedEventsMapOf<T> = TypedEventsMapOf<T>> = {
-  [K in Extract<Mapping[0], string>]: Mapping[1];
+export type TypedEventsOf<T, Events = PickEvent<T>> = {
+  [K in keyof Events as EventNameOf<K>]: Events[K];
 }
 
+// @ts-ignore
 export type TypedEventEmitterOf<T> = TypedEventEmitter<TypedEventsOf<T>>;
 
 export function MixinEventEmitterOf<T>() {
   return EventEmitter as unknown as new () => TypedEventEmitterOf<T>;
 }
 
-export type Exposable<T> = EventEmitterOf<T> & WithoutEvents<T>;
+export type Exposable<T, Props = PickProp<T>> = WithoutEvents<T> & { x: string; } & {
+  [K in keyof Props as `asyncSet${Capitalize<Extract<K, string>>}`]?: (value: Props[K]) => Promise<void>;
+};
 
 type GettersOf<T> = {
   [K in keyof T]: () => Promise<T[K]>;
@@ -45,7 +44,11 @@ type AsyncFunctionsOf<T> = {
   [K in keyof T]: AsyncFunctionOf<T[K]>;
 }
 
-export type Remotable<T, Props = PickProp<T>> = EventEmitterOf<T> & GettersOf<PickProp<T>> & SettersOf<PickProp<T>> & AsyncFunctionsOf<PickMethod<T>> & {
+export type Remotable<T, Props = PickProp<T>> = EventEmitterOf<T> & GettersOf<Props> & SettersOf<Props> & AsyncFunctionsOf<PickMethod<T>> & {
   onPropertyChange<P extends keyof Props>(prop: P, listener: (oldValue: Props[P], newValue: Props[P]) => any): ThisType<T>;
   onDispose(listener: () => Promise<any>): ThisType<T>;
+  //
+  dispose(): Promise<void>;
 };
+
+export type ObservedPropertyHandler<T> = (instance: T, prop: string, oldValue: any, newValue: any) => Promise<any>;

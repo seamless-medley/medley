@@ -1,25 +1,45 @@
-import { propertyDescriptorOf } from "./remote";
-import { WithoutEvents } from "./types";
+import { isFunction, pickBy } from "lodash";
+import { isProperty, propertyDescriptorOf } from "./remote/utils";
+import { ObservedPropertyHandler, WithoutEvents } from "./types";
 
-export function StubOf<T>(cls: abstract new () => WithoutEvents<T>) {
-  const AnyCtor = cls as (abstract new () => any);
+type StubCtor<T> = abstract new () => WithoutEvents<T>;
+
+export type Stub<T> = {
+  readonly StubbedFrom: StubCtor<T>;
+  readonly descriptors: Record<'own' | 'proto', ReturnType<typeof propertyDescriptorOf>>;
+}
+
+export interface StubbingMarker<T> {
+
+}
+
+/**
+ * A mixin for creating a class that conforms to a remote interface
+ *
+ * The wrapped class must implement type/interface `T`
+ * the implementation could simply be anything as it won't actually be used
+ *
+ * The point for stubbing is to expose property descriptors at runtime as this wouldn't be possible by using typing alone
+ */
+export function StubOf<T>(wrapped: StubCtor<T>): Stub<T> {
+  const AnyCtor = wrapped as (abstract new () => any);
 
   const Inst = class extends AnyCtor {
 
   }
 
-  abstract class Stubbed<From> extends AnyCtor {
-    readonly StubbedFrom = cls as From;
+  abstract class Stubbed extends AnyCtor implements StubbingMarker<T> {
+    static readonly StubbedFrom = wrapped;
 
     static get descriptors() {
       return {
         own: propertyDescriptorOf(new Inst),
-        proto: propertyDescriptorOf(cls.prototype)
+        proto: propertyDescriptorOf(wrapped.prototype)
       }
     }
   };
 
-  return Stubbed<T>;
+  return Stubbed;
 }
 
-export type Stub<T> = ReturnType<typeof StubOf<T>>;
+

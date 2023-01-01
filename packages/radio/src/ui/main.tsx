@@ -1,49 +1,58 @@
 import React, { useEffect } from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot, Root } from 'react-dom/client';
 
-import { entangle } from './hashi/atoms';
-import { atom, useAtom } from 'jotai';
 import { Client } from './client';
 import { MantineProvider } from '@mantine/core';
-import { RemoteTypes, StubCounter } from '../socket/remote';
-import { range } from 'lodash';
+import { RemoteTypes } from '../socket/remote';
+import { StubOf } from '../socket/stub';
+import { Config } from '../socket/remote';
 
-const x = entangle(10);
-const k = atom(10);
+const StubConfig = StubOf<Config>(class Config {
+  mongodb = undefined as any;
+  test = undefined as any;
+});
+
+const $window = window as any;
+const client: Client<RemoteTypes> = $window.$client ?? (() => {
+  const client = new Client<RemoteTypes>();
+
+  // client.surrogateOf(StubConfig, 'config', '').then(async (config) => {
+  //   const x = await config.mongodb();
+  //   console.log('x', x);
+
+  //   config.mongodb({
+  //     ...x,
+  //     url: 'GGGG'
+  //   });
+
+  //   config.dispose();
+  // });
+
+  client.remoteGet('config', '', 'mongodb').then(mongodb => console.log(mongodb));
+  client.remoteInvoke('config', '', 'test', '')
+
+  return client;
+})();
 
 const App: React.FC = () => {
-  useEffect(() => {
-    const c = new Client<RemoteTypes>();
-
-    Promise.all(range(0, 10).map(() => c.surrogateOf(StubCounter, 'root', 'test'))).then(surogates => {
-      surogates.map((s, index) => {
-
-        s.onPropertyChange('count', (newValue) => {
-          console.log(`onPropertyChange count`, s, newValue);
-        });
-      });
-    });
-
-    return () => {
-      c.dispose();
-    }
-  }, []);
-
-
-  const [value, setValue] = useAtom(x);
+  console.log('APP');
 
   return (
     <>
-      <span onClick={() => setValue(value + 1)}>Medley {value}</span>
+      Hello SSsss
     </>
   );
 }
 
-ReactDOM.render(
+const root: Root = $window.$root ?? createRoot(document.getElementById('root') as HTMLElement);
+
+root!.render(
   <React.StrictMode>
     <MantineProvider withGlobalStyles withNormalizeCSS withCSSVariables>
       <App />
     </MantineProvider>
-  </React.StrictMode>,
-  document.getElementById('root')
+  </React.StrictMode>
 );
+
+$window.$root = root;
+$window.$client = client;

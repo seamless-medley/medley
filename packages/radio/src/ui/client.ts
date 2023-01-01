@@ -1,12 +1,12 @@
 import { isFunction, mapValues, pickBy, uniqueId, } from "lodash";
 import { io, Socket } from "socket.io-client";
-import { ClientEvents, RemoteErrorStatus, RemoteResponse, ServerEvents } from '../socket/events';
-import { isProperty } from "../socket/remote";
+import { ClientEvents, ErrorResponse, RemoteResponse, ServerEvents } from '../socket/events';
+import { isProperty } from "../socket/remote/utils";
 import { Stub } from "../socket/stub";
-import { Remotable } from "../socket/types";
-import { AsyncFunctionOf, Callable } from "../types";
+import { PickMethod, PickProp, Remotable } from "../socket/types";
+import { AsyncFunctionOf, Callable, ParametersOf } from "../types";
 
-type ObserverHandler<NS, T = any> = (ns: NS, id: string, prop: string, oldValue: T, newValue: T) => Promise<any>;
+type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, prop: string, oldValue: T, newValue: T) => Promise<any>;
 
 class ObservingStore<T extends object> {
   private _observed: T = {} as T;
@@ -34,9 +34,6 @@ class ObservingStore<T extends object> {
   }
 }
 
-const $AnyProp: unique symbol = Symbol.for('$AnyProp');
-type AnyProp = typeof $AnyProp;
-
 type SurrogateInfo = {
   disposers: Set<AsyncFunctionOf<Callable>>;
 }
@@ -59,8 +56,8 @@ export class Client<Types extends { [key: string]: any }> {
     this.socket.io.on('reconnect', this.handleSocketReconnect);
   }
 
-  private handleRemoteEvent: ServerEvents['remote:event'] = (ns, id, event, ...args) => {
-    const delegates = this.getDelegateFor(ns, id, event);
+  private handleRemoteEvent: ServerEvents['remote:event'] = (kind, id, event, ...args) => {
+    const delegates = this.getDelegateFor(kind, id, event);
 
     if (delegates) {
       for (const delegate of delegates.values()) {
@@ -69,23 +66,23 @@ export class Client<Types extends { [key: string]: any }> {
     }
   }
 
-  private handleRemoteUpdate: ServerEvents['remote:update'] = (ns, id, prop, oldValue, newValue) => {
-    const store = this.observingStores.get(`${ns}:${id}`);
+  private handleRemoteUpdate: ServerEvents['remote:update'] = (kind, id, prop, oldValue, newValue) => {
+    const store = this.observingStores.get(`${kind}:${id}`);
     if (store) {
       store.observed[prop] = newValue;
 
       for (const handler of store.handlers.values()) {
-        handler(ns, id, prop, oldValue, newValue);
+        handler(kind, id, prop, oldValue, newValue);
       }
     }
   }
 
   private handleSocketReconnect = (attempt: number) => {
     for (const [key, events] of this.delegates) {
-      const [ns, id] = this.extractId(key);
+      const [kind, id] = this.extractId(key);
 
       for (const event of Object.keys(events)) {
-        this.socket.emit('remote:subscribe', ns, id, event, async (response) => {
+        this.socket.emit('remote:subscribe', kind, id, event, async (response) => {
           if (response.status !== undefined) {
             // Error resubscribing to event, remove it
             delete events[event];
@@ -99,10 +96,10 @@ export class Client<Types extends { [key: string]: any }> {
     }
 
     for (const [key, store] of [...this.observingStores]) {
-      const [ns, id] = this.extractId(key);
+      const [kind, id] = this.extractId(key);
 
       for (const handler of store.handlers) {
-        this.socket.emit('remote:observe', ns, id, async (response) => {
+        this.socket.emit('remote:observe', kind, id, async (response) => {
           if (response.status !== undefined) {
             // Error reobserving
             store.remove(handler);
@@ -133,8 +130,8 @@ export class Client<Types extends { [key: string]: any }> {
         }
       }
     }
-    this.delegates.clear();
 
+    this.delegates.clear();
     this.observingStores.clear();
 
     for (const dispose of this.surrogateInfo.disposers) {
@@ -156,54 +153,80 @@ export class Client<Types extends { [key: string]: any }> {
     return this.delegates.get(key)!;
   }
 
-  private getDelegateFor(ns: string, id: string, event: string) {
-    const events = this.getDelegateEvents(ns, id);
+  private getDelegateFor(kind: string, id: string, event: string) {
+    const events = this.getDelegateEvents(kind, id);
     const hasSet = !!events[event];
     return hasSet ? events[event]! : (() => events[event] = new Set<Callable>())();
   }
 
-  private remoteGet(ns: string, id: string, prop: string) {
+  remoteGet<
+    Kind extends Extract<keyof Types, string>,
+    P extends keyof O,
+    O = PickProp<Types[Kind]>
+  >(
+    kind: Kind,
+    id: string,
+    prop: P
+  ) {
     return new Promise<any>((resolve, reject) => {
-      this.socket.emit('remote:get', ns, id, prop, async (response: RemoteResponse<any>) => {
+      this.socket.emit('remote:get', kind, id, prop as string, async (response: RemoteResponse<any>) => {
         if (response.status === undefined) {
           resolve(response.result);
           return;
         }
 
-        reject(new RemotePropertyError(response.status, ns, id, prop, 'get'));
+        reject(new RemotePropertyError(response, kind, id, prop as string, 'get'));
       });
     });
   }
 
-  private remoteSet(ns: string, id: string, prop: string, value: any) {
+  remoteSet<
+    Kind extends Extract<keyof Types, string>,
+    P extends keyof O,
+    O = PickProp<Types[Kind]>
+  >(
+    kind: Kind,
+    id: string,
+    prop: P,
+    value: O[P]
+  ) {
     return new Promise<any>((resolve, reject) => {
-      this.socket.emit('remote:set', ns, id, prop, value, async (response: RemoteResponse<any>) => {
+      this.socket.emit('remote:set', kind, id, prop as string, value, async (response: RemoteResponse<any>) => {
         if (response.status === undefined) {
           resolve(response.result);
           return;
         }
 
-        reject(new RemotePropertyError(response.status, ns, id, prop, 'set'));
+        reject(new RemotePropertyError(response, kind, id, prop as string, 'set'));
       })
     });
   }
 
-  private remoteInvoke(ns: string, id: string, method: string, ...args: any[]) {
+  remoteInvoke<
+    Kind extends Extract<keyof Types, string>,
+    N extends keyof M,
+    M = PickMethod<Types[Kind]>
+  >(
+    kind: Kind,
+    id: string,
+    method: N,
+    ...args: ParametersOf<M[N]>
+  ) {
     return new Promise<any>((resolve, reject) => {
-      this.socket.emit('remote:invoke', ns, id, method, args, async (response: RemoteResponse<any>) => {
+      this.socket.emit('remote:invoke', kind, id, method as string, args, async (response: RemoteResponse<any>) => {
         if (response.status === undefined) {
           resolve(response.result);
           return;
         }
 
-        reject(new RemoteInvocationError(response.status, ns, id, method));
+        reject(new RemoteInvocationError(response, kind, id, method as string));
       })
     })
   }
 
-  private remoteSubscribe(ns: string, id: string, event: string, delegate: Callable) {
+  private remoteSubscribe(kind: string, id: string, event: string, delegate: Callable) {
     return new Promise<void>((resolve, reject) => {
-      const deletgates = this.getDelegateFor(ns, id, event);
+      const deletgates = this.getDelegateFor(kind, id, event);
 
       // Already subscribed
       if (deletgates.has(delegate)) {
@@ -219,9 +242,9 @@ export class Client<Types extends { [key: string]: any }> {
       }
 
       // It is the first time, subscrbe to remote first
-      this.socket.emit('remote:subscribe', ns, id, event, async (response: RemoteResponse<void>) => {
+      this.socket.emit('remote:subscribe', kind, id, event, async (response: RemoteResponse<void>) => {
         if (response.status !== undefined) {
-          reject(new RemoteSubscriptionError(response.status, ns, id, event));
+          reject(new RemoteSubscriptionError(response, kind, id, event));
           return;
         }
 
@@ -231,9 +254,9 @@ export class Client<Types extends { [key: string]: any }> {
     });
   }
 
-  private remoteUnsubscribe(ns: string, id: string, event: string, delegate: Callable) {
+  private remoteUnsubscribe(kind: string, id: string, event: string, delegate: Callable) {
     return new Promise<void>((resolve, reject) => {
-      const events = this.getDelegateEvents(ns, id);
+      const events = this.getDelegateEvents(kind, id);
       const delegates = events[event];
 
       if (!delegates) {
@@ -254,12 +277,12 @@ export class Client<Types extends { [key: string]: any }> {
       delete events[event];
 
       if (Object.keys(events).length === 0) {
-        this.delegates.delete(`${ns}:${id}`);
+        this.delegates.delete(`${kind}:${id}`);
       }
 
-      this.socket.emit('remote:unsubscribe', ns, id, event, async (response: RemoteResponse<void>) => {
+      this.socket.emit('remote:unsubscribe', kind, id, event, async (response: RemoteResponse<void>) => {
         if (response.status !== undefined) {
-          reject(new RemoteSubscriptionError(response.status, ns, id, event));
+          reject(new RemoteSubscriptionError(response, kind, id, event));
           return;
         }
 
@@ -268,24 +291,25 @@ export class Client<Types extends { [key: string]: any }> {
     });
   }
 
-  private remoteObserve<NS extends Extract<keyof Types, string>>(ns: NS, id: string, handler: ObserverHandler<NS>) {
-    return new Promise<Types[NS]>((resolve, reject) => {
-      const key = `${ns}:${id}` as const;
+  private remoteObserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, handler: ObserverHandler<Kind>) {
+    return new Promise<Types[Kind]>((resolve, reject) => {
+      const key = `${kind}:${id}` as const;
 
       if (this.observingStores.has(key)) {
         const store = this.observingStores.get(key)!;
 
         store.add(handler);
         resolve(store.observed);
+
         return;
       }
 
-      const store = new ObservingStore<Types[NS]>();
+      const store = new ObservingStore<Types[Kind]>();
       this.observingStores.set(key, store);
 
-      this.socket.emit('remote:observe', ns, id, async (response: RemoteResponse<any>) => {
+      this.socket.emit('remote:observe', kind, id, async (response: RemoteResponse<any>) => {
         if (response.status !== undefined) {
-          reject(new RemoteObservationError(response.status, ns, id));
+          reject(new RemoteObservationError(response, kind, id));
           return;
         }
 
@@ -297,9 +321,9 @@ export class Client<Types extends { [key: string]: any }> {
     });
   }
 
-  private remoteUnobserve<NS extends Extract<keyof Types, string>>(ns: NS, id: string, handler: ObserverHandler<NS>) {
+  private remoteUnobserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, handler: ObserverHandler<Kind>) {
     return new Promise<void>((resolve, reject) => {
-      const key = `${ns}:${id}` as const;
+      const key = `${kind}:${id}` as const;
 
       if (!this.observingStores.has(key)) {
         resolve();
@@ -316,18 +340,21 @@ export class Client<Types extends { [key: string]: any }> {
 
       this.observingStores.delete(key);
 
-      this.socket.emit('remote:unobserve', ns, id, async (response) => {
+      this.socket.emit('remote:unobserve', kind, id, async (response) => {
         if (response.status === undefined) {
           resolve();
           return;
         }
 
-        reject(new RemoteObservationError(response.status, ns, id));
+        reject(new RemoteObservationError(response, kind, id));
       });
     });
   }
 
-  async surrogateOf<NS extends Extract<keyof Types, string>>(StubClass: Stub<Types[NS]>, ns: NS, id: string) {
+  /**
+   * Return a virtual object that acts as a surrogate of a remote object
+   */
+  async surrogateOf<Kind extends Extract<keyof Types, string>>(StubClass: Stub<Types[Kind]>, kind: Kind, id: string) {
     const uuid = uniqueId('surrogate');
 
     const { descriptors } = StubClass;
@@ -336,30 +363,21 @@ export class Client<Types extends { [key: string]: any }> {
     const propertyDescs = pickBy(mergedDescs, isProperty);
     const methodDescs = pickBy(mergedDescs, desc => isFunction(desc.value));
 
-    const propertyChangeHandlers = new Map<string | AnyProp, Set<(newValue: any, oldValue: any) => Promise<any>>>();
+    const propertyChangeHandlers = new Map<string, Set<(newValue: any, oldValue: any) => Promise<any>>>();
 
-    const propertyObserver: ObserverHandler<NS> = async (ns, id, prop, oldValue, newValue) => {
-      const anyHandlers = propertyChangeHandlers.get($AnyProp);
+    const propertyObserver: ObserverHandler<Kind> = async (kind, id, prop, oldValue, newValue) => {
       const propHandlers = propertyChangeHandlers.get(prop);
 
-      const allHandlers: ((newValue: any, oldValue: any) => Promise<any>)[] = [];
-
-      if (anyHandlers) {
-        allHandlers.push(...anyHandlers)
+      if (!propHandlers) {
+        return;
       }
 
-      if (propHandlers) {
-        allHandlers.push(...propHandlers);
-      }
-
-      for (const handler of allHandlers) {
+      for (const handler of Array.from(propHandlers)) {
         handler(newValue, oldValue);
       }
     }
 
-    const addPropertyChangeHandler = (name: string | undefined, handler: (oldValue: any, newValue: any) => any) => {
-      const propKey = name ?? $AnyProp;
-
+    const addPropertyChangeHandler = (propKey: string, handler: (oldValue: any, newValue: any) => any) => {
       if (!propertyChangeHandlers.has(propKey)) {
         propertyChangeHandlers.set(propKey, new Set());
       }
@@ -375,7 +393,7 @@ export class Client<Types extends { [key: string]: any }> {
     }
 
     const observe = async () => {
-      return this.remoteObserve(ns, id, propertyObserver);
+      return this.remoteObserve(kind, id, propertyObserver);
     }
 
     const observed = await observe();
@@ -383,7 +401,7 @@ export class Client<Types extends { [key: string]: any }> {
     const subscriptionHandlers = new Map<string, Set<Callable>>;
 
     const on = (event: string, handler: Callable) => {
-      this.remoteSubscribe(ns, id, event, handler);
+      this.remoteSubscribe(kind, id, event, handler);
 
       if (!subscriptionHandlers.has(event)) {
         subscriptionHandlers.set(event, new Set());
@@ -393,7 +411,7 @@ export class Client<Types extends { [key: string]: any }> {
     }
 
     const off = (event: string, handler: Callable) => {
-      this.remoteUnsubscribe(ns, id, event, handler);
+      this.remoteUnsubscribe(kind, id, event, handler);
 
       if (subscriptionHandlers.has(event)) {
         const handlers = subscriptionHandlers.get(event)!;
@@ -415,18 +433,19 @@ export class Client<Types extends { [key: string]: any }> {
       }
 
       if (args.length >= 1) {
-        return await this.remoteSet(ns, id, name, args[0]);
+        await this.remoteSet(kind, id, name as any, args[0]).then(resolve).catch(reject);
+        return;
       }
     }));
 
-    const methods = mapValues(methodDescs, (desc, name) => (...args: any[]) => this.remoteInvoke(ns, id, name, ...args));
+    const methods = mapValues(methodDescs, (desc, name) => (...args: any[]) => this.remoteInvoke(kind, id, name as any, ...args as any));
 
     const dispose = async () => {
-      this.remoteUnobserve(ns, id, propertyObserver);
+      this.remoteUnobserve(kind, id, propertyObserver);
 
       for (const [event, handlers] of [...subscriptionHandlers]) {
         for (const handler of handlers) {
-          this.remoteUnsubscribe(ns, id, event, handler);
+          this.remoteUnsubscribe(kind, id, event, handler);
         }
       }
 
@@ -446,11 +465,17 @@ export class Client<Types extends { [key: string]: any }> {
     return new Proxy({ uuid } as {}, {
       get(target, prop) {
         if (prop === 'onPropertyChange') {
+          // Return the method
           return addPropertyChangeHandler;
         }
 
         if (prop === 'onDispose') {
+          // Return the method
           return addDisposeHandler;
+        }
+
+        if (prop === 'dispose') {
+          return dispose;
         }
 
         if (prop in emitterMethods) {
@@ -465,34 +490,41 @@ export class Client<Types extends { [key: string]: any }> {
           return methods[prop as keyof typeof methods];
         }
       }
-    }) as Remotable<Types[NS]>;;
+    }) as Remotable<Types[Kind]>;;
   }
 }
 
-abstract class RemoteError<NS> {
-  constructor(readonly kind: RemoteErrorStatus, readonly ns: NS, readonly id: string) {
+abstract class RemoteError<Kind> {
+  readonly errorType: string;
+  readonly message?: string;
 
+  constructor(response: ErrorResponse, readonly kind: Kind, readonly id: string) {
+    this.errorType = response.status;
+
+    if (response.status === 'exception') {
+      this.message = response.message;
+    }
   }
 }
 
-class RemotePropertyError<NS> extends RemoteError<NS> {
-  constructor(kind: RemoteErrorStatus, ns: NS, id: string, readonly prop: string, readonly direction: 'get' | 'set') {
-    super(kind, ns, id);
+class RemotePropertyError<Kind> extends RemoteError<Kind> {
+  constructor(response: ErrorResponse, kind: Kind, id: string, readonly prop: string, readonly direction: 'get' | 'set') {
+    super(response, kind, id);
   }
 }
 
-class RemoteInvocationError<NS> extends RemoteError<NS> {
-  constructor(kind: RemoteErrorStatus, ns: NS, id: string, readonly method: string) {
-    super(kind, ns, id);
+class RemoteInvocationError<Kind> extends RemoteError<Kind> {
+  constructor(response: ErrorResponse, kind: Kind, id: string, readonly method: string) {
+    super(response, kind, id);
   }
 }
 
-class RemoteSubscriptionError<NS> extends RemoteError<NS> {
-  constructor(kind: RemoteErrorStatus, ns: NS, id: string, readonly event: string) {
-    super(kind, ns, id);
+class RemoteSubscriptionError<Kind> extends RemoteError<Kind> {
+  constructor(response: ErrorResponse, kind: Kind, id: string, readonly event: string) {
+    super(response, kind, id);
   }
 }
 
-class RemoteObservationError<NS> extends RemoteError<NS> {
+class RemoteObservationError<Kind> extends RemoteError<Kind> {
 
 }
