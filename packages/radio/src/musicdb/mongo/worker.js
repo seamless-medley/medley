@@ -7,6 +7,8 @@ const { random, omitBy } = require('lodash');
 /** @typedef {import('@seamless-medley/core').SearchHistory} SearchHistory */
 /** @typedef {import('@seamless-medley/core').SearchQuery} SearchQuery */
 /** @typedef {import('@seamless-medley/core').TrackHistory} TrackHistory */
+/** @typedef {import('@seamless-medley/core').RecentSearchRecord} RecentSearchRecord */
+/** @typedef {import('@seamless-medley/core').SearchRecord} SearchRecord */
 /** @typedef {import('@seamless-medley/core').TimestampedTrackRecord} TimestampedTrackRecord */
 /** @typedef {import('./mongo').Options} Options */
 
@@ -19,10 +21,10 @@ let db;
 /** @type {Collection<MusicTrack>} */
 let musics;
 
-/** @type {Collection<SearchQuery>} */
+/** @type {Collection<SearchQuery & { stationId: string, timestamp: Date }>} */
 let searchHistory;
 
-/** @type {Collection<TimestampedTrackRecord>} */
+/** @type {Collection<TimestampedTrackRecord & { stationId: string }>} */
 let trackHistory;
 
 /** @type {[min: number, max: number]} */
@@ -101,6 +103,7 @@ async function find(value, by) {
     return;
   }
 
+  // @ts-ignore
   return omitBy(found, (v, p) => ['expires', 'path'].includes(p));
 }
 
@@ -186,6 +189,7 @@ const search_recentItems = async(stationId, key, $limit) => {
 
   const cursor = searchHistory.aggregate(pipelines);
 
+  /** @type {Array<RecentSearchRecord>} */
   const result = [];
 
   for await (const doc of cursor) {
@@ -194,6 +198,46 @@ const search_recentItems = async(stationId, key, $limit) => {
       doc.count,
       doc.timestamp
     ])
+  }
+
+  return result;
+}
+
+/**
+ * @type {SearchHistory['unmatchItems']}
+ */
+const search_unmatchItems = async(stationId) => {
+  /** @type {import('mongodb').Document[]} */
+  const pipelines = [
+    {
+      $match: {
+        stationId,
+        resultCount: { $eq: 0 }
+      },
+      $project: {
+        _id: 0,
+        artist: 1,
+        title: 1,
+        query: 1,
+        count: "$resultCount",
+        timestamp: 1
+      }
+    }
+  ];
+
+  const cursor = searchHistory.aggregate(pipelines);
+
+  /** @type {Array<SearchRecord>} */
+  const result = [];
+
+  for await (const doc of cursor) {
+    result.push({
+      artist: doc.artist ?? undefined,
+      title: doc.title ?? undefined,
+      query: doc.query ?? undefined,
+      count: doc.count,
+      timestamp: doc.timestamp
+    })
   }
 
   return result;
@@ -246,6 +290,7 @@ workerpool.worker({
   delete: _delete,
   search_add,
   search_recentItems,
+  search_unmatchItems,
   track_add,
   track_getAll
 })
