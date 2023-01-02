@@ -11,6 +11,12 @@ type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, prop: string, old
 class ObservingStore<T extends object> {
   private _observed: T = {} as T;
 
+  private resolver: ((value: T) => void) | undefined;
+
+  private _pending: Promise<T> | undefined = new Promise<T>((resolve) => {
+    this.resolver = resolve;
+  })
+
   readonly handlers = new Set<ObserverHandler<any>>();
 
   get observed() {
@@ -19,6 +25,13 @@ class ObservingStore<T extends object> {
 
   set observed(value) {
     this._observed = { ...value };
+    this.resolver?.(this._observed);
+    this.resolver = undefined;
+    this._pending = undefined;
+  }
+
+  get pending() {
+    return this._pending;
   }
 
   add(handler: ObserverHandler<any>) {
@@ -292,17 +305,21 @@ export class Client<Types extends { [key: string]: any }> {
   }
 
   private remoteObserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, handler: ObserverHandler<Kind>) {
-    return new Promise<Types[Kind]>((resolve, reject) => {
+    return new Promise<Types[Kind]>(async (resolve, reject) => {
       const key = `${kind}:${id}` as const;
 
       if (this.observingStores.has(key)) {
         const store = this.observingStores.get(key)!;
-
         store.add(handler);
+
+        await store.pending;
         resolve(store.observed);
 
         return;
       }
+
+      const store = new ObservingStore<Types[Kind]>();
+      this.observingStores.set(key, store);
 
       this.socket.emit('remote:observe', kind, id, async (response: RemoteResponse<any>) => {
         if (response.status !== undefined) {
@@ -310,12 +327,9 @@ export class Client<Types extends { [key: string]: any }> {
           return;
         }
 
-        const store = new ObservingStore<Types[Kind]>();
-
         store.observed = response.result;
         store.add(handler);
 
-        this.observingStores.set(key, store);
         resolve(store.observed);
       });
     });
