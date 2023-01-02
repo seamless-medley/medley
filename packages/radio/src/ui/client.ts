@@ -120,7 +120,11 @@ export class Client<Types extends { [key: string]: any }> {
             if (store.count <= 0) {
               this.observingStores.delete(key);
             }
+
+            return;
           }
+
+          // TODO: Call handler with all current property
         });
       }
     }

@@ -28,10 +28,6 @@ export function MixinEventEmitterOf<T>() {
   return EventEmitter as unknown as new () => TypedEventEmitterOf<T>;
 }
 
-export type Exposable<T, Props = PickProp<T>> = WithoutEvents<T> & {
-  [K in keyof Props as `asyncSet${Capitalize<Extract<K, string>>}`]?: (value: Props[K]) => Promise<void>;
-};
-
 type GettersOf<T> = {
   [K in keyof T]: () => T[K];
 }
@@ -57,3 +53,5 @@ export type Remotable<T, Props = PickProp<T>> = EventEmitterOf<T> & GettersOf<Pr
 };
 
 export type ObservedPropertyHandler<T> = (instance: T, prop: string, oldValue: any, newValue: any) => Promise<any>;
+
+export type ExtractCtor<T> = T extends new (...args: infer A) => infer R ? { args: A, returns: R } : never;

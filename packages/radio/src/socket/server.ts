@@ -4,8 +4,9 @@ import { capitalize, isFunction, noop, pickBy} from "lodash";
 import { Server as IOServer, Socket as IOSocket } from "socket.io";
 import { ConditionalKeys } from "type-fest";
 import { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "./events";
+import { Exposing } from "./expose";
 import { isProperty, propertyDescriptorOf } from "./remote/utils";
-import { EventEmitterOf, Exposable, ObservedPropertyHandler } from "./types";
+import { EventEmitterOf, ObservedPropertyHandler } from "./types";
 
 export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
   constructor(httpServer: http.Server, path: string) {
@@ -199,7 +200,9 @@ export class SocketServerController<Remote> {
             observation.set(key, observer);
           }
 
-          return observed?.getAll();
+          const all: any = observed?.getAll();
+          console.log('ALL', all);
+          return all;
         },
         callback
       )
@@ -271,7 +274,7 @@ export class SocketServerController<Remote> {
     }
   }
 
-  register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: EventEmitterOf<Remote[Kind]>) {
+  register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: Exposing & EventEmitterOf<Remote[Kind]>) {
     if (typeof o !== 'object') {
       return;
     }
@@ -285,7 +288,6 @@ export class SocketServerController<Remote> {
 
     if (scoped.get(id)?.instance === instance) {
       // Already registered
-      console.log('Already registered');
       return;
     }
 

@@ -8,10 +8,6 @@ export type Stub<T> = {
   readonly descriptors: Record<'own' | 'proto', ReturnType<typeof propertyDescriptorOf>>;
 }
 
-export interface StubbingMarker<T> {
-
-}
-
 /**
  * A mixin for creating a class that conforms to a remote interface
  *
@@ -27,7 +23,7 @@ export function StubOf<T>(wrapped: StubCtor<T>): Stub<T> {
 
   }
 
-  abstract class Stubbed extends AnyCtor implements StubbingMarker<T> {
+  abstract class Stubbed extends AnyCtor {
     static readonly StubbedFrom = wrapped;
 
     static get descriptors() {
