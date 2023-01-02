@@ -28,12 +28,12 @@ export function MixinEventEmitterOf<T>() {
   return EventEmitter as unknown as new () => TypedEventEmitterOf<T>;
 }
 
-export type Exposable<T, Props = PickProp<T>> = WithoutEvents<T> & { x: string; } & {
+export type Exposable<T, Props = PickProp<T>> = WithoutEvents<T> & {
   [K in keyof Props as `asyncSet${Capitalize<Extract<K, string>>}`]?: (value: Props[K]) => Promise<void>;
 };
 
 type GettersOf<T> = {
-  [K in keyof T]: () => Promise<T[K]>;
+  [K in keyof T]: () => T[K];
 }
 
 type SettersOf<T> = {
@@ -44,8 +44,13 @@ type AsyncFunctionsOf<T> = {
   [K in keyof T]: AsyncFunctionOf<T[K]>;
 }
 
+export const $AnyProp: unique symbol = Symbol.for('$AnyProp');
+export type AnyProp = typeof $AnyProp;
+
 export type Remotable<T, Props = PickProp<T>> = EventEmitterOf<T> & GettersOf<Props> & SettersOf<Props> & AsyncFunctionsOf<PickMethod<T>> & {
-  onPropertyChange<P extends keyof Props>(prop: P, listener: (oldValue: Props[P], newValue: Props[P]) => any): ThisType<T>;
+  getProperties(): Props;
+  //
+  onPropertyChange<P extends keyof Props>(props: P | AnyProp, listener: (oldValue: Props[P], newValue: Props[P]) => any): () => void;
   onDispose(listener: () => Promise<any>): ThisType<T>;
   //
   dispose(): Promise<void>;

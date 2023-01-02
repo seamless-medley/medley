@@ -290,7 +290,7 @@ export class SocketServerController<Remote> {
     }
 
     this.deregister(kind, id);
-    this.objectNamespaces.get(kind)?.set(id, new ObjectObserver(instance, this.observerPropertyHandler));
+    this.objectNamespaces.get(kind)?.set(id, new ObjectObserver(instance, this.makeObserverPropertyHandler(kind, id)));
   }
 
   deregister<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string) {
@@ -341,14 +341,16 @@ export class SocketServerController<Remote> {
     }
   }
 
-  private observerPropertyHandler: ObservedPropertyHandler<any> = async (stub, prop, oldValue, newValue) => {
+  private makeObserverPropertyHandler = (kind: string, id: string): ObservedPropertyHandler<any> => async (stub, prop, oldValue, newValue) => {
     for (const [, socket] of this.io.sockets.sockets) {
       const observation = this.socketObservations.get(socket);
 
+
       if (observation) {
-        for (const handler of observation.values()) {
-          handler(stub, prop, oldValue, newValue).catch(noop);
-        }
+        const key = `${kind}:${id}` as `${string}:${string}`;
+
+        const handler = observation.get(key);
+        handler?.(stub, prop, oldValue, newValue).catch(noop);
       }
     }
   }

@@ -1,6 +1,5 @@
-import { isFunction, pickBy } from "lodash";
-import { isProperty, propertyDescriptorOf } from "./remote/utils";
-import { ObservedPropertyHandler, WithoutEvents } from "./types";
+import { propertyDescriptorOf } from "./remote/utils";
+import { WithoutEvents } from "./types";
 
 type StubCtor<T> = abstract new () => WithoutEvents<T>;
 
