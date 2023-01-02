@@ -3,7 +3,7 @@ import { io, Socket } from "socket.io-client";
 import { ClientEvents, ErrorResponse, RemoteResponse, ServerEvents } from '../socket/events';
 import { isProperty } from "../socket/remote/utils";
 import { Stub } from "../socket/stub";
-import { PickMethod, PickProp, Remotable } from "../socket/types";
+import { $AnyProp, AnyProp, PickMethod, PickProp, Remotable } from "../socket/types";
 import { AsyncFunctionOf, Callable, ParametersOf } from "../types";
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, prop: string, oldValue: T, newValue: T) => Promise<any>;
@@ -304,18 +304,18 @@ export class Client<Types extends { [key: string]: any }> {
         return;
       }
 
-      const store = new ObservingStore<Types[Kind]>();
-      this.observingStores.set(key, store);
-
       this.socket.emit('remote:observe', kind, id, async (response: RemoteResponse<any>) => {
         if (response.status !== undefined) {
           reject(new RemoteObservationError(response, kind, id));
           return;
         }
 
-        store.observed = response.result;
+        const store = new ObservingStore<Types[Kind]>();
 
+        store.observed = response.result;
         store.add(handler);
+
+        this.observingStores.set(key, store);
         resolve(store.observed);
       });
     });
@@ -354,7 +354,13 @@ export class Client<Types extends { [key: string]: any }> {
   /**
    * Return a virtual object that acts as a surrogate of a remote object
    */
-  async surrogateOf<Kind extends Extract<keyof Types, string>>(StubClass: Stub<Types[Kind]>, kind: Kind, id: string) {
+  async surrogateOf<
+    Kind extends Extract<keyof Types, string>,
+  >(
+    StubClass: Stub<Types[Kind]>,
+    kind: Kind,
+    id: string
+  ) {
     const uuid = uniqueId('surrogate');
 
     const { descriptors } = StubClass;
@@ -363,27 +369,41 @@ export class Client<Types extends { [key: string]: any }> {
     const propertyDescs = pickBy(mergedDescs, isProperty);
     const methodDescs = pickBy(mergedDescs, desc => isFunction(desc.value));
 
-    const propertyChangeHandlers = new Map<string, Set<(newValue: any, oldValue: any) => Promise<any>>>();
+    const propertyChangeHandlers = new Map<string | AnyProp, Set<(newValue: any, oldValue: any) => Promise<any>>>();
 
     const propertyObserver: ObserverHandler<Kind> = async (kind, id, prop, oldValue, newValue) => {
+      const anyPropHandlers = propertyChangeHandlers.get($AnyProp);
+
       const propHandlers = propertyChangeHandlers.get(prop);
 
-      if (!propHandlers) {
+      const allHandlers = [];
+
+      if (anyPropHandlers) {
+        allHandlers.push(...anyPropHandlers);
+      }
+
+      if (propHandlers) {
+        allHandlers.push(...propHandlers);
+      }
+
+      if (!allHandlers.length) {
         return;
       }
 
-      for (const handler of Array.from(propHandlers)) {
+      for (const handler of allHandlers) {
         handler(newValue, oldValue);
       }
     }
 
-    const addPropertyChangeHandler = (propKey: string, handler: (oldValue: any, newValue: any) => any) => {
+    const addPropertyChangeHandler = (propKey: string | AnyProp, handler: (oldValue: any, newValue: any) => any) => {
       if (!propertyChangeHandlers.has(propKey)) {
         propertyChangeHandlers.set(propKey, new Set());
       }
 
       const handlers = propertyChangeHandlers.get(propKey)!;
       handlers.add(handler);
+
+      return () => void handlers.delete(handler);
     }
 
     const onDisposeHandlers = new Set<() => Promise<any>>();
@@ -426,17 +446,18 @@ export class Client<Types extends { [key: string]: any }> {
 
     const emitterMethods = { on, off };
 
-    const propertyGetters = mapValues(propertyDescs, (desc, name) => (...args: any[]) => new Promise(async (resolve, reject) => {
+    const getProperties = () => observed;
+
+    const propertyGetters = mapValues(propertyDescs, (desc, name) => (...args: any[]) => {
       if (args.length === 0) {
-        resolve((observed as any)[name]);
-        return;
+        return (observed as any)[name];
       }
 
-      if (args.length >= 1) {
+      return new Promise(async (resolve, reject) => {
         await this.remoteSet(kind, id, name as any, args[0]).then(resolve).catch(reject);
         return;
-      }
-    }));
+      })
+    });
 
     const methods = mapValues(methodDescs, (desc, name) => (...args: any[]) => this.remoteInvoke(kind, id, name as any, ...args as any));
 
@@ -462,20 +483,17 @@ export class Client<Types extends { [key: string]: any }> {
 
     this.surrogateInfo.disposers.add(dispose);
 
+    const specialMethods: Record<string | symbol, any> = {
+      dispose,
+      getProperties,
+      onPropertyChange: addPropertyChangeHandler,
+      onDispose: addDisposeHandler,
+    }
+
     return new Proxy({ uuid } as {}, {
       get(target, prop) {
-        if (prop === 'onPropertyChange') {
-          // Return the method
-          return addPropertyChangeHandler;
-        }
-
-        if (prop === 'onDispose') {
-          // Return the method
-          return addDisposeHandler;
-        }
-
-        if (prop === 'dispose') {
-          return dispose;
+        if (prop in specialMethods) {
+          return specialMethods[prop];
         }
 
         if (prop in emitterMethods) {
