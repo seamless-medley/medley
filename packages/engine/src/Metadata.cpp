@@ -93,6 +93,7 @@ void medley::Metadata::readFromTrack(const ITrack::Ptr track)
 
 void medley::Metadata::readFromFile(const File& file)
 {
+    bpm = 0.0f;
     trackGain = 0.0f;
     title = "";
     artist = "";
@@ -152,6 +153,11 @@ bool medley::Metadata::readID3V2(const File& f)
             if (pFrame) {
                 juce::String bpm = pFrame->toString().toCWString();
                 this->bpm = bpm.getFloatValue();
+
+                if (this->bpm < 0.0f) {
+                    this->bpm = 0.0f;
+
+                }
                 break;
             }
         }

@@ -18,11 +18,11 @@ type WorkerCoverAndLyrics = Omit<CoverAndLyrics, 'cover'> & {
 
 export type FetchResult = {
   hit: boolean;
-  metadata: Partial<Metadata>;
+  metadata: Metadata;
 }
 
 interface Methods {
-  metadata(path: string): Partial<Metadata>;
+  metadata(path: string): Metadata;
   coverAndLyrics(path: string): WorkerCoverAndLyrics | CoverAndLyrics;
   isTrackLoadable(path: string): boolean;
   searchLyrics(artist: string, title: string): string;
@@ -51,7 +51,7 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     return promise;
   }
 
-  async metadata(path: string): Promise<Partial<Metadata>> {
+  async metadata(path: string): Promise<Metadata> {
     return this.runIfNeeded(`metadata:${path}`, async () => this.exec('metadata', path).then(omitBy(falsy)))
   }
 

@@ -317,12 +317,12 @@ export type AudioDeviceTypeInfo = {
 }
 
 export type Metadata = {
-  title: string;
-  artist: string;
-  album: string;
-  isrc: string;
-  trackGain: number;
-  bpm: number;
+  title?: string;
+  artist?: string;
+  album?: string;
+  isrc?: string;
+  trackGain?: number;
+  bpm?: number;
 }
 
 export type CoverAndLyrics = {

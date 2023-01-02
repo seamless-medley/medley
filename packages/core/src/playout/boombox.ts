@@ -26,7 +26,7 @@ export enum TrackKind {
 }
 
 export type BoomBoxTrackExtra = {
-  tags?: Partial<Metadata>;
+  tags?: Metadata;
   maybeCoverAndLyrics?: Promise<CoverAndLyrics>;
   kind: TrackKind;
   source?: string;

@@ -49,7 +49,7 @@ export interface MusicDb {
   get trackHistory(): TrackHistory;
 }
 
-export interface MusicTrack extends Partial<Metadata> {
+export interface MusicTrack extends Metadata {
   trackId: string;
   path: string;
 }
