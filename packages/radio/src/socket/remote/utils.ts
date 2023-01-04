@@ -1,7 +1,7 @@
 import { isFunction, isString, pickBy } from "lodash";
 
 export function isPublicPropertyName(name: any) {
-  return isString(name) && !name.startsWith('_') && !['constructor'].includes(name);
+  return isString(name) && !/^[_$ϟ]/.test(name) && !['constructor'].includes(name);
 }
 
 export function propertyDescriptorOf(o: any) {

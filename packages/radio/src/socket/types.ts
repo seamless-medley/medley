@@ -25,7 +25,7 @@ export type TypedEventsOf<T, Events = PickEvent<T>> = {
 export type TypedEventEmitterOf<T> = TypedEventEmitter<TypedEventsOf<T>>;
 
 export function MixinEventEmitterOf<T>() {
-  return EventEmitter as unknown as new () => TypedEventEmitterOf<T>;
+  return EventEmitter as unknown as new (...args: any[]) => TypedEventEmitterOf<T>;
 }
 
 type GettersOf<T> = {
