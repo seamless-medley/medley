@@ -3,9 +3,9 @@ import { castArray, flatten, matches, some, toLower, trim, uniq, without } from 
 import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
-import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex } from "@seamless-medley/medley";
+import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
-import { Track } from "../track";
+import { Track, TrackExtra } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
 import { createLogger, Logger } from '../logging';
@@ -25,11 +25,10 @@ export enum TrackKind {
   Insertion
 }
 
-export type BoomBoxTrackExtra = {
+export type BoomBoxTrackExtra = TrackExtra & {
   tags?: Metadata;
   maybeCoverAndLyrics?: Promise<CoverAndLyrics>;
   kind: TrackKind;
-  source?: string;
 }
 
 export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
@@ -95,6 +94,10 @@ export type DeckInfo = {
   trackPlay?: BoomBoxTrackPlay;
   playing: boolean;
   active: boolean;
+}
+
+export type DeckInfoWithPositions = DeckInfo & {
+  positions: DeckPositions;
 }
 
 export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
@@ -184,8 +187,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     return this._inTransition;
   }
 
-  getDeckInfo(index: DeckIndex): Readonly<DeckInfo> {
-    return this.decks[index];
+  getDeckInfo(index: DeckIndex): Readonly<DeckInfoWithPositions> {
+    const positions = this.medley.getDeckPositions(index);
+
+    return {
+      ...this.decks[index],
+      positions
+    }
   }
 
   private requests: TrackCollection<RequestTrack<Requester>> = new TrackCollection('$_requests');
