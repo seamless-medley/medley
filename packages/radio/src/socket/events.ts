@@ -8,8 +8,14 @@ export type OKResponse<T> = {
   result: T;
 }
 
-export type IdOrKeyErrorResponse = {
-  status: 'id' | 'key';
+export type IdErrorResponse = {
+  status: 'id';
+  id: string;
+}
+
+export type KeyErrorResponse = {
+  status: 'key';
+  key: string;
 }
 
 export type ExceptionResponse = {
@@ -17,7 +23,7 @@ export type ExceptionResponse = {
   message: string;
 }
 
-export type ErrorResponse = IdOrKeyErrorResponse | ExceptionResponse;;
+export type ErrorResponse = IdErrorResponse | KeyErrorResponse | ExceptionResponse;;
 
 export type RemoteResponse<T> = OKResponse<T> | ErrorResponse;
 

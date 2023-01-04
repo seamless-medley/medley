@@ -131,10 +131,16 @@ export class SocketServerController<Remote> {
           }
         }
       } else {
-        resp = { status: 'key' }
+        resp = {
+          status: 'key',
+          key: key!
+        }
       }
     } else {
-      resp = { status: 'id' }
+      resp = {
+        status: 'id',
+        id
+      }
     }
 
     if (isFunction(callback)) {
