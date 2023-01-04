@@ -1,7 +1,7 @@
 import { MusicDb, Station} from "@seamless-medley/core";
 import { MongoMusicDb, Options as MongoDBOptions } from "../musicdb/mongo";
 import { SocketServer, SocketServerController } from "../socket";
-import { ExposedTick, RemoteTypes } from "../socket/remote";
+import { RemoteTypes } from "../socket/remote";
 import { Config } from "../socket/remote/config";
 import { ExposedConfig, ExposedConfigCallback } from "./expose/config";
 import { ExposedStation } from "./expose/station";

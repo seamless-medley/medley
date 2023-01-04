@@ -1,23 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { initRoot } from './init';
 import { Button, Group, MantineProvider } from '@mantine/core';
-import { Tick } from '../socket/remote';
 import { StubOf } from '../socket/stub';
-import { Config } from '../socket/remote';
 import { noop } from 'lodash';
-import { useRemotable, useRemotableProp } from './hooks/remotable';
-import { useSurrogate } from './hooks/surrogate';
+import { useSurrogateWithRemotable } from './hooks/surrogate';
 import { Station } from '../socket/remote/station';
-
-const StubConfig = StubOf<Config>(class Config {
-  mongodb = undefined as any;
-});
-
-const StubTick = StubOf<Tick>(class Tick {
-  count = undefined as any;
-  test = noop as any;
-});
+import { TrackPlay } from '../socket/po/track';
 
 const StubStation = StubOf<Station>(class Station {
   playing = undefined as any;
@@ -29,54 +18,44 @@ const StubStation = StubOf<Station>(class Station {
   skip = noop as any;
 });
 
-const TickComponent: React.FC = () => {
-  const tick = useSurrogate(StubTick, 'tick', '');
-  const tickValues = useRemotable(tick);
-
-  return (
-    <div>
-      Hello { tickValues?.count }
-      <h4>Tick</h4>
-      <pre>
-        { JSON.stringify(tickValues) }
-      </pre>
-    </div>
-  );
-}
-
-const ConfigComponent: React.FC = () => {
-  const config = useSurrogate(StubConfig, 'config', '');
-  const configValues = useRemotable(config);
-
-  return (
-    <>
-      <h4>Config</h4>
-      <pre>
-        { JSON.stringify(configValues, undefined, 2) }
-      </pre>
-    </>
-  );
-}
-
 const App: React.FC = () => {
-  const tick = useSurrogate(StubTick, 'tick', '');
-  const tick2 = useSurrogate(StubTick, 'tick', '');
-  const count = useRemotableProp(tick, 'count');
-  const count2 = useRemotableProp(tick2, 'count');
+  const [trackPlay, setTrackPlay] = useState<TrackPlay | undefined>();
+  const [coverURL, setCoverURL] = useState<string | undefined>();
 
-  const station = useSurrogate(StubStation, 'station', 'default');
+  const [station, stationProps] = useSurrogateWithRemotable(StubStation, 'station', 'default');
+
+  const handleTrackStarted = (deckIndex: number, trackPlay: TrackPlay) => {
+    setTrackPlay(trackPlay);
+
+    const cover = trackPlay.track.extra?.coverAndLyrics?.cover;
+    const blob = new Blob(cover ? [cover] : []);
+    setCoverURL(URL.createObjectURL(blob));
+  }
+
+  useEffect(() => {
+    if (!station) {
+      return;
+    }
+
+    station.on('trackStarted', handleTrackStarted);
+
+    return () => {
+      station.off('trackStarted', handleTrackStarted);
+    }
+  }, [station]);
 
   return (
     <>
-      <TickComponent />
-      <ConfigComponent />
-      <div>{ count }</div>
-      <div>{ count2 }</div>
       <Group>
         <Button disabled={!station} onClick={() => station?.start()}>Start</Button>
         <Button disabled={!station} onClick={() => station?.pause()}>Pause</Button>
-        <Button disabled={!station} onClick={() => station?.skip()} color="red">Skip</Button>
+        <Button disabled={!station} onClick={() => console.log('Skip', station?.skip())} color="red">Skip</Button>
       </Group>
+      <h4>Play State: { stationProps?.playState }</h4>
+      <img src={coverURL} />
+      <pre>
+        {JSON.stringify(trackPlay, undefined, 2)}
+      </pre>
     </>
   );
 }
