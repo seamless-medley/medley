@@ -4,9 +4,9 @@ import { capitalize, isFunction, noop, pickBy} from "lodash";
 import { Server as IOServer, Socket as IOSocket } from "socket.io";
 import { ConditionalKeys } from "type-fest";
 import { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "./events";
-import { Exposing } from "./expose";
 import { isProperty, propertyDescriptorOf } from "./remote/utils";
 import { EventEmitterOf, ObservedPropertyHandler } from "./types";
+import { $Exposing } from "./expose";
 
 export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
   constructor(httpServer: http.Server, path: string) {
@@ -274,7 +274,7 @@ export class SocketServerController<Remote> {
     }
   }
 
-  register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: Exposing & EventEmitterOf<Remote[Kind]>) {
+  register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: WithoutEvents<Remote[Kind]>) {
     if (typeof o !== 'object') {
       return;
     }

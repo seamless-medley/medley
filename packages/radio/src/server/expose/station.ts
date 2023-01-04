@@ -3,35 +3,39 @@ import { $Exposing, Exposable } from "../../socket/expose";
 import { Station as RemoteStation } from "../../socket/remote/station";
 
 export class ExposedStation implements Exposable<RemoteStation> {
-  [$Exposing] = true as const;
-
-  #station: Station;
+  [$Exposing]: Station;
 
   constructor(station: Station) {
-    console.log('ExposedStation constructor')
-    this.#station = station;
+    super();
+    this[$Exposing] = station;
+
+
+  get #exposed() {
+    return this[$Exposing];
+  }
   }
 
   get playing() {
-    return this.#station.playing;
+    return this.#exposed.playing;
   }
 
   get paused() {
-    return this.#station.paused;
+    return this.#exposed.paused;
   }
 
-  get playState() {
-    return this.#station.playState;
+  get playState(): PlayState {
+    return this.#exposed.playState;
   }
 
-  start(): void {
-    this.#station.start();
+  async start() {
+    this.#exposed.start();
   }
 
-  pause() {
-    this.#station.pause();
+  async pause() {
+    this.#exposed.pause();
   }
-  skip() {
-    return this.#station.skip();
+
+  async skip() {
+    return this.#exposed.skip();
   }
 };

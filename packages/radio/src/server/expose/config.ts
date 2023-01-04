@@ -8,8 +8,6 @@ export type ExposedConfigCallback = {
 }
 
 export class ExposedConfig implements Exposable<Config> {
-  [$Exposing] = true as const;
-
   private _mongodb: MongoDBOptions;
 
   #handler: ExposedConfigCallback;

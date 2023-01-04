@@ -12,8 +12,6 @@ export type Tick = {
 }
 
 export class ExposedTick extends MixinEventEmitterOf<Tick>() implements Exposable<Tick> {
-  [$Exposing] = true as const;
-
   count = 0;
 
   constructor() {
