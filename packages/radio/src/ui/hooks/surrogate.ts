@@ -4,6 +4,7 @@ import type { RemoteTypes } from "../../socket/remote";
 import type { Stub } from "../../socket/stub";
 import type { Remotable } from "../../socket/types";
 import { clientAtom } from "../atoms/client";
+import { useRemotable } from "./remotable";
 
 export function useSurrogate<
   T extends RemoteTypes[Kind],
@@ -27,4 +28,18 @@ export function useSurrogate<
   }, []);
 
   return remote;
+}
+
+export function useSurrogateWithRemotable<
+  T extends RemoteTypes[Kind],
+  Kind extends keyof RemoteTypes
+>(
+  StubClass: Stub<T>,
+  kind: Kind,
+  id: string
+) {
+  const remote = useSurrogate(StubClass, kind, id);
+  const values = useRemotable(remote);
+
+  return [remote, values] as const;
 }

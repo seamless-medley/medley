@@ -12,11 +12,14 @@ export function useRemotableProp<
 
   useEffect(
     () => {
-      if (r) {
-        set(r.getProperties()[prop]);
+      const update = (value?: T[P]) => {
+        if (r) {
+          set(value ?? r.getProperties()[prop]);
+        }
       }
 
-      return r?.onPropertyChange(prop as any, (_, newValue) => set(newValue))
+      update();
+      return r?.onPropertyChange(prop as any, (_, newValue) => update(newValue))
     },
     [r]
   );
