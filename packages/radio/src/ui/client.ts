@@ -111,22 +111,20 @@ export class Client<Types extends { [key: string]: any }> {
     for (const [key, store] of [...this.observingStores]) {
       const [kind, id] = this.extractId(key);
 
-      for (const handler of store.handlers) {
-        this.socket.emit('remote:observe', kind, id, async (response) => {
-          if (response.status !== undefined) {
-            // Error reobserving
-            store.remove(handler);
+      this.socket.emit('remote:observe', kind, id, async (response) => {
+        if (response.status !== undefined) {
+          // Error reobserving
+          return;
+        }
 
-            if (store.count <= 0) {
-              this.observingStores.delete(key);
-            }
+        store.observed = response.result;
 
-            return;
+        for (const handler of store.handlers) {
+          for (const [prop, value] of Object.entries(response.result)) {
+            handler(kind, id, prop, value, value);
           }
-
-          // TODO: Call handler with all current property
-        });
-      }
+        }
+      });
     }
   }
 
@@ -430,11 +428,13 @@ export class Client<Types extends { [key: string]: any }> {
       onDisposeHandlers.add(handler);
     }
 
-    const observe = async () => {
-      return this.remoteObserve(kind, id, propertyObserver);
-    }
+    await this.remoteObserve(kind, id, propertyObserver);
 
-    const observed = await observe();
+    const getObservedFromStore = () => {
+      const key = `${kind}:${id}` as const;
+      const store = this.observingStores.get(key);
+      return store?.observed ?? {} as Types[Kind];
+    }
 
     const subscriptionHandlers = new Map<string, Set<Callable>>;
 
@@ -464,11 +464,11 @@ export class Client<Types extends { [key: string]: any }> {
 
     const emitterMethods = { on, off };
 
-    const getProperties = () => observed;
+    const getProperties = () => getObservedFromStore();
 
     const propertyGetters = mapValues(propertyDescs, (desc, name) => (...args: any[]) => {
       if (args.length === 0) {
-        return (observed as any)[name];
+        return getProperties()[name];
       }
 
       return new Promise(async (resolve, reject) => {
@@ -484,7 +484,7 @@ export class Client<Types extends { [key: string]: any }> {
 
       for (const [event, handlers] of [...subscriptionHandlers]) {
         for (const handler of handlers) {
-          this.remoteUnsubscribe(kind, id, event, handler);
+          off(event, handler);
         }
       }
 

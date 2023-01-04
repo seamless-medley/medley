@@ -1,13 +1,13 @@
 import EventEmitter from "events";
 import http from "http";
-import { capitalize, isFunction, noop, pickBy} from "lodash";
+import { capitalize, chain, isFunction, isObject, mapValues, noop, pickBy } from "lodash";
 import { Server as IOServer, Socket as IOSocket } from "socket.io";
 import { ConditionalKeys } from "type-fest";
 import TypedEventEmitter from "typed-emitter";
 import { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "./events";
-import { isProperty, propertyDescriptorOf } from "./remote/utils";
-import { EventEmitterOf, ObservedPropertyHandler } from "./types";
 import { $Exposing } from "./expose";
+import { isProperty, isPublicPropertyName, propertyDescriptorOf } from "./remote/utils";
+import { ObservedPropertyHandler, WithoutEvents } from "./types";
 
 export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
   constructor(httpServer: http.Server, path: string) {
@@ -212,9 +212,7 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
             observation.set(key, observer);
           }
 
-          const all: any = observed?.getAll();
-          console.log('ALL', all);
-          return all;
+          return observed?.getAll();
         },
         callback
       )
@@ -250,33 +248,37 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
      * Client requests to subscribe to an event of a remote object
      */
     'remote:subscribe': async (socket, kind, id, event, callback) => {
-      this.interact(kind, id, 'on', isEvented, async (object: EventEmitter) => {
-        const handler = (...args: any[]) => {
-          console.log('Relaying event to clent', socket.id);
-          socket.emit('remote:event', kind, id, event, ...args);
-        };
+      this.interact(
+        kind, id, 'on',
+        isEvented,
+        async (object: EventEmitter) => {
+          const handler = (...args: any[]) => {
+            socket.emit('remote:event', kind, id, event, ...args);
+          };
 
-        if (!this.socketSubscriptions.has(socket)) {
-          this.socketSubscriptions.set(socket, new Map());
-        }
+          if (!this.socketSubscriptions.has(socket)) {
+            this.socketSubscriptions.set(socket, new Map());
+          }
 
-        const socketSubscriptions = this.socketSubscriptions.get(socket)!;
+          const socketSubscriptions = this.socketSubscriptions.get(socket)!;
 
-        if (!socketSubscriptions.has(object)) {
-          socketSubscriptions.set(object, {});
-        }
+          if (!socketSubscriptions.has(object)) {
+            socketSubscriptions.set(object, {});
+          }
 
-        const eventHandlerMap = socketSubscriptions.get(object)!;
+          const eventHandlerMap = socketSubscriptions.get(object)!;
 
-        if (eventHandlerMap[event]) {
-          object.off(event, eventHandlerMap[event]);
-        }
+          if (eventHandlerMap[event]) {
+            object.off(event, eventHandlerMap[event]);
+          }
 
-        console.log('Subscribe', kind, id, event, socket.id)
+          object.on(event, handler);
+          eventHandlerMap[event] = handler;
 
-        object.on(event, handler);
-        eventHandlerMap[event] = handler;
-      }, callback);
+          return true;
+        },
+        callback
+      );
     },
 
     'remote:unsubscribe': async (socket, kind, id, event, callback) => {
@@ -370,35 +372,77 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
   }
 }
 
-export class ObjectObserver<T extends object> {
-  readonly #methods: Record<string, TypedPropertyDescriptor<T>>;
+type TypedPropertyDescriptorOf = TypedPropertyDescriptor<any> & {
+  instance: object;
+  name: string;
+}
 
-  readonly #props: Record<string, TypedPropertyDescriptor<T>>;
+function bindDescInstance(instance: object, name: string, desc: TypedPropertyDescriptor<any>): TypedPropertyDescriptorOf {
+  return {
+    ...desc,
+    name,
+    instance
+  }
+}
+
+export class ObjectObserver<T extends object> {
+  readonly #methods: Record<string, TypedPropertyDescriptorOf>;
+
+  readonly #props: Record<string, TypedPropertyDescriptorOf>;
 
   constructor(readonly instance: T, private readonly notify: ObservedPropertyHandler<T>) {
+    const target = this.getTarget();
+
     const own = propertyDescriptorOf(instance);
     const proto = propertyDescriptorOf(Object.getPrototypeOf(instance));
 
-    const mergedDescs = { ...own, ...proto };
+    const declared = mapValues({ ...own, ...proto }, (desc, name) => bindDescInstance(instance, name, desc));
 
-    this.#methods = pickBy(mergedDescs, desc => isFunction(desc.value));
-    this.#props = pickBy(mergedDescs, isProperty);
+    const exposed = target !== instance ? (() => {
+      return mapValues({
+        ...propertyDescriptorOf(target),
+        ...propertyDescriptorOf(Object.getPrototypeOf(target))
+      }, (desc, name) => bindDescInstance(target, name, desc));
+
+    })() : declared;
+
+    this.#methods = pickBy(exposed, desc => isFunction(desc.value));
+
+    this.#props = chain(exposed)
+      .pickBy(desc => (desc.name in declared) && isProperty(desc) && isPublicPropertyName(desc.name))
+      .value();
 
     for (const [prop, desc] of Object.entries(this.#props)) {
-      Object.defineProperty(instance, prop, {
-        get: () => desc.get?.call(instance) ?? desc.value,
+      Object.defineProperty(desc.instance, prop, {
+        get: () => {
+          return desc.get?.call(desc.instance) ?? desc.value
+        },
 
         set: (v) => {
-          const old = desc.get?.call(instance) ?? desc.value;
+          const old = desc.get?.call(desc.instance) ?? desc.value;
 
           if (typeof prop === 'string' && this.isPublishedProperty(prop) && old !== v) {
             this.notify(instance, prop, old, v);
           }
 
-          desc.set ? desc.set.call(instance, v) : (desc.value = v);
+          desc.set ? desc.set.call(desc.instance, v) : (desc.value = v);
         }
       })
     }
+  }
+
+  private getExposed() {
+    if ($Exposing in this.instance) {
+      const exposed = (this.instance as any)[$Exposing];
+
+      if (isObject(exposed)) {
+        return exposed;
+      }
+    }
+  }
+
+  private getTarget() {
+    return this.getExposed() ?? this.instance;
   }
 
   /**
@@ -406,7 +450,7 @@ export class ObjectObserver<T extends object> {
    */
   getAll() {
     return Object.entries(this.#props).reduce((o, [prop, desc]) => {
-      o[prop] = desc.value ?? desc.get?.call(this.instance);
+      o[prop] = desc.value ?? desc.get?.call(this.getTarget());
       return o;
     }, {} as any) as T;
   }
