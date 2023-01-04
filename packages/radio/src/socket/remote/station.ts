@@ -1,4 +1,5 @@
 import { PlayState } from "@seamless-medley/core";
+import * as po from "../po/track";
 
 export interface Station {
   readonly playing: boolean;
@@ -7,5 +8,7 @@ export interface Station {
 
   start(): void;
   pause(): void;
-  skip(): boolean;
+  skip(): Promise<boolean>;
+
+  ϟtrackStarted(deckIndex: number, trackPlay: po.TrackPlay): void;
 }
