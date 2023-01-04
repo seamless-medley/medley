@@ -14,19 +14,19 @@ async function run() {
     process.exit(1);
   }
 
-  httpServer
-    .once('error', listenErrorHandler)
-    .listen(port, () => {
-      httpServer.off('error', listenErrorHandler);
-      start(httpServer);
-    });
-}
-
-async function start(httpServer: http.Server) {
-  console.log(`Listening on port ${port}`);
+  console.info('Initializing');
 
   const ioServer = new IOServer(httpServer, '/socket.io');
   const server = new Server(ioServer);
+
+  server.once('ready', () => {
+    httpServer
+      .once('error', listenErrorHandler)
+      .listen(port, () => {
+        httpServer.off('error', listenErrorHandler);
+        console.log(`Listening on port ${port}`);
+      });
+  });
 }
 
 run();

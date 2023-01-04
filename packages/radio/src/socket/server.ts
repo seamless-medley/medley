@@ -3,6 +3,7 @@ import http from "http";
 import { capitalize, isFunction, noop, pickBy} from "lodash";
 import { Server as IOServer, Socket as IOSocket } from "socket.io";
 import { ConditionalKeys } from "type-fest";
+import TypedEventEmitter from "typed-emitter";
 import { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "./events";
 import { isProperty, propertyDescriptorOf } from "./remote/utils";
 import { EventEmitterOf, ObservedPropertyHandler } from "./types";
@@ -27,8 +28,13 @@ type Handlers = {
 
 const isEvented = (value: any, object: any) => isFunction(value) && object instanceof EventEmitter;
 
-export class SocketServerController<Remote> {
+export type SocketServerEvents = {
+  ready(): void;
+}
+
+export class SocketServerController<Remote> extends (EventEmitter as new () => TypedEventEmitter<SocketServerEvents>) {
   constructor(private io: SocketServer) {
+    super();
     io.on('connection', this.addSocket);
   }
 
