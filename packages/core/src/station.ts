@@ -300,11 +300,21 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.medley.paused;
   }
 
+  private _playState: PlayState = PlayState.Idle;
+
   get playState(): PlayState {
-    if (this.paused) return PlayState.Paused;
-    if (this.playing) return PlayState.Playing;
-    return PlayState.Idle;
+    return this._playState;
   }
+
+  private set playState(value) {
+    this._playState = value;
+  }
+
+  // private updatePlayState() {
+  //   if (this.paused) return this.playState = PlayState.Paused;
+  //   if (this.playing) return this.playState = PlayState.Playing;
+  //   this.playState = PlayState.Idle;
+  // }
 
   getDeckInfo(index: DeckIndex) {
     return this.boombox.getDeckInfo(index);
@@ -357,6 +367,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       this._starting = true;
       this.medley.play(false);
       this.logger.info('Playing started');
+
+      this.playState = PlayState.Playing;
     }
   }
 
@@ -365,6 +377,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       this.medley.togglePause(false);
       this.logger.info('Playing paused');
     }
+
+    this.playState = PlayState.Paused;
 
     this._starting = false;
   }
@@ -550,10 +564,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   updateAudiences(groupId: AudienceGroupId, audiences: [id: string, data: any][]) {
     this.audiences.set(groupId, new Map(audiences));
-    this.updatePlayState();
+    this.updatePlayback();
   }
 
-  updatePlayState() {
+  updatePlayback() {
     if (this.hasAudiences) {
       this.start();
     } else {

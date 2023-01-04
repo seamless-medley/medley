@@ -259,7 +259,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           this.logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
 
           return result;
-      }, { retries, wait: 1000 }).then(() => stationLink?.station?.updatePlayState());
+      }, { retries, wait: 1000 }).then(() => stationLink?.station?.updatePlayback());
     }
   }
 
