@@ -901,10 +901,6 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return false;
     }
 
-    if (station.isInTransition) {
-      return false;
-    }
-
     if (station.paused || !station.playing) {
       return false;
     }

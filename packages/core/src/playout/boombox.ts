@@ -427,12 +427,11 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     const kind = trackPlay.track.extra?.kind;
 
+    this._inTransition = kind === TrackKind.Insertion;
+
     if (kind === TrackKind.Insertion) {
-      this._inTransition = true;
       return;
     }
-
-    this._inTransition = false;
 
     if (kind === undefined) {
       return;

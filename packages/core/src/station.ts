@@ -333,7 +333,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 
   skip() {
-    return this.medley.fadeOut();
+    return this.isInTransition ? false : this.medley.fadeOut();
   }
 
   private _starting = false;
