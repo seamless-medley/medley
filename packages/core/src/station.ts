@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import { DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
+import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
 import { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek } from "./collections";
@@ -18,6 +18,10 @@ import {
 } from "./playout";
 import { MetadataHelper } from "./metadata";
 import { SearchQuery, SearchQueryField } from "./library/search";
+
+export type StationAudioLevels = AudioLevels & {
+  reduction: number;
+}
 
 export enum PlayState {
   Idle = 'idle',
@@ -222,6 +226,16 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   setAudioDevice(descriptor: { type?: string, device?: string }) {
     return this.medley.setAudioDevice(descriptor);
+  }
+
+  get audioLevels(): StationAudioLevels {
+    const levels = this.medley.level;
+    const reduction = this.medley.reduction;
+
+    return {
+      ...levels,
+      reduction
+    }
   }
 
   private handleTrackQueued: StationEvents['trackQueued'] = (...args) => {

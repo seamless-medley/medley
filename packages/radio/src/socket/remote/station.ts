@@ -21,4 +21,6 @@ export interface Station {
   ϟdeckUnloaded(deckIndex: number): void;
   ϟdeckStarted(deckIndex: number, position: DeckPositions): void;
   ϟdeckActive(deckIndex: number, position: DeckPositions): void;
+
+  ϟaudioLevels(levels: Buffer | undefined): void;
 }
