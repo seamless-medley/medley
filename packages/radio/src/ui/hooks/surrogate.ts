@@ -1,10 +1,9 @@
-import { useAtomValue } from "jotai";
 import { useEffect, useState } from "react";
 import type { RemoteTypes } from "../../socket/remote";
 import type { Stub } from "../../socket/stub";
 import type { Remotable } from "../../socket/types";
-import { clientAtom } from "../atoms/client";
 import { useRemotable } from "./remotable";
+import { useClient } from "./useClient";
 
 export function useSurrogate<
   T extends RemoteTypes[Kind],
@@ -14,7 +13,7 @@ export function useSurrogate<
   kind: Kind,
   id: string
 ) {
-  const client = useAtomValue(clientAtom);
+  const client = useClient();
   const [remote, setRemote] = useState<Remotable<T>>();
 
   useEffect(() => {
@@ -22,7 +21,7 @@ export function useSurrogate<
     client.surrogateOf<Kind>(StubClass as any, kind, id).then(s => {
       _s = s as any;
       setRemote(s as any);
-    })
+    });
 
     return () => void _s?.dispose();
   }, []);
