@@ -12,7 +12,7 @@ export class Server extends SocketServerController<RemoteTypes> {
 
   private _musicDb: MusicDb | undefined;
 
-  private defaultStation!: Station;
+  private testStation!: Station;
 
   constructor(io: SocketServer) {
     super(io);
@@ -37,8 +37,8 @@ export class Server extends SocketServerController<RemoteTypes> {
   }
 
   private initialize = async () => {
-    this.defaultStation = new Station({
-      id: 'default',
+    this.testStation = new Station({
+      id: 'ui-test',
       name: 'Default station',
       useNullAudioDevice: false,
       musicDb: this._musicDb!
@@ -46,14 +46,14 @@ export class Server extends SocketServerController<RemoteTypes> {
 
     for (const desc of musicCollections) {
       if (!desc.auxiliary) {
-        await this.defaultStation.library.addCollection(desc);
+        await this.testStation.library.addCollection(desc);
       }
     }
 
-    this.defaultStation.updateSequence(sequences);
-    this.defaultStation.sweeperInsertionRules = sweeperRules;
+    this.testStation.updateSequence(sequences);
+    this.testStation.sweeperInsertionRules = sweeperRules;
 
-    this.register('station', 'default', new ExposedStation(this.defaultStation));
+    this.register('station', 'default', new ExposedStation(this.testStation));
 
     // TODO: Register a demo automaton
 
@@ -65,8 +65,6 @@ export class Server extends SocketServerController<RemoteTypes> {
   }
 
   private async connectMongoDB() {
-    console.log('Connecting to MongoDB');
-
     try {
       const newInstance = await new MongoMusicDb().init({
         ...this.config.mongodb,
@@ -77,7 +75,6 @@ export class Server extends SocketServerController<RemoteTypes> {
       this._musicDb = newInstance;
     }
     catch (e) {
-      console.log('connectMongoDB Error', e);
       throw e;
     }
   }
