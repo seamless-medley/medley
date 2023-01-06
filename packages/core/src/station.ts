@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import { DeckIndex, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
+import { DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
 import { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek } from "./collections";
@@ -104,7 +104,19 @@ export type Audience = {
   id: string;
 }
 
-export type StationEvents = Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished' | 'currentCollectionChange'> & {
+type EventNamesFromBoomBox =
+  'trackQueued' |
+  'deckLoaded' |
+  'deckUnloaded' |
+  'deckStarted' |
+  'deckActive' |
+  'deckFinished' |
+  'trackStarted' |
+  'trackActive' |
+  'trackFinished' |
+  'currentCollectionChange';
+
+export type StationEvents = Pick<BoomBoxEvents, EventNamesFromBoomBox> & {
   requestTrackAdded: (track: TrackPeek<RequestTrack<Audience>>) => void;
 }
 
@@ -179,7 +191,13 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     });
 
     boombox.on('trackQueued', this.handleTrackQueued);
-    boombox.on('trackLoaded', this.handleTrackLoaded);
+
+    boombox.on('deckLoaded', this.handleDeckLoaded);
+    boombox.on('deckUnloaded', this.handleDeckUnloaded);
+    boombox.on('deckStarted', this.handleDeckStarted);
+    boombox.on('deckActive', this.handleDeckActive);
+    boombox.on('deckFinished', this.handleDeckFinished);
+
     boombox.on('trackStarted', this.handleTrackStarted);
     boombox.on('trackActive', this.handleTrackActive);
     boombox.on('trackFinished', this.handleTrackFinished);
@@ -210,8 +228,24 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.emit('trackQueued', ...args);
   }
 
-  private handleTrackLoaded: StationEvents['trackLoaded'] = (...args) => {
-    this.emit('trackLoaded', ...args);
+  private handleDeckLoaded: StationEvents['deckLoaded'] = (...args) => {
+    this.emit('deckLoaded', ...args);
+  }
+
+  private handleDeckUnloaded: StationEvents['deckUnloaded'] = (...args) => {
+    this.emit('deckUnloaded', ...args);
+  }
+
+  private handleDeckStarted: StationEvents['deckStarted'] = (...args) => {
+    this.emit('deckStarted', ...args);
+  }
+
+  private handleDeckActive: StationEvents['deckActive'] = (...args) => {
+    this.emit('deckActive', ...args);
+  }
+
+  private handleDeckFinished: StationEvents['deckFinished'] = (...args) => {
+    this.emit('deckFinished', ...args);
   }
 
   private handleTrackStarted: StationEvents['trackStarted'] = (...args) => {
@@ -315,6 +349,9 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   //   if (this.playing) return this.playState = PlayState.Playing;
   //   this.playState = PlayState.Idle;
   // }
+  getDeckPositions(index: DeckIndex): DeckPositions {
+    return this.boombox.getDeckPositions(index);
+  }
 
   getDeckInfo(index: DeckIndex) {
     return this.boombox.getDeckInfo(index);

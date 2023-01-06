@@ -54,11 +54,18 @@ export type BoomBoxEvents = {
   currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack>, newCollection: TrackCollection<BoomBoxTrack>, ignoreFrom: boolean) => void;
   currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
   trackQueued: (track: BoomBoxTrack) => void;
-  trackLoaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
-  trackUnloaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+
+  deckLoaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  deckStarted: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  deckActive: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  deckFinished: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  deckUnloaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+
+
   trackStarted: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => void;
   trackActive: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
   trackFinished: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+
   error: (error: Error) => void;
 }
 
@@ -400,7 +407,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       }
     }
 
-    this.emit('trackLoaded', deck, trackPlay);
+    this.emit('deckLoaded', deck, trackPlay);
   }
 
   private deckUnloaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
@@ -419,7 +426,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       }
     }
 
-    this.emit('trackUnloaded', deck, trackPlay);
+    this.emit('deckUnloaded', deck, trackPlay);
   }
 
   private deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
@@ -428,6 +435,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     const kind = trackPlay.track.extra?.kind;
 
     this._inTransition = kind === TrackKind.Insertion;
+
+    this.emit('deckStarted', deck, trackPlay);
 
     if (kind === TrackKind.Insertion) {
       return;
@@ -460,13 +469,14 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   private deckFinished: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
     this.decks[deck].playing = false;
 
+    this.emit('deckFinished', deck, trackPlay);
+
     const kind = trackPlay.track.extra?.kind;
 
-    if (kind === undefined || kind === TrackKind.Insertion) {
+    if (kind !== TrackKind.Insertion) {
+      this.emit('trackFinished', deck, trackPlay);
       return;
     }
-
-    this.emit('trackFinished', deck, trackPlay);
   }
 
   private mainDeckChanged: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
@@ -477,11 +487,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       }
     }
 
-    if (trackPlay.track.extra?.kind === TrackKind.Insertion) {
-      return;
-    }
+    this.emit('deckActive', deck, trackPlay);
 
-    this.emit('trackActive', deck, trackPlay);
+    const kind = trackPlay.track.extra?.kind;
+
+    if (kind !== TrackKind.Insertion) {
+      this.emit('trackActive', deck, trackPlay);
+    }
   }
 
   /**

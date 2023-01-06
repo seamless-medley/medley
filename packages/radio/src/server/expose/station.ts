@@ -1,6 +1,6 @@
-import { BoomBoxTrackPlay, PlayState, Station } from "@seamless-medley/core";
+import { DeckIndex, DeckPositions, PlayState, Station, StationEvents } from "@seamless-medley/core";
 import { $Exposing, Exposable } from "../../socket/expose";
-import { fromBoomBoxTrackPlay } from "../../socket/po/track";
+import { DeckInfoWithPositions, fromDeckInfoWithPositions } from "../../socket/po/deck";
 import { Station as RemoteStation } from "../../socket/remote/station";
 import { MixinEventEmitterOf } from "../../socket/types";
 
@@ -11,46 +11,85 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     super();
     this[$Exposing] = station;
 
-    this.#exposed.on('trackStarted', this.#onTrackStarted);
+    this.#station.on('deckLoaded', this.#onDeckLoaded);
+    this.#station.on('deckUnloaded', this.#onDeckUnloaded);
+    this.#station.on('deckStarted', this.#onDeckStarted);
+    this.#station.on('deckActive', this.#onDeckActive);
   }
 
   dispose() {
-    this.#exposed.off('trackStarted', this.#onTrackStarted);
+    this.#station.off('deckLoaded', this.#onDeckLoaded);
+    this.#station.off('deckUnloaded', this.#onDeckUnloaded);
+    this.#station.off('deckStarted', this.#onDeckStarted);
+    this.#station.off('deckActive', this.#onDeckActive);
   }
 
-  get #exposed() {
+  get #station() {
     return this[$Exposing];
   }
 
-  // TODO: Should inform a new observer about current state of all decks
+  #onDeckLoaded: StationEvents['deckLoaded'] = async (deckIndex: number) => {
+    const info = await this.getDeckInfo(deckIndex);
+    this.emit('deckLoaded', deckIndex, info);
+  }
 
-  #onTrackStarted = async (deckIndex: number, trackPlay: BoomBoxTrackPlay) => {
-    const x = await fromBoomBoxTrackPlay(trackPlay);
-    console.log('Emitting', x);
-    this.emit('trackStarted', deckIndex, x);
+  #onDeckUnloaded: StationEvents['deckUnloaded'] = async (deckIndex: number) => {
+    this.emit('deckUnloaded', deckIndex);
+  }
+
+  #onDeckStarted: StationEvents['deckStarted'] = async (deckIndex: number) => {
+    const { positions } = await this.getDeckInfo(deckIndex);
+    this.emit('deckStarted', deckIndex, positions);
+  }
+
+  #onDeckActive: StationEvents['deckActive'] = async (deckIndex) => {
+    const { positions } = await this.getDeckInfo(deckIndex);
+    this.emit('deckActive', deckIndex, positions);
+  }
+
+  get id() {
+    return this.#station.id;
+  }
+
+  get name() {
+    return this.#station.name;
+  }
+
+  get description() {
+    return this.#station.description;
   }
 
   get playing() {
-    return this.#exposed.playing;
+    return this.#station.playing;
   }
 
   get paused() {
-    return this.#exposed.paused;
+    return this.#station.paused;
   }
 
   get playState(): PlayState {
-    return this.#exposed.playState;
+    return this.#station.playState;
   }
 
   async start() {
-    this.#exposed.start();
+    this.#station.start();
   }
 
   async pause() {
-    this.#exposed.pause();
+    this.#station.pause();
   }
 
   async skip() {
-    return this.#exposed.skip();
+    return this.#station.skip();
+  }
+
+  getDeckPositions(deckIndex: DeckIndex): DeckPositions {
+    return this.#station.getDeckPositions(deckIndex)
+  }
+
+  getDeckInfo(deckIndex: DeckIndex): Promise<DeckInfoWithPositions> {
+    return fromDeckInfoWithPositions(
+      this.#station.getDeckInfo(deckIndex)
+    )
   }
 };
