@@ -1,10 +1,12 @@
 import { isFunction, mapValues, pickBy, uniqueId, } from "lodash";
+import { EventEmitter } from "eventemitter3";
 import { io, Socket } from "socket.io-client";
-import { ClientEvents, ErrorResponse, RemoteResponse, ServerEvents } from '../socket/events';
+import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents } from '../socket/events';
 import { isProperty } from "../socket/remote/utils";
 import { Stub } from "../socket/stub";
 import { $AnyProp, AnyProp, PickMethod, PickProp, Remotable } from "../socket/types";
-import { AsyncFunctionOf, Callable, ParametersOf } from "../types";
+import { Callable, ParametersOf } from "../types";
+import { DisconnectDescription } from "socket.io-client/build/esm/socket";
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, prop: string, oldValue: T, newValue: T) => Promise<any>;
 
@@ -47,26 +49,38 @@ class ObservingStore<T extends object> {
   }
 }
 
-type SurrogateInfo = {
-  disposers: Set<AsyncFunctionOf<Callable>>;
+type ClientEvents = {
+  connect(): void;
+  disconnect(reason?: DisconnectReason): void;
 }
 
-export class Client<Types extends { [key: string]: any }> {
-  private socket: Socket<ServerEvents, ClientEvents>;
+export enum DisconnectReason {
+  // "io server disconnect" | "io client disconnect" | "ping timeout" | "transport close" | "transport error"
+  ByClient,
+  ByServer,
+  Timeout,
+  Transport
+}
+
+export class Client<Types extends { [key: string]: any }> extends EventEmitter<ClientEvents> {
+  private socket: Socket<ServerEvents, SocketClientEvents>;
 
   private delegates = new Map<`${string}:${string}`, { [event: string]: Set<Callable> | undefined }>();
 
   private observingStores = new Map<`${string}:${string}`, ObservingStore<any>>();
 
-  private surrogateInfo: SurrogateInfo = {
-    disposers: new Set()
-  }
+  private surrogates = new Map<string, Remotable<Types[any]>>();
 
   constructor() {
+    super();
+
     this.socket = io({ transports: ['websocket'] });
     this.socket.on('remote:event', this.handleRemoteEvent);
     this.socket.on('remote:update', this.handleRemoteUpdate);
     this.socket.io.on('reconnect', this.handleSocketReconnect);
+
+    this.socket.on('connect', this.handleSocketConnect);
+    this.socket.on('disconnect', this.handleSocketDisconnect);
   }
 
   private handleRemoteEvent: ServerEvents['remote:event'] = (kind, id, event, ...args) => {
@@ -128,6 +142,21 @@ export class Client<Types extends { [key: string]: any }> {
     }
   }
 
+  private handleSocketConnect = () => {
+    this.emit('connect');
+  }
+
+  private handleSocketDisconnect = (reason: Socket.DisconnectReason, description?: DisconnectDescription) => {
+    const reasonMap: Record<Socket.DisconnectReason, DisconnectReason> = {
+      'io client disconnect': DisconnectReason.ByClient,
+      'io server disconnect': DisconnectReason.ByServer,
+      'ping timeout': DisconnectReason.Timeout,
+      'transport close': DisconnectReason.Transport,
+      'transport error': DisconnectReason.Transport
+    };
+
+    this.emit('disconnect', reasonMap[reason]);
+  }
 
   private extractId(key: `${string}:${string}`) {
     return key.split(':', 2);
@@ -149,11 +178,11 @@ export class Client<Types extends { [key: string]: any }> {
     this.delegates.clear();
     this.observingStores.clear();
 
-    for (const dispose of this.surrogateInfo.disposers) {
-      dispose();
+    for (const surrogate of this.surrogates.values()) {
+      surrogate.dispose();
     }
 
-    this.surrogateInfo.disposers.clear();
+    this.surrogates.clear();
 
     this.socket.close();
   }
@@ -377,7 +406,7 @@ export class Client<Types extends { [key: string]: any }> {
     kind: Kind,
     id: string
   ) {
-    const uuid = uniqueId('surrogate');
+    const uuid = uniqueId(`surrogate:${kind}:${id}`);
 
     const { descriptors } = StubClass;
     const mergedDescs = { ...descriptors.own, ...descriptors.proto };
@@ -496,10 +525,8 @@ export class Client<Types extends { [key: string]: any }> {
 
       onDisposeHandlers.clear();
 
-      this.surrogateInfo.disposers.delete(dispose);
+      this.surrogates.delete(uuid);
     }
-
-    this.surrogateInfo.disposers.add(dispose);
 
     const specialMethods: Record<string | symbol, any> = {
       dispose,
@@ -508,7 +535,7 @@ export class Client<Types extends { [key: string]: any }> {
       onDispose: addDisposeHandler,
     }
 
-    return new Proxy({ uuid } as {}, {
+    const surrogate = new Proxy({ uuid } as {}, {
       get(target, prop) {
         if (prop in specialMethods) {
           return specialMethods[prop];
@@ -526,7 +553,11 @@ export class Client<Types extends { [key: string]: any }> {
           return methods[prop as keyof typeof methods];
         }
       }
-    }) as Remotable<Types[Kind]>;;
+    }) as Remotable<Types[Kind]>;
+
+    this.surrogates.set(uuid, surrogate);
+
+    return surrogate;
   }
 }
 
