@@ -344,11 +344,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this._playState = value;
   }
 
-  // private updatePlayState() {
-  //   if (this.paused) return this.playState = PlayState.Paused;
-  //   if (this.playing) return this.playState = PlayState.Playing;
-  //   this.playState = PlayState.Idle;
-  // }
   getDeckPositions(index: DeckIndex): DeckPositions {
     return this.boombox.getDeckPositions(index);
   }

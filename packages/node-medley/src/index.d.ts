@@ -1,6 +1,6 @@
 /// <reference types="node" />
 
-import type { EventEmitter } from 'events';
+import type { EventEmitter } from 'node:events';
 import type { Readable } from 'stream';
 
 export interface TrackInfo {

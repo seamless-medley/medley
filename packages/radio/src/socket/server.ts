@@ -55,8 +55,6 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
   }
 
   private removeSocket(socket: Socket) {
-    console.log('Removing socket', socket.id);
-
     const subscriptions = this.socketSubscriptions.get(socket);
 
     if (subscriptions) {
@@ -135,6 +133,8 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
             status: 'exception',
             message: `${e.message || e}`
           }
+
+          console.error(e);
         }
       } else {
         resp = {
@@ -169,8 +169,6 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
         kind, id, prop,
         (value, object, observed) => observed?.isPublishedProperty(prop) ?? false,
         async (object) => {
-
-
           const asyncSetterName = `asyncSet${capitalize(prop)}`;
 
           if (asyncSetterName in object) {
