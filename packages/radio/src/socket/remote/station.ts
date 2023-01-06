@@ -1,7 +1,11 @@
-import { PlayState } from "@seamless-medley/core";
-import * as po from "../po/track";
+import { DeckIndex, DeckPositions, PlayState } from "@seamless-medley/core";
+import * as deckPO from "../po/deck";
 
 export interface Station {
+  readonly id: string;
+  readonly name: string;
+  readonly description?: string;
+
   readonly playing: boolean;
   readonly paused: boolean;
   readonly playState: PlayState;
@@ -10,5 +14,11 @@ export interface Station {
   pause(): void;
   skip(): Promise<boolean>;
 
-  ϟtrackStarted(deckIndex: number, trackPlay: po.TrackPlay): void;
+  getDeckPositions(deckIndec: DeckIndex): DeckPositions;
+  getDeckInfo(deckIndex: DeckIndex): Promise<deckPO.DeckInfoWithPositions>;
+
+  ϟdeckLoaded(deckIndex: number, info: deckPO.DeckInfoWithPositions): void;
+  ϟdeckUnloaded(deckIndex: number): void;
+  ϟdeckStarted(deckIndex: number, position: DeckPositions): void;
+  ϟdeckActive(deckIndex: number, position: DeckPositions): void;
 }

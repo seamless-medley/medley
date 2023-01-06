@@ -194,6 +194,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     return this._inTransition;
   }
 
+  getDeckPositions(index: DeckIndex): DeckPositions {
+    return this.medley.getDeckPositions(index);
+  }
+
   getDeckInfo(index: DeckIndex): Readonly<DeckInfoWithPositions> {
     const positions = this.medley.getDeckPositions(index);
 
