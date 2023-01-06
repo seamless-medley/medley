@@ -1,4 +1,5 @@
-import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, breath } from "@seamless-medley/core";
+import { TrackCollection, createLogger, Station, StationRegistry, StationOptions } from "@seamless-medley/core";
+import { breath } from "@seamless-medley/utils";
 import { shuffle } from "lodash";
 import { musicCollections, sequences, sweeperRules } from "../fixtures";
 import { MongoMusicDb } from "../musicdb/mongo";

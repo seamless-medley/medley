@@ -13,6 +13,7 @@
   "dependencies": {
     "@parcel/watcher": "^2.0.7",
     "@seamless-medley/medley": "workspace:../node-medley",
+    "@seamless-medley/utils": "workspace:../utils",
     "@types/workerpool": "^6.1.0",
     "fast-glob": "^3.2.7",
     "lodash": "^4.17.21",

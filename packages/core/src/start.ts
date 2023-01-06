@@ -1,10 +1,10 @@
+import { breath } from "@seamless-medley/utils";
 import normalizePath from "normalize-path";
 import { basename } from "path";
 import { WatchTrackCollection } from "./collections";
 import { InMemoryMusicDb, MusicCollectionDescriptor } from "./library";
 import { SweeperInsertionRule } from "./playout";
 import { SequenceConfig, Station } from "./station";
-import { breath } from "./utils";
 
 process.on('uncaughtException', (e) => {
   console.log('Uncaught exception', e);

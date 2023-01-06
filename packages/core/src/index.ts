@@ -6,5 +6,4 @@ export * from './crate';
 export * from './playout';
 export * from './station';
 export * from './lyrics';
-export * from './utils';
 export * from './logging';

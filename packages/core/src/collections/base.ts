@@ -5,7 +5,7 @@ import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, rando
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
-import { moveArrayElements } from '../utils';
+import { moveArrayElements } from '@seamless-medley/utils';
 
 export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 

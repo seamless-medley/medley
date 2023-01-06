@@ -35,6 +35,7 @@ import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMes
 
 import EventEmitter from "events";
 import { createExciter } from "./exciter";
+import { decibelsToGain, retryable, waitFor } from "@seamless-medley/utils";
 
 export type MedleyAutomatonOptions = {
   id: string;

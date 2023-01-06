@@ -1,4 +1,4 @@
-import { decibelsToGain, gainToDecibels, interpolate } from "@seamless-medley/core";
+import { decibelsToGain, gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { ChatInputCommandInteraction } from "discord.js";
 import { range, round } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
