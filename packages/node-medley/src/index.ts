@@ -1,5 +1,5 @@
 import { inherits } from 'util';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import { Readable } from 'stream';
 import type { AudioFormat, RequestAudioCallbackOptions, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult } from './index.d';
 

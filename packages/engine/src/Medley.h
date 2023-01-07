@@ -141,7 +141,7 @@ public:
 
     void setMaximumFadeOutDuration(double value);
 
-    void fadeOutMainDeck();
+    bool fadeOutMainDeck();
 
     inline double getLevel(int channel) {
         return mixer.getLevel(channel);

@@ -3,16 +3,29 @@ import express from 'express';
 import { SocketServer as IOServer } from '../socket';
 import { Server } from './socket-server';
 
+const port = +(process.env.PORT || 3001);
+
 async function run() {
   const app = express();
   const httpServer = http.createServer(app);
-  const ioServer = new IOServer(httpServer, '/socket.io');
 
+  const listenErrorHandler = (e: Error) => {
+    console.error('Error starting server,', e.message);
+    process.exit(1);
+  }
+
+  console.info('Initializing');
+
+  const ioServer = new IOServer(httpServer, '/socket.io');
   const server = new Server(ioServer);
 
-  const port = +(process.env.PORT || 3001);
-  httpServer.listen(port, () => {
-    console.log(`Listening on port ${port}`);
+  server.once('ready', () => {
+    httpServer
+      .once('error', listenErrorHandler)
+      .listen(port, () => {
+        httpServer.off('error', listenErrorHandler);
+        console.log(`Listening on port ${port}`);
+      });
   });
 }
 

@@ -2,6 +2,113 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+    class AudioRequestProcessor : public AsyncWorker {
+    public:
+        AudioRequestProcessor(std::shared_ptr<Medley::AudioRequest> request, const Napi::Env& env)
+            : AsyncWorker(env),
+            request(request)
+        {
+
+        }
+
+        AudioRequestProcessor(std::shared_ptr<Medley::AudioRequest> request, const Napi::Function& callback)
+            : AsyncWorker(callback),
+            request(request)
+        {
+
+        }
+
+    protected:
+        void Process(uint64_t requestedNumSamples) {
+            auto outputBytesPerSample = request->outputBytesPerSample;
+            auto numChannels = request->numChannels;
+
+            while (request->buffer.getNumReady() < request->buffering) {
+                std::this_thread::sleep_for(5ms);
+            }
+
+            request->currentTime = Time::getMillisecondCounterHiRes();
+
+            auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedNumSamples);
+
+            juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
+            request->buffer.read(tempBuffer, numSamples);
+
+            auto gain = request->fader.update(request->currentTime);
+
+            tempBuffer.applyGainRamp(0, numSamples, request->lastGain, gain);
+            request->lastGain = gain;
+
+            juce::AudioBuffer<float>* sourceBuffer = &tempBuffer;
+            std::unique_ptr<juce::AudioBuffer<float>> resampleBuffer;
+            auto outSamples = numSamples;
+
+            if (request->inSampleRate != request->requestedSampleRate)
+            {
+                outSamples = roundToInt(numSamples * (double)request->requestedSampleRate / (double)request->inSampleRate);
+                resampleBuffer = std::make_unique<juce::AudioBuffer<float>>(numChannels, outSamples);
+
+                long used = 0;
+                int actualSamples = outSamples;
+
+                for (int i = 0; i < numChannels; i++) {
+                    actualSamples = request->resamplers[i]->process(
+                        tempBuffer.getReadPointer(i),
+                        numSamples,
+                        resampleBuffer->getWritePointer(i),
+                        outSamples,
+                        used
+                    );
+                }
+
+                sourceBuffer = resampleBuffer.get();
+                outSamples = actualSamples;
+            }
+
+            bytesReady = outSamples * numChannels * outputBytesPerSample;
+            request->scratch.ensureSize(bytesReady);
+
+            for (int i = 0; i < numChannels; i++) {
+                request->converter->convertSamples(request->scratch.getData(), i, sourceBuffer->getReadPointer(i), 0, outSamples);
+            }
+        }
+
+        std::shared_ptr<Medley::AudioRequest> request;
+        uint64_t bytesReady = 0;
+    };
+
+    class AudioConsumer : public AudioRequestProcessor {
+    public:
+        AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)
+            :
+            AudioRequestProcessor(request, Napi::Function::New(deferred.Env(), [deferred](const CallbackInfo &cbInfo) {
+                deferred.Resolve(cbInfo[0]); // cbInfo[0] is the buffer returned from GetResult()
+                return cbInfo.Env().Undefined();
+            })),
+            requestedSize(requestedSize)
+        {
+
+        }
+
+        void Execute() override
+        {
+            Process(requestedSize / request->outputBytesPerSample / request->numChannels);
+        }
+
+        std::vector<napi_value> GetResult(Napi::Env env) override {
+            auto result = Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)request->scratch.getData(), bytesReady);
+            return { result };
+        }
+    private:
+        uint64_t requestedSize;
+    };
+
+    Napi::Value safeString(Napi::Env env, juce::String s) {
+        return s.isNotEmpty() ? Napi::String::New(env, s.toRawUTF8()) : env.Undefined();
+    }
+}
+
 void Medley::Initialize(Object& exports) {
     auto proto = {
         InstanceMethod<&Medley::getAvailableDevices>("getAvailableDevices"),
@@ -272,8 +379,8 @@ Napi::Value Medley::togglePause(const CallbackInfo& info) {
     return Napi::Boolean::New(info.Env(), engine->togglePause(fade));
 }
 
-void Medley::fadeOut(const CallbackInfo& info) {
-    engine->fadeOutMainDeck();
+Napi::Value Medley::fadeOut(const CallbackInfo& info) {
+    return Napi::Boolean::New(info.Env(), engine->fadeOutMainDeck());
 }
 
 void Medley::seek(const CallbackInfo& info) {
@@ -395,12 +502,16 @@ Napi::Value Medley::getDeckMetadata(const CallbackInfo& info) {
     auto metadata = deck.metadata();
     auto result = Object::New(env);
 
-    result.Set("title", metadata.getTitle().toRawUTF8());
-    result.Set("artist", metadata.getArtist().toRawUTF8());
-    result.Set("album", metadata.getAlbum().toRawUTF8());
-    result.Set("isrc", metadata.getISRC().toRawUTF8());
-    result.Set("trackGain", metadata.getTrackGain());
-    result.Set("bpm", metadata.getBeatsPerMinute());
+    result.Set("title", safeString(env, metadata.getTitle()));
+    result.Set("artist", safeString(env, metadata.getArtist()));
+    result.Set("album", safeString(env, metadata.getAlbum()));
+    result.Set("isrc", safeString(env, metadata.getISRC()));
+
+    auto trackGain = metadata.getTrackGain();
+    auto bpm = metadata.getBeatsPerMinute();
+
+    result.Set("trackGain", trackGain != 0.0f ? Napi::Number::New(env, trackGain) : env.Undefined());
+    result.Set("bpm", bpm != 0.0f ? Napi::Number::New(env, bpm) : env.Undefined());
 
     return result;
 }
@@ -580,109 +691,6 @@ void Medley::audioData(const AudioSourceChannelInfo& info) {
     }
 }
 
-namespace {
-    class AudioRequestProcessor : public AsyncWorker {
-    public:
-        AudioRequestProcessor(std::shared_ptr<Medley::AudioRequest> request, const Napi::Env& env)
-            : AsyncWorker(env),
-            request(request)
-        {
-
-        }
-
-        AudioRequestProcessor(std::shared_ptr<Medley::AudioRequest> request, const Napi::Function& callback)
-            : AsyncWorker(callback),
-            request(request)
-        {
-
-        }
-
-    protected:
-        void Process(uint64_t requestedNumSamples) {
-            auto outputBytesPerSample = request->outputBytesPerSample;
-            auto numChannels = request->numChannels;
-
-            while (request->buffer.getNumReady() < request->buffering) {
-                std::this_thread::sleep_for(5ms);
-            }
-
-            request->currentTime = Time::getMillisecondCounterHiRes();
-
-            auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedNumSamples);
-
-            juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
-            request->buffer.read(tempBuffer, numSamples);
-
-            auto gain = request->fader.update(request->currentTime);
-
-            tempBuffer.applyGainRamp(0, numSamples, request->lastGain, gain);
-            request->lastGain = gain;
-
-            juce::AudioBuffer<float>* sourceBuffer = &tempBuffer;
-            std::unique_ptr<juce::AudioBuffer<float>> resampleBuffer;
-            auto outSamples = numSamples;
-
-            if (request->inSampleRate != request->requestedSampleRate)
-            {
-                outSamples = roundToInt(numSamples * (double)request->requestedSampleRate / (double)request->inSampleRate);
-                resampleBuffer = std::make_unique<juce::AudioBuffer<float>>(numChannels, outSamples);
-
-                long used = 0;
-                int actualSamples = outSamples;
-
-                for (int i = 0; i < numChannels; i++) {
-                    actualSamples = request->resamplers[i]->process(
-                        tempBuffer.getReadPointer(i),
-                        numSamples,
-                        resampleBuffer->getWritePointer(i),
-                        outSamples,
-                        used
-                    );
-                }
-
-                sourceBuffer = resampleBuffer.get();
-                outSamples = actualSamples;
-            }
-
-            bytesReady = outSamples * numChannels * outputBytesPerSample;
-            request->scratch.ensureSize(bytesReady);
-
-            for (int i = 0; i < numChannels; i++) {
-                request->converter->convertSamples(request->scratch.getData(), i, sourceBuffer->getReadPointer(i), 0, outSamples);
-            }
-        }
-
-        std::shared_ptr<Medley::AudioRequest> request;
-        uint64_t bytesReady = 0;
-    };
-
-    class AudioConsumer : public AudioRequestProcessor {
-    public:
-        AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)
-            :
-            AudioRequestProcessor(request, Napi::Function::New(deferred.Env(), [deferred](const CallbackInfo &cbInfo) {
-                deferred.Resolve(cbInfo[0]); // cbInfo[0] is the buffer returned from GetResult()
-                return cbInfo.Env().Undefined();
-            })),
-            requestedSize(requestedSize)
-        {
-
-        }
-
-        void Execute() override
-        {
-            Process(requestedSize / request->outputBytesPerSample / request->numChannels);
-        }
-
-        std::vector<napi_value> GetResult(Napi::Env env) override {
-            auto result = Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)request->scratch.getData(), bytesReady);
-            return { result };
-        }
-    private:
-        uint64_t requestedSize;
-    };
-}
-
 Napi::Value Medley::reqAudioConsume(const CallbackInfo& info) {
     auto env = info.Env();
 
@@ -765,11 +773,16 @@ Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
 
     auto result = Object::New(env);
 
-    result.Set("title", metadata.getTitle().toRawUTF8());
-    result.Set("artist", metadata.getArtist().toRawUTF8());
-    result.Set("album", metadata.getAlbum().toRawUTF8());
-    result.Set("isrc", metadata.getISRC().toRawUTF8());
-    result.Set("trackGain", metadata.getTrackGain());
+    result.Set("title", safeString(env, metadata.getTitle()));
+    result.Set("artist", safeString(env, metadata.getArtist()));
+    result.Set("album", safeString(env, metadata.getAlbum()));
+    result.Set("isrc", safeString(env, metadata.getISRC()));
+
+    auto trackGain = metadata.getTrackGain();
+    auto bpm = metadata.getBeatsPerMinute();
+
+    result.Set("trackGain", trackGain != 0.0f ? Napi::Number::New(env, trackGain) : env.Undefined());
+    result.Set("bpm", bpm != 0.0f ? Napi::Number::New(env, bpm) : env.Undefined());
 
     return result;
 }

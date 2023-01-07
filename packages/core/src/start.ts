@@ -1,9 +1,10 @@
+import { breath } from "@seamless-medley/utils";
 import normalizePath from "normalize-path";
-import { TrackCollection, WatchTrackCollection } from "./collections";
-import { InMemoryMusicDb, MusicLibraryDescriptor } from "./library";
-import { BoomBoxTrack, SweeperInsertionRule } from "./playout";
+import { basename } from "path";
+import { WatchTrackCollection } from "./collections";
+import { InMemoryMusicDb, MusicCollectionDescriptor } from "./library";
+import { SweeperInsertionRule } from "./playout";
 import { SequenceConfig, Station } from "./station";
-import { breath } from "./utils";
 
 process.on('uncaughtException', (e) => {
   console.log('Uncaught exception', e);
@@ -16,7 +17,7 @@ const moods = {
   sad: ['lonely', 'brokenhearted', 'hurt']
 }
 
-const musicCollections: MusicLibraryDescriptor[] = [
+const musicCollections: MusicCollectionDescriptor[] = [
   { id: 'bright', description:'Bright', path: 'D:\\vittee\\Google Drive\\musics\\bright' },
   { id: 'brokenhearted', description:'Broken Hearted', path: 'D:\\vittee\\Google Drive\\musics\\brokenhearted' },
   { id: 'chill', description:'Chill', path: 'D:\\vittee\\Google Drive\\musics\\chill' },
@@ -49,7 +50,15 @@ const sequences: SequenceConfig[] = [
   { crateId: 'guid11', collections: [ { id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
 ];
 
-const makeSweeperRule = (type: string) => new WatchTrackCollection(type).watch(normalizePath(`E:\\medley-drops\\${type}/**/*`))
+const makeSweeperRule = (type: string) => {
+  const collection = new WatchTrackCollection(type, {
+    trackCreator: async (path) => ({ id: basename(path), path })
+  });
+
+  collection.watch(normalizePath(`E:\\medley-drops\\${type}`));
+
+  return collection;
+}
 
 const sweeperRules: SweeperInsertionRule[] = [
   {

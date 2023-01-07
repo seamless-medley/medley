@@ -3,9 +3,9 @@ import { castArray, flatten, matches, some, toLower, trim, uniq, without } from 
 import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
 import type TypedEventEmitter from "typed-emitter";
-import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex } from "@seamless-medley/medley";
+import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
-import { Track } from "../track";
+import { Track, TrackExtra } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
 import { createLogger, Logger } from '../logging';
@@ -25,11 +25,10 @@ export enum TrackKind {
   Insertion
 }
 
-export type BoomBoxTrackExtra = {
-  tags?: Partial<Metadata>;
+export type BoomBoxTrackExtra = TrackExtra & {
+  tags?: Metadata;
   maybeCoverAndLyrics?: Promise<CoverAndLyrics>;
   kind: TrackKind;
-  source?: string;
 }
 
 export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
@@ -50,16 +49,23 @@ export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
   return !!o && !!o.requestedBy;
 }
 
-export interface BoomBoxEvents {
+export type BoomBoxEvents = {
   sequenceChange: (activeCrate: BoomBoxCrate) => void;
   currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack>, newCollection: TrackCollection<BoomBoxTrack>, ignoreFrom: boolean) => void;
   currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
   trackQueued: (track: BoomBoxTrack) => void;
-  trackLoaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
-  trackUnloaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+
+  deckLoaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  deckStarted: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  deckActive: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  deckFinished: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+  deckUnloaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+
+
   trackStarted: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => void;
   trackActive: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
   trackFinished: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
+
   error: (error: Error) => void;
 }
 
@@ -95,6 +101,10 @@ export type DeckInfo = {
   trackPlay?: BoomBoxTrackPlay;
   playing: boolean;
   active: boolean;
+}
+
+export type DeckInfoWithPositions = DeckInfo & {
+  positions: DeckPositions;
 }
 
 export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
@@ -184,8 +194,17 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     return this._inTransition;
   }
 
-  getDeckInfo(index: DeckIndex): Readonly<DeckInfo> {
-    return this.decks[index];
+  getDeckPositions(index: DeckIndex): DeckPositions {
+    return this.medley.getDeckPositions(index);
+  }
+
+  getDeckInfo(index: DeckIndex): Readonly<DeckInfoWithPositions> {
+    const positions = this.medley.getDeckPositions(index);
+
+    return {
+      ...this.decks[index],
+      positions
+    }
   }
 
   private requests: TrackCollection<RequestTrack<Requester>> = new TrackCollection('$_requests');
@@ -257,9 +276,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       kind: TrackKind.Request
     }
 
-    const index = this.requests.push(requested);
     return {
-      index,
+      index: this.requests.push(requested),
       track: requested
     }
   }
@@ -268,6 +286,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.requests.sort(t => -(t.priority || 0), t => (t.lastRequestTime?.valueOf() || 0));
   }
 
+  // TODO: Rename this to a new better name
   private _requestsEnabled = true;
 
   get requestsEnabled() {
@@ -393,7 +412,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       }
     }
 
-    this.emit('trackLoaded', deck, trackPlay);
+    this.emit('deckLoaded', deck, trackPlay);
   }
 
   private deckUnloaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
@@ -412,7 +431,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       }
     }
 
-    this.emit('trackUnloaded', deck, trackPlay);
+    this.emit('deckUnloaded', deck, trackPlay);
   }
 
   private deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
@@ -420,12 +439,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
     const kind = trackPlay.track.extra?.kind;
 
+    this._inTransition = kind === TrackKind.Insertion;
+
+    this.emit('deckStarted', deck, trackPlay);
+
     if (kind === TrackKind.Insertion) {
-      this._inTransition = true;
       return;
     }
-
-    this._inTransition = false;
 
     if (kind === undefined) {
       return;
@@ -454,13 +474,14 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
   private deckFinished: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
     this.decks[deck].playing = false;
 
+    this.emit('deckFinished', deck, trackPlay);
+
     const kind = trackPlay.track.extra?.kind;
 
-    if (kind === undefined || kind === TrackKind.Insertion) {
+    if (kind !== TrackKind.Insertion) {
+      this.emit('trackFinished', deck, trackPlay);
       return;
     }
-
-    this.emit('trackFinished', deck, trackPlay);
   }
 
   private mainDeckChanged: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
@@ -471,11 +492,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       }
     }
 
-    if (trackPlay.track.extra?.kind === TrackKind.Insertion) {
-      return;
-    }
+    this.emit('deckActive', deck, trackPlay);
 
-    this.emit('trackActive', deck, trackPlay);
+    const kind = trackPlay.track.extra?.kind;
+
+    if (kind !== TrackKind.Insertion) {
+      this.emit('trackActive', deck, trackPlay);
+    }
   }
 
   /**

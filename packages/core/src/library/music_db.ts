@@ -3,15 +3,22 @@ import normalizePath from "normalize-path";
 import type { TrackRecord } from "../playout";
 import type { SearchQuery, SearchQueryKey } from "./search";
 
-export type SearchRecord = [term: string, count: number, timestamp: Date];
+export type RecentSearchRecord = [term: string, count: number, timestamp: Date];
+
+export type SearchRecord = {
+  artist?: string;
+  title?: string;
+  query?: string;
+  count: number;
+  timestamp: Date;
+}
 
 export interface SearchHistory {
   add(scope: string, query: SearchQuery & { resultCount?: number }): Promise<void>;
 
-  recentItems(scope: string, key: SearchQueryKey, limit?: number): Promise<SearchRecord[]>;
+  recentItems(scope: string, key: SearchQueryKey, limit?: number): Promise<RecentSearchRecord[]>;
 
-  // TODO: Unmatch items
-  // unmatchItems(scope: string): void;
+  unmatchItems(scope: string): Promise<SearchRecord[]>;
 }
 
 export type TimestampedTrackRecord = TrackRecord & {
@@ -25,6 +32,8 @@ export interface TrackHistory {
 }
 
 export interface MusicDb {
+  dispose(): void;
+
   findById(trackId: string): Promise<MusicTrack | undefined>;
 
   findByPath(path: string): Promise<MusicTrack | undefined>;
@@ -40,7 +49,7 @@ export interface MusicDb {
   get trackHistory(): TrackHistory;
 }
 
-export interface MusicTrack extends Partial<Metadata> {
+export interface MusicTrack extends Metadata {
   trackId: string;
   path: string;
 }
@@ -88,7 +97,9 @@ export class InMemoryMusicDb implements MusicDb {
 
     },
 
-    recentItems: async (scope, key, limit?) => []
+    recentItems: async (scope, key, limit?) => [],
+
+    unmatchItems: async (scope) => []
   }
 
   private readonly _trackHistory: TrackHistory = {
@@ -97,5 +108,9 @@ export class InMemoryMusicDb implements MusicDb {
     },
 
     getAll: async (scope) => []
+  }
+
+  dispose(): void {
+
   }
 }

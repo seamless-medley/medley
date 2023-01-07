@@ -16,5 +16,16 @@
   },
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": ["@babel/*"],
+      "allowedVersions": {
+        "@discordjs/opus": "0.9"
+      }
+    },
+    "allowedDeprecatedVersions": {
+      "@floating-ui/react-dom-interactions": "*"
+    }
+  }
 }

@@ -18,7 +18,7 @@ type Nominatee = TrackPeek<RequestTrack<Audience>> & {
   emoji: string;
 }
 
-const guildVoteMessage: Map<string, Message> = new Map();
+const guildVoteMessage = new Map<string, Message>();
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);

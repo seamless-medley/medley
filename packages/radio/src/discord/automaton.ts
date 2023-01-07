@@ -25,7 +25,8 @@ import {
   BoomBoxTrack,
   BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
   Station,
-  createLogger, Logger, decibelsToGain, makeAudienceGroup as makeStationAudienceGroup, AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents, retryable, waitFor
+  createLogger, Logger, makeAudienceGroup as makeStationAudienceGroup,
+  AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents,
 } from "@seamless-medley/core";
 
 import type TypedEventEmitter from 'typed-emitter';
@@ -35,6 +36,7 @@ import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMes
 
 import EventEmitter from "events";
 import { createExciter } from "./exciter";
+import { decibelsToGain, retryable, waitFor } from "@seamless-medley/utils";
 
 export type MedleyAutomatonOptions = {
   id: string;
@@ -94,7 +96,7 @@ export type UpdateTrackMessageOptions = {
   showSkip?: boolean;
 }
 
-export interface AutomatonEvents {
+export type AutomatonEvents = {
   ready: () => void;
 }
 
@@ -259,7 +261,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           this.logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
 
           return result;
-      }, { retries, wait: 1000 }).then(() => stationLink?.station?.updatePlayState());
+      }, { retries, wait: 1000 }).then(() => stationLink?.station?.updatePlayback());
     }
   }
 
@@ -267,18 +269,30 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     return this.client.isReady();
   }
 
+  private loginAbortController: AbortController | undefined;
+
   async login() {
-    await retryable(async () => {
-      this.logger.info('Logging in');
+    this.loginAbortController?.abort();
+    this.loginAbortController = new AbortController();
 
-      return this.client.login(this.botToken)
-        .catch(e => {
-          this.logger.error('Error login', e);
-          throw e;
-        });
-    }, { wait: 5000 });
+    try {
+      const result = await retryable(async () => {
+        this.logger.info('Logging in');
 
-    this.logger.debug('Logging in done');
+        return this.client.login(this.botToken)
+          .catch(e => {
+            this.logger.error('Error login', e);
+            throw e;
+          });
+      }, { wait: 5000, signal: this.loginAbortController.signal });
+
+      if (result !== undefined) {
+        this.logger.debug('Logging in done');
+      }
+    }
+    catch (e) {
+      this.logger.error('Error logging in', e);
+    }
   }
 
   ensureGuildState(guildId: Guild['id']) {
@@ -715,6 +729,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
         return;
       }
 
+      if (msg.status >= TrackMessageStatus.Ending) {
+        return;
+      }
+
       return  {
         showSkip: true,
         showLyrics: true,
@@ -749,7 +767,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
           return;
         }
 
-        const isEndingOrPlaying = [TrackMessageStatus.Playing, TrackMessageStatus.Ending].includes(msg.status);
+        const isEndingOrPlaying = (msg.status >= TrackMessageStatus.Playing) && (msg.status <= TrackMessageStatus.Ending);
 
         if (!isEndingOrPlaying) {
           return;
@@ -787,11 +805,6 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       trackMessage.maybeMessage?.then(sentMessage => {
         if (sentMessage?.id === message.id)  {
           trackMessage.maybeMessage = undefined;
-
-          const index = trackMessages.indexOf(trackMessage);
-          if (index > -1) {
-            trackMessages.splice(index, 1);
-          }
         }
       });
     }
@@ -890,10 +903,6 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       return false;
     }
 
-    if (station.isInTransition) {
-      return false;
-    }
-
     if (station.paused || !station.playing) {
       return false;
     }
@@ -901,6 +910,10 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     const { trackPlay } = station;
 
     if (!trackPlay) {
+      return false;
+    }
+
+    if (!station.skip()) {
       return false;
     }
 
@@ -920,7 +933,6 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       }
     );
 
-    station.skip();
     return true;
   }
 

@@ -1,10 +1,13 @@
 import { createHash } from 'crypto';
 import EventEmitter from "events";
-import { castArray, chain, chunk, find, findIndex, omit, partition, sample, shuffle, sortBy } from "lodash";
+import type TypedEventEmitter from "typed-emitter";
+import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, random, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
-import { moveArrayElements } from '../utils';
+import { moveArrayElements } from '@seamless-medley/utils';
+
+export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 
 export type TrackCreator<T extends Track<any, CE>, CE = any> = (path: string) => Promise<Omit<T, 'collection' | 'sequencing'> | undefined>;
 
@@ -21,9 +24,9 @@ export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = {
   /**
    * How the new tracks should be added
    *
-   * @default append
+   * @default spread
    */
-  newTracksAddingMode?: 'prepend' | 'append';
+  newTracksAddingMode?: TrackAddingMode;
 
   disableLatch?: boolean;
 
@@ -36,7 +39,15 @@ export type TrackPeek<T extends Track<any, CE>, CE = any> = {
   index: number;
   track: T;
 }
-export class TrackCollection<T extends Track<any, CE>, CE = any> extends EventEmitter {
+
+export type TrackCollectionEvents = {
+  ready: () => void;
+  tracksAdd: (tracks: Track<any, any>[]) => void;
+  tracksRemove: (tracks: Track<any, any>[]) => void;
+  tracksUpdate: (tracks: Track<any, any>[]) => void;
+}
+
+export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventEmitter as new () => TypedEventEmitter<TrackCollectionEvents>) {
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];
@@ -130,11 +141,15 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends EventEm
     return -1;
   }
 
-  async add(paths: string | string[]): Promise<T[]> {
+  static isKnownFileExtension(filename: string) {
+    return /\.(mp3|flac|wav|ogg|aiff)$/i.test(filename);
+  }
+
+  private async transform(paths: string[], fn: (tracks: T[]) => Promise<any>) {
     const validPaths = chain(paths)
       .castArray()
       .map(p => normalizePath(p))
-      .filter(p => /\.(mp3|flac|wav|ogg|aiff)$/i.test(p))
+      .filter(TrackCollection.isKnownFileExtension)
       .uniq()
       .value();
 
@@ -142,41 +157,75 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends EventEm
 
     for (const group of chunk(validPaths, 500)) {
       const created = await Promise.all(group.map(async p => await this.createTrack(p, await this.getTrackId(p))));
-      await this.addTracks(created);
+      await fn(created);
       immediateTracks.push(...created);
     }
 
     return immediateTracks;
   }
 
-  private async addTracks(tracks: T[]) {
+  async add(paths: string[], mode?: TrackAddingMode): Promise<T[]> {
+    return this.transform(paths, async created => this.addTracks(created, mode));
+  }
+
+  private async addTracks(tracks: T[], mode?: TrackAddingMode) {
     const { tracksMapper } = this.options;
 
-    const [updatingTracks, freshTracks] = partition(tracks, it => this.trackIdMap.has(it.id));
-    const freshTracksMapped = await tracksMapper?.(freshTracks) ?? freshTracks;
+    const newTracks = tracks.filter(it => !this.trackIdMap.has(it.id));
+    const mapped = await tracksMapper?.(newTracks) ?? newTracks;
 
-    if (freshTracksMapped.length) {
-      const [a, b] = (this.options.newTracksAddingMode === 'prepend') ? [freshTracksMapped, this.tracks] : [this.tracks, freshTracksMapped];
-
-      this.tracks = [...a, ...b];
-
-      for (const track of freshTracksMapped) {
-        this.trackIdMap.set(track.id, track);
-      }
-
-      this.emit('tracksAdd', freshTracksMapped);
+    if (!mapped.length) {
+      return;
     }
 
-    if (updatingTracks.length) {
-      this.emit('tracksUpdate', updatingTracks);
+    switch (mode ?? this.options.newTracksAddingMode ?? 'spread') {
+      case 'append':
+        this.tracks.push(...mapped);
+        break;
+
+      case 'prepend':
+        this.tracks.unshift(...mapped);
+        break;
+
+      case 'spread':
+        {
+          let index = 0;
+
+          for (const track of mapped) {
+            const width = Math.ceil(this.tracks.length / mapped.length) + 1;
+            index = clamp(random(index, index + width), 0, this.tracks.length - 1);
+            this.tracks.splice(index, 0, track);
+          }
+        }
+        break;
     }
+
+    for (const track of mapped) {
+      this.trackIdMap.set(track.id, track);
+    }
+
+    this.logger.debug('New tracks added', mapped.length);
+
+    this.emit('tracksAdd', mapped);
+  }
+
+  async update(paths: string[]) {
+    return this.transform(paths, async updated => {
+      this.logger.debug('Track updated', updated.length);
+      this.emit('tracksUpdate', updated);
+    });
+  }
+
+  clear() {
+    this.tracks = [];
+    this.trackIdMap.clear();
   }
 
   removeBy(predicate: (track: T) => boolean): T[] {
     const [removed, remaining] = partition(this.tracks, predicate);
     this.tracks = remaining;
 
-    for (const { id, path } of removed) {
+    for (const { id } of removed) {
       this.trackIdMap.delete(id);
     }
 

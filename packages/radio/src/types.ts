@@ -1,6 +1,6 @@
-export type TypeOrArray<T> = T | T[];
+import { Primitive } from "type-fest";
 
-export type Primitive = string | bigint | number | boolean;
+export type TypeOrArray<T> = T | T[];
 
 export type PrimitiveOrArray = TypeOrArray<Primitive>;
 
@@ -12,4 +12,4 @@ export type ParametersOf<T> = T extends (...args: infer A) => any ? A : never;
 
 export type ReturnTypeOf<T> = T extends (...args: any) => infer R ? R : never;
 
-export type AsyncFunctionOf<T> = T extends (...args: infer A) => infer R ? (...args: A) => Promise<R> : never;
+export type AsyncFunctionOf<T> = T extends (...args: infer A) => infer R ? (...args: A) => Promise<Awaited<R>> : never;

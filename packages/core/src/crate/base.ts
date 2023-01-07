@@ -1,8 +1,8 @@
 import { isFunction, sumBy } from "lodash";
-import { weightedSample } from "../utils";
 import { TrackCollection } from "../collections/base";
 import { Track } from "../track";
 import { createLogger, Logger } from '../logging';
+import { weightedSample } from "@seamless-medley/utils";
 
 export type CrateSourceWithWeight<T extends Track<any, E>, E = any> = {
   collection: TrackCollection<T, E>;
@@ -105,14 +105,14 @@ export class Crate<T extends Track<any, CE>, CE = any> {
     }
 
     const item = source.shift();
-    const isValid = (item && validator) ? await validator(item.path) : true;
 
-    if (!isValid || !item) {
-      this.logger.debug('Invalid item');
-      return undefined;
+    if (!item) {
+      return;
     }
 
     source.push(item);
-    return item;
+
+    const isValid = validator ? await validator(item.path) : true;
+    return isValid ? item : undefined;
   }
 }

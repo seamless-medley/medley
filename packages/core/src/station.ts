@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import { DeckIndex, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
+import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
 import { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek } from "./collections";
@@ -18,6 +18,10 @@ import {
 } from "./playout";
 import { MetadataHelper } from "./metadata";
 import { SearchQuery, SearchQueryField } from "./library/search";
+
+export type StationAudioLevels = AudioLevels & {
+  reduction: number;
+}
 
 export enum PlayState {
   Idle = 'idle',
@@ -104,8 +108,19 @@ export type Audience = {
   id: string;
 }
 
-export interface StationEvents extends Pick<BoomBoxEvents, 'trackQueued' | 'trackLoaded' | 'trackStarted' | 'trackActive' | 'trackFinished' | 'currentCollectionChange'> {
-  // ready: () => void;
+type EventNamesFromBoomBox =
+  'trackQueued' |
+  'deckLoaded' |
+  'deckUnloaded' |
+  'deckStarted' |
+  'deckActive' |
+  'deckFinished' |
+  'trackStarted' |
+  'trackActive' |
+  'trackFinished' |
+  'currentCollectionChange';
+
+export type StationEvents = Pick<BoomBoxEvents, EventNamesFromBoomBox> & {
   requestTrackAdded: (track: TrackPeek<RequestTrack<Audience>>) => void;
 }
 
@@ -180,7 +195,13 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     });
 
     boombox.on('trackQueued', this.handleTrackQueued);
-    boombox.on('trackLoaded', this.handleTrackLoaded);
+
+    boombox.on('deckLoaded', this.handleDeckLoaded);
+    boombox.on('deckUnloaded', this.handleDeckUnloaded);
+    boombox.on('deckStarted', this.handleDeckStarted);
+    boombox.on('deckActive', this.handleDeckActive);
+    boombox.on('deckFinished', this.handleDeckFinished);
+
     boombox.on('trackStarted', this.handleTrackStarted);
     boombox.on('trackActive', this.handleTrackActive);
     boombox.on('trackFinished', this.handleTrackFinished);
@@ -207,12 +228,38 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.medley.setAudioDevice(descriptor);
   }
 
+  get audioLevels(): StationAudioLevels {
+    const levels = this.medley.level;
+    const reduction = this.medley.reduction;
+
+    return {
+      ...levels,
+      reduction
+    }
+  }
+
   private handleTrackQueued: StationEvents['trackQueued'] = (...args) => {
     this.emit('trackQueued', ...args);
   }
 
-  private handleTrackLoaded: StationEvents['trackLoaded'] = (...args) => {
-    this.emit('trackLoaded', ...args);
+  private handleDeckLoaded: StationEvents['deckLoaded'] = (...args) => {
+    this.emit('deckLoaded', ...args);
+  }
+
+  private handleDeckUnloaded: StationEvents['deckUnloaded'] = (...args) => {
+    this.emit('deckUnloaded', ...args);
+  }
+
+  private handleDeckStarted: StationEvents['deckStarted'] = (...args) => {
+    this.emit('deckStarted', ...args);
+  }
+
+  private handleDeckActive: StationEvents['deckActive'] = (...args) => {
+    this.emit('deckActive', ...args);
+  }
+
+  private handleDeckFinished: StationEvents['deckFinished'] = (...args) => {
+    this.emit('deckFinished', ...args);
   }
 
   private handleTrackStarted: StationEvents['trackStarted'] = (...args) => {
@@ -301,10 +348,18 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.medley.paused;
   }
 
+  private _playState: PlayState = PlayState.Idle;
+
   get playState(): PlayState {
-    if (this.paused) return PlayState.Paused;
-    if (this.playing) return PlayState.Playing;
-    return PlayState.Idle;
+    return this._playState;
+  }
+
+  private set playState(value) {
+    this._playState = value;
+  }
+
+  getDeckPositions(index: DeckIndex): DeckPositions {
+    return this.boombox.getDeckPositions(index);
   }
 
   getDeckInfo(index: DeckIndex) {
@@ -324,7 +379,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 
   skip() {
-    this.medley.fadeOut();
+    return this.isInTransition ? false : this.medley.fadeOut();
   }
 
   private _starting = false;
@@ -358,6 +413,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       this._starting = true;
       this.medley.play(false);
       this.logger.info('Playing started');
+
+      this.playState = PlayState.Playing;
     }
   }
 
@@ -366,6 +423,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
       this.medley.togglePause(false);
       this.logger.info('Playing paused');
     }
+
+    this.playState = PlayState.Paused;
 
     this._starting = false;
   }
@@ -551,10 +610,10 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   updateAudiences(groupId: AudienceGroupId, audiences: [id: string, data: any][]) {
     this.audiences.set(groupId, new Map(audiences));
-    this.updatePlayState();
+    this.updatePlayback();
   }
 
-  updatePlayState() {
+  updatePlayback() {
     if (this.hasAudiences) {
       this.start();
     } else {

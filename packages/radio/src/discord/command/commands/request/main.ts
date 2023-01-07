@@ -21,12 +21,12 @@ import {
   StringSelectMenuInteraction
 } from "discord.js";
 
-import { chain, isNull, noop, take, truncate, zip } from "lodash";
+import { chain, chunk, clamp, Dictionary, isNull, noop, sortBy, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
-import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview, reply } from "../../utils";
+import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview, maxSelectMenuOptions, reply } from "../../utils";
 
 export type Selection = {
   title: string;
@@ -72,7 +72,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     artist,
     title,
     query
-  }, 100);
+  }, maxSelectMenuOptions * 10); // 10 pages
 
   if (results.length < 1) {
     const escq = (s: string) => s.replace(/"/g, '\\"');
@@ -108,30 +108,53 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       }
     })
     .groupBy(({ title, artist = '' }) => createHash('sha256').update(`${title}:${artist}`.toLowerCase()).digest('base64'))
+    .transform((d, selection, groupKey) => {
+      selection = sortBy(selection, selectionSortingOrder);
+
+      if (selection.length <= maxSelectMenuOptions) {
+        d[groupKey] = selection;
+        return;
+      }
+
+      const chunks = chunk(selection, maxSelectMenuOptions);
+      for (const [page, chunk] of chunks.entries()) {
+        const pagedGroupKey = `${groupKey}:${page}`;
+
+        d[pagedGroupKey] = chunk;
+        d[pagedGroupKey].fromChunk = true;
+      }
+    }, {} as Dictionary<(Selection[]) & { fromChunk?: boolean }>)
     .value();
 
 
-  const [isGrouped, resultSelections] = ((): [grouped: boolean, data: SelectMenuComponentOptionData[]] => {
+  const [isGrouped, resultSelectionChunks] = ((): [grouped: boolean, data: SelectMenuComponentOptionData[][]] => {
     const entries = Object.entries(groupedSelections);
 
     if (entries.length === 1) {
-      return [false, makeTrackSelections(entries[0][1])];
+      return [false, [makeTrackSelections(entries[0][1])]];
     }
 
-    return [true, take(entries, 25).map(([key, grouped]) => {
-      const sel = grouped[0];
-      const f = grouped.length > 1 ? ` // ${toEmoji(grouped.length.toString())} found` : '';
+    return [true, chain(entries)
+      .map(([key, grouped]) => {
+        const sel = grouped[0];
+        const f = (grouped.length > 1) || (grouped.fromChunk) ? ` 💿 ${toEmoji(grouped.length.toString())} found` : '';
 
-      const title = (sel.title.length + f.length > 100) ? truncate(sel.title, { length: 100 - f.length }) : sel.title;
-      const artist = sel.artist !== undefined ? truncate(sel.artist, { length: 100 }) : 'Unknown Artist';
+        const title = (sel.title.length + f.length > 100) ? truncate(sel.title, { length: 100 - f.length }) : sel.title;
+        const artist = sel.artist !== undefined ? truncate(sel.artist, { length: 100 }) : 'Unknown Artist';
 
-      return {
-        label: `${title}${f}`,
-        description: artist,
-        value: key
-      }
-    })];
+        return {
+          label: `${title}${f}`,
+          description: artist,
+          value: key
+        }
+      })
+      .chunk(maxSelectMenuOptions)
+      .value()
+    ];
   })();
+
+  const totalPages = resultSelectionChunks.length;
+  let currentPage = 0;
 
   const cancelButtonBuilder = new ButtonBuilder()
     .setCustomId('request:cancel')
@@ -139,22 +162,42 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     .setStyle(ButtonStyle.Secondary)
     .setEmoji('❌');
 
-  const searchResultMenu: InteractionReplyOptions = {
-    content: 'Search result:',
-    components: [
-      new ActionRowBuilder<MessageActionRowComponentBuilder>()
-        .addComponents(
-          new StringSelectMenuBuilder()
-            .setCustomId(isGrouped ? 'request' : 'request:pick')
-            .setPlaceholder('Select a result')
-            .addOptions(resultSelections)
-        ),
-      new ActionRowBuilder<MessageActionRowComponentBuilder>()
-        .addComponents(cancelButtonBuilder),
-    ]
+  const prevPageButtonBuilder = new ButtonBuilder()
+    .setCustomId('request:prevPage')
+    .setStyle(ButtonStyle.Secondary)
+
+    const nextPageButtonBuilder = new ButtonBuilder()
+    .setCustomId('request:nextPage')
+    .setStyle(ButtonStyle.Secondary)
+
+  const buildSearchResultMenu = (page: number): InteractionReplyOptions => {
+    const components: MessageActionRowComponentBuilder[] = [cancelButtonBuilder];
+
+    if (page > 0) {
+      components.push(prevPageButtonBuilder.setLabel(`⏮ Page ${page}`));
+    }
+
+    if (page < totalPages - 1) {
+      components.push(nextPageButtonBuilder.setLabel(`Page ${page + 2} ⏭`));
+    }
+
+    return {
+      content: isGrouped ? `Search result, page ${page + 1}/${totalPages}:` : 'Select a track',
+      components: [
+        new ActionRowBuilder<MessageActionRowComponentBuilder>()
+          .addComponents(
+            new StringSelectMenuBuilder()
+              .setCustomId(isGrouped ? 'request' : 'request:pick')
+              .setPlaceholder(isGrouped ? 'Select a result' : 'Select a track')
+              .addOptions(resultSelectionChunks[page])
+          ),
+        new ActionRowBuilder<MessageActionRowComponentBuilder>()
+          .addComponents(components),
+      ]
+    }
   }
 
-  const selector = await reply(interaction, { ...searchResultMenu, fetchReply: true });
+  const selector = await reply(interaction, { ...buildSearchResultMenu(currentPage), fetchReply: true });
 
   if (selector instanceof Message) {
     const collector = selector.createMessageComponentCollector({ time: 90_000 });
@@ -214,6 +257,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         return;
       }
 
+      // Cancel button
       if (customId === 'request:cancel') {
         await stop(false);
         collected.update({
@@ -225,16 +269,28 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
       collector.resetTimer({ time: 90_000 });
 
-      const isSelectMenu = collected.isStringSelectMenu();
+      const paginationNavigation: Record<string, number> = {
+        'request:back': 0,
+        'request:prevPage': -1,
+        'request:nextPage': 1
+      };
 
-      if (customId === 'request:back') {
+      if (customId in paginationNavigation) {
+        const increment = paginationNavigation[customId];
+
+        currentPage = clamp(currentPage + increment, 0, totalPages - 1);
+
+        const menu = buildSearchResultMenu(currentPage);
+
         collected.update({
-          content: searchResultMenu.content,
-          components: searchResultMenu.components
+          content: menu.content,
+          components: menu.components
         });
 
         return;
       }
+
+      const isSelectMenu = collected.isStringSelectMenu();
 
       if (customId === 'request' && isSelectMenu) {
         const [key] = collected.values;
@@ -249,7 +305,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
           return;
         }
 
-        if (choices.length === 1) {
+        if (choices.length === 1 && !choices.fromChunk) {
           makeRequest(collected, choices[0].track.id);
           return;
         }
@@ -308,13 +364,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
 function makeTrackSelections(choices: Selection[]) {
   return chain(choices)
-    .groupBy(c => {
-      // Sorting order
-      const { options } = c.track.collection;
-      if (options.auxiliary) return 2;
-      if (options.noFollowOnRequest) return 1;
-      return 0;
-    })
+    .groupBy(selectionSortingOrder)
     .flatMap((auxGroup) => chain(auxGroup)
       .groupBy(c => c.track.collection.id) // Collection
       .flatMap((byCollection) => (byCollection.length === 1)
@@ -332,6 +382,7 @@ function makeTrackSelections(choices: Selection[]) {
     )
     .value()
   )
+  .take(maxSelectMenuOptions)
   .map(({ selection: { title, artist = 'Unknown Artist', track }, by }) => {
     const collectionName = (track.collection.extra as unknown as MusicLibraryExtra<Station>)?.descriptor.description ?? track.collection.id;
 
@@ -346,4 +397,11 @@ function makeTrackSelections(choices: Selection[]) {
     }
   })
   .value()
+}
+
+function selectionSortingOrder(selection: Selection): 0 | 1 | 2 {
+  const { options } = selection.track.collection;
+  if (options.auxiliary) return 2;
+  if (options.noFollowOnRequest) return 1;
+  return 0;
 }

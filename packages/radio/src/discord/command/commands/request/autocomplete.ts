@@ -14,10 +14,13 @@ export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteIn
 
   const { name, value } = interaction.options.getFocused(true);
 
-  const forArtistOrTitleField = ['artist', 'title'].includes(name);
+  const searchField = ['artist', 'title'].includes(name) ? name as SearchQueryField : undefined;
 
-  const searchField = forArtistOrTitleField ? name as SearchQueryField : undefined;
-  const narrowBy = forArtistOrTitleField ? (name !== 'artist' ? 'artist' : 'title') : undefined;
+  const narrowBy = searchField ? ({
+    'artist': 'title',
+    'title': 'artist'
+  })[searchField] as SearchQueryField : undefined;
+
   const narrowTerm = narrowBy ? interaction.options.getString(narrowBy) : undefined;
 
   const suggestions = await station.autoSuggest(`${value}`, searchField, narrowTerm ? narrowBy : undefined, narrowTerm || undefined);

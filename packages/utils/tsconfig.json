@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "allowJs": false,
+    "declaration": true,
+    "isolatedModules": true,
+    "strict": true,
+    "experimentalDecorators": true,
+    "esModuleInterop": true,
+    "moduleResolution": "Node",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap" : true,
+    "composite": true,
+    "noEmit": true,
+    "rootDir": "src"
+  },
+  "include": ["src"]
+}

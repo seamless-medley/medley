@@ -1,27 +1,31 @@
 export type ServerEvents = {
-  'remote:event': (ns: string, id: string, event: string, ...args: any[]) => void;
-  'remote:update': (ns: string, id: string, prop: string, oldValue: any, newValue: any) => void;
+  'remote:event': (kind: string, id: string, event: string, ...args: any[]) => void;
+  'remote:update': (kind: string, id: string, prop: string, oldValue: any, newValue: any) => void;
 }
 
-type OKResponse<T> = {
+export type OKResponse<T> = {
   status: undefined;
   result: T;
 }
 
-type ErrorResponse<T extends string> = {
-  status: T;
+export type IdErrorResponse = {
+  status: 'id';
+  id: string;
 }
 
-type ExceptionResponse = {
+export type KeyErrorResponse = {
+  status: 'key';
+  key: string;
+}
+
+export type ExceptionResponse = {
   status: 'exception';
   message: string;
 }
 
-export type RemoteResponse<T> =
-  OKResponse<T> |
-  ErrorResponse<'key'> |
-  ErrorResponse<'id'> |
-  ExceptionResponse;
+export type ErrorResponse = IdErrorResponse | KeyErrorResponse | ExceptionResponse;;
+
+export type RemoteResponse<T> = OKResponse<T> | ErrorResponse;
 
 export type ResponseStatus = RemoteResponse<any>['status'];
 
@@ -32,14 +36,14 @@ export type RemoteCallback<T = any> = (response: RemoteResponse<T>) => Promise<v
 
 export type ClientEvents = {
   // property
-  'remote:get': (ns: string, id: string, prop: string, callback: RemoteCallback) => void;
-  'remote:set': (ns: string, id: string, prop: string, value: any, callback: RemoteCallback) => void;
+  'remote:get': (kind: string, id: string, prop: string, callback: RemoteCallback) => void;
+  'remote:set': (kind: string, id: string, prop: string, value: any, callback: RemoteCallback) => void;
   // method
-  'remote:invoke': (ns: string, id: string, method: string, args: any[], callback: RemoteCallback) => void;
+  'remote:invoke': (kind: string, id: string, method: string, args: any[], callback: RemoteCallback) => void;
   // object event
-  'remote:subscribe': (ns: string, id: string, event: string, callback: RemoteCallback) => void;
-  'remote:unsubscribe': (ns: string, id: string, event: string, callback: RemoteCallback) => void;
+  'remote:subscribe': (kind: string, id: string, event: string, callback: RemoteCallback) => void;
+  'remote:unsubscribe': (kind: string, id: string, event: string, callback: RemoteCallback) => void;
   // observ
-  'remote:observe': (ns: string, id: string, callback: RemoteCallback<{ [prop: string]: any }>) => void;
-  'remote:unobserve': (ns: string, id: string, callback: RemoteCallback) => void;
+  'remote:observe': (kind: string, id: string, callback: RemoteCallback<{ [prop: string]: any }>) => void;
+  'remote:unobserve': (kind: string, id: string, callback: RemoteCallback) => void;
 }

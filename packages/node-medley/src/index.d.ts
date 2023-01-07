@@ -1,6 +1,6 @@
 /// <reference types="node" />
 
-import type { EventEmitter } from 'events';
+import type { EventEmitter } from 'node:events';
 import type { Readable } from 'stream';
 
 export interface TrackInfo {
@@ -11,6 +11,8 @@ export interface TrackInfo {
 
   /**
    * Start position of the track
+   *
+   * Setting this property will also disable lead-in
    */
   readonly cueInPosition?: number;
 
@@ -20,7 +22,7 @@ export interface TrackInfo {
   readonly cueOutPosition?: number;
 
   /**
-   * Disable lead-in of the next track, useful for jingle/sweeper transition
+   * Disable lead-in of the next track, useful for transiting from jingle/sweeper
    *
    * The lead-in is the position where it is considered as the start singing point,
    * usually presented in a track which has smooth beginning.
@@ -200,7 +202,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
   /**
    * Force fading out and unloading of the current track.
    */
-  fadeOut(): void;
+  fadeOut(): boolean;
 
   /**
    * Seek the main deck
@@ -315,12 +317,12 @@ export type AudioDeviceTypeInfo = {
 }
 
 export type Metadata = {
-  title: string;
-  artist: string;
-  album: string;
-  isrc: string;
-  trackGain: number;
-  bpm: number;
+  title?: string;
+  artist?: string;
+  album?: string;
+  isrc?: string;
+  trackGain?: number;
+  bpm?: number;
 }
 
 export type CoverAndLyrics = {

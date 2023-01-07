@@ -5,10 +5,10 @@ import { TrackCollection } from "../collections";
 import { Track, TrackExtra, TrackExtraOf } from "../track";
 import { Crate } from "./base";
 import { createLogger } from "../logging";
-import { moveArrayIndexes } from "../utils";
 import { randomUUID } from "crypto";
+import { moveArrayIndexes } from "@seamless-medley/utils";
 
-export interface CrateSequencerEvents {
+export type CrateSequencerEvents = {
   change: (crate: Crate<Track<any>>, oldCrate?: Crate<Track<any>>) => void;
   rescue: (scanned: number, ignore: number) => void;
 }

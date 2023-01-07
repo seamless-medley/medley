@@ -17,6 +17,8 @@ import { castArray, isString, maxBy, padStart } from "lodash";
 import { MedleyAutomaton } from "../automaton";
 import { CommandError } from "./type";
 
+export const maxSelectMenuOptions = 25;
+
 export enum HighlightTextType {
   Cyan = 'yaml',
   Yellow = 'fix',
