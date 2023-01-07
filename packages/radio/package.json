@@ -35,6 +35,7 @@
     "@mantine/core": "5.9.6",
     "@mantine/hooks": "5.9.6",
     "@seamless-medley/core": "workspace:../core",
+    "@seamless-medley/utils": "workspace:../utils",
     "@types/ffmpeg-static": "^3.0.1",
     "@types/normalize-path": "^3.0.0",
     "axios": "1.2.1",
