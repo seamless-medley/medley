@@ -105,7 +105,7 @@ const VUMeter: React.FC<{ station?: Remotable<Station>, channel: 'left' | 'right
 
   let raf = 0;
 
-  const normalize = (v: number, headRoom: number = 6) => interpolate(Math.min(v, headRoom), [-100, headRoom], [0, 1]);
+  const normalize = (v: number, headRoom: number = 0) => interpolate(Math.min(v, headRoom), [-100, headRoom], [0, 1]);
 
   const handleAudioLevels: Station['ϟaudioLevels'] = (buffer) => {
     const { current: levelEl } = levelRef;
@@ -125,7 +125,7 @@ const VUMeter: React.FC<{ station?: Remotable<Station>, channel: 'left' | 'right
       levelEl.style.right = `${(1-normalize(magnitude)) * 100}%`;
       peakEl.style.right = `${(1-normalize(peak)) * 100}%`;
 
-      const reduction = normalize(levels.reduction + 6.0);
+      const reduction = normalize(levels.reduction + 0);
 
       reductionEl.style.left = `${(reduction) * 100}%`
       raf = 0;

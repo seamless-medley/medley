@@ -286,6 +286,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.requests.sort(t => -(t.priority || 0), t => (t.lastRequestTime?.valueOf() || 0));
   }
 
+  // TODO: Rename this to a new better name
   private _requestsEnabled = true;
 
   get requestsEnabled() {

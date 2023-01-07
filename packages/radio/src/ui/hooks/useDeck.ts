@@ -30,9 +30,6 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
   const [info, setInfo] = useState<DeckInfoWithPositions | undefined>();
   const [cover, setCover] = useState<string | undefined>();
 
-  // TODO: Parse Lyrics
-  const [lyrics, setLyrics] = useState<string | undefined>();
-
   const update = (deckIndex: number, newInfo: DeckInfoWithPositions) => {
     if (deckIndex !== index) {
       return;
@@ -42,12 +39,10 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
 
     const {
       cover,
-      coverMimeType,
-      lyrics
+      coverMimeType
     } = newInfo?.trackPlay?.track?.extra?.coverAndLyrics ?? {};
 
     setCover(cover && coverMimeType ? URL.createObjectURL(new Blob([cover])) : undefined);
-    setLyrics(lyrics);
 
     return newInfo;
   }
@@ -181,7 +176,6 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
 
   return {
     info,
-    cover,
-    lyrics
+    cover
   }
 }

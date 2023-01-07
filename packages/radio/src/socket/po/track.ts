@@ -9,6 +9,8 @@ import type { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest
 
 export type TrackCollection = Writable<Pick<BoomBoxTrack['collection'], 'id'>>;
 
+// TODO: TrackSequencing
+
 export type Track = Simplify<Writable<
   ConditionalPick<BoomBoxTrack, Jsonifiable | undefined> & {
     collection: TrackCollection;

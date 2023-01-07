@@ -25,7 +25,8 @@ import {
   BoomBoxTrack,
   BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
   Station,
-  createLogger, Logger, decibelsToGain, makeAudienceGroup as makeStationAudienceGroup, AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents, retryable, waitFor
+  createLogger, Logger, makeAudienceGroup as makeStationAudienceGroup,
+  AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents,
 } from "@seamless-medley/core";
 
 import type TypedEventEmitter from 'typed-emitter';
