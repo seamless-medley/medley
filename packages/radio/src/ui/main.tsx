@@ -1,16 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import styled from "@emotion/styled";
 
 import { initRoot } from './init';
 import { Button, Group, MantineProvider } from '@mantine/core';
 import { StubOf } from '../socket/stub';
-import { identity, mapValues, noop } from 'lodash';
+import { noop } from 'lodash';
 import { useSurrogateWithRemotable } from './hooks/surrogate';
 import { Station } from '../socket/remote/station';
 import { Deck } from './components';
 import { Remotable } from '../socket/types';
-import type { StationAudioLevels } from '@seamless-medley/core';
-import { gainToDecibels, interpolate } from '@seamless-medley/utils';
+import { useAudioLevels } from './hooks/useAudioLevels';
 
 const StubStation = StubOf<Station>(class Station {
   id = undefined as any;
@@ -26,38 +25,6 @@ const StubStation = StubOf<Station>(class Station {
   getDeckPositions = noop as any;
   getDeckInfo = noop as any;
 });
-
-const emptyLevel: StationAudioLevels = {
-  left: {
-    magnitude: 0,
-    peak: 0
-  },
-  right: {
-    magnitude: 0,
-    peak: 0
-  },
-  reduction: 0
-}
-
-function arrayBufferToAudioLevels(buffer?: ArrayBuffer): StationAudioLevels {
-  if (!buffer || (buffer.byteLength < 8 * 5)) {
-    return emptyLevel;
-  }
-
-  const view = new Float64Array(buffer);
-
-  return {
-    left: {
-      magnitude: view[0],
-      peak: view[1]
-    },
-    right: {
-      magnitude: view[2],
-      peak: view[3]
-    },
-    reduction: view[4]
-  }
-}
 
 const Box = styled.div`
   width: 500px;
@@ -103,11 +70,7 @@ const VUMeter: React.FC<{ station?: Remotable<Station>, channel: 'left' | 'right
   const reductionRef = useRef<HTMLDivElement>(null);
   const peakRef = useRef<HTMLDivElement>(null);
 
-  let raf = 0;
-
-  const normalize = (v: number, headRoom: number = 0) => interpolate(Math.min(v, headRoom), [-100, headRoom], [0, 1]);
-
-  const handleAudioLevels: Station['ϟaudioLevels'] = (buffer) => {
+  useAudioLevels(station, (data) => {
     const { current: levelEl } = levelRef;
     const { current: reductionEl } = reductionRef;
     const { current: peakEl } = peakRef;
@@ -116,36 +79,13 @@ const VUMeter: React.FC<{ station?: Remotable<Station>, channel: 'left' | 'right
       return;
     }
 
-    const levels = arrayBufferToAudioLevels(buffer);
-    const { magnitude, peak } = mapValues({ ...levels[channel] }, gainToDecibels);
+    const { level, peak } = data[channel];
 
-    raf = requestAnimationFrame(() => {
-      // el.style.opacity = `${levels.left.magnitude*200}%`
-      // el.innerText = `${normalize(magnitude).toFixed(2)}`;
-      levelEl.style.right = `${(1-normalize(magnitude)) * 100}%`;
-      peakEl.style.right = `${(1-normalize(peak)) * 100}%`;
+    levelEl.style.right = `${(1-level) * 100}%`;
+    peakEl.style.right = `${(1-peak) * 100}%`;
 
-      const reduction = normalize(levels.reduction + 0);
-
-      reductionEl.style.left = `${(reduction) * 100}%`
-      raf = 0;
-    })
-  }
-
-  useEffect(() => {
-    if (!station) {
-      return;
-    }
-
-    station.on('audioLevels', handleAudioLevels);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      station.off('audioLevels', handleAudioLevels);
-    }
-  }, [station]);
-
-
+    reductionEl.style.left = `${(data.reduction) * 100}%`
+  });
 
   return (
     <div>
