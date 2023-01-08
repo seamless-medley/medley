@@ -7,7 +7,7 @@ import { ExposedConfig, ExposedConfigCallback } from "./expose/config";
 import { ExposedStation } from "./expose/station";
 import { musicCollections, sequences, sweeperRules } from "../fixtures";
 
-export class Server extends SocketServerController<RemoteTypes> {
+export class MedleyServer extends SocketServerController<RemoteTypes> {
   private config: Config;
 
   private _musicDb: MusicDb | undefined;
@@ -29,9 +29,6 @@ export class Server extends SocketServerController<RemoteTypes> {
         }
       }
     }, this.mongoDBConfigHandlers);
-
-    // this.register('config', '', this.config);
-    // this.register('tick', '', new ExposedTick());
 
     this.connectMongoDB().then(this.initialize);
   }

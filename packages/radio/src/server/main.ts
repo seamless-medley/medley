@@ -1,7 +1,7 @@
 import http from 'http';
 import express from 'express';
-import { SocketServer as IOServer } from '../socket';
-import { Server } from './socket-server';
+import { SocketServer as SocketIOServer } from '../socket';
+import { MedleyServer } from './medley-server';
 
 const port = +(process.env.PORT || 3001);
 
@@ -16,8 +16,8 @@ async function run() {
 
   console.info('Initializing');
 
-  const ioServer = new IOServer(httpServer, '/socket.io');
-  const server = new Server(ioServer);
+  const ioServer = new SocketIOServer(httpServer, '/socket.io');
+  const server = new MedleyServer(ioServer);
 
   server.once('ready', () => {
     httpServer
