@@ -28,6 +28,7 @@ const StubStation = StubOf<Station>(class Station {
 
 const Box = styled.div`
   width: 500px;
+  height: 100%;
   position: relative;
   border-radius: 0.25em 0px 0px 0px;
   background-color: rgba(200, 200, 255, 0.3);
@@ -40,7 +41,7 @@ const Level = styled.div`
   position: absolute;
   left: 0;
   top: 0;
-  right: 0;
+  right: 0%;
   bottom: 0;
   background-color: rgba(77, 224, 66, 0.877);
 `;
@@ -50,13 +51,14 @@ const Peak = styled.div`
   width: 2px;
   top: 0;
   bottom: 0;
+  left: 0%;
 
   background-color: rgba(226, 28, 104, 0.902);
 `;
 
 const Reduction = styled.div`
   position: absolute;
-  left: 0;
+  left: 100%;
   right: 0;
   top: 0;
   bottom: 0;
@@ -82,16 +84,14 @@ const VUMeter: React.FC<{ station?: Remotable<Station>, channel: 'left' | 'right
     const { level, peak } = data[channel];
 
     levelEl.style.right = `${(1-level) * 100}%`;
-    peakEl.style.right = `${(1-peak) * 100}%`;
+    peakEl.style.left = `${(peak) * 100}%`;
 
     reductionEl.style.left = `${(data.reduction) * 100}%`
   });
 
   return (
-    <div>
+    <div style={{ height: '24px' }}>
       <Box>
-        &nbsp;
-
         <Level ref={levelRef} />
         <Reduction ref={reductionRef} />
         <Peak ref={peakRef}/>
