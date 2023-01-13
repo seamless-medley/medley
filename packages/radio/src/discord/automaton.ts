@@ -1,5 +1,5 @@
-import { REST as RestClient } from "@discordjs/rest";
-import { Routes, OAuth2Scopes, PermissionFlagsBits } from "discord-api-types/v10";
+import { Routes } from "discord.js";
+import { OAuth2Scopes, PermissionFlagsBits } from "discord-api-types/v10";
 
 import {
   AudioPlayer,
@@ -37,6 +37,7 @@ import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMes
 import EventEmitter from "events";
 import { createExciter } from "./exciter";
 import { decibelsToGain, retryable, waitFor } from "@seamless-medley/utils";
+import { RestClient } from "./rest";
 
 export type MedleyAutomatonOptions = {
   id: string;
@@ -504,12 +505,15 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   }
 
   private handleClientReady = async (client: Client) => {
-    const guilds = await client.guilds.fetch();
+    const guilds = [...(await client.guilds.fetch()).values()];
 
-    await Promise.all(guilds.map((guild: OAuth2Guild) => {
-      this.ensureGuildState(guild.id);
-      return this.registerCommands(guild);
-    }));
+    for (const { id } of guilds) {
+      this.ensureGuildState(id);
+    };
+
+    if (process.env.DEBUG) {
+      await this.registerGuildCommands(guilds);
+    }
 
     this.logger.info('Ready');
     this.emit('ready');
@@ -970,7 +974,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
             }
           });
 
-          const d = (textChannel || guild.systemChannel)?.send(options).catch(e => void this.logger.prettyError(e));
+          const d = (textChannel || guild.systemChannel)?.send(options).catch(e => void this.logger.error(e));
 
           results.push([guildId, trackMsg, d]);
         }
@@ -980,18 +984,35 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     return results;
   }
 
-  async registerCommands(guild: Guild | OAuth2Guild) {
+  async registerGuildCommands(guilds: OAuth2Guild[]) {
+    return Promise.all(guilds.map(async guild => {
+      await this.registerCommands(guild);
+      await waitFor(3000);
+    }));
+  }
+
+  #rest = new RestClient();
+
+  async registerCommands(guild?: Guild | OAuth2Guild) {
     try {
-      this.logger.info('Registering commands with guild id:', guild.id, `(${guild.name})`);
+      if (guild) {
+        this.logger.info('Registering commands with guild id:', guild.id, `(${guild.name})`);
+      } else {
+        this.logger.info('Registering commands');
+      }
 
-      const client = new RestClient({ version: '10' }).setToken(this.botToken);
+      this.#rest.setToken(this.botToken);
 
-      await client.put(
-        Routes.applicationGuildCommands(this.clientId, guild.id),
-        {
-          body: [createCommandDeclarations(this.baseCommand || 'medley')]
-        }
-      );
+      await this.#rest.queueRequest({
+        method: 'PUT',
+        fullRoute: (guild
+          ? Routes.applicationGuildCommands(this.clientId, guild.id)
+          : Routes.applicationCommands(this.clientId)
+        ),
+        body: [
+          createCommandDeclarations(this.baseCommand || 'medley')
+        ]
+      });
     }
     catch (e) {
       this.logger.error('Error registering command', e);
