@@ -16,6 +16,7 @@
     "@seamless-medley/utils": "workspace:../utils",
     "@types/workerpool": "^6.1.0",
     "fast-glob": "^3.2.7",
+    "glob": "^8.0.3",
     "lodash": "^4.17.21",
     "lyrics-searcher": "^1.0.58",
     "minimatch": "5.0.1",
@@ -27,6 +28,7 @@
     "workerpool": "^6.2.0"
   },
   "devDependencies": {
+    "@types/glob": "^8.0.0",
     "@types/lodash": "^4.14.176",
     "@types/minimatch": "^5.1.2",
     "@types/node": "16.11.17",

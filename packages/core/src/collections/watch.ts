@@ -1,7 +1,7 @@
 import { dirname } from 'path';
 import { stat } from "fs/promises";
 
-import fg from 'fast-glob';
+import node_glob from 'glob';
 import mm from 'minimatch';
 import { debounce, groupBy, shuffle, stubFalse, uniq } from "lodash";
 import normalizePath from "normalize-path";
@@ -247,4 +247,13 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
   }
 }
 
-const glob = (pattern: string) => fg(pattern, { absolute: true, onlyFiles: true });
+const glob = (pattern: string) => new Promise<string[]>((resolve, reject) => {
+  node_glob(pattern, (err, matches) => {
+    if (err) {
+      reject(err);
+      return;
+    }
+
+    resolve(matches);
+  })
+});
