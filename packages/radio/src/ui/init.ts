@@ -14,7 +14,7 @@ export function initClient() {
   client ??= new Client<RemoteTypes>();
 
   // @ts-ignore
-  if (import.meta.env.DEV) {
+  if (!window.$client && import.meta.env.DEV) {
     window.$client = client;
   }
 
@@ -30,7 +30,7 @@ export function initRoot() {
   root ??= createRoot(document.getElementById('root') as HTMLElement);
 
   // @ts-ignore
-  if (import.meta.env.DEV) {
+  if (!window.$root && import.meta.env.DEV) {
     window.$root = root;
   }
 

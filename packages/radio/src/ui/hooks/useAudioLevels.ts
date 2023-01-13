@@ -5,6 +5,7 @@ import { compose } from "lodash/fp";
 import { useEffect } from "react";
 import { Station } from "../../socket/remote/station";
 import { Remotable } from "../../socket/types";
+import { useClient } from "./useClient";
 
 const emptyLevel: StationAudioLevels = {
   left: {
@@ -55,10 +56,11 @@ export function useAudioLevels(station: Remotable<Station> | undefined, callback
   const normalize = (v: number) => interpolate(Math.min(v, max), [-100, max], [0, 1]);
   const process = compose(normalize, gainToDecibels);
 
+  const client = useClient();
+
   let raf = 0;
 
-  const handleAudioLevels: Station['ϟaudioLevels'] = (buffer) => {
-    const levels = arrayBufferToAudioLevels(buffer);
+  const update = (levels: StationAudioLevels) => {
     const left = mapValues({ ...levels.left }, process);
     const right = mapValues({ ...levels.right }, process);
     const reduction = normalize(levels.reduction + max);
@@ -77,19 +79,28 @@ export function useAudioLevels(station: Remotable<Station> | undefined, callback
       });
 
       raf = 0;
-    })
+    });
   }
+
+  const handleAudioLevels: Station['ϟaudioLevels'] = (buffer) => update(arrayBufferToAudioLevels(buffer));
+  const handleDisconnect = () => update({
+    left: { magnitude: 0, peak: 0 },
+    right: { magnitude: 0, peak: 0 },
+    reduction: 0
+  });
 
   useEffect(() => {
     if (!station) {
       return;
     }
 
+    client.on('disconnect', handleDisconnect)
     station.on('audioLevels', handleAudioLevels);
 
     return () => {
       cancelAnimationFrame(raf);
       station.off('audioLevels', handleAudioLevels);
+      client.off('disconnect', handleDisconnect);
     }
   }, [station]);
 }
