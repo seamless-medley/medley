@@ -1,6 +1,8 @@
 const workerpool = require('workerpool');
+const { threadId } = require('node:worker_threads');
 const { MongoClient, Db, Collection } = require('mongodb');
 const { random, omitBy } = require('lodash');
+const { Logger } = require('tslog');
 
 /** @typedef {import('@seamless-medley/core').MusicDb} MusicDb */
 /** @typedef {import('@seamless-medley/core').MusicTrack} MusicTrack */
@@ -33,6 +35,36 @@ let ttls = [
   60 * 60 * 36
 ];
 
+const logger = new Logger({
+  name: `musicdb/mongo/${threadId}`,
+  type: 'pretty',
+  minLevel: !!process.env.DEBUG ? 2 : 3,
+  stylePrettyLogs: true,
+  prettyLogTimeZone: 'local',
+  prettyLogTemplate: '{{yyyy}}.{{mm}}.{{dd}} {{hh}}:{{MM}}:{{ss}}:{{ms}} {{logLevelName}} [{{name}}] ',
+  prettyLogStyles: {
+    name: 'blue',
+    logLevelName: {
+      "*": ["bold", "black", "bgWhiteBright", "dim"],
+      SILLY: ["bold", "white"],
+      TRACE: ["bold", "whiteBright"],
+      DEBUG: ["bold", "green"],
+      INFO: ["bold", "blue"],
+      WARN: ["bold", "yellow"],
+      ERROR: ["bold", "red"],
+      FATAL: ["bold", "redBright"],
+    }
+  }
+});
+
+process.on('uncaughtException', (e) => {
+  logger.error('Uncaught exception', e);
+});
+
+process.on('unhandledRejection', (e) => {
+  logger.error('Unhandled rejection', e);
+});
+
 /**
  *
  * @param {Options} options
@@ -43,6 +75,23 @@ async function configure(options) {
   }
 
   client = new MongoClient(options.url, options.connectionOptions);
+
+  client.on('connectionPoolCreated', (e) => {
+    logger.info('connection pool created');
+  });
+
+  client.on('connectionPoolCleared', (e) => {
+    logger.info('connection pool cleared');
+  });
+
+  client.on('connectionCreated', (e) => {
+    logger.info('connection created, connectionId:', e.connectionId);
+  });
+
+  client.on('connectionClosed', ({ connectionId, reason }) => {
+    logger.info(`connection closed, connectionId: ${connectionId}, reason: ${reason}`);
+  });
+
   db = client.db(options.database);
 
   musics = db.collection('musics');
@@ -67,6 +116,10 @@ async function configure(options) {
     { key: { stationId: 1 } },
     { key: { playedTime: 1 } }
   ]);
+
+  client.on('error', (e) => {
+    logger.error(e);
+  });
 }
 
 /**
@@ -97,7 +150,10 @@ async function find(value, by) {
   const found = await musics.findOne({
     [by]: value,
     expires: { $gte: Date.now() }
-  }, { projection: { _id: 0 }});
+  }, { projection: { _id: 0 }})
+  .catch((e) => {
+    logger.error('Error in find', e);
+  });
 
   if (!found) {
     return;
@@ -116,14 +172,20 @@ const update = async (trackId, fields) => {
       ...fields,
       expires: Date.now() + random(...ttls) * 1000
     }
-  }, { upsert: true });
+  }, { upsert: true })
+  .catch((e) => {
+    logger.error('Error in update', e);
+  });
 }
 
 /**
  * @type {MusicDb['update']}
  */
 const _delete = async (trackId) => {
-  await musics.deleteOne({ trackId });
+  await musics.deleteOne({ trackId })
+  .catch((e) => {
+    logger.error('Error in delete', e);
+  });
 }
 
 /**
@@ -134,6 +196,9 @@ const search_add = async (stationId, query) => {
     ...query,
     stationId,
     timestamp: new Date
+  })
+  .catch((e) => {
+    logger.error('Error in insert', e);
   });
 }
 
@@ -187,19 +252,23 @@ const search_recentItems = async(stationId, key, $limit) => {
     pipelines.push({ $limit });
   }
 
-  const cursor = searchHistory.aggregate(pipelines);
-
   /** @type {Array<RecentSearchRecord>} */
   const result = [];
 
-  for await (const doc of cursor) {
-    result.push([
-      doc[key],
-      doc.count,
-      doc.timestamp
-    ])
-  }
+  try {
+    const cursor = searchHistory.aggregate(pipelines);
 
+    for await (const doc of cursor) {
+      result.push([
+        doc[key],
+        doc.count,
+        doc.timestamp
+      ]);
+    }
+
+  } catch(e) {
+    logger.error('Error in recent search', e);
+  }
   return result;
 }
 
@@ -225,19 +294,24 @@ const search_unmatchedItems = async(stationId) => {
     }
   ];
 
-  const cursor = searchHistory.aggregate(pipelines);
-
   /** @type {Array<SearchRecord>} */
   const result = [];
 
-  for await (const doc of cursor) {
-    result.push({
-      artist: doc.artist ?? undefined,
-      title: doc.title ?? undefined,
-      query: doc.query ?? undefined,
-      count: doc.count,
-      timestamp: doc.timestamp
-    })
+  try {
+    const cursor = searchHistory.aggregate(pipelines);
+
+    for await (const doc of cursor) {
+      result.push({
+        artist: doc.artist ?? undefined,
+        title: doc.title ?? undefined,
+        query: doc.query ?? undefined,
+        count: doc.count,
+        timestamp: doc.timestamp
+      })
+    }
+  }
+  catch (e) {
+    logger.error('Error in unmatched items', e);
   }
 
   return result;
@@ -254,9 +328,16 @@ const search_unmatchedItems = async(stationId) => {
   await trackHistory.insertOne({
     stationId,
     ...record
+  })
+  .catch((e) => {
+    logger.error('Error in TrackHistory::add, while inserting', e);
   });
 
-  const count = await trackHistory.countDocuments({ stationId });
+  const count = await trackHistory.countDocuments({ stationId })
+  .catch((e) => {
+    logger.error('Error in TrackHistory::add, while counting', e);
+    return 0;
+  });
 
   if (count > max) {
     const deleteCount = max - count;
@@ -265,7 +346,11 @@ const search_unmatchedItems = async(stationId) => {
       .sort('playedTime', 'asc')
       .limit(deleteCount)
       .map(doc => doc._id)
-      .toArray();
+      .toArray()
+      .catch((e) => {
+        logger.error('Error in TrackHistory::add, while getting result', e);
+        return [];
+      });
 
     await trackHistory.deleteMany({
       _id: { $in: ids }
@@ -279,7 +364,11 @@ const search_unmatchedItems = async(stationId) => {
  const track_getAll = async (stationId) => await trackHistory.find({ stationId })
     .sort('playedTime', 'asc')
     .map(({ _id, ...record }) => record)
-    .toArray();
+    .toArray()
+    .catch((e) => {
+      logger.error('Error in getAll', e);
+      return [];
+    });
 
 workerpool.worker({
   configure,
