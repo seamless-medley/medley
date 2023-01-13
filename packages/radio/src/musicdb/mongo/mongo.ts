@@ -69,8 +69,8 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
       return this.exec('search_recentItems', stationId, key, limit);
     },
 
-    unmatchItems: async (stationId) => {
-      return this.exec('search_unmatchItems', stationId);
+    unmatchedItems: async (stationId) => {
+      return this.exec('search_unmatchedItems', stationId);
     },
   }
 

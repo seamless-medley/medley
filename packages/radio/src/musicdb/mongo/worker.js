@@ -204,9 +204,9 @@ const search_recentItems = async(stationId, key, $limit) => {
 }
 
 /**
- * @type {SearchHistory['unmatchItems']}
+ * @type {SearchHistory['unmatchedItems']}
  */
-const search_unmatchItems = async(stationId) => {
+const search_unmatchedItems = async(stationId) => {
   /** @type {import('mongodb').Document[]} */
   const pipelines = [
     {
@@ -290,7 +290,7 @@ workerpool.worker({
   delete: _delete,
   search_add,
   search_recentItems,
-  search_unmatchItems,
+  search_unmatchedItems,
   track_add,
   track_getAll
 })

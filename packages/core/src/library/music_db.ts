@@ -18,7 +18,7 @@ export interface SearchHistory {
 
   recentItems(scope: string, key: SearchQueryKey, limit?: number): Promise<RecentSearchRecord[]>;
 
-  unmatchItems(scope: string): Promise<SearchRecord[]>;
+  unmatchedItems(scope: string): Promise<SearchRecord[]>;
 }
 
 export type TimestampedTrackRecord = TrackRecord & {
@@ -99,7 +99,7 @@ export class InMemoryMusicDb implements MusicDb {
 
     recentItems: async (scope, key, limit?) => [],
 
-    unmatchItems: async (scope) => []
+    unmatchedItems: async (scope) => []
   }
 
   private readonly _trackHistory: TrackHistory = {
