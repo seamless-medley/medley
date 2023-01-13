@@ -1,6 +1,6 @@
 import { curry, sample, sortBy } from "lodash";
 import { TrackCollection } from "../collections";
-import { createLogger, Logger } from "../logging";
+import { createLogger, Logger, type ILogObj } from "../logging";
 import { BoomBox, BoomBoxEvents, BoomBoxTrack, TrackKind } from "./boombox";
 
 export type SweeperInsertionRule = {
@@ -71,7 +71,7 @@ export class SweeperInserter {
     boombox.on('currentCollectionChange', this.handler);
   }
 
-  private static _logger?: Logger;
+  private static _logger?: Logger<ILogObj>;
 
   get logger() {
     return SweeperInserter._logger = SweeperInserter._logger ?? createLogger({ name: 'sweeper-inserter' });

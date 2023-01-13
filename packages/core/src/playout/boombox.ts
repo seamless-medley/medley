@@ -8,7 +8,7 @@ import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, Trac
 import { Track, TrackExtra } from "../track";
 import { TrackCollection, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
-import { createLogger, Logger } from '../logging';
+import { createLogger, Logger, type ILogObj } from '../logging';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from '../library/music_db';
 
@@ -124,7 +124,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
   artistHistory: string[][] = [];
 
-  private logger: Logger;
+  private logger: Logger<ILogObj>;
 
   constructor(options: BoomBoxOptions<Requester>) {
     super();

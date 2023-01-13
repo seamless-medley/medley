@@ -24,7 +24,7 @@
     "node-gyp-build": "4.3.0",
     "normalize-path": "^3.0.0",
     "string-similarity": "^4.0.4",
-    "tslog": "^3.3.2",
+    "tslog": "^4.7.1",
     "workerpool": "^6.2.0"
   },
   "devDependencies": {

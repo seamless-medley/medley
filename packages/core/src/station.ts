@@ -5,7 +5,7 @@ import type TypedEventEmitter from 'typed-emitter';
 import { TrackCollection, TrackPeek } from "./collections";
 import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
 import { Library, MusicDb, MusicLibrary } from "./library";
-import { createLogger, Logger } from "./logging";
+import { createLogger, Logger, type ILogObj } from "./logging";
 import {
   BoomBox,
   BoomBoxCrate,
@@ -150,7 +150,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private audiences: Map<AudienceGroupId, Map<string, any>> = new Map();
 
-  private logger: Logger;
+  private logger: Logger<ILogObj>;
 
   constructor(options: Omit<StationOptions, 'musicCollections' | 'sequences' | 'sweeperRules'>) {
     super();

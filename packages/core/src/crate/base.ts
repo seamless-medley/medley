@@ -1,7 +1,7 @@
 import { isFunction, sumBy } from "lodash";
 import { TrackCollection } from "../collections/base";
 import { Track } from "../track";
-import { createLogger, Logger } from '../logging';
+import { createLogger, Logger, type ILogObj } from '../logging';
 import { weightedSample } from "@seamless-medley/utils";
 
 export type CrateSourceWithWeight<T extends Track<any, E>, E = any> = {
@@ -39,7 +39,7 @@ export class Crate<T extends Track<any, CE>, CE = any> {
 
   private _max: number;
 
-  protected logger: Logger;
+  protected logger: Logger<ILogObj>;
 
   constructor(options: CrateOptions<T, CE>) {
     this.id = options.id

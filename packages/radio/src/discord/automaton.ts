@@ -25,8 +25,8 @@ import {
   BoomBoxTrack,
   BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
   Station,
-  createLogger, Logger, makeAudienceGroup as makeStationAudienceGroup,
-  AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents,
+  makeAudienceGroup as makeStationAudienceGroup,
+  AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents, Logger, ILogObj, createLogger,
 } from "@seamless-medley/core";
 
 import type TypedEventEmitter from 'typed-emitter';
@@ -120,7 +120,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
   private _guildStates: Map<Guild['id'], GuildState> = new Map();
 
-  private logger: Logger;
+  private logger: Logger<ILogObj>;
 
   private rejoining = false;
 
