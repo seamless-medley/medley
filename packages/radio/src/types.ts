@@ -2,6 +2,8 @@ import { Primitive } from "type-fest";
 
 export type TypeOrArray<T> = T | T[];
 
+export type Unpacked<T> = T extends (infer U)[] ? U : T;
+
 export type PrimitiveOrArray = TypeOrArray<Primitive>;
 
 export type PrimitiveKeyValue = PrimitiveOrArray | { [key: string]: PrimitiveKeyValue };

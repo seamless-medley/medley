@@ -31,7 +31,8 @@ export type TrackPlay = Simplify<Writable<
 >>;
 
 export const fromBoomBoxTrack = async (
-  { id, path, musicId, cueInPosition, cueOutPosition, disableNextLeadIn, extra, collection }: BoomBoxTrack
+  { id, path, musicId, cueInPosition, cueOutPosition, disableNextLeadIn, extra, collection }: BoomBoxTrack,
+  noExta?: boolean
 ): Promise<Track> => ({
   id,
   path,
@@ -39,7 +40,7 @@ export const fromBoomBoxTrack = async (
   cueInPosition,
   cueOutPosition,
   disableNextLeadIn,
-  extra: extra ? await fromBoomBoxTrackExtra(extra) : undefined,
+  extra: !noExta && extra ? await fromBoomBoxTrackExtra(extra) : undefined,
   collection: fromBoomBoxTrackCollection(collection)
 })
 

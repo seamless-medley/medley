@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import styled from "@emotion/styled";
 
 import { initRoot } from './init';
@@ -6,12 +6,13 @@ import { Button, Group, MantineProvider } from '@mantine/core';
 import { StubOf } from '../socket/stub';
 import { noop } from 'lodash';
 import { useSurrogateWithRemotable } from './hooks/surrogate';
-import { Station } from '../socket/remote/station';
+import { Collection, Station } from '../socket/remote';
 import { Deck } from './components';
 import { Remotable } from '../socket/types';
 import { useAudioLevels } from './hooks/useAudioLevels';
+import { useClient } from './hooks/useClient';
 
-const StubStation = StubOf<Station>(class Station {
+class StubbingStation {
   id = undefined as any;
   name = undefined as any;
   description = undefined as any;
@@ -22,8 +23,25 @@ const StubStation = StubOf<Station>(class Station {
   start = noop as any;
   pause = noop as any;
   skip = noop as any;
+
   getDeckPositions = noop as any;
   getDeckInfo = noop as any;
+
+  getCollections = noop as any;
+}
+
+const StubStation = StubOf<Station>(StubbingStation);
+
+const StubCollection = StubOf<Collection>(class StubbingCollecting {
+  id = undefined as any;
+  description = undefined as any;
+  options = undefined as any;
+  length = undefined as any;
+  ready = undefined as any;
+
+  clear = noop as any;
+  shuffle = noop as any;
+  all = noop as any;
 });
 
 const Box = styled.div`
@@ -101,7 +119,37 @@ const VUMeter: React.FC<{ station?: Remotable<Station>, channel: 'left' | 'right
 }
 
 const App: React.FC = () => {
-  const [station, stationProps] = useSurrogateWithRemotable(StubStation, 'station', 'default');
+  const client = useClient();
+  const [station, stationProps] = useSurrogateWithRemotable(StubStation, 'station', 'demo');
+
+  useEffect(() => {
+    if (!station) {
+      return;
+    }
+
+    station.getCollections().then(async cols => {
+      console.log('Got collections');
+
+      for (const col of cols) {
+        const s = await client.surrogateOf(StubCollection, 'collection', `${station.id()}/${col}`);
+
+        console.log('Options', s.options());
+
+        // s.all().then((tracks) => {
+        //   console.log('All tracks for', col, tracks);
+        // })
+
+        s.on('trackShift', (track) => {
+          console.log('Track shift from', col, track);
+        });
+
+        s.on('trackPush', (track) => {
+          console.log('Track push to', col, track);
+        });
+      }
+    });
+  }, [station])
+
 
   return (
     <>

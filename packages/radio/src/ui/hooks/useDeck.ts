@@ -20,6 +20,12 @@ const storeCache = (station: Remotable<Station>, index: DeckIndex, info?: Promis
   cache.get(station)![index] = info;
 }
 
+const clearCache = (station: Remotable<Station>, index: DeckIndex) => {
+  if (cache.has(station)) {
+    cache.get(station)![index] = undefined;
+  }
+}
+
 const getCache = (station: Remotable<Station>, index: DeckIndex) => {
   return cache.get(station)?.[index];
 }
@@ -49,12 +55,19 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
 
   const refreshDeckInfo = () => {
     if (!station) {
+      console.log('Cannot refresh deck info', index);
       return Promise.resolve(undefined);
     }
 
     const promise = station.getDeckInfo(index).then(newInfo => update(index, newInfo));
     storeCache(station, index, promise);
     return promise;
+  }
+
+  const invalidateDeckInfo = () => {
+    if (station) {
+      clearCache(station, index);
+    }
   }
 
   const onLoaded: Station['ϟdeckLoaded'] = async (deckIndex, newInfo) => {
@@ -138,14 +151,17 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
       return;
     }
 
-    storeCache(station, deckIndex, undefined);
+    clearCache(station, deckIndex);
   }
 
   useEffect(() => {
+    // TODO: This won't work since the event was fired before receiving the station
     client.on('connect', refreshDeckInfo);
+    client.on('disconnect', invalidateDeckInfo)
 
     return () => {
       client.off('connect', refreshDeckInfo);
+      client.off('disconnect', invalidateDeckInfo);
     }
   }, [])
 

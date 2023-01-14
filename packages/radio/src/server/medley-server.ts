@@ -1,4 +1,4 @@
-import { MusicDb, Station} from "@seamless-medley/core";
+import { MusicDb, Station, StationEvents} from "@seamless-medley/core";
 import { MongoMusicDb, Options as MongoDBOptions } from "../musicdb/mongo";
 import { SocketServer, SocketServerController } from "../socket";
 import { RemoteTypes } from "../socket/remote";
@@ -6,13 +6,15 @@ import { Config } from "../socket/remote/config";
 import { ExposedConfig, ExposedConfigCallback } from "./expose/config";
 import { ExposedStation } from "./expose/station";
 import { musicCollections, sequences, sweeperRules } from "../fixtures";
+import { ExposedColection } from "./expose/collection";
+import { Unpacked } from "../types";
 
 export class MedleyServer extends SocketServerController<RemoteTypes> {
   private config: Config;
 
   private _musicDb: MusicDb | undefined;
 
-  private testStation!: Station;
+  private demoStation!: Station;
 
   constructor(io: SocketServer) {
     super(io);
@@ -34,23 +36,23 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   }
 
   private initialize = async () => {
-    this.testStation = new Station({
-      id: 'ui-test',
-      name: 'Default station',
+    this.demoStation = new Station({
+      id: 'demo',
+      name: 'Demo station',
       useNullAudioDevice: false,
       musicDb: this._musicDb!
     });
 
     for (const desc of musicCollections) {
       if (!desc.auxiliary) {
-        await this.testStation.library.addCollection(desc);
+        await this.demoStation.addCollection(desc);
       }
     }
 
-    this.testStation.updateSequence(sequences);
-    this.testStation.sweeperInsertionRules = sweeperRules;
+    this.demoStation.updateSequence(sequences);
+    this.demoStation.sweeperInsertionRules = sweeperRules;
 
-    this.register('station', 'default', new ExposedStation(this.testStation));
+    this.registerStation(this.demoStation);
 
     // TODO: Register a demo automaton
 
@@ -78,6 +80,45 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
   private get musicDb() {
     return this._musicDb;
+  }
+
+  registerStation(station: Station) {
+    station.on('collectionAdded', this.handleStationCollectionAdded);
+    station.on('collectionRemoved', this.handleStationCollectionRemoved);
+
+    this.register('station', station.id, new ExposedStation(station));
+
+    for (const col of station.collections) {
+      this.registerCollection(col);
+    }
+  }
+
+  deregisterStation(station: Station) {
+    station.off('collectionAdded', this.handleStationCollectionAdded);
+    station.off('collectionRemoved', this.handleStationCollectionRemoved);
+
+    this.deregister('station', station.id);
+  }
+
+  private handleStationCollectionAdded: StationEvents['collectionAdded'] = (collection) => {
+    this.registerCollection(collection);
+  }
+
+  private handleStationCollectionRemoved: StationEvents['collectionAdded'] = (collection) => {
+    this.deregisterCollection(collection);
+  }
+
+  /**
+   * A collection is registered with station namespace
+   */
+  registerCollection(collection: Unpacked<Station['collections']>) {
+    const station = collection.extra.owner;
+    this.register('collection', `${station.id}/${collection.id}`, new ExposedColection(collection));
+  }
+
+  deregisterCollection(collection: Unpacked<Station['collections']>) {
+    const station = collection.extra.owner;
+    this.deregister('collection', `${station.id}/${collection.id}`);
   }
 }
 
