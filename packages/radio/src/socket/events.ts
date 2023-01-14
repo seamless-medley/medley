@@ -31,8 +31,9 @@ export type ResponseStatus = RemoteResponse<any>['status'];
 
 export type RemoteErrorStatus = Exclude<ResponseStatus, undefined>;
 
-export type RemoteCallback<T = any> = (response: RemoteResponse<T>) => Promise<void>
+export type RemoteCallback<T = any> = (response: RemoteResponse<T>) => Promise<void>;
 
+export type RemoteCallParams<T> = T extends (...args: [...infer P, infer H]) => any ? { params: P, handler: H } : never;
 
 export type ClientEvents = {
   // property

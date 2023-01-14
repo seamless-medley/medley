@@ -286,7 +286,7 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
     }
   }
 
-  register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: WithoutEvents<Remote[Kind]>) {
+  protected register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: WithoutEvents<Remote[Kind]>) {
     if (typeof o !== 'object') {
       return;
     }
@@ -307,7 +307,7 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
     this.objectNamespaces.get(kind)?.set(id, new ObjectObserver(instance, this.makeObserverPropertyHandler(kind, id)));
   }
 
-  deregister<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string) {
+  protected deregister<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string) {
     const namespace = this.objectNamespaces.get(kind);
     if (!namespace) {
       return;
@@ -389,26 +389,25 @@ export class ObjectObserver<T extends object> {
   readonly #props: Record<string, TypedPropertyDescriptorOf>;
 
   constructor(readonly instance: T, private readonly notify: ObservedPropertyHandler<T>) {
-    const target = this.getTarget();
+    const exposedInstance = this.getExposed();
 
     const own = propertyDescriptorOf(instance);
     const proto = propertyDescriptorOf(Object.getPrototypeOf(instance));
 
     const declared = mapValues({ ...own, ...proto }, (desc, name) => bindDescInstance(instance, name, desc));
 
-    const exposed = target !== instance ? (() => {
-      return mapValues({
-        ...propertyDescriptorOf(target),
-        ...propertyDescriptorOf(Object.getPrototypeOf(target))
-      }, (desc, name) => bindDescInstance(target, name, desc));
+    const exposed = exposedInstance
+      ? mapValues(
+          {
+          ...propertyDescriptorOf(exposedInstance),
+          ...propertyDescriptorOf(Object.getPrototypeOf(exposedInstance))
+          },
+          (desc, name) => bindDescInstance(exposedInstance, name, desc)
+        )
+      : undefined;
 
-    })() : declared;
-
-    this.#methods = pickBy(exposed, desc => isFunction(desc.value));
-
-    this.#props = chain(exposed)
-      .pickBy(desc => (desc.name in declared) && isProperty(desc) && isPublicPropertyName(desc.name))
-      .value();
+    this.#methods = pickBy(declared, desc => isFunction(desc.value));
+    this.#props = pickBy(exposed ?? declared, desc => (desc.name in declared) && isProperty(desc) && isPublicPropertyName(desc.name));
 
     for (const [prop, desc] of Object.entries(this.#props)) {
       Object.defineProperty(desc.instance, prop, {
@@ -439,16 +438,12 @@ export class ObjectObserver<T extends object> {
     }
   }
 
-  private getTarget() {
-    return this.getExposed() ?? this.instance;
-  }
-
   /**
    * Get a copy of all property values
    */
   getAll() {
     return Object.entries(this.#props).reduce((o, [prop, desc]) => {
-      o[prop] = desc.value ?? desc.get?.call(this.getTarget());
+      o[prop] = desc.value ?? desc.get?.call(desc.instance);
       return o;
     }, {} as any) as T;
   }
