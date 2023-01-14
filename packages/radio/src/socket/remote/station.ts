@@ -17,6 +17,8 @@ export interface Station {
   getDeckPositions(deckIndec: DeckIndex): DeckPositions;
   getDeckInfo(deckIndex: DeckIndex): Promise<deckPO.DeckInfoWithPositions>;
 
+  getCollections(): string[];
+
   ϟdeckLoaded(deckIndex: number, info: deckPO.DeckInfoWithPositions): void;
   ϟdeckUnloaded(deckIndex: number): void;
   ϟdeckStarted(deckIndex: number, position: DeckPositions): void;

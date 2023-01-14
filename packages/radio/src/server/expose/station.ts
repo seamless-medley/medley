@@ -45,8 +45,6 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
       reduction
     ];
 
-    // console.log(...values);
-
     const isSilence = every(values, equals(0));
 
     const buffer = !isSilence ? Buffer.alloc(values.length * 8) : undefined;
@@ -123,5 +121,9 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     return fromDeckInfoWithPositions(
       this.#station.getDeckInfo(deckIndex)
     )
+  }
+
+  getCollections(): string[] {
+    return this.#station.collections.map(c => c.id);
   }
 };
