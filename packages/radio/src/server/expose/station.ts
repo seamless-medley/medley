@@ -3,7 +3,7 @@ import { every } from "lodash";
 import { equals } from "lodash/fp";
 import { $Exposing, Exposable } from "../../socket/expose";
 import { DeckInfoWithPositions, fromDeckInfoWithPositions } from "../../socket/po/deck";
-import { Station as RemoteStation } from "../../socket/remote/station";
+import { Station as RemoteStation } from "../../socket/remote";
 import { MixinEventEmitterOf } from "../../socket/types";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation>  {

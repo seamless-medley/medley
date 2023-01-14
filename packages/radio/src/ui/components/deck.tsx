@@ -1,6 +1,6 @@
 import { DeckIndex } from "@seamless-medley/core";
 import React from "react";
-import { Station } from "../../socket/remote/station";
+import { Station } from "../../socket/remote";
 import { Remotable } from "../../socket/types";
 import { useDeck } from "../hooks/useDeck";
 

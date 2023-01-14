@@ -1,6 +1,6 @@
 import { PickProp, WithoutEvents } from "./types";
 
-export const $Exposing: unique symbol = Symbol.for('$Exposing');
+export const $Exposing: unique symbol = Symbol('$Exposing');
 
 type AsyncSetOfName<T> = `asyncSet${Capitalize<Extract<T, string>>}`;
 

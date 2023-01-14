@@ -3,7 +3,7 @@ import { gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { mapValues } from "lodash";
 import { compose } from "lodash/fp";
 import { useEffect } from "react";
-import { Station } from "../../socket/remote/station";
+import { Station } from "../../socket/remote";
 import { Remotable } from "../../socket/types";
 import { useClient } from "./useClient";
 

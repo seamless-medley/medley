@@ -3,7 +3,8 @@ import { Station } from "./station";
 
 
 export type {
-  Config
+  Config,
+  Station,
 }
 
 export interface RemoteTypes {

@@ -1,7 +1,7 @@
 import { DeckIndex } from "@seamless-medley/core";
 import { useEffect, useState } from "react";
 import { DeckInfoWithPositions } from "../../socket/po/deck";
-import { Station } from "../../socket/remote/station";
+import { Station } from "../../socket/remote";
 import { Remotable } from "../../socket/types";
 import { useClient } from "../hooks/useClient";
 

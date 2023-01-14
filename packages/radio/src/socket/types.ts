@@ -39,7 +39,7 @@ type AsyncFunctionsOf<T> = {
   [K in keyof T]: AsyncFunctionOf<T[K]>;
 }
 
-export const $AnyProp: unique symbol = Symbol.for('$AnyProp');
+export const $AnyProp: unique symbol = Symbol('$AnyProp');
 export type AnyProp = typeof $AnyProp;
 
 export type Remotable<T, Props = PickProp<T>> = EventEmitterOf<T> & GettersOf<Props> & SettersOf<Props> & AsyncFunctionsOf<PickMethod<T>> & {
