@@ -2,9 +2,9 @@ import EventEmitter from "events";
 import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
 import { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
-import { TrackCollection, TrackPeek } from "./collections";
+import { TrackCollection, TrackCollectionBasicOptions, TrackPeek, WatchTrackCollection } from "./collections";
 import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
-import { Library, MusicDb, MusicLibrary } from "./library";
+import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicLibraryExtra } from "./library";
 import { createLogger, Logger, type ILogObj } from "./logging";
 import {
   BoomBox,
@@ -122,6 +122,10 @@ type EventNamesFromBoomBox =
 
 export type StationEvents = Pick<BoomBoxEvents, EventNamesFromBoomBox> & {
   requestTrackAdded: (track: TrackPeek<RequestTrack<Audience>>) => void;
+  //
+  collectionAdded: (collection: WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<Station>>) => void;
+  collectionRemoved: (collection: WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<Station>>) => void;
+  collectionUpdated: (collection: WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<Station>>) => void;
 }
 
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
@@ -136,8 +140,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private readonly musicDb: MusicDb;
 
-  readonly library: MusicLibrary<Station>;
-
+  private readonly library: MusicLibrary<Station>;
 
   intros?: TrackCollection<BoomBoxTrack>;
   requestSweepers?: TrackCollection<BoomBoxTrack>;
@@ -437,28 +440,79 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.medley.deleteAudioStream(streamId);
   }
 
+  //#region Collection
+
+  async addCollection(descriptor: MusicCollectionDescriptor) {
+    const result = await this.library.addCollection(descriptor);
+
+    if (!result) {
+      return;
+    }
+
+    this.emit('collectionAdded', result);
+    return result;
+  }
+
+  removeCollection(id: string): boolean {
+    if (!this.library.has(id)) {
+      return false;
+    }
+
+    const isInUsed = this.crates.some(c => c.sources.some(col => col.id === id));
+    if (isInUsed) {
+      return false;
+    }
+
+    this.emit('collectionRemoved', this.getCollection(id)!);
+    this.library.remove(id);
+
+    return true;
+  }
+
+  updateCollectionOptions(id: MusicCollectionDescriptor['id'], options: TrackCollectionBasicOptions) {
+    if (!this.library.has(id)) {
+      return false;
+    }
+
+    const collection = this.library.get(id)!
+    collection.options = { ...options };
+    this.emit('collectionUpdated', collection);
+  }
+
+  getCollection(id: string) {
+    return this.library.get(id);
+  }
+
+  get collections() {
+    return this.library.all();
+  }
+
+  //#endregion
+
   updateSequence(sequences: SequenceConfig[]) {
-    const crates = sequences.map(
-      ({ crateId, collections, chance, limit }, index) => {
-        const validCollections = collections.filter(col => this.library.has(col.id));
-
-        if (validCollections.length === 0) {
-          return;
-        }
-
-        const existing = this.boombox.crates.find(c => c.id === crateId);
-
-        return new Crate({
-          id: crateId,
-          sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.library.get(id)!, weight })),
-          chance: createChanceable(chance),
-          limit: this.sequenceLimit(limit),
-          max: existing?.max
-        });
-      })
+    const crates = sequences
+      .map(config => this.createCrate(config))
       .filter((c): c is BoomBoxCrate => c !== undefined);
 
     this.addCrates(...crates);
+  }
+
+  private createCrate({ crateId, collections, chance, limit }: SequenceConfig) {
+    const validCollections = collections.filter(col => this.library.has(col.id));
+
+    if (validCollections.length === 0) {
+      return;
+    }
+
+    const existing = this.boombox.crates.find(c => c.id === crateId);
+
+    return new Crate({
+      id: crateId,
+      sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.library.get(id)!, weight })),
+      chance: createChanceable(chance),
+      limit: crateLimitFromSequenceLimit(limit),
+      max: existing?.max
+    });
   }
 
   addCrates(...crates: BoomBoxCrate[]) {
@@ -475,36 +529,6 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   get crates() {
     return this.boombox.crates;
-  }
-
-  private sequenceLimit(limit: SequenceLimit): CrateLimit  {
-    if (typeof limit === 'number') {
-      return limit;
-    }
-
-    if (limit === 'all') {
-      return limit;
-    }
-
-    const { by } = limit;
-
-    if (by === 'upto') {
-      const upto = () => random(1, limit.upto);
-      return upto;
-    }
-
-    if (by === 'range') {
-      const [min, max] = sortBy(limit.range);
-      const range = () => random(min, max);
-      return range;
-    }
-
-    if (by === 'sample' || by === 'one-of') {
-      const oneOf = () => sample(limit.list) ?? 0;
-      return oneOf;
-    }
-
-    return 0;
   }
 
   set sweeperInsertionRules(rules: SweeperInsertionRule[]) {
@@ -732,6 +756,36 @@ function chanceOf(n: [yes: number, no: number]): Chanceable {
     },
     chances: () => all
   }
+}
+
+function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit  {
+  if (typeof limit === 'number') {
+    return limit;
+  }
+
+  if (limit === 'all') {
+    return limit;
+  }
+
+  const { by } = limit;
+
+  if (by === 'upto') {
+    const upto = () => random(1, limit.upto);
+    return upto;
+  }
+
+  if (by === 'range') {
+    const [min, max] = sortBy(limit.range);
+    const range = () => random(min, max);
+    return range;
+  }
+
+  if (by === 'sample' || by === 'one-of') {
+    const oneOf = () => sample(limit.list) ?? 0;
+    return oneOf;
+  }
+
+  return 0;
 }
 
 export class StationRegistry<S extends Station> extends Library<S, S['id']> {

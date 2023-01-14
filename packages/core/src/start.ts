@@ -100,7 +100,7 @@ async function main() {
 
   for (const desc of musicCollections) {
     if (!desc.auxiliary) {
-      await station.library.addCollection(desc);
+      await station.addCollection(desc);
     }
   }
 
@@ -111,7 +111,7 @@ async function main() {
 
   for (const desc of musicCollections) {
     if (desc.auxiliary) {
-      await station.library.addCollection(desc);
+      await station.addCollection(desc);
       await breath();
     }
   }

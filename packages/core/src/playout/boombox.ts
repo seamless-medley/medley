@@ -207,7 +207,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     }
   }
 
-  private requests: TrackCollection<RequestTrack<Requester>> = new TrackCollection('$_requests');
+  private requests: TrackCollection<RequestTrack<Requester>> = new TrackCollection('$_requests', undefined);
 
   private isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path);
 

@@ -16,8 +16,8 @@ type WatchInfo = {
 }
 
 export class WatchTrackCollection<T extends Track<any, E>, E = any> extends TrackCollection<T, E> {
-  constructor(id: string, options: TrackCollectionOptions<T> = {}) {
-    super(id, {
+  constructor(id: string, extra: E, options: TrackCollectionOptions<T> = {}) {
+    super(id, extra, {
       tracksMapper: async (tracks) => shuffle(tracks),
       ...options
     });

@@ -1,6 +1,6 @@
 import { castArray, chain, isString, noop } from 'lodash';
 import normalizePath from 'normalize-path';
-import { TrackCreator, TrackCollectionOptions, WatchTrackCollection } from '../collections';
+import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions } from '../collections';
 import { createLogger } from '../logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
@@ -11,15 +11,17 @@ import { MusicDb } from './music_db';
 export type MusicCollectionDescriptor = {
   id: string;
   path: string;
-  description?: string;
-} & Omit<TrackCollectionOptions<any>, 'trackCreator' | 'trackMapper'>;
+  description: string;
+} & TrackCollectionBasicOptions;
 
 export type MusicLibraryExtra<O> = {
   descriptor: MusicCollectionDescriptor;
   owner: O;
 }
 
-export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>> {
+export type MusicTrackCollection<O> = WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>;
+
+export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
   private logger = createLogger({ name: `library/${this.id}` });
 
   private searchEngine = new SearchEngine();
@@ -114,23 +116,28 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     this.searchEngine.add(track);
   }
 
-  addCollection(descriptor: MusicCollectionDescriptor, onceReady?: () => void) {
-    return new Promise<WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>>(async (resolve) => {
+  async addCollection(descriptor: MusicCollectionDescriptor, onceReady?: () => void): Promise<MusicTrackCollection<O> | undefined> {
+    if (this.has(descriptor.id)) {
+      return;
+    }
+
+    return new Promise(async (resolve) => {
       const { id } = descriptor;
+
       const path = normalizePath(descriptor.path);
 
+      const extra: MusicLibraryExtra<O> = {
+        descriptor,
+        owner: this.owner
+      }
+
       const newCollection = new WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>(
-        id,
+        id, extra,
         {
           ...descriptor,
           trackCreator: this.trackCreator
         }
       );
-
-      newCollection.extra = {
-        descriptor,
-        owner: this.owner
-      };
 
       newCollection.once('ready', () => {
         newCollection.shuffle();
@@ -138,28 +145,9 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
         resolve(newCollection);
       });
 
-      ////////////////////////////////////////////////////////
-
-      const existing = this.get(id);
-
-      if (!existing) {
-        newCollection.on('tracksAdd', this.handleTrackAddition);
-        newCollection.on('tracksRemove', this.handleTrackRemoval);
-        newCollection.on('tracksUpdate', this.handleTrackUpdates);
-      } else {
-        const existingPath = this.collectionPaths.get(id)!;
-
-        // same collection id, but different path
-        if (existingPath !== path) {
-          // Unwatch old path
-          existing.unwatchAll();
-
-          // Detach event handlers
-          existing.off('tracksAdd', this.handleTrackAddition);
-          existing.off('tracksRemove', this.handleTrackRemoval);
-          existing.off('tracksUpdate', this.handleTrackUpdates);
-        }
-      }
+      newCollection.on('tracksAdd', this.handleTrackAddition);
+      newCollection.on('tracksRemove', this.handleTrackRemoval);
+      newCollection.on('tracksUpdate', this.handleTrackUpdates);
 
       this.add(newCollection);
       this.collectionPaths.set(id, path);
@@ -172,11 +160,15 @@ export class MusicLibrary<O> extends BaseLibrary<WatchTrackCollection<BoomBoxTra
     return super.size;
   }
 
+  all() {
+    return super.all();
+  }
+
   has(id: string): boolean {
     return super.has(id);
   }
 
-  get(id: string): WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>> | undefined {
+  get(id: string): MusicTrackCollection<O> | undefined {
     return super.get(id);
   }
 

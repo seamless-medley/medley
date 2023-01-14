@@ -29,7 +29,7 @@ async function main() {
   });
 
   for (const desc of musicCollections) {
-    await station.library.addCollection(desc);
+    await station.addCollection(desc);
   }
 
   station.updateSequence(sequences);

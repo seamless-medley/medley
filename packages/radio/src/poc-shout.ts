@@ -26,7 +26,7 @@ async function main() {
 
   for (const desc of musicCollections) {
     if (!desc.auxiliary) {
-      await station.library.addCollection(desc);
+      await station.addCollection(desc);
     }
   }
 

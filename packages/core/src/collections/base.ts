@@ -5,20 +5,13 @@ import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, rando
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
-import { moveArrayElements } from '@seamless-medley/utils';
+import { moveArrayElements, moveArrayIndexes } from '@seamless-medley/utils';
 
 export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 
 export type TrackCreator<T extends Track<any, CE>, CE = any> = (path: string) => Promise<Omit<T, 'collection' | 'sequencing'> | undefined>;
 
-export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = {
-  trackCreator?: TrackCreator<T, CE>;
-
-  /**
-   * Called when new tracks are added to the collection
-   */
-  tracksMapper?: (tracks: T[]) => Promise<T[]>;
-
+export type TrackCollectionBasicOptions = {
   reshuffleEvery?: number;
 
   /**
@@ -35,6 +28,15 @@ export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = {
   auxiliary?: boolean;
 }
 
+export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = TrackCollectionBasicOptions & {
+  trackCreator?: TrackCreator<T, CE>;
+
+  /**
+   * Called when new tracks are added to the collection
+   */
+  tracksMapper?: (tracks: T[]) => Promise<T[]>;
+}
+
 export type TrackPeek<T extends Track<any, CE>, CE = any> = {
   index: number;
   track: T;
@@ -42,8 +44,11 @@ export type TrackPeek<T extends Track<any, CE>, CE = any> = {
 
 export type TrackCollectionEvents = {
   ready: () => void;
-  tracksAdd: (tracks: Track<any, any>[]) => void;
-  tracksRemove: (tracks: Track<any, any>[]) => void;
+  refresh: () => void;
+  trackShift: (track: Track<any, any>) => void;
+  trackPush: (track: Track<any, any>) => void;
+  tracksAdd: (tracks: Track<any, any>[], indexes: number[]) => void;
+  tracksRemove: (tracks: Track<any, any>[], indexes?: number[]) => void;
   tracksUpdate: (tracks: Track<any, any>[]) => void;
 }
 
@@ -53,14 +58,15 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
   protected tracks: T[] = [];
   protected trackIdMap: Map<string, T> = new Map();
 
-  extra?: CE;
+  extra!: CE extends (undefined | null) ? never : CE;
 
   protected logger = createLogger({
     name: `collection/${this.id}`
   });
 
-  constructor(readonly id: string, public options: TrackCollectionOptions<T, CE> = {}) {
+  constructor(readonly id: string, extra: CE, public options: TrackCollectionOptions<T, CE> = {}) {
     super();
+    this.extra = extra as any;
     this.afterConstruct();
   }
 
@@ -114,10 +120,6 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
   shift(): T | undefined {
     const track = this.tracks.shift();
 
-    if (track) {
-      this.trackIdMap.delete(track.id);
-    }
-
     if (this.options.reshuffleEvery) {
       ++this.shiftCounter;
 
@@ -125,8 +127,14 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
         this.logger.debug('Re-shuffle', this.options.reshuffleEvery);
 
         this.shiftCounter = 0;
-        this.tracks = shuffle(this.tracks);
+        this.shuffle();
+        return track;
       }
+    }
+
+    if (track) {
+      this.trackIdMap.delete(track.id);
+      this.emit('trackShift', track);
     }
 
     return track;
@@ -135,6 +143,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
   push(track: T): number {
     if (track) {
       this.trackIdMap.set(track.id, track);
+      this.emit('trackPush', track);
       return this.tracks.push(track) - 1;
     }
 
@@ -204,9 +213,9 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
       this.trackIdMap.set(track.id, track);
     }
 
+    const indexes = mapped.map(t => this.indexOf(t));
     this.logger.debug('New tracks added', mapped.length);
-
-    this.emit('tracksAdd', mapped);
+    this.emit('tracksAdd', mapped, indexes);
   }
 
   async update(paths: string[]) {
@@ -217,11 +226,15 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
   }
 
   clear() {
+    this.emit('tracksRemove', this.tracks);
+
     this.tracks = [];
     this.trackIdMap.clear();
   }
 
   removeBy(predicate: (track: T) => boolean): T[] {
+    const snapshot = this.all();
+
     const [removed, remaining] = partition(this.tracks, predicate);
     this.tracks = remaining;
 
@@ -229,7 +242,9 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
       this.trackIdMap.delete(id);
     }
 
-    this.emit('tracksRemove', removed);
+    const indexes = removed.map(t => snapshot.findIndex(st => st.id == t.id));
+
+    this.emit('tracksRemove', removed, indexes);
 
     return removed;
   }
@@ -244,16 +259,16 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
     return this.remove(toRemove);
   }
 
-  async moveTrack(newPosition: number, tracks: T | T[]) {
+  move(newPosition: number, indexes: number[]) {
+    moveArrayIndexes(this.tracks, newPosition, ...indexes);
+  }
+
+  moveTrack(newPosition: number, tracks: T | T[]) {
     moveArrayElements(this.tracks, newPosition, ...castArray(tracks));
   }
 
-  async move(newPosition: number, paths: string | string[]) {
-    const toMove = await Promise.all(castArray(paths)
-      .map(path => this.getTrackId(path)))
-      .then(ids => ids.map(id => this.trackIdMap.get(id))
-    );
-
+  moveByPath(newPosition: number, paths: string | string[]) {
+    const toMove = castArray(paths).map(path => this.find(path));
     moveArrayElements(this.tracks, newPosition, ...toMove);
   }
 
@@ -262,7 +277,8 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
   }
 
   async shuffleBy(fn: (tracks: T[]) => T[] | Promise<T[]>) {
-    this.tracks = await fn(this.tracks)
+    this.tracks = await fn(this.tracks);
+    this.emit('refresh');
   }
 
   sort(...sortFn: ((track: T) => unknown)[]) {
@@ -271,6 +287,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
     }
 
     this.tracks = sortBy(this.tracks, ...sortFn);
+    this.emit('refresh');
   }
 
   indexOf(track: T): number {
@@ -318,7 +335,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
     return this.tracks.values();
   }
 
-  all(): ReadonlyArray<T> {
+  all(): T[] {
     return [...this.tracks];
   }
 }
