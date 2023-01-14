@@ -10,7 +10,9 @@ export default defineConfig({
       babel: {
         plugins: [
           jotaiDebugLabel,
-          jotaiReactRefresh
+          jotaiReactRefresh,
+          ["@babel/plugin-proposal-decorators", { legacy: true }],
+          ["@babel/plugin-proposal-class-properties", { loose: true }]
         ]
       }
     })

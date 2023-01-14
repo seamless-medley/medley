@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
-    "target": "es2020",
+    "target": "es2021",
     "module": "commonjs",
     "jsx": "react-jsx",
     "allowJs": false,
     "strict": true,
+    "experimentalDecorators": true,
     "esModuleInterop": true,
     "moduleResolution": "Node",
     "isolatedModules": true,
