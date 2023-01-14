@@ -16,7 +16,7 @@
   "main": "dist/index.js",
   "scripts": {
     "copy-native": "copyfiles --up 4 ../node-medley/build/Release/medley.node build/Release/ || true",
-    "dev:react": "vite",
+    "dev:react": "vite --port 9586",
     "dev:server": "cross-env MEDLEY_DEMO=1 DEBUG=1 ts-node src/server/main.ts",
     "poc:bot": "cross-env MEDLEY_DEMO=1 DEBUG=1 ts-node src/discord/bot_main.ts",
     "debug:bot": "cross-env MEDLEY_DEMO=1 DEBUG=1 tsx -- --inspect src/discord/bot_main.ts",
