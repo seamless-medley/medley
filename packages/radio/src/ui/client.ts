@@ -5,8 +5,10 @@ import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, Serv
 import { isProperty } from "../socket/remote/utils";
 import { Stub } from "../socket/stub";
 import { $AnyProp, AnyProp, PickMethod, PickProp, Remotable } from "../socket/types";
-import { Callable, ParametersOf } from "../types";
+import { Callable, ParametersOf, ReturnTypeOf } from "../types";
 import { DisconnectDescription } from "socket.io-client/build/esm/socket";
+import { waitFor } from "@seamless-medley/utils";
+import { getRemoteTimeout } from "../socket/decorator";
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, prop: string, oldValue: T, newValue: T) => Promise<any>;
 
@@ -60,6 +62,12 @@ export enum DisconnectReason {
   ByServer,
   Timeout,
   Transport
+}
+
+function rejectAfter(ms: number, reject: (reason?: any) => any, reason: string = 'Timeout') {
+  if (ms > 0) {
+    waitFor(ms).then(() => reject(reason));
+  }
 }
 
 export class Client<Types extends { [key: string]: any }> extends EventEmitter<ClientEvents> {
@@ -210,9 +218,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   >(
     kind: Kind,
     id: string,
+    timeout: number,
     prop: P
   ) {
     return new Promise<any>((resolve, reject) => {
+      rejectAfter(timeout, reject);
+
       this.socket.emit('remote:get', kind, id, prop as string, async (response: RemoteResponse<any>) => {
         if (response.status === undefined) {
           resolve(response.result);
@@ -231,10 +242,13 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   >(
     kind: Kind,
     id: string,
+    timeout: number,
     prop: P,
     value: O[P]
   ) {
     return new Promise<any>((resolve, reject) => {
+      rejectAfter(timeout, reject);
+
       this.socket.emit('remote:set', kind, id, prop as string, value, async (response: RemoteResponse<any>) => {
         if (response.status === undefined) {
           resolve(response.result);
@@ -253,11 +267,14 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   >(
     kind: Kind,
     id: string,
+    timeout: number,
     method: N,
     ...args: ParametersOf<M[N]>
   ) {
-    return new Promise<any>((resolve, reject) => {
-      this.socket.emit('remote:invoke', kind, id, method as string, args, async (response: RemoteResponse<any>) => {
+    return new Promise((resolve, reject) => {
+      rejectAfter(timeout, reject);
+
+      this.socket.emit('remote:invoke', kind, id, method as string, args, async (response: RemoteResponse<ReturnTypeOf<M[N]>>) => {
         if (response.status === undefined) {
           resolve(response.result);
           return;
@@ -284,6 +301,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         resolve();
         return;
       }
+
+      rejectAfter(5_000, reject);
 
       // It is the first time, subscrbe to remote first
       this.socket.emit('remote:subscribe', kind, id, event, async (response: RemoteResponse<void>) => {
@@ -324,6 +343,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         this.delegates.delete(`${kind}:${id}`);
       }
 
+      rejectAfter(5_000, reject);
+
       this.socket.emit('remote:unsubscribe', kind, id, event, async (response: RemoteResponse<void>) => {
         if (response.status !== undefined) {
           reject(new RemoteSubscriptionError(response, kind, id, event));
@@ -351,6 +372,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
       const store = new ObservingStore<Types[Kind]>();
       this.observingStores.set(key, store);
+
+      rejectAfter(5_000, reject);
 
       this.socket.emit('remote:observe', kind, id, async (response: RemoteResponse<any>) => {
         if (response.status !== undefined) {
@@ -384,6 +407,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       }
 
       this.observingStores.delete(key);
+
+      rejectAfter(5_000, reject);
 
       this.socket.emit('remote:unobserve', kind, id, async (response) => {
         if (response.status === undefined) {
@@ -501,12 +526,16 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       }
 
       return new Promise(async (resolve, reject) => {
-        await this.remoteSet(kind, id, name as any, args[0]).then(resolve).catch(reject);
+        const timeout = Math.max(0, getRemoteTimeout(StubClass.StubbedFrom, name) ?? 60_000);
+        await this.remoteSet(kind, id, timeout, name as any, args[0]).then(resolve).catch(reject);
         return;
       })
     });
 
-    const methods = mapValues(methodDescs, (desc, name) => (...args: any[]) => this.remoteInvoke(kind, id, name as any, ...args as any));
+    const methods = mapValues(methodDescs, (desc, name) => (...args: any[]) => {
+      const timeout = Math.max(0, getRemoteTimeout(StubClass.StubbedFrom, name) ?? 60_000);
+      return this.remoteInvoke(kind, id, timeout, name as any, ...args as any)
+    });
 
     const dispose = async () => {
       this.remoteUnobserve(kind, id, propertyObserver);
