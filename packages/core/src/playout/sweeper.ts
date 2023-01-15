@@ -1,4 +1,5 @@
 import { curry, sample, sortBy } from "lodash";
+import { basename } from "path";
 import { TrackCollection } from "../collections";
 import { createLogger, Logger, type ILogObj } from "../logging";
 import { BoomBox, BoomBoxEvents, BoomBoxTrack, TrackKind } from "./boombox";
@@ -86,7 +87,8 @@ export class SweeperInserter {
         if (track) {
           collection.push(track);
 
-          const id = track.musicId ?? track.id;
+          const id = track.musicId ?? basename(track.path).toLowerCase();
+          this.logger.debug('Insetion id', id);
 
           if (!this.recent.includes(id)) {
             this.recent.push(id);
