@@ -17,6 +17,7 @@ export interface Station {
   getDeckPositions(deckIndec: DeckIndex): DeckPositions;
   getDeckInfo(deckIndex: DeckIndex): Promise<deckPO.DeckInfoWithPositions>;
 
+  getCurrentCollection(): string | undefined;
   getCollections(): string[];
 
   ϟdeckLoaded(deckIndex: number, info: deckPO.DeckInfoWithPositions): void;
@@ -25,4 +26,6 @@ export interface Station {
   ϟdeckActive(deckIndex: number, position: DeckPositions): void;
 
   ϟaudioLevels(levels: Buffer | undefined): void;
+
+  ϟcollectionChange(prevCollection: string | undefined, newCollection: string, fromRequestTrack: boolean): void;
 }

@@ -10,7 +10,7 @@ import { VUMeter } from './components/vu-meter';
 import { useCollection } from './hooks/useCollection';
 import { Track } from '../socket/po/track';
 import { PickMethod } from '../socket/types';
-import { Collection } from '../socket/remote';
+import { Collection, Station } from '../socket/remote';
 
 const CollectionList: React.FC<{ id: string }> = ({ id }) => {
   const collection = useCollection(id);
@@ -38,6 +38,7 @@ const CollectionList: React.FC<{ id: string }> = ({ id }) => {
     collection.on('refresh', refresh);
     collection.on('trackShift', handleShift);
     collection.on('trackPush', handlePush);
+    // TODO: Handle other events
 
     return () => {
       collection.off('refresh', refresh);
@@ -62,7 +63,9 @@ const App: React.FC = () => {
   const [selectedCollection, setSelectedCollection] = useState<string>();
   const collection = useCollection(selectedCollection);
 
-  console.log('collection', collection);
+  const handleCollectionChange: Station['ϟcollectionChange'] = (oldId, newId) => {
+    setSelectedCollection(newId);
+  }
 
   useEffect(() => {
     if (!station) {
@@ -70,31 +73,13 @@ const App: React.FC = () => {
     }
 
     station.getCollections().then(setCollections);
+    station.getCurrentCollection().then(setSelectedCollection);
 
-    // station.getCollections().then(async cols => {
-    //   console.log('Got collections');
+    station.on('collectionChange', handleCollectionChange);
 
-    //   for (const col of cols) {
-    //     const s = await client.surrogateOf(StubCollection, 'collection', col);
-
-    //     console.log('Options', s.options());
-    //     console.log('ID', s.id());
-
-    //     const getAll = async () => console.log('All tracks for', col, await s.all());
-
-    //     s.on('refresh', () => {
-    //       getAll();
-    //     })
-
-    //     s.on('trackShift', (track) => {
-    //       console.log('Track shift from', col, track);
-    //     });
-
-    //     s.on('trackPush', (track) => {
-    //       console.log('Track push to', col, track);
-    //     });
-    //   }
-    // });
+    return () => {
+      station.off('collectionChange', handleCollectionChange);
+    }
   }, [station]);
 
   const shuffle = useCallback(() => {
@@ -105,18 +90,13 @@ const App: React.FC = () => {
 
   return (
     <>
-      {station ?
-        <>
-          <div>
-            Left: <VUMeter stationId={'demo'} channel="left" />
-          </div>
-          <div>
-            Right: <VUMeter stationId={'demo'} channel="right" />
-          </div>
-        </>
-        :
-        undefined
-      }
+      <div>
+        Left: <VUMeter stationId={'demo'} channel="left" />
+      </div>
+      <div>
+        Right: <VUMeter stationId={'demo'} channel="right" />
+      </div>
+
       <br />
       <Group>
         <Button disabled={!station} onClick={() => station?.start()}>Start</Button>

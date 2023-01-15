@@ -17,6 +17,7 @@ class StubbingStation {
   getDeckPositions = noop as any;
   getDeckInfo = noop as any;
 
+  getCurrentCollection = noop as any;
   getCollections = noop as any;
 }
 

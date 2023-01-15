@@ -6,7 +6,7 @@ import { DeckInfoWithPositions, fromDeckInfoWithPositions } from "../../socket/p
 import { Station as RemoteStation } from "../../socket/remote";
 import { MixinEventEmitterOf } from "../../socket/types";
 
-export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation>  {
+export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
   [$Exposing]: Station;
 
   constructor(station: Station) {
@@ -17,6 +17,8 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#station.on('deckUnloaded', this.#onDeckUnloaded);
     this.#station.on('deckStarted', this.#onDeckStarted);
     this.#station.on('deckActive', this.#onDeckActive);
+    this.#station.on('currentCollectionChange', this.#onCollectionChange);
+    // TODO: on crateChange
 
     this.#audiLevelTimer = setInterval(this.#audioLevelDispatcher, 1000 / 60);
   }
@@ -26,12 +28,17 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#station.off('deckUnloaded', this.#onDeckUnloaded);
     this.#station.off('deckStarted', this.#onDeckStarted);
     this.#station.off('deckActive', this.#onDeckActive);
+    this.#station.off('currentCollectionChange', this.#onCollectionChange);
 
     clearInterval(this.#audiLevelTimer);
   }
 
   get #station() {
     return this[$Exposing];
+  }
+
+  #prefixWithStationId(s: string) {
+    return `${this.id}/${s}`
   }
 
   #audiLevelTimer: NodeJS.Timer;
@@ -75,6 +82,15 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   #onDeckActive: StationEvents['deckActive'] = async (deckIndex) => {
     const { positions } = await this.getDeckInfo(deckIndex);
     this.emit('deckActive', deckIndex, positions);
+  }
+
+  #onCollectionChange: StationEvents['currentCollectionChange'] = async (prevCollection, newCollection, fromRequestTrack) => {
+    this.emit(
+      'collectionChange',
+      prevCollection ? this.#prefixWithStationId(prevCollection.id) : undefined,
+      this.#prefixWithStationId(newCollection.id),
+      fromRequestTrack
+    );
   }
 
   get id() {
@@ -123,7 +139,12 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     )
   }
 
-  getCollections(): string[] {
-    return this.#station.collections.map(c => `${this.id}/${c.id}`);
+  getCurrentCollection() {
+    const id = this.#station.trackPlay?.track?.collection?.id
+    return id ? this.#prefixWithStationId(id) : undefined;
+  }
+
+  getCollections() {
+    return this.#station.collections.map(c => this.#prefixWithStationId(c.id));
   }
 };
