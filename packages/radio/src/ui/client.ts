@@ -421,6 +421,15 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     });
   }
 
+  private surrogateCache = new Map<string, WeakRef<Remotable<object>>>();
+
+  private surrogateRegistry = new FinalizationRegistry<string>((objectId) => {
+    if (!this.surrogateCache.get(objectId)?.deref()) {
+      console.log('Removing surrogate cahce for', objectId);
+      this.surrogateCache.delete(objectId);
+    }
+  });
+
   /**
    * Return a virtual object that acts as a surrogate of a remote object
    */
@@ -431,7 +440,14 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     kind: Kind,
     id: string
   ) {
-    const uuid = uniqueId(`surrogate:${kind}:${id}`);
+    const objectId = `${kind}:${id}` as const;
+
+    if (this.surrogateCache.has(objectId)) {
+      console.log('Returning cached surrogate for', objectId);
+      return this.surrogateCache.get(objectId)!.deref() as Remotable<Types[Kind]>;
+    }
+
+    const uuid = uniqueId(`surrogate:${objectId}`);
 
     const { descriptors } = StubClass;
     const mergedDescs = { ...descriptors.own, ...descriptors.proto };
@@ -485,8 +501,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     await this.remoteObserve(kind, id, propertyObserver);
 
     const getObservedFromStore = () => {
-      const key = `${kind}:${id}` as const;
-      const store = this.observingStores.get(key);
+      const store = this.observingStores.get(objectId);
       return store?.observed ?? {} as Types[Kind];
     }
 
@@ -555,6 +570,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       onDisposeHandlers.clear();
 
       this.surrogates.delete(uuid);
+      this.surrogateCache.delete(objectId);
     }
 
     const specialMethods: Record<string | symbol, any> = {
@@ -585,6 +601,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     }) as Remotable<Types[Kind]>;
 
     this.surrogates.set(uuid, surrogate);
+    this.surrogateCache.set(objectId, new WeakRef(surrogate));
+    this.surrogateRegistry.register(surrogate, objectId);
 
     return surrogate;
   }
