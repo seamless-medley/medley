@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { Station } from "../../socket/remote";
 import { Remotable } from "../../socket/types";
 import { useClient } from "./useClient";
+import { useStation } from "./useStation";
 
 const emptyLevel: StationAudioLevels = {
   left: {
@@ -51,12 +52,13 @@ function arrayBufferToAudioLevels(buffer?: ArrayBuffer): StationAudioLevels {
 }
 
 
-export function useAudioLevels(station: Remotable<Station> | undefined, callback: (data: UseAudioLevelsData) => any, options?: { max?: number }) {
+export function useAudioLevels(stationId: string, callback: (data: UseAudioLevelsData) => any, options?: { max?: number }) {
   const max = options?.max ?? 0;
   const normalize = (v: number) => interpolate(Math.min(v, max), [-100, max], [0, 1]);
   const process = compose(normalize, gainToDecibels);
 
   const client = useClient();
+  const station = useStation(stationId);
 
   let raf = 0;
 
