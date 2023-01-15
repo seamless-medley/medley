@@ -386,30 +386,33 @@ function bindDescInstance(instance: object, name: string, desc: TypedPropertyDes
 export class ObjectObserver<T extends object> {
   readonly #methods: Record<string, TypedPropertyDescriptorOf>;
 
-  readonly #props: Record<string, TypedPropertyDescriptorOf>;
+  readonly #exposingProps: Record<string, TypedPropertyDescriptorOf>;
+
+  readonly #declaredProps: Record<string, TypedPropertyDescriptorOf>;
 
   constructor(readonly instance: T, private readonly notify: ObservedPropertyHandler<T>) {
-    const exposedInstance = this.getExposed();
+    const exposingInstance = this.getExposing();
 
     const own = propertyDescriptorOf(instance);
     const proto = propertyDescriptorOf(Object.getPrototypeOf(instance));
 
     const declared = mapValues({ ...own, ...proto }, (desc, name) => bindDescInstance(instance, name, desc));
 
-    const exposed = exposedInstance
+    const exposing = exposingInstance
       ? mapValues(
           {
-          ...propertyDescriptorOf(exposedInstance),
-          ...propertyDescriptorOf(Object.getPrototypeOf(exposedInstance))
+          ...propertyDescriptorOf(exposingInstance),
+          ...propertyDescriptorOf(Object.getPrototypeOf(exposingInstance))
           },
-          (desc, name) => bindDescInstance(exposedInstance, name, desc)
+          (desc, name) => bindDescInstance(exposingInstance, name, desc)
         )
       : undefined;
 
     this.#methods = pickBy(declared, desc => isFunction(desc.value));
-    this.#props = pickBy(exposed ?? declared, desc => (desc.name in declared) && isProperty(desc) && isPublicPropertyName(desc.name));
+    this.#exposingProps = pickBy(exposing, desc => (desc.name in declared) && isProperty(desc) && isPublicPropertyName(desc.name));
+    this.#declaredProps = pickBy(declared, desc => isProperty(desc) && isPublicPropertyName(desc.name));
 
-    for (const [prop, desc] of Object.entries(this.#props)) {
+    for (const [prop, desc] of Object.entries(this.#declaredProps)) {
       Object.defineProperty(desc.instance, prop, {
         get: () => {
           return desc.get?.call(desc.instance) ?? desc.value
@@ -428,7 +431,7 @@ export class ObjectObserver<T extends object> {
     }
   }
 
-  private getExposed() {
+  private getExposing() {
     if ($Exposing in this.instance) {
       const exposed = (this.instance as any)[$Exposing];
 
@@ -442,14 +445,23 @@ export class ObjectObserver<T extends object> {
    * Get a copy of all property values
    */
   getAll() {
-    return Object.entries(this.#props).reduce((o, [prop, desc]) => {
-      o[prop] = desc.value ?? desc.get?.call(desc.instance);
+    const props = new Set([
+      ...Object.keys(this.#declaredProps),
+      ...Object.keys(this.#exposingProps)
+    ]);
+
+    return Array.from(props).reduce((o, prop) => {
+      const declared = this.#declaredProps[prop];
+      const exposing = this.#exposingProps[prop];
+      o[prop] =
+        (declared.value ?? declared.get?.call(declared.instance))
+        ?? (exposing.value ?? exposing.get?.call(exposing.instance))
       return o;
     }, {} as any) as T;
   }
 
   isPublishedProperty(name: string) {
-    return name in this.#props;
+    return name in this.#exposingProps;
   }
 
   isPublishedMethod(name: string) {
