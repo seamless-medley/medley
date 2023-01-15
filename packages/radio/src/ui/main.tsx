@@ -13,18 +13,6 @@ import { useAudioLevels } from './hooks/useAudioLevels';
 import { useClient } from './hooks/useClient';
 
 
-const StubCollection = StubOf<Collection>(class StubbingCollecting {
-  id = undefined as any;
-  description = undefined as any;
-  options = undefined as any;
-  length = undefined as any;
-  ready = undefined as any;
-
-  clear = noop as any;
-  shuffle = noop as any;
-  all = noop as any;
-});
-
 const Box = styled.div`
   width: 500px;
   height: 100%;
