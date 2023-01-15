@@ -1,149 +1,143 @@
-import React, { useEffect, useRef } from 'react';
-import styled from "@emotion/styled";
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { initRoot } from './init';
 import { Button, Group, MantineProvider } from '@mantine/core';
-import { StubOf } from '../socket/stub';
-import { noop } from 'lodash';
-import { useSurrogateWithRemotable } from './hooks/surrogate';
-import { Collection, Station } from '../socket/remote';
-import { Deck } from './components';
-import { Remotable } from '../socket/types';
-import { useAudioLevels } from './hooks/useAudioLevels';
 import { useClient } from './hooks/useClient';
+import { useStation } from './hooks/useStation';
+import { useRemotableProps } from './hooks/remotable';
+import { StubCollection } from './stubs/collection';
+import { VUMeter } from './components/vu-meter';
+import { useCollection } from './hooks/useCollection';
+import { Track } from '../socket/po/track';
+import { PickMethod } from '../socket/types';
+import { Collection } from '../socket/remote';
 
+const CollectionList: React.FC<{ id: string }> = ({ id }) => {
+  const collection = useCollection(id);
+  const [items, setItems] = useState<Track[]>([]);
 
-const Box = styled.div`
-  width: 500px;
-  height: 100%;
-  position: relative;
-  border-radius: 0.25em 0px 0px 0px;
-  background-color: rgba(200, 200, 255, 0.3);
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  transition: width 2s ease, height 2s ease;
-`;
+  const refresh = () => {
+    collection?.all().then(setItems);
+  }
 
-const Level = styled.div`
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 100%;
-  bottom: 0;
-  background-color: rgba(77, 224, 66, 0.877);
-`;
+  const handleShift = (track: Track) => {
+    setItems(([, ...rest]) => rest);
+  }
 
-const Peak = styled.div`
-  position: absolute;
-  width: 2px;
-  top: 0;
-  bottom: 0;
-  left: 0%;
+  const handlePush = (track: Track) => {
+    setItems(prev => [...prev, track]);
+  }
 
-  background-color: rgba(226, 28, 104, 0.902);
-`;
-
-const Reduction = styled.div`
-  position: absolute;
-  left: 100%;
-  right: 0;
-  top: 0;
-  bottom: 0;
-
-  background-color: rgba(97, 22, 236, 0.902);
-`;
-
-
-const VUMeter: React.FC<{ station?: Remotable<Station>, channel: 'left' | 'right' }> = ({ station, channel }) => {
-  const levelRef = useRef<HTMLDivElement>(null);
-  const reductionRef = useRef<HTMLDivElement>(null);
-  const peakRef = useRef<HTMLDivElement>(null);
-
-  useAudioLevels(station, (data) => {
-    const { current: levelEl } = levelRef;
-    const { current: reductionEl } = reductionRef;
-    const { current: peakEl } = peakRef;
-
-    if (!levelEl || !peakEl || !reductionEl) {
+  useEffect(() => {
+    if (!collection) {
       return;
     }
 
-    const { level, peak } = data[channel];
+    refresh();
 
-    levelEl.style.right = `${(1-level) * 100}%`;
-    peakEl.style.left = `${(peak) * 100}%`;
+    collection.on('refresh', refresh);
+    collection.on('trackShift', handleShift);
+    collection.on('trackPush', handlePush);
 
-    reductionEl.style.left = `${(data.reduction) * 100}%`
-  });
+    return () => {
+      collection.off('refresh', refresh);
+      collection.off('trackShift', handleShift);
+      collection.off('trackPush', handlePush);
+    }
+  }, [collection]);
 
   return (
-    <div style={{ height: '24px' }}>
-      <Box>
-        <Level ref={levelRef} />
-        <Reduction ref={reductionRef} />
-        <Peak ref={peakRef}/>
-      </Box>
-    </div>
-  );
+    <>
+      {items.map((item, index) => <div key={item.id}>{item.path}</div>)}
+    </>
+  )
 }
 
 const App: React.FC = () => {
   const client = useClient();
-  const [station, stationProps] = useSurrogateWithRemotable(StubStation, 'station', 'demo');
+  const station = useStation('demo');
+  const stationProps = useRemotableProps(station);
+
+  const [collections, setCollections] = useState<string[]>([]);
+  const [selectedCollection, setSelectedCollection] = useState<string>();
+  const collection = useCollection(selectedCollection);
+
+  console.log('collection', collection);
 
   useEffect(() => {
     if (!station) {
       return;
     }
 
-    station.getCollections().then(async cols => {
-      console.log('Got collections');
+    station.getCollections().then(setCollections);
 
-      for (const col of cols) {
-        const s = await client.surrogateOf(StubCollection, 'collection', `${station.id()}/${col}`);
+    // station.getCollections().then(async cols => {
+    //   console.log('Got collections');
 
-        console.log('Options', s.options());
+    //   for (const col of cols) {
+    //     const s = await client.surrogateOf(StubCollection, 'collection', col);
 
-        // s.all().then((tracks) => {
-        //   console.log('All tracks for', col, tracks);
-        // })
+    //     console.log('Options', s.options());
+    //     console.log('ID', s.id());
 
-        s.on('trackShift', (track) => {
-          console.log('Track shift from', col, track);
-        });
+    //     const getAll = async () => console.log('All tracks for', col, await s.all());
 
-        s.on('trackPush', (track) => {
-          console.log('Track push to', col, track);
-        });
-      }
-    });
-  }, [station])
+    //     s.on('refresh', () => {
+    //       getAll();
+    //     })
 
+    //     s.on('trackShift', (track) => {
+    //       console.log('Track shift from', col, track);
+    //     });
+
+    //     s.on('trackPush', (track) => {
+    //       console.log('Track push to', col, track);
+    //     });
+    //   }
+    // });
+  }, [station]);
+
+  const shuffle = useCallback(() => {
+    if (selectedCollection) {
+      client.remoteInvoke('collection', selectedCollection, 5000, 'shuffle')
+    }
+  }, [selectedCollection])
 
   return (
     <>
-      <div>
-        Left: <VUMeter station={station} channel="left" />
-      </div>
-      <div>
-        Right: <VUMeter station={station} channel="right" />
-      </div>
+      {station ?
+        <>
+          <div>
+            Left: <VUMeter stationId={'demo'} channel="left" />
+          </div>
+          <div>
+            Right: <VUMeter stationId={'demo'} channel="right" />
+          </div>
+        </>
+        :
+        undefined
+      }
       <br />
       <Group>
         <Button disabled={!station} onClick={() => station?.start()}>Start</Button>
         <Button disabled={!station} onClick={() => station?.pause()}>Pause</Button>
         <Button disabled={!station} onClick={() => console.log('Skip', station?.skip())} color="red">Skip</Button>
+        <Button onClick={shuffle}>Shuffle {collection?.description()} collection</Button>
       </Group>
       <h4>Play State: { stationProps?.playState }</h4>
 
-      <h2>Deck1</h2>
+      {/* <h2>Deck1</h2>
       <Deck station={station} index={0} />
 
       <h2>Deck2</h2>
       <Deck station={station} index={1} />
 
       <h2>Deck3</h2>
-      <Deck station={station} index={2} />
+      <Deck station={station} index={2} /> */}
+
+      {collections.map(c => <h4 key={c} onClick={() => setSelectedCollection(c)}>{c}</h4>)}
+      <h2>{selectedCollection}</h2>
+      {selectedCollection ? <CollectionList id={selectedCollection} /> : undefined}
     </>
   );
 }
