@@ -51,7 +51,7 @@ export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
 
 export type BoomBoxEvents = {
   sequenceChange: (activeCrate: BoomBoxCrate) => void;
-  currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack>, newCollection: TrackCollection<BoomBoxTrack>, ignoreFrom: boolean) => void;
+  currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack> | undefined, newCollection: TrackCollection<BoomBoxTrack>, trasitingFromRequestTrack: boolean) => void;
   currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
   trackQueued: (track: BoomBoxTrack) => void;
 
@@ -109,7 +109,9 @@ export type DeckInfoWithPositions = DeckInfo & {
 
 export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
   readonly id: string;
+
   readonly sequencer: CrateSequencer<BoomBoxTrack>;
+  private readonly sweeperInserter: SweeperInserter;
 
   options: Required<Pick<BoomBoxOptions<Requester>, 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
 
@@ -163,9 +165,10 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       this.logger.debug('Rescue, removing', n, 'artist history entries');
       this.artistHistory = this.artistHistory.slice(n);
     });
+
+    this.sweeperInserter = new SweeperInserter(this, []);
   }
 
-  private sweeperInserter: SweeperInserter = new SweeperInserter(this, []);
 
   get sweeperInsertionRules() {
     return this.sweeperInserter.rules;
@@ -362,7 +365,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       const nextCollection = nextTrack.collection;
       const collectionChange = currentCollection?.id !== nextCollection.id;
 
-      if (currentCollection && nextCollection && (collectionChange)) {
+      if (collectionChange && nextCollection) {
         const trasitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
         this.emit('currentCollectionChange', currentCollection, nextCollection, trasitingFromRequestTrack);
       }

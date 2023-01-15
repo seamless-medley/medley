@@ -67,14 +67,11 @@ export const findRule = (from: string, to: string, rules: SweeperInsertionRule[]
 }
 
 export class SweeperInserter {
+  private logger: Logger<ILogObj>;
+
   constructor(private boombox: BoomBox, public rules: SweeperInsertionRule[] = []) {
+    this.logger = createLogger({ name: `${boombox.id}/sweeper-inserter` });
     boombox.on('currentCollectionChange', this.handler);
-  }
-
-  private static _logger?: Logger<ILogObj>;
-
-  get logger() {
-    return SweeperInserter._logger = SweeperInserter._logger ?? createLogger({ name: 'sweeper-inserter' });
   }
 
   private recent: string[] = [];
@@ -89,8 +86,10 @@ export class SweeperInserter {
         if (track) {
           collection.push(track);
 
-          if (!this.recent.includes(track.id)) {
-            this.recent.push(track.id);
+          const id = track.musicId ?? track.id;
+
+          if (!this.recent.includes(id)) {
+            this.recent.push(id);
             return track;
           }
         }
@@ -103,6 +102,10 @@ export class SweeperInserter {
   }
 
   private handler: BoomBoxEvents['currentCollectionChange'] = (oldCollection, newCollection, ignoreFrom) => {
+    if (!oldCollection) {
+      return;
+    }
+
     const matched = findRule(oldCollection.id, newCollection.id, this.rules, ignoreFrom);
 
     if (!matched) {
@@ -111,6 +114,7 @@ export class SweeperInserter {
 
     const insertion = this.pick(matched.collection);
     if (insertion) {
+      this.logger.info('Inserting', insertion.path);
       // ensure track kind
       if (insertion.extra?.kind === undefined) {
         insertion.extra = {
