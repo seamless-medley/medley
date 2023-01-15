@@ -59,11 +59,12 @@ export class ExposedColection extends MixinEventEmitterOf<Collection>() implemen
   }
 
   get id() {
-    return this.#collection.id;
+    const { owner: station } = this.#collection.extra;
+    return `${station.id}/${this.#collection.id}`;
   }
 
   get description() {
-    return this.#collection.extra.descriptor.description;
+    return this.#collection.extra.description;
   }
 
   get options() {

@@ -124,6 +124,6 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   }
 
   getCollections(): string[] {
-    return this.#station.collections.map(c => c.id);
+    return this.#station.collections.map(c => `${this.id}/${c.id}`);
   }
 };

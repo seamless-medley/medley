@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { RemoteTypes } from "../../socket/remote";
 import type { Stub } from "../../socket/stub";
 import type { Remotable } from "../../socket/types";
-import { useRemotable } from "./remotable";
+import { useRemotableProps } from "./remotable";
 import { useClient } from "./useClient";
 
 export function useSurrogate<
@@ -38,7 +38,7 @@ export function useSurrogateWithRemotable<
   id: string
 ) {
   const remote = useSurrogate(StubClass, kind, id);
-  const values = useRemotable(remote);
+  const values = useRemotableProps(remote);
 
   return [remote, values] as const;
 }

@@ -32,7 +32,7 @@ export type TrackPlay = Simplify<Writable<
 
 export const fromBoomBoxTrack = async (
   { id, path, musicId, cueInPosition, cueOutPosition, disableNextLeadIn, extra, collection }: BoomBoxTrack,
-  noExta?: boolean
+  noCover?: boolean
 ): Promise<Track> => ({
   id,
   path,
@@ -40,15 +40,18 @@ export const fromBoomBoxTrack = async (
   cueInPosition,
   cueOutPosition,
   disableNextLeadIn,
-  extra: !noExta && extra ? await fromBoomBoxTrackExtra(extra) : undefined,
+  extra: extra ? await fromBoomBoxTrackExtra(extra, noCover) : undefined,
   collection: fromBoomBoxTrackCollection(collection)
 })
 
-export const fromBoomBoxTrackExtra = async ({ kind, source, tags, maybeCoverAndLyrics }: BoomBoxTrackExtra): Promise<TrackExtra> => ({
+export const fromBoomBoxTrackExtra = async (
+  { kind, source, tags, maybeCoverAndLyrics }: BoomBoxTrackExtra,
+  noCover?: boolean
+): Promise<TrackExtra> => ({
   kind,
   source,
   tags,
-  coverAndLyrics: await maybeCoverAndLyrics
+  coverAndLyrics: !noCover ? await maybeCoverAndLyrics : undefined
 })
 
 export const fromBoomBoxTrackCollection = ({ id }: BoomBoxTrack['collection']): TrackCollection => ({ id });

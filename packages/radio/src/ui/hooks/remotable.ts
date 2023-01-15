@@ -27,7 +27,7 @@ export function useRemotableProp<
   return value;
 }
 
-export function useRemotable<T>(r: Remotable<T> | undefined) {
+export function useRemotableProps<T>(r: Remotable<T> | undefined) {
   const [values, setValues] = useState(r?.getProperties());
 
   useEffect(

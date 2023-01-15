@@ -12,7 +12,7 @@ export type PickEvent<T> = {
   [K in keyof T as EventNameOf<K>]: T[K];
 }
 
-export type PickMethod<T> = Pick<T, Exclude<SelectKeyByValue<T, Function>, keyof PickEvent<T>>>;
+export type PickMethod<T> = Pick<T, SelectKeyByValue<WithoutEvents<T>, Function>>;
 export type PickProp<T> = ConditionalExcept<T, Function>;
 
 export type EventEmitterOf<T, Events = PickEvent<T>> = keyof Events extends never ? {} : {

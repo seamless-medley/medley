@@ -1,5 +1,5 @@
-import { DeckIndex } from "@seamless-medley/core";
 import React from "react";
+import { DeckIndex } from "@seamless-medley/core";
 import { Station } from "../../socket/remote";
 import { Remotable } from "../../socket/types";
 import { useDeck } from "../hooks/useDeck";
