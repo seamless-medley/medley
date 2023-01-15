@@ -12,25 +12,6 @@ import { Remotable } from '../socket/types';
 import { useAudioLevels } from './hooks/useAudioLevels';
 import { useClient } from './hooks/useClient';
 
-class StubbingStation {
-  id = undefined as any;
-  name = undefined as any;
-  description = undefined as any;
-  playing = undefined as any;
-  paused = undefined as any;
-  playState = undefined as any;
-
-  start = noop as any;
-  pause = noop as any;
-  skip = noop as any;
-
-  getDeckPositions = noop as any;
-  getDeckInfo = noop as any;
-
-  getCollections = noop as any;
-}
-
-const StubStation = StubOf<Station>(StubbingStation);
 
 const StubCollection = StubOf<Collection>(class StubbingCollecting {
   id = undefined as any;
