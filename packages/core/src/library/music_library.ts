@@ -15,7 +15,7 @@ export type MusicCollectionDescriptor = {
 } & TrackCollectionBasicOptions;
 
 export type MusicLibraryExtra<O> = {
-  descriptor: MusicCollectionDescriptor;
+  description: string;
   owner: O;
 }
 
@@ -122,19 +122,17 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
 
     return new Promise(async (resolve) => {
-      const { id } = descriptor;
-
-      const path = normalizePath(descriptor.path);
+      const { id, description, path, ...options } = descriptor;
 
       const extra: MusicLibraryExtra<O> = {
-        descriptor,
+        description,
         owner: this.owner
       }
 
       const newCollection = new WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>(
         id, extra,
         {
-          ...descriptor,
+          ...options,
           trackCreator: this.trackCreator
         }
       );
@@ -149,10 +147,11 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
       newCollection.on('tracksRemove', this.handleTrackRemoval);
       newCollection.on('tracksUpdate', this.handleTrackUpdates);
 
-      this.add(newCollection);
-      this.collectionPaths.set(id, path);
+      const normalizedPath = normalizePath(path);
 
-      newCollection.watch(path);
+      this.add(newCollection);
+      this.collectionPaths.set(id, normalizedPath);
+      newCollection.watch(normalizedPath);
     });
   }
 

@@ -112,7 +112,7 @@ export async function createTrackMessage(guildId: string, station: Station, trac
   }
 
   if (track.collection.extra) {
-    const { descriptor: { description }, owner: station } = track.collection.extra as MusicLibraryExtra<Station>;
+    const { description, owner: station } = track.collection.extra as MusicLibraryExtra<Station>;
     const { latch } = track.sequencing;
 
     const fields: APIEmbedField[] = [];

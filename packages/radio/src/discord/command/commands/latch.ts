@@ -57,7 +57,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     return;
   }
 
-  const { descriptor: { description = latching.collection.id } } = latching.collection.extra as MusicLibraryExtra<any>;
+  const { description = latching.collection.id } = latching.collection.extra as MusicLibraryExtra<any>;
 
   if (latching.max === 0) {
     accept(interaction, `OK: Stop latching "${description}" collection`);
@@ -66,7 +66,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 
   if (inquire) {
     const listing = station.allLatches.map((l) => {
-      const from =  ` from \`${(l.collection.extra as MusicLibraryExtra<any>).descriptor.description}\``;
+      const from =  ` from \`${(l.collection.extra as MusicLibraryExtra<any>).description}\``;
       return `Latching: \`${l.count}/${l.max}\`${from}`;
     });
 
@@ -111,7 +111,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   }
 
   const more = latching.max - latching.count;
-  const { descriptor: { description } } = latching.collection.extra as MusicLibraryExtra<any>;
+  const { description } = latching.collection.extra as MusicLibraryExtra<any>;
 
   accept(interaction,
     `OK: Will play ${more} more like this from "${description}" collection`,

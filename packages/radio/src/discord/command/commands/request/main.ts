@@ -384,7 +384,7 @@ function makeTrackSelections(choices: Selection[]) {
   )
   .take(maxSelectMenuOptions)
   .map(({ selection: { title, artist = 'Unknown Artist', track }, by }) => {
-    const collectionName = (track.collection.extra as unknown as MusicLibraryExtra<Station>)?.descriptor.description ?? track.collection.id;
+    const collectionName = (track.collection.extra as unknown as MusicLibraryExtra<Station>)?.description ?? track.collection.id;
 
     if (title.length + artist.length + 3 > 100) {
       title = truncate(title, { length: 100 - artist.length - 3 })
