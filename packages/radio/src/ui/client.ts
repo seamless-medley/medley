@@ -202,8 +202,13 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     this.socket.close();
   }
 
-  get ready() {
+  get connected() {
     return this.socket.connected;
+  }
+
+  get ready() {
+    // TODO: This should also check whether connection initialization was done (auth, etc)
+    return this.connected;
   }
 
   private getDelegateEvents(ns: string, id: string) {
