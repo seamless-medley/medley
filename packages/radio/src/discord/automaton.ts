@@ -1,4 +1,4 @@
-import { Routes } from "discord.js";
+import { REST, Routes } from "discord.js";
 import { OAuth2Scopes, PermissionFlagsBits } from "discord-api-types/v10";
 
 import {
@@ -37,7 +37,6 @@ import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMes
 import EventEmitter from "events";
 import { createExciter } from "./exciter";
 import { decibelsToGain, retryable, waitFor } from "@seamless-medley/utils";
-import { RestClient } from "./rest";
 
 export type MedleyAutomatonOptions = {
   id: string;
@@ -991,7 +990,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }));
   }
 
-  #rest = new RestClient();
+  #rest = new REST();
 
   async registerCommands(guild?: Guild | OAuth2Guild) {
     try {
@@ -1003,16 +1002,17 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
 
       this.#rest.setToken(this.botToken);
 
-      await this.#rest.queueRequest({
-        method: 'PUT',
-        fullRoute: (guild
+      await this.#rest.put(
+        (guild
           ? Routes.applicationGuildCommands(this.clientId, guild.id)
           : Routes.applicationCommands(this.clientId)
         ),
-        body: [
-          createCommandDeclarations(this.baseCommand || 'medley')
-        ]
-      });
+        {
+          body: [createCommandDeclarations(this.baseCommand || 'medley')]
+        }
+      )
+
+      this.logger.debug('Registered', guild?.id, guild?.name);
     }
     catch (e) {
       this.logger.error('Error registering command', e);
