@@ -210,10 +210,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra = TrackExtr
 
     if (forceSelect) {
       this._lastCrate = this.currentCrate;
-
-      if (this.currentCrate) {
-        this.currentCrate.select(forceSelect);
-      }
+      this.currentCrate?.select(true);
     }
   }
 
