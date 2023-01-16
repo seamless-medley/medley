@@ -80,13 +80,13 @@ async function main() {
   const stations = await Promise.all(
     storedConfigs.stations.map(config => new Promise<Station>(async (resolve) => {
       const intros = config.intros ? (() => {
-        const collection = new TrackCollection('$_intros');
+        const collection = new TrackCollection('$_intros', undefined);
         collection.add(config.intros);
         return collection;
       })() : undefined;
 
       const requestSweepers = config.requestSweepers ? (() => {
-        const collection = new TrackCollection('$_req_sweepers');
+        const collection = new TrackCollection('$_req_sweepers', undefined);
         collection.add(shuffle(config.requestSweepers));
         return collection;
       })() : undefined;
