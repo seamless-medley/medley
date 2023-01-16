@@ -185,13 +185,25 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     this.delegates.clear();
     this.observingStores.clear();
 
+    this.surrogateCache.clear();
+    this.surrogateRefCounters.clear();
+
     for (const surrogate of this.surrogates.values()) {
-      surrogate.dispose();
+      try {
+        (surrogate as any).dispose();
+      }
+      catch {
+
+      }
     }
 
     this.surrogates.clear();
 
     this.socket.close();
+  }
+
+  get ready() {
+    return this.socket.connected;
   }
 
   private getDelegateEvents(ns: string, id: string) {
@@ -422,9 +434,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
   private surrogateCache = new Map<string, WeakRef<Remotable<object>>>();
 
+  private surrogateRefCounters = new Map<string, number>();
+
   private surrogateRegistry = new FinalizationRegistry<string>((objectId) => {
     if (!this.surrogateCache.get(objectId)?.deref()) {
       this.surrogateCache.delete(objectId);
+      this.surrogateRefCounters.delete(objectId);
     }
   });
 
@@ -441,6 +456,11 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     const objectId = `${kind}:${id}` as const;
 
     if (this.surrogateCache.has(objectId)) {
+      this.surrogateRefCounters.set(
+        objectId,
+        (this.surrogateRefCounters.get(objectId) ?? 0) + 1
+      );
+
       return this.surrogateCache.get(objectId)!.deref() as Remotable<Types[Kind]>;
     }
 
@@ -550,6 +570,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     });
 
     const dispose = async () => {
+      const refCount = this.surrogateRefCounters.get(objectId)! -1;
+
+      if (refCount > 0) {
+        return;
+      }
+
       this.remoteUnobserve(kind, id, propertyObserver);
 
       for (const [event, handlers] of [...subscriptionHandlers]) {
@@ -568,6 +594,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
       this.surrogates.delete(uuid);
       this.surrogateCache.delete(objectId);
+      this.surrogateRefCounters.delete(objectId);
     }
 
     const specialMethods: Record<string | symbol, any> = {
@@ -599,6 +626,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     this.surrogates.set(uuid, surrogate);
     this.surrogateCache.set(objectId, new WeakRef(surrogate));
+    this.surrogateRefCounters.set(objectId, 1);
     this.surrogateRegistry.register(surrogate, objectId);
 
     return surrogate;
