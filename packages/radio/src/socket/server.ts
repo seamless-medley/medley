@@ -412,7 +412,7 @@ export class ObjectObserver<T extends object> {
     this.#exposingProps = pickBy(exposing, desc => (desc.name in declared) && isProperty(desc) && isPublicPropertyName(desc.name));
     this.#declaredProps = pickBy(declared, desc => isProperty(desc) && isPublicPropertyName(desc.name));
 
-    for (const [prop, desc] of Object.entries(this.#declaredProps)) {
+    for (const [prop, desc] of Object.entries(this.#exposingProps)) {
       Object.defineProperty(desc.instance, prop, {
         get: () => {
           return desc.get?.call(desc.instance) ?? desc.value
