@@ -758,7 +758,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     });
   }
 
-  private handleCollectionChange = (station: Station): StationEvents['currentCollectionChange'] => (oldCollection) => {
+  private handleCollectionChange = (station: Station): StationEvents['currentCollectionChange'] => (oldCollection, newCollection) => {
     // Hide "more like this" button for this currently playing track
     this.updateTrackMessage(
       async (msg) =>  {
@@ -773,7 +773,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
         }
 
         return {
-          showMore: msg.trackPlay.track.collection.id !== oldCollection.id,
+          showMore: msg.trackPlay.track.collection.id === newCollection.id,
           showSkip: true,
           showLyrics: true
         }
