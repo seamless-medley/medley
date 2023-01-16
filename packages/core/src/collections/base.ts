@@ -1,3 +1,4 @@
+import os from 'node:os';
 import { createHash } from 'crypto';
 import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
@@ -5,7 +6,7 @@ import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, rando
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
-import { moveArrayElements, moveArrayIndexes } from '@seamless-medley/utils';
+import { breath, moveArrayElements, moveArrayIndexes } from '@seamless-medley/utils';
 
 export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 
@@ -168,9 +169,9 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
 
     const immediateTracks: T[] = [];
 
-    for (const group of chunk(validPaths, 500)) {
+    for (const group of chunk(validPaths, 25 * os.cpus().length)) {
       const created = await Promise.all(group.map(async p => await this.createTrack(p, await this.getTrackId(p))));
-      await fn(created);
+      await fn(created).then(breath);
       immediateTracks.push(...created);
     }
 
