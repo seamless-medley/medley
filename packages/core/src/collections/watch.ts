@@ -1,13 +1,13 @@
 import { dirname } from 'path';
 import { stat } from "fs/promises";
 
-import node_glob from 'glob';
+import fg from 'fast-glob';
 import mm from 'minimatch';
 import { debounce, groupBy, shuffle, stubFalse, uniq } from "lodash";
 import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback } from '@parcel/watcher';
 
-import { TrackCollection, TrackCollectionOptions } from "./base";
+import { supportedExts, TrackCollection, TrackCollectionOptions } from "./base";
 import { Track } from "../track";
 
 type WatchInfo = {
@@ -219,7 +219,7 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
   }
 
   private async scan(dir: string) {
-    const files = await glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
+    const files = await glob(`${normalizePath(dir)}/**/*.{${supportedExts.join(',')}}`).catch(stubFalse);
 
     if (files !== false) {
       this.add(shuffle(files));
@@ -247,13 +247,9 @@ export class WatchTrackCollection<T extends Track<any, E>, E = any> extends Trac
   }
 }
 
-const glob = (pattern: string) => new Promise<string[]>((resolve, reject) => {
-  node_glob(pattern, (err, matches) => {
-    if (err) {
-      reject(err);
-      return;
-    }
-
-    resolve(matches);
-  })
+const glob = (pattern: string) => fg(pattern, {
+  absolute: true,
+  onlyFiles: true,
+  braceExpansion: true,
+  suppressErrors: true,
 });

@@ -52,6 +52,10 @@ export type TrackCollectionEvents = {
   tracksUpdate: (tracks: Track<any, any>[]) => void;
 }
 
+export const supportedExts = ['mp3', 'flac', 'wav', 'ogg', 'aiff'];
+
+export const knownExtRegExp = new RegExp(`\\.(${supportedExts.join('|')})$`, 'i')
+
 export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventEmitter as new () => TypedEventEmitter<TrackCollectionEvents>) {
   protected _ready: boolean = false;
 
@@ -151,7 +155,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
   }
 
   static isKnownFileExtension(filename: string) {
-    return /\.(mp3|flac|wav|ogg|aiff)$/i.test(filename);
+    return knownExtRegExp.test(filename);
   }
 
   private async transform(paths: string[], fn: (tracks: T[]) => Promise<any>) {
