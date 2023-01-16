@@ -1,4 +1,4 @@
-import { noop } from "lodash";
+import { useForceUpdate } from "@mantine/hooks";
 import { useEffect, useState } from "react";
 import type { RemoteTypes } from "../../socket/remote";
 import type { Stub } from "../../socket/stub";
@@ -14,28 +14,38 @@ export function useSurrogate<
   kind: Kind,
   id?: string
 ) {
-
   const client = useClient();
   const [remote, setRemote] = useState<Remotable<T>>();
+
+  const update = useForceUpdate();
+
+  const onConnect = () => void update();
+  const onDisconnect = () => setRemote(undefined);
 
   useEffect(() => {
     let _s: typeof remote;
 
-    if (!id) {
-      return;
+    if (id && client.ready) {
+      client.surrogateOf<Kind>(StubClass as any, kind, id)
+        .then(s => {
+          _s = s as any;
+          setRemote(s as any);
+        })
+        .catch((e) => {
+          console.error('Could not get surrogate', e);
+        });
     }
 
-    client.surrogateOf<Kind>(StubClass as any, kind, id)
-      .then(s => {
-        _s = s as any;
-        setRemote(s as any);
-      })
-      .catch((e) => {
-        console.error('Could not get surrogate', e);
-      });
+    client.on('connect', onConnect);
+    client.on('disconnect', onDisconnect);
 
-    return () => void _s?.dispose();
-  }, [id]);
+    return () => {
+      _s?.dispose();
+
+      client.off('connect', onConnect);
+      client.off('disconnect', onDisconnect)
+    }
+  }, [id, client.ready]);
 
   return remote;
 }
