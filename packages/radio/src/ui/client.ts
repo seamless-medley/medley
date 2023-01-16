@@ -57,7 +57,6 @@ type ClientEvents = {
 }
 
 export enum DisconnectReason {
-  // "io server disconnect" | "io client disconnect" | "ping timeout" | "transport close" | "transport error"
   ByClient,
   ByServer,
   Timeout,
@@ -425,7 +424,6 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
   private surrogateRegistry = new FinalizationRegistry<string>((objectId) => {
     if (!this.surrogateCache.get(objectId)?.deref()) {
-      console.log('Removing surrogate cahce for', objectId);
       this.surrogateCache.delete(objectId);
     }
   });
@@ -443,7 +441,6 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     const objectId = `${kind}:${id}` as const;
 
     if (this.surrogateCache.has(objectId)) {
-      console.log('Returning cached surrogate for', objectId);
       return this.surrogateCache.get(objectId)!.deref() as Remotable<Types[Kind]>;
     }
 

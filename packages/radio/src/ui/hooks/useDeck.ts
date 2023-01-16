@@ -155,7 +155,6 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
   }
 
   useEffect(() => {
-    // TODO: This won't work since the event was fired before receiving the station
     client.on('connect', refreshDeckInfo);
     client.on('disconnect', invalidateDeckInfo)
 
