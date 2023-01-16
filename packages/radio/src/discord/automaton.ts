@@ -510,10 +510,6 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
       this.ensureGuildState(id);
     };
 
-    if (process.env.DEBUG) {
-      await this.registerGuildCommands(guilds);
-    }
-
     this.logger.info('Ready');
     this.emit('ready');
   }

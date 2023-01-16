@@ -144,6 +144,11 @@ async function main() {
     automaton.once('ready', () => resolve(automaton));
 
     await automaton.login();
+
+    if (process.argv[2] === 'register') {
+      await automaton.registerGuildCommands([...(await automaton.client.guilds.fetch()).values()]);
+    }
+
     return automaton;
   })));
 
