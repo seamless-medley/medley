@@ -34,6 +34,7 @@ export type BoomBoxTrackExtra = TrackExtra & {
 export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
 export type BoomBoxTrackPlay = TrackPlay<BoomBoxTrack>;
 export type BoomBoxCrate = Crate<BoomBoxTrack>;
+export type BoomBoxTrackCollection = TrackCollection<BoomBoxTrack>;
 
 export type RequestTrack<Requester> = BoomBoxTrack & {
   rid: number;
@@ -51,7 +52,7 @@ export function isRequestTrack<T>(o: any): o is RequestTrack<T> {
 
 export type BoomBoxEvents = {
   sequenceChange: (activeCrate: BoomBoxCrate) => void;
-  currentCollectionChange: (oldCollection: TrackCollection<BoomBoxTrack> | undefined, newCollection: TrackCollection<BoomBoxTrack>, trasitingFromRequestTrack: boolean) => void;
+  currentCollectionChange: (oldCollection: BoomBoxTrackCollection | undefined, newCollection: BoomBoxTrackCollection, trasitingFromRequestTrack: boolean) => void;
   currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
   trackQueued: (track: BoomBoxTrack) => void;
 
@@ -60,7 +61,6 @@ export type BoomBoxEvents = {
   deckActive: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
   deckFinished: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
   deckUnloaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
-
 
   trackStarted: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => void;
   trackActive: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
@@ -178,8 +178,8 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     this.sweeperInserter.rules = rules;
   }
 
-  private _currentCrate: BoomBoxCrate | undefined;
-  private _currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
+  private _currentCrate?: BoomBoxCrate;
+  private _currentTrackPlay?: BoomBoxTrackPlay;
   private _inTransition = false;
 
   /**
@@ -539,7 +539,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     return this.sequencer.latch(options);
   }
 
-  isKnownCollection(collection: TrackCollection<BoomBoxTrack>): boolean {
+  isKnownCollection(collection: BoomBoxTrackCollection): boolean {
     return this.sequencer.isKnownCollection(collection);
   }
 

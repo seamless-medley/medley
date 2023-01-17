@@ -2,12 +2,12 @@ import { curry, sample, sortBy } from "lodash";
 import { basename } from "path";
 import { TrackCollection } from "../collections";
 import { createLogger, Logger, type ILogObj } from "../logging";
-import { BoomBox, BoomBoxEvents, BoomBoxTrack, TrackKind } from "./boombox";
+import { BoomBox, BoomBoxEvents, BoomBoxTrack, BoomBoxTrackCollection, TrackKind } from "./boombox";
 
 export type SweeperInsertionRule = {
   from?: string[];
   to?: string[];
-  collection: TrackCollection<BoomBoxTrack>;
+  collection: BoomBoxTrackCollection;
 }
 
 const validateRule = (from: [id: string, list: string[] | undefined], to: [id: string, list: string[] | undefined]): boolean => {
@@ -77,7 +77,7 @@ export class SweeperInserter {
 
   private recent: string[] = [];
 
-  private pick(collection: TrackCollection<BoomBoxTrack>) {
+  private pick(collection: BoomBoxTrackCollection) {
     const count = this.recent.length + 1;
 
     for (let i = 0; i < count; i++) {

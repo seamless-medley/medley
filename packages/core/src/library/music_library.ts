@@ -2,7 +2,7 @@ import { castArray, chain, isString, noop } from 'lodash';
 import normalizePath from 'normalize-path';
 import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions } from '../collections';
 import { createLogger } from '../logging';
-import { BoomBoxTrack, TrackKind } from '../playout';
+import { BoomBoxTrack, BoomBoxTrackCollection, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
 import { SearchEngine, Query, TrackDocumentFields } from './search';
 import { MetadataHelper } from '../metadata';

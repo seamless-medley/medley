@@ -11,6 +11,7 @@ import {
   BoomBoxCrate,
   BoomBoxEvents,
   BoomBoxTrack,
+  BoomBoxTrackCollection,
   RequestTrack,
   SweeperInsertionRule,
   TrackKind,
@@ -64,9 +65,9 @@ export type StationOptions = {
 
   useNullAudioDevice?: boolean;
 
-  intros?: TrackCollection<BoomBoxTrack>;
+  intros?: BoomBoxTrackCollection;
 
-  requestSweepers?: TrackCollection<BoomBoxTrack>;
+  requestSweepers?: BoomBoxTrackCollection;
 
   // BoomBox
   musicDb: MusicDb;
@@ -142,8 +143,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
   private readonly library: MusicLibrary<Station>;
 
-  intros?: TrackCollection<BoomBoxTrack>;
-  requestSweepers?: TrackCollection<BoomBoxTrack>;
+  intros?: StationOptions['intros'];
+  requestSweepers?: StationOptions['requestSweepers'];
 
   followCrateAfterRequestTrack: boolean;
 
@@ -697,7 +698,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.boombox.latch(options);
   }
 
-  isCollectionLatchable(collection: TrackCollection<BoomBoxTrack>): boolean {
+  isCollectionLatchable(collection: BoomBoxTrackCollection): boolean {
     return !collection.latchDisabled && this.boombox.isKnownCollection(collection);
   }
 
