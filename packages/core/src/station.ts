@@ -112,6 +112,7 @@ export type Audience = {
 export type StationTrack = MusicTrack<Station>;
 export type StationTrackPlay = TrackPlay<StationTrack>;
 export type StationTrackCollection = MusicTrackCollection<Station>;
+export type StationRequestedTrack = TrackWithRequester<StationTrack, Audience>;
 
 export type StationEvents = {
   trackQueued: (track: StationTrack) => void;
@@ -125,7 +126,7 @@ export type StationEvents = {
   trackFinished: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
   currentCollectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, trasitingFromRequestTrack: boolean) => void;
 
-  requestTrackAdded: (track: TrackPeek<TrackWithRequester<StationTrack, Audience>>) => void;
+  requestTrackAdded: (track: TrackPeek<StationRequestedTrack>) => void;
   //
   collectionAdded: (collection: StationTrackCollection) => void;
   collectionRemoved: (collection: StationTrackCollection) => void;
@@ -294,7 +295,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.emit('currentCollectionChange', oldCollection as StationTrackCollection | undefined, newCollection as StationTrackCollection, trasitingFromRequestTrack);
   }
 
-  private handleRequestTrack = async (track: TrackWithRequester<StationTrack, Audience>) => {
+  private handleRequestTrack = async (track: StationRequestedTrack) => {
     const { requestSweepers } = this;
 
     const currentTrack =  this.boombox.trackPlay?.track;
