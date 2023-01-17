@@ -1,21 +1,21 @@
 import EventEmitter from "events";
-import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions } from "@seamless-medley/medley";
+import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions, TrackPlay } from "@seamless-medley/medley";
 import { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import type TypedEventEmitter from 'typed-emitter';
-import { TrackCollection, TrackCollectionBasicOptions, TrackPeek, WatchTrackCollection } from "./collections";
+import { TrackCollectionBasicOptions, TrackPeek } from "./collections";
 import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
-import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicLibraryExtra } from "./library";
+import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "./library";
 import { createLogger, Logger, type ILogObj } from "./logging";
 import {
   BoomBox,
   BoomBoxCrate,
   BoomBoxEvents,
-  BoomBoxTrack,
   BoomBoxTrackCollection,
-  RequestTrack,
+  BoomBoxTrackExtra,
   SweeperInsertionRule,
   TrackKind,
-  trackRecordOf
+  trackRecordOf,
+  TrackWithRequester
 } from "./playout";
 import { MetadataHelper } from "./metadata";
 import { SearchQuery, SearchQueryField } from "./library/search";
@@ -109,24 +109,27 @@ export type Audience = {
   id: string;
 }
 
-type EventNamesFromBoomBox =
-  'trackQueued' |
-  'deckLoaded' |
-  'deckUnloaded' |
-  'deckStarted' |
-  'deckActive' |
-  'deckFinished' |
-  'trackStarted' |
-  'trackActive' |
-  'trackFinished' |
-  'currentCollectionChange';
+export type StationTrack = MusicTrack<Station>;
+export type StationTrackPlay = TrackPlay<StationTrack>;
+export type StationTrackCollection = MusicTrackCollection<Station>;
 
-export type StationEvents = Pick<BoomBoxEvents, EventNamesFromBoomBox> & {
-  requestTrackAdded: (track: TrackPeek<RequestTrack<Audience>>) => void;
+export type StationEvents = {
+  trackQueued: (track: StationTrack) => void;
+  deckLoaded: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
+  deckUnloaded: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
+  deckStarted: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
+  deckActive: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
+  deckFinished: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
+  trackStarted: (deck: DeckIndex, trackPlay: StationTrackPlay, lastTrackPlay?: StationTrackPlay) => void;
+  trackActive: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
+  trackFinished: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
+  currentCollectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, trasitingFromRequestTrack: boolean) => void;
+
+  requestTrackAdded: (track: TrackPeek<TrackWithRequester<StationTrack, Audience>>) => void;
   //
-  collectionAdded: (collection: WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<Station>>) => void;
-  collectionRemoved: (collection: WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<Station>>) => void;
-  collectionUpdated: (collection: WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<Station>>) => void;
+  collectionAdded: (collection: StationTrackCollection) => void;
+  collectionRemoved: (collection: StationTrackCollection) => void;
+  collectionUpdated: (collection: StationTrackCollection) => void;
 }
 
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
@@ -134,8 +137,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   readonly name: string;
   readonly description?: string;
 
-  readonly queue: Queue<BoomBoxTrack>;
-  readonly medley: Medley<BoomBoxTrack>;
+  readonly queue: Queue<StationTrack>;
+  readonly medley: Medley<StationTrack>;
 
   private readonly boombox: BoomBox<Audience>;
 
@@ -169,9 +172,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.noRequestSweeperOnIdenticalCollection = options.noRequestSweeperOnIdenticalCollection ?? true;
 
     this.logger = createLogger({ name: `station/${this.id}`});
+    this.logger.debug('Creating station');
 
     this.queue = new Queue();
+    this.logger.debug('Queue created');
     this.medley = new Medley(this.queue);
+    this.logger.debug('Medley engine created');
 
     if (options.useNullAudioDevice ?? true) {
       if (this.getCurrentAudioDevice().type !== 'Null') {
@@ -181,7 +187,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
     this.musicDb = options.musicDb;
 
-    this.library = new MusicLibrary(
+    this.library = new MusicLibrary<Station>(
       this.id,
       this,
       this.musicDb
@@ -242,35 +248,33 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }
   }
 
-  private handleTrackQueued: StationEvents['trackQueued'] = (...args) => {
-    this.emit('trackQueued', ...args);
+  private handleTrackQueued: BoomBoxEvents['trackQueued'] = (track: StationTrack) => {
+    this.emit('trackQueued', track);
   }
 
-  private handleDeckLoaded: StationEvents['deckLoaded'] = (...args) => {
-    this.emit('deckLoaded', ...args);
+  private handleDeckLoaded: BoomBoxEvents['deckLoaded'] = (deck, trackPlay: StationTrackPlay) => {
+    this.emit('deckLoaded', deck, trackPlay);
   }
 
-  private handleDeckUnloaded: StationEvents['deckUnloaded'] = (...args) => {
-    this.emit('deckUnloaded', ...args);
+  private handleDeckUnloaded: BoomBoxEvents['deckUnloaded'] = (deck, trackPlay: StationTrackPlay) => {
+    this.emit('deckUnloaded', deck, trackPlay);
   }
 
-  private handleDeckStarted: StationEvents['deckStarted'] = (...args) => {
-    this.emit('deckStarted', ...args);
+  private handleDeckStarted: BoomBoxEvents['deckStarted'] = (deck, trackPlay: StationTrackPlay) => {
+    this.emit('deckStarted', deck, trackPlay);
   }
 
-  private handleDeckActive: StationEvents['deckActive'] = (...args) => {
-    this.emit('deckActive', ...args);
+  private handleDeckActive: BoomBoxEvents['deckActive'] = (deck, trackPlay: StationTrackPlay) => {
+    this.emit('deckActive', deck, trackPlay);
   }
 
-  private handleDeckFinished: StationEvents['deckFinished'] = (...args) => {
-    this.emit('deckFinished', ...args);
+  private handleDeckFinished: BoomBoxEvents['deckFinished'] = (deck, trackPlay: StationTrackPlay) => {
+    this.emit('deckFinished', deck, trackPlay);
   }
 
-  private handleTrackStarted: StationEvents['trackStarted'] = (...args) => {
+  private handleTrackStarted: BoomBoxEvents['trackStarted'] = (deck, trackPlay: StationTrackPlay, lastTrackPlay?: StationTrackPlay) => {
     this._starting = false;
-    this.emit('trackStarted', ...args);
-
-    const [, trackPlay] = args;
+    this.emit('trackStarted', deck, trackPlay, lastTrackPlay);
 
     this.musicDb.trackHistory.add(this.id, {
       ...trackRecordOf(trackPlay.track),
@@ -278,19 +282,19 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     }, this.maxTrackHistory);
   }
 
-  private handleTrackActive: StationEvents['trackActive'] = (...args) => {
-    this.emit('trackActive', ...args);
+  private handleTrackActive: BoomBoxEvents['trackActive'] = (deck, trackPlay: StationTrackPlay) => {
+    this.emit('trackActive', deck, trackPlay);
   }
 
-  private handleTrackFinished: StationEvents['trackFinished'] = (...args) => {
-    this.emit('trackFinished', ...args);
+  private handleTrackFinished: BoomBoxEvents['trackFinished'] = (deck, trackPlay: StationTrackPlay) => {
+    this.emit('trackFinished', deck, trackPlay);
   }
 
-  private handleCollectionChange: StationEvents['currentCollectionChange'] = (...args) => {
-    this.emit('currentCollectionChange', ...args);
+  private handleCollectionChange: BoomBoxEvents['currentCollectionChange'] = (oldCollection, newCollection, trasitingFromRequestTrack) => {
+    this.emit('currentCollectionChange', oldCollection as StationTrackCollection | undefined, newCollection as StationTrackCollection, trasitingFromRequestTrack);
   }
 
-  private handleRequestTrack = async (track: RequestTrack<Audience>) => {
+  private handleRequestTrack = async (track: TrackWithRequester<StationTrack, Audience>) => {
     const { requestSweepers } = this;
 
     const currentTrack =  this.boombox.trackPlay?.track;
@@ -371,7 +375,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   }
 
   get trackPlay() {
-    return this.boombox.trackPlay;
+    return this.boombox.trackPlay as StationTrackPlay;
   }
 
   async trackHistory() {
@@ -536,7 +540,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.boombox.sweeperInsertionRules = rules;
   }
 
-  findTrackById(id: BoomBoxTrack['id']) {
+  findTrackById(id: StationTrack['id']) {
     return this.library.findTrackById(id);
   }
 
@@ -545,7 +549,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
 
     this.musicDb.searchHistory.add(this.id, { ...q, resultCount: result.length });
 
-    return result;
+    return result as StationTrack[];
   }
 
   async autoSuggest(q: string, field?: SearchQueryField, narrowBy?: SearchQueryField, narrowTerm?: string) {
@@ -560,7 +564,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
-  async request(trackId: BoomBoxTrack['id'], requestedBy: Audience) {
+  async request(trackId: StationTrack['id'], requestedBy: Audience) {
     const track = this.findTrackById(trackId);
 
     if (!track) {
@@ -694,11 +698,11 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return Array.from(this.audiences.keys());
   }
 
-  latch(options?: LatchOptions<BoomBoxTrack>) {
-    return this.boombox.latch(options);
+  latch(options?: LatchOptions<StationTrack>) {
+    return this.boombox.latch(options) as LatchSession<StationTrack, NonNullable<StationTrack['extra']>>;
   }
 
-  isCollectionLatchable(collection: BoomBoxTrackCollection): boolean {
+  isCollectionLatchable(collection: StationTrackCollection): boolean {
     return !collection.latchDisabled && this.boombox.isKnownCollection(collection);
   }
 
@@ -706,7 +710,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     return this.boombox.isLatchActive;
   }
 
-  get allLatches(): LatchSession<BoomBoxTrack>[] {
+  get allLatches(): LatchSession<StationTrack, BoomBoxTrackExtra>[] {
     return this.boombox.allLatches;
   }
 }

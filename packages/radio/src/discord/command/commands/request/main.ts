@@ -5,7 +5,8 @@ import {
   getTrackBanner,
   makeAudience,
   MusicLibraryExtra,
-  Station
+  Station,
+  StationTrack
 } from "@seamless-medley/core";
 
 import {
@@ -31,7 +32,7 @@ import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeReque
 export type Selection = {
   title: string;
   artist?: string;
-  track: BoomBoxTrack;
+  track: StationTrack;
 };
 
 const onGoing = new Set<string>();
@@ -384,7 +385,7 @@ function makeTrackSelections(choices: Selection[]) {
   )
   .take(maxSelectMenuOptions)
   .map(({ selection: { title, artist = 'Unknown Artist', track }, by }) => {
-    const collectionName = (track.collection.extra as unknown as MusicLibraryExtra<Station>)?.description ?? track.collection.id;
+    const collectionName = track.collection.extra.description ?? track.collection.id;
 
     if (title.length + artist.length + 3 > 100) {
       title = truncate(title, { length: 100 - artist.length - 3 })

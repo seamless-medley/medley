@@ -34,13 +34,13 @@ export interface TrackHistory {
 export interface MusicDb {
   dispose(): void;
 
-  findById(trackId: string): Promise<MusicTrack | undefined>;
+  findById(trackId: string): Promise<MusicDbTrack | undefined>;
 
-  findByPath(path: string): Promise<MusicTrack | undefined>;
+  findByPath(path: string): Promise<MusicDbTrack | undefined>;
 
-  findByISRC(musicId: string): Promise<MusicTrack | undefined>;
+  findByISRC(musicId: string): Promise<MusicDbTrack | undefined>;
 
-  update(trackId: string, update: Omit<MusicTrack, 'trackId'>): Promise<void>;
+  update(trackId: string, update: Omit<MusicDbTrack, 'trackId'>): Promise<void>;
 
   delete(trackId: string): Promise<void>;
 
@@ -49,7 +49,7 @@ export interface MusicDb {
   get trackHistory(): TrackHistory;
 }
 
-export interface MusicTrack extends Metadata {
+export interface MusicDbTrack extends Metadata {
   trackId: string;
   path: string;
 }
@@ -58,7 +58,7 @@ export interface MusicTrack extends Metadata {
  * INTERNAL USE ONLY
  */
 export class InMemoryMusicDb implements MusicDb {
-  private tracks = new Map<string, MusicTrack>();
+  private tracks = new Map<string, MusicDbTrack>();
 
   async findById(trackId: string) {
     return this.tracks.get(trackId);
@@ -72,12 +72,12 @@ export class InMemoryMusicDb implements MusicDb {
     return undefined;
   }
 
-  async update(trackId: string, update: Omit<MusicTrack, "trackId">) {
+  async update(trackId: string, update: Omit<MusicDbTrack, "trackId">) {
     const existing = this.tracks.get(trackId) ?? {};
     this.tracks.set(trackId, {
       ...existing,
       ...update
-    } as MusicTrack)
+    } as MusicDbTrack)
   }
 
   async delete(trackId: string){

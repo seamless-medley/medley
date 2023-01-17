@@ -7,7 +7,10 @@ import {
   MusicLibraryExtra,
   Station,
   extractAudienceGroup,
-  AudienceType
+  AudienceType,
+  StationTrackPlay,
+  StationTrackCollection,
+  StationTrack
 } from "@seamless-medley/core";
 import { MetadataHelper } from "@seamless-medley/core/src/metadata";
 
@@ -51,14 +54,14 @@ export type TrackMessage = {
   lyricMessage?: Message;
 }
 
-export async function createTrackMessage(guildId: string, station: Station, trackPlay: BoomBoxTrackPlay): Promise<TrackMessage> {
-  const requested = isRequestTrack<Audience>(trackPlay.track) ? trackPlay.track : undefined;
+export async function createTrackMessage(guildId: string, station: Station, trackPlay: StationTrackPlay): Promise<TrackMessage> {
+  const requested = isRequestTrack<StationTrack, Audience>(trackPlay.track) ? trackPlay.track : undefined;
   const requestedBy = requested?.requestedBy;
 
   // Find the best track object by looking up the maybeCoverAndLyrics in which is already defined
   // If none was found, fallback to the track object from BoomBoxTrackPlay
   const track = [requested?.original, trackPlay.track]
-      .find((t): t is BoomBoxTrack => t?.extra?.maybeCoverAndLyrics !== undefined)
+      .find((t): t is StationTrack => t?.extra?.maybeCoverAndLyrics !== undefined)
       ?? requested?.original ?? trackPlay.track;
 
 
@@ -112,14 +115,13 @@ export async function createTrackMessage(guildId: string, station: Station, trac
   }
 
   if (track.collection.extra) {
-    const { description, owner: station } = track.collection.extra as MusicLibraryExtra<Station>;
-    const { latch } = track.sequencing;
+    const { description, owner: station } = track.collection.extra;
 
     const fields: APIEmbedField[] = [];
 
     fields.push({ name: 'Collection', value: description ?? track.collection.id });
-    if (latch) {
-      const { order, session } = latch;
+    if (track.sequencing?.latch) {
+      const { order, session } = track.sequencing.latch;
       fields.push({ name: 'Latch', value: `${order} of ${session.max}`, inline: true });
     }
     fields.push({ name: 'Station', value: station.name });
@@ -156,7 +158,7 @@ export async function createTrackMessage(guildId: string, station: Station, trac
     .setStyle(ButtonStyle.Danger)
     .setCustomId(`skip:${trackPlay.uuid}`);
 
-  const moreButton = station.isCollectionLatchable(trackPlay.track.collection)
+  const moreButton = station.isCollectionLatchable(trackPlay.track.collection as StationTrackCollection)
     ? new ButtonBuilder()
       .setLabel('More Like This')
       .setEmoji(sample(['❤️', '🧡', '💛', '💕', '💓', '💗', '💖', '💘', '💝'])!)

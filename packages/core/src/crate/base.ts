@@ -4,8 +4,8 @@ import { Track } from "../track";
 import { createLogger, Logger, type ILogObj } from '../logging';
 import { weightedSample } from "@seamless-medley/utils";
 
-export type CrateSourceWithWeight<T extends Track<any, E>, E = any> = {
-  collection: TrackCollection<T, E>;
+export type CrateSourceWithWeight<T extends Track<any>> = {
+  collection: T['collection'];
   weight: number;
 }
 
@@ -18,9 +18,9 @@ export type CrateLimitValue = number | 'all';
 
 export type CrateLimit = CrateLimitValue | (() => CrateLimitValue);
 
-export type CrateOptions<T extends Track<any, E>, E = any> = {
+export type CrateOptions<T extends Track<any>> = {
   id: string;
-  sources: CrateSourceWithWeight<T, E>[];
+  sources: CrateSourceWithWeight<T>[];
 
   chance?: Chanceable;
 
@@ -28,10 +28,10 @@ export type CrateOptions<T extends Track<any, E>, E = any> = {
   max?: number;
 }
 
-export class Crate<T extends Track<any, CE>, CE = any> {
+export class Crate<T extends Track<any>> {
   readonly id: string;
 
-  private _sources: TrackCollection<T, CE>[] = [];
+  private _sources: T['collection'][] = [];
   private sourceWeights: number[] = [];
 
   limit: CrateLimit;
@@ -41,7 +41,7 @@ export class Crate<T extends Track<any, CE>, CE = any> {
 
   protected logger: Logger<ILogObj>;
 
-  constructor(options: CrateOptions<T, CE>) {
+  constructor(options: CrateOptions<T>) {
     this.id = options.id
 
     this.chance = options.chance;
@@ -60,7 +60,7 @@ export class Crate<T extends Track<any, CE>, CE = any> {
     return this._sources;
   }
 
-  updateSources(newSources: CrateSourceWithWeight<T, CE>[]) {
+  updateSources(newSources: CrateSourceWithWeight<T>[]) {
     this._sources = newSources.map(s => s.collection);
     this.sourceWeights = newSources.map(s => s.weight);
   }
@@ -97,7 +97,7 @@ export class Crate<T extends Track<any, CE>, CE = any> {
     return true;
   }
 
-  async next(validator?: (path: string) => Promise<boolean>, intendedCollection?: TrackCollection<T, CE>): Promise<T | undefined> {
+  async next(validator?: (path: string) => Promise<boolean>, intendedCollection?: T['collection']): Promise<T | undefined> {
     const source = intendedCollection ?? weightedSample(this._sources, this.sourceWeights);
 
     if (!source) {
@@ -113,6 +113,6 @@ export class Crate<T extends Track<any, CE>, CE = any> {
     source.push(item);
 
     const isValid = validator ? await validator(item.path) : true;
-    return isValid ? item : undefined;
+    return isValid ? item as T : undefined;
   }
 }

@@ -5,12 +5,12 @@ import type TypedEventEmitter from "typed-emitter";
 import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, random, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
-import { Track } from "../track";
+import { Track, TrackExtra } from "../track";
 import { breath, moveArrayElements, moveArrayIndexes } from '@seamless-medley/utils';
 
 export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 
-export type TrackCreator<T extends Track<any, CE>, CE = any> = (path: string) => Promise<Omit<T, 'collection' | 'sequencing'> | undefined>;
+export type TrackCreator<T extends Track<any>> = (path: string) => Promise<Omit<T, 'collection' | 'sequencing'> | undefined>;
 
 export type TrackCollectionBasicOptions = {
   reshuffleEvery?: number;
@@ -29,8 +29,8 @@ export type TrackCollectionBasicOptions = {
   auxiliary?: boolean;
 }
 
-export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = TrackCollectionBasicOptions & {
-  trackCreator?: TrackCreator<T, CE>;
+export type TrackCollectionOptions<T extends Track<any>> = TrackCollectionBasicOptions & {
+  trackCreator?: TrackCreator<T>;
 
   /**
    * Called when new tracks are added to the collection
@@ -38,7 +38,7 @@ export type TrackCollectionOptions<T extends Track<any, CE>, CE = any> = TrackCo
   tracksMapper?: (tracks: T[]) => Promise<T[]>;
 }
 
-export type TrackPeek<T extends Track<any, CE>, CE = any> = {
+export type TrackPeek<T extends Track<any>> = {
   index: number;
   track: T;
 }
@@ -46,32 +46,32 @@ export type TrackPeek<T extends Track<any, CE>, CE = any> = {
 export type TrackCollectionEvents = {
   ready: () => void;
   refresh: () => void;
-  trackShift: (track: Track<any, any>) => void;
-  trackPush: (track: Track<any, any>) => void;
-  tracksAdd: (tracks: Track<any, any>[], indexes: number[]) => void;
-  tracksRemove: (tracks: Track<any, any>[], indexes?: number[]) => void;
-  tracksUpdate: (tracks: Track<any, any>[]) => void;
+  trackShift: (track: Track<any>) => void;
+  trackPush: (track: Track<any>) => void;
+  tracksAdd: (tracks: Track<any>[], indexes: number[]) => void;
+  tracksRemove: (tracks: Track<any>[], indexes?: number[]) => void;
+  tracksUpdate: (tracks: Track<any>[]) => void;
 }
 
 export const supportedExts = ['mp3', 'flac', 'wav', 'ogg', 'aiff'];
 
 export const knownExtRegExp = new RegExp(`\\.(${supportedExts.join('|')})$`, 'i')
 
-export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventEmitter as new () => TypedEventEmitter<TrackCollectionEvents>) {
+export class TrackCollection<T extends Track<any>, Extra = any> extends (EventEmitter as new () => TypedEventEmitter<TrackCollectionEvents>) {
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];
   protected trackIdMap: Map<string, T> = new Map();
 
-  extra!: CE extends (undefined | null) ? never : CE;
+  extra: Extra;
 
   protected logger = createLogger({
     name: `collection/${this.id}`
   });
 
-  constructor(readonly id: string, extra: CE, public options: TrackCollectionOptions<T, CE> = {}) {
+  constructor(readonly id: string, extra: Extra, public options: TrackCollectionOptions<T> = {}) {
     super();
-    this.extra = extra as any;
+    this.extra = extra;
     this.afterConstruct();
   }
 
@@ -103,7 +103,6 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
       id: createdTrack?.id ?? generatedId,
       path,
       collection: this as unknown as T['collection'],
-      sequencing: {},
       ...omit(createdTrack, 'id', 'path'),
     } as T;
   }
@@ -315,7 +314,7 @@ export class TrackCollection<T extends Track<any, CE>, CE = any> extends (EventE
     return sample(this.tracks);
   }
 
-  peek(from: number = 0, n: number): TrackPeek<T, CE>[] {
+  peek(from: number = 0, n: number): TrackPeek<T>[] {
     const max = this.tracks.length - 1;
     const sib = Math.floor((n - 1) / 2);
 

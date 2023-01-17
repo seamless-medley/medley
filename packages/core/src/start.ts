@@ -51,7 +51,7 @@ const sequences: SequenceConfig[] = [
 ];
 
 const makeSweeperRule = (type: string) => {
-  const collection = new WatchTrackCollection(type, {
+  const collection = new WatchTrackCollection(type, undefined, {
     trackCreator: async (path) => ({ id: basename(path), path })
   });
 

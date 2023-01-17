@@ -1,8 +1,7 @@
 import { curry, sample, sortBy } from "lodash";
 import { basename } from "path";
-import { TrackCollection } from "../collections";
 import { createLogger, Logger, type ILogObj } from "../logging";
-import { BoomBox, BoomBoxEvents, BoomBoxTrack, BoomBoxTrackCollection, TrackKind } from "./boombox";
+import { BoomBox, BoomBoxEvents, BoomBoxTrackCollection, TrackKind } from "./boombox";
 
 export type SweeperInsertionRule = {
   from?: string[];

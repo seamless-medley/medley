@@ -8,15 +8,15 @@ import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback } from '@parcel/watcher';
 
 import { supportedExts, TrackCollection, TrackCollectionOptions } from "./base";
-import { Track } from "../track";
+import { Track, TrackExtra } from "../track";
 
 type WatchInfo = {
   subscription?: AsyncSubscription;
   handler: SubscribeCallback;
 }
 
-export class WatchTrackCollection<T extends Track<any, E>, E = any> extends TrackCollection<T, E> {
-  constructor(id: string, extra: E, options: TrackCollectionOptions<T> = {}) {
+export class WatchTrackCollection<T extends Track<any>, Extra = any> extends TrackCollection<T, Extra> {
+  constructor(id: string, extra: Extra, options: TrackCollectionOptions<T> = {}) {
     super(id, extra, {
       tracksMapper: async (tracks) => shuffle(tracks),
       ...options

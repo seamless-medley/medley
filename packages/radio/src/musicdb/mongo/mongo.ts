@@ -1,4 +1,4 @@
-import { MusicDb, MusicTrack, SearchHistory, TrackHistory } from "@seamless-medley/core";
+import { MusicDb, MusicDbTrack, SearchHistory, TrackHistory } from "@seamless-medley/core";
 import { WorkerPoolAdapter } from "@seamless-medley/core/src/worker_pool_adapter";
 import { MongoClientOptions } from "mongodb";
 
@@ -40,19 +40,19 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
     return this;
   }
 
-  async findById(trackId: string): Promise<MusicTrack | undefined> {
+  async findById(trackId: string): Promise<MusicDbTrack | undefined> {
     return this.exec('findById', trackId);
   }
 
-  async findByPath(path: string): Promise<MusicTrack | undefined> {
+  async findByPath(path: string): Promise<MusicDbTrack | undefined> {
     return this.exec('findByPath', path);
   }
 
-  async findByISRC(musicId: string): Promise<MusicTrack | undefined> {
+  async findByISRC(musicId: string): Promise<MusicDbTrack | undefined> {
     return this.exec('findByISRC', musicId);
   }
 
-  async update(trackId: string, fields: Omit<MusicTrack, 'trackId'>) {
+  async update(trackId: string, fields: Omit<MusicDbTrack, 'trackId'>) {
     return this.exec('update', trackId, fields);
   }
 

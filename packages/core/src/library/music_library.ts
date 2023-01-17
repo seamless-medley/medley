@@ -2,11 +2,12 @@ import { castArray, chain, isString, noop } from 'lodash';
 import normalizePath from 'normalize-path';
 import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions } from '../collections';
 import { createLogger } from '../logging';
-import { BoomBoxTrack, BoomBoxTrackCollection, TrackKind } from '../playout';
+import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
 import { SearchEngine, Query, TrackDocumentFields } from './search';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from './music_db';
+import { TrackWithCollectionExtra } from '../track';
 
 export type MusicCollectionDescriptor = {
   id: string;
@@ -19,7 +20,9 @@ export type MusicLibraryExtra<O> = {
   owner: O;
 }
 
-export type MusicTrackCollection<O> = WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>;
+export type MusicTrack<O> = TrackWithCollectionExtra<BoomBoxTrack, MusicLibraryExtra<O>>;
+
+export type MusicTrackCollection<O> = WatchTrackCollection<MusicTrack<O>, MusicLibraryExtra<O>>;
 
 export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
   private logger = createLogger({ name: `library/${this.id}` });
@@ -36,7 +39,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     super();
   }
 
-  private trackCreator: TrackCreator<BoomBoxTrack> = async (path) => {
+  private trackCreator: TrackCreator<MusicTrack<O>> = async (path) => {
     const fromDb = await this.musicDb.findByPath(path);
 
     if (!fromDb) {
@@ -56,9 +59,9 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
   }
 
-  private handleTrackAddition = (tracks: BoomBoxTrack[]) => this.indexTracks(tracks, noop);
+  private handleTrackAddition = (tracks: MusicTrack<O>[]) => this.indexTracks(tracks, noop);
 
-  private handleTrackRemoval = (tracks: BoomBoxTrack[]) => {
+  private handleTrackRemoval = (tracks: MusicTrack<O>[]) => {
     for (const { id } of tracks) {
       this.musicDb.delete(id);
     }
@@ -66,7 +69,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     this.searchEngine.removeAll(tracks);
   }
 
-  private handleTrackUpdates = async (tracks: BoomBoxTrack[]) => {
+  private handleTrackUpdates = async (tracks: MusicTrack<O>[]) => {
     await this.searchEngine.removeAll(tracks).catch(noop);
 
     for (const track of tracks) {
@@ -74,7 +77,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
   }
 
-  remove(...collections: (string | WatchTrackCollection<BoomBoxTrack>)[]) {
+  remove(...collections: (string | MusicTrackCollection<O>)[]) {
     for (const c of collections) {
       const collection =  (typeof c === 'string') ? this.get(c) : c;
 
@@ -87,7 +90,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     super.remove(...collections);
   }
 
-  private async indexTracks(tracks: BoomBoxTrack[], done: () => void) {
+  private async indexTracks(tracks: MusicTrack<O>[], done: () => void) {
     if (tracks.length <= 0) {
       done();
       return;
@@ -99,7 +102,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     this.indexTracks(remainings, done);
   }
 
-  private async indexTrack(track: BoomBoxTrack, force: boolean = false) {
+  private async indexTrack(track: MusicTrack<O>, force: boolean = false) {
     if (force || !track.extra?.tags) {
       await helper.fetchMetadata(track, this.musicDb, force)
         .then(async (result) => {
@@ -129,7 +132,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
         owner: this.owner
       }
 
-      const newCollection = new WatchTrackCollection<BoomBoxTrack, MusicLibraryExtra<O>>(
+      const newCollection = new WatchTrackCollection<MusicTrack<O>, MusicLibraryExtra<O>>(
         id, extra,
         {
           ...options,
@@ -171,7 +174,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     return super.get(id);
   }
 
-  findTrackById(id: BoomBoxTrack['id']) {
+  findTrackById(id: MusicTrack<O>['id']) {
     for (const collection of this) {
       const track = collection.fromId(id);
       if (track) {
@@ -180,7 +183,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
   }
 
-  async search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): Promise<BoomBoxTrack[]> {
+  async search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): Promise<MusicTrack<O>[]> {
     const { artist, title, query } = q;
 
     const queries: Query[] = [];
@@ -215,7 +218,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     const chained = chain(result)
       .sortBy([s => -s.score, 'title'])
       .map(s => this.findTrackById(s.id))
-      .filter((t): t is BoomBoxTrack => t !== undefined)
+      .filter((t): t is MusicTrack<O> => t !== undefined)
       .uniqBy(t => t.path)
 
     return (limit ? chained.take(limit) : chained).value();
@@ -223,7 +226,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
 
   async autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string): Promise<string[]> {
     if (!q && field && narrowTerm && narrowBy) {
-      let tracks: BoomBoxTrack[] | undefined;
+      let tracks: MusicTrack<O>[] | undefined;
 
       if (field === 'title' && narrowBy === 'artist') {
         // Start showing title suggestion for a known artist
