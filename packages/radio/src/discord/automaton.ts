@@ -22,11 +22,10 @@ import {
 } from "discord.js";
 
 import {
-  BoomBoxTrack,
-  BoomBoxTrackPlay, IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
+  IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
   Station,
   makeAudienceGroup as makeStationAudienceGroup,
-  AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents, Logger, ILogObj, createLogger,
+  AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents, Logger, ILogObj, createLogger, StationTrack, StationTrackPlay,
 } from "@seamless-medley/core";
 
 import type TypedEventEmitter from 'typed-emitter';
@@ -662,7 +661,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     this._guildStates.delete(guild.id);
   }
 
-  private handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay: BoomBoxTrackPlay, lastTrackPlay?: BoomBoxTrackPlay) => {
+  private handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay, lastTrackPlay) => {
     if (trackPlay.track.extra?.kind !== TrackKind.Insertion) {
       const sentMessages = await this.sendTrackPlayForStation(trackPlay, station);
 
@@ -862,7 +861,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
     }
   }
 
-  async removeLyricsButton(trackId: BoomBoxTrack['id']) {
+  async removeLyricsButton(trackId: StationTrack['id']) {
     for (const state of this._guildStates.values()) {
       const currentCollectionId = state.stationLink?.station.trackPlay?.track?.collection?.id;
 
@@ -938,7 +937,7 @@ export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitte
   /**
    * Send to all guilds for a station
    */
-  private async sendTrackPlayForStation(trackPlay: BoomBoxTrackPlay, station: Station) {
+  private async sendTrackPlayForStation(trackPlay: StationTrackPlay, station: Station) {
     const results: [guildId: string, trackMsg: TrackMessage, maybeMessage: Promise<Message<boolean> | undefined> | undefined][] = [];
 
     for (const group of station.audienceGroups) {

@@ -1,10 +1,7 @@
 import {
   Audience,
-  BoomBoxTrack,
-  BoomBoxTrackPlay,
   isRequestTrack,
   Metadata,
-  MusicLibraryExtra,
   Station,
   extractAudienceGroup,
   AudienceType,
@@ -41,7 +38,7 @@ export enum TrackMessageStatus {
 
 export type TrackMessage = {
   station: Station;
-  trackPlay: BoomBoxTrackPlay;
+  trackPlay: StationTrackPlay;
   status: TrackMessageStatus;
   embed: EmbedBuilder;
   coverImage?: AttachmentBuilder;
@@ -59,7 +56,7 @@ export async function createTrackMessage(guildId: string, station: Station, trac
   const requestedBy = requested?.requestedBy;
 
   // Find the best track object by looking up the maybeCoverAndLyrics in which is already defined
-  // If none was found, fallback to the track object from BoomBoxTrackPlay
+  // If none was found, fallback to the track object from StationTrackPlay
   const track = [requested?.original, trackPlay.track]
       .find((t): t is StationTrack => t?.extra?.maybeCoverAndLyrics !== undefined)
       ?? requested?.original ?? trackPlay.track;

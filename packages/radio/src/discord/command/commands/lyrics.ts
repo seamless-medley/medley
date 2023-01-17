@@ -1,11 +1,11 @@
-import { BoomBoxTrack, CoverAndLyrics, getTrackBanner, lyricsToText, parseLyrics } from "@seamless-medley/core";
+import { CoverAndLyrics, getTrackBanner, lyricsToText, parseLyrics, StationTrack } from "@seamless-medley/core";
 import { MetadataHelper } from "@seamless-medley/core/src/metadata";
 import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
 import { deny, guildStationGuard, reply, warn } from "../utils";
 
-const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, trackId: BoomBoxTrack['id']) => {
+const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, trackId: StationTrack['id']) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
   const track = station.findTrackById(trackId);
