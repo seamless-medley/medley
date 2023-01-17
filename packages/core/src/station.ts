@@ -8,7 +8,6 @@ import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, 
 import { createLogger, Logger, type ILogObj } from "./logging";
 import {
   BoomBox,
-  BoomBoxCrate,
   BoomBoxEvents,
   BoomBoxTrackCollection,
   BoomBoxTrackExtra,
@@ -498,7 +497,7 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
   updateSequence(sequences: SequenceConfig[]) {
     const crates = sequences
       .map(config => this.createCrate(config))
-      .filter((c): c is BoomBoxCrate => c !== undefined);
+      .filter((c): c is Crate<StationTrack> => c !== undefined);
 
     this.addCrates(...crates);
   }
@@ -521,15 +520,15 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     });
   }
 
-  addCrates(...crates: BoomBoxCrate[]) {
+  addCrates(...crates: Crate<StationTrack>[]) {
     this.boombox.addCrates(...crates);
   }
 
-  removeCrates(...cratesOrIds: Array<BoomBoxCrate['id'] | BoomBoxCrate>) {
+  removeCrates(...cratesOrIds: Array<Crate<StationTrack>['id'] | Crate<StationTrack>>) {
     this.boombox.removeCrates(...cratesOrIds);
   }
 
-  moveCrates(newPosition: number, ...cratesOrIds: Array<BoomBoxCrate['id'] | BoomBoxCrate>) {
+  moveCrates(newPosition: number, ...cratesOrIds: Array<Crate<StationTrack>['id'] | Crate<StationTrack>>) {
     this.boombox.moveCrates(newPosition, ...cratesOrIds);
   }
 
