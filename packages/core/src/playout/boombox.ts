@@ -51,9 +51,28 @@ export function isRequestTrack<T extends BoomBoxTrack, R>(o: any): o is TrackWit
 }
 
 export type BoomBoxEvents = {
-  sequenceChange: (activeCrate: BoomBoxCrate) => void;
-  currentCollectionChange: (oldCollection: BoomBoxTrackCollection | undefined, newCollection: BoomBoxTrackCollection, trasitingFromRequestTrack: boolean) => void;
-  currentCrateChange: (oldCrate: BoomBoxCrate, newCrate: BoomBoxCrate) => void;
+  /**
+   * Emit when an active crate is changed by the sequencer during the sequencing phase
+   */
+  sequenceChange: (activeCrate: BoomBoxCrate, oldCrate?: BoomBoxCrate) => void;
+
+  /**
+   * Emit when an active collection was changed by any means during track queuing phase
+   *
+   * This event is triggered by node-medley itself
+   *
+   * To detect change during the actual playback, listen to `trackStarted` event and check the collection from trackPlay instead
+   */
+  collectionChange: (oldCollection: BoomBoxTrackCollection | undefined, newCollection: BoomBoxTrackCollection, trasitingFromRequestTrack: boolean) => void;
+
+  /**
+   * Emit when an active crate was changed by any means during track queuing phase
+   *
+   * Note that this is not the same as `sequenceChange` event
+   * This event is triggered by node-medley itself
+   */
+  crateChange: (oldCrate: BoomBoxCrate | undefined, newCrate: BoomBoxCrate) => void;
+
   trackQueued: (track: BoomBoxTrack) => void;
 
   deckLoaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
@@ -159,7 +178,7 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
       trackVerifier: this.verifyTrack
     });
 
-    this.sequencer.on('change', (crate: BoomBoxCrate) => this.emit('sequenceChange', crate));
+    this.sequencer.on('change', (crate: BoomBoxCrate, oldCrate?: BoomBoxCrate) => this.emit('sequenceChange', crate, oldCrate));
     this.sequencer.on('rescue', (scanned, ignored) => {
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
       this.logger.debug('Rescue, removing', n, 'artist history entries');
@@ -367,13 +386,13 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
 
       if (collectionChange && nextCollection) {
         const trasitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
-        this.emit('currentCollectionChange', currentCollection, nextCollection, trasitingFromRequestTrack);
+        this.emit('collectionChange', currentCollection, nextCollection, trasitingFromRequestTrack);
       }
 
       if (this._currentCrate !== nextTrack.sequencing.crate) {
 
-        if (this._currentCrate && nextTrack.sequencing.crate) {
-          this.emit('currentCrateChange', this._currentCrate, nextTrack.sequencing.crate);
+        if (nextTrack.sequencing.crate) {
+          this.emit('crateChange', this._currentCrate, nextTrack.sequencing.crate);
         }
 
         this._currentCrate = nextTrack.sequencing.crate;

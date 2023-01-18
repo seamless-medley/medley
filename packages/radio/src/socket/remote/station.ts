@@ -28,4 +28,5 @@ export interface Station {
   ϟaudioLevels(levels: Buffer | undefined): void;
 
   ϟcollectionChange(prevCollection: string | undefined, newCollection: string, fromRequestTrack: boolean): void;
+  ϟcrateChange: (oldCrate: string | undefined, newCrate: string) => void;
 }

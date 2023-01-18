@@ -17,8 +17,8 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#station.on('deckUnloaded', this.#onDeckUnloaded);
     this.#station.on('deckStarted', this.#onDeckStarted);
     this.#station.on('deckActive', this.#onDeckActive);
-    this.#station.on('currentCollectionChange', this.#onCollectionChange);
-    // TODO: on crateChange
+    this.#station.on('collectionChange', this.#onCollectionChange);
+    this.#station.on('crateChange', this.#onCrateChange);
 
     this.#audiLevelTimer = setInterval(this.#audioLevelDispatcher, 1000 / 60);
   }
@@ -28,7 +28,7 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#station.off('deckUnloaded', this.#onDeckUnloaded);
     this.#station.off('deckStarted', this.#onDeckStarted);
     this.#station.off('deckActive', this.#onDeckActive);
-    this.#station.off('currentCollectionChange', this.#onCollectionChange);
+    this.#station.off('collectionChange', this.#onCollectionChange);
 
     clearInterval(this.#audiLevelTimer);
   }
@@ -84,13 +84,17 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.emit('deckActive', deckIndex, positions);
   }
 
-  #onCollectionChange: StationEvents['currentCollectionChange'] = async (prevCollection, newCollection, fromRequestTrack) => {
+  #onCollectionChange: StationEvents['collectionChange'] = (prevCollection, newCollection, fromRequestTrack) => {
     this.emit(
       'collectionChange',
       prevCollection ? this.#prefixWithStationId(prevCollection.id) : undefined,
       this.#prefixWithStationId(newCollection.id),
       fromRequestTrack
     );
+  }
+
+  #onCrateChange: StationEvents['crateChange'] = (oldCrate, newCrate) => {
+    this.emit('crateChange', oldCrate?.id, newCrate.id);
   }
 
   get id() {

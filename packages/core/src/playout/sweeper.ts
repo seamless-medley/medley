@@ -71,7 +71,7 @@ export class SweeperInserter {
 
   constructor(private boombox: BoomBox, public rules: SweeperInsertionRule[] = []) {
     this.logger = createLogger({ name: `${boombox.id}/sweeper-inserter` });
-    boombox.on('currentCollectionChange', this.handler);
+    boombox.on('collectionChange', this.handler);
   }
 
   private recent: string[] = [];
@@ -102,7 +102,7 @@ export class SweeperInserter {
     return collection.sample();
   }
 
-  private handler: BoomBoxEvents['currentCollectionChange'] = (oldCollection, newCollection, ignoreFrom) => {
+  private handler: BoomBoxEvents['collectionChange'] = (oldCollection, newCollection, ignoreFrom) => {
     if (!oldCollection) {
       return;
     }

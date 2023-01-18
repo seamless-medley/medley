@@ -112,6 +112,7 @@ export type StationTrack = MusicTrack<Station>;
 export type StationTrackPlay = TrackPlay<StationTrack>;
 export type StationTrackCollection = MusicTrackCollection<Station>;
 export type StationRequestedTrack = TrackWithRequester<StationTrack, Audience>;
+export type StationCrate = Crate<StationTrack>;
 
 export type StationEvents = {
   trackQueued: (track: StationTrack) => void;
@@ -123,7 +124,8 @@ export type StationEvents = {
   trackStarted: (deck: DeckIndex, trackPlay: StationTrackPlay, lastTrackPlay?: StationTrackPlay) => void;
   trackActive: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
   trackFinished: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
-  currentCollectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, trasitingFromRequestTrack: boolean) => void;
+  collectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, trasitingFromRequestTrack: boolean) => void;
+  crateChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
 
   requestTrackAdded: (track: TrackPeek<StationRequestedTrack>) => void;
   //
@@ -215,7 +217,8 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     boombox.on('trackStarted', this.handleTrackStarted);
     boombox.on('trackActive', this.handleTrackActive);
     boombox.on('trackFinished', this.handleTrackFinished);
-    boombox.on('currentCollectionChange', this.handleCollectionChange);
+    boombox.on('collectionChange', this.handleCollectionChange);
+    boombox.on('crateChange', this.handleCrateChange);
 
     this.musicDb.trackHistory
       .getAll(this.id)
@@ -290,8 +293,12 @@ export class Station extends (EventEmitter as new () => TypedEventEmitter<Statio
     this.emit('trackFinished', deck, trackPlay);
   }
 
-  private handleCollectionChange: BoomBoxEvents['currentCollectionChange'] = (oldCollection, newCollection, trasitingFromRequestTrack) => {
-    this.emit('currentCollectionChange', oldCollection as StationTrackCollection | undefined, newCollection as StationTrackCollection, trasitingFromRequestTrack);
+  private handleCollectionChange: BoomBoxEvents['collectionChange'] = (oldCollection, newCollection, trasitingFromRequestTrack) => {
+    this.emit('collectionChange', oldCollection as StationTrackCollection | undefined, newCollection as StationTrackCollection, trasitingFromRequestTrack);
+  }
+
+  private handleCrateChange: BoomBoxEvents['crateChange'] = (oldCrate, newCrate) => {
+    this.emit('crateChange', oldCrate, newCrate);
   }
 
   private handleRequestTrack = async (track: StationRequestedTrack) => {
