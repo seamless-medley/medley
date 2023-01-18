@@ -237,19 +237,19 @@ export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEv
     try {
       const metadata = track.extra?.tags ?? (await helper.fetchMetadata(track, this.musicDb, true)).metadata;
 
-      const boombooxExtra: BoomBoxTrackExtra = {
+      const boomboxExtra: BoomBoxTrackExtra = {
         kind: TrackKind.Normal,
         ...track.extra,
         tags: metadata
       }
 
       const playedArtists = flatten(this.artistHistory).map(toLower);
-      const currentArtists = getArtists(boombooxExtra).map(toLower);
+      const currentArtists = getArtists(boomboxExtra).map(toLower);
       const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));
 
       return {
         shouldPlay: !dup,
-        extra: !dup ? boombooxExtra : undefined
+        extra: !dup ? boomboxExtra : undefined
       }
     }
     catch (e: unknown) {
