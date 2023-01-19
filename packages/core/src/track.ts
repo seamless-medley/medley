@@ -19,6 +19,14 @@ export type TrackExtra = {
 
 export type TrackExtraOf<T extends Track<any>> = T extends Track<infer E> ? E : never;
 
+export type TrackSequencingLatch<T extends Track<E>, E extends TrackExtra> = {
+    /**
+     * Track order in this latch
+     */
+    order: number;
+    session: LatchSession<T, E>;
+}
+
 export type TrackSequencing<T extends Track<E>, E extends TrackExtra> = {
   /**
    * The current crate it was fetched from
@@ -27,10 +35,7 @@ export type TrackSequencing<T extends Track<E>, E extends TrackExtra> = {
 
   playOrder: [count: number, max: number];
 
-  latch?: {
-    order: number;
-    session: LatchSession<T, E>;
-  }
+  latch?: TrackSequencingLatch<T, E>;
 }
 
 export type SequencedTrack<T extends Track<any>> = Omit<T, 'sequencing'> & {
