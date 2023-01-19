@@ -4,13 +4,13 @@ import { io, Socket } from "socket.io-client";
 import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents } from '../socket/events';
 import { isProperty } from "../socket/remote/utils";
 import { Stub } from "../socket/stub";
-import { $AnyProp, AnyProp, PickMethod, PickProp, Remotable } from "../socket/types";
+import { $AnyProp, AnyProp, ObservedPropertyChange, PickMethod, PickProp, Remotable } from "../socket/types";
 import { Callable, ParametersOf, ReturnTypeOf } from "../types";
 import { DisconnectDescription } from "socket.io-client/build/esm/socket";
 import { waitFor } from "@seamless-medley/utils";
 import { getRemoteTimeout } from "../socket/decorator";
 
-type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, prop: string, oldValue: T, newValue: T) => Promise<any>;
+type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, changes: ObservedPropertyChange<T>[]) => Promise<any>;
 
 class ObservingStore<T extends object> {
   private _observed: T = {} as T;
@@ -100,13 +100,15 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     }
   }
 
-  private handleRemoteUpdate: ServerEvents['remote:update'] = (kind, id, prop, oldValue, newValue) => {
+  private handleRemoteUpdate: ServerEvents['remote:update'] = (kind, id, changes) => {
     const store = this.observingStores.get(`${kind}:${id}`);
     if (store) {
-      store.observed[prop] = newValue;
+      for (const { prop, oldValue, newValue } of changes) {
+        store.observed[prop] = newValue;
+      }
 
       for (const handler of store.handlers.values()) {
-        handler(kind, id, prop, oldValue, newValue);
+        handler(kind, id, changes);
       }
     }
   }
@@ -140,10 +142,14 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
         store.observed = response.result;
 
+        const changes = Object.entries(response.result).map<ObservedPropertyChange>(([prop, value]) => ({
+          prop,
+          oldValue: value,
+          newValue: value
+        }));
+
         for (const handler of store.handlers) {
-          for (const [prop, value] of Object.entries(response.result)) {
-            handler(kind, id, prop, value, value);
-          }
+          handler(kind, id, changes);
         }
       });
     }
@@ -479,27 +485,29 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     const propertyChangeHandlers = new Map<string | AnyProp, Set<(newValue: any, oldValue: any) => Promise<any>>>();
 
-    const propertyObserver: ObserverHandler<Kind> = async (kind, id, prop, oldValue, newValue) => {
+    const propertyObserver: ObserverHandler<Kind> = async (kind, id, changes) => {
       const anyPropHandlers = propertyChangeHandlers.get($AnyProp);
 
-      const propHandlers = propertyChangeHandlers.get(prop);
+      for (const { prop, oldValue, newValue } of changes) {
+        const propHandlers = propertyChangeHandlers.get(prop);
 
-      const allHandlers = [];
+        const allHandlers = [];
 
-      if (anyPropHandlers) {
-        allHandlers.push(...anyPropHandlers);
-      }
+        if (anyPropHandlers) {
+          allHandlers.push(...anyPropHandlers);
+        }
 
-      if (propHandlers) {
-        allHandlers.push(...propHandlers);
-      }
+        if (propHandlers) {
+          allHandlers.push(...propHandlers);
+        }
 
-      if (!allHandlers.length) {
-        return;
-      }
+        if (!allHandlers.length) {
+          continue;
+        }
 
-      for (const handler of allHandlers) {
-        handler(newValue, oldValue);
+        for (const handler of allHandlers) {
+          handler(newValue, oldValue);
+        }
       }
     }
 
@@ -524,7 +532,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     const getObservedFromStore = () => {
       const store = this.observingStores.get(objectId);
-      return store?.observed ?? {} as Types[Kind];
+      return (store?.observed ?? {}) as Types[Kind];
     }
 
     const subscriptionHandlers = new Map<string, Set<Callable>>;

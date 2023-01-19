@@ -1,6 +1,8 @@
+import type { ObservedPropertyChange } from "./types";
+
 export type ServerEvents = {
   'remote:event': (kind: string, id: string, event: string, ...args: any[]) => void;
-  'remote:update': (kind: string, id: string, prop: string, oldValue: any, newValue: any) => void;
+  'remote:update': (kind: string, id: string, changes: ObservedPropertyChange[]) => void;
 }
 
 export type OKResponse<T> = {

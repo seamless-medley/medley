@@ -4,10 +4,11 @@ import { capitalize, chain, isFunction, isObject, mapValues, noop, pickBy } from
 import { Server as IOServer, Socket as IOSocket } from "socket.io";
 import { ConditionalKeys } from "type-fest";
 import TypedEventEmitter from "typed-emitter";
+import { getDependents } from "./decorator";
 import { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "./events";
 import { $Exposing } from "./expose";
 import { isProperty, isPublicPropertyName, propertyDescriptorOf } from "./remote/utils";
-import { ObservedPropertyHandler, WithoutEvents } from "./types";
+import { ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents } from "./types";
 
 export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
   constructor(httpServer: http.Server, path: string) {
@@ -202,9 +203,9 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
           const key = `${kind}:${id}` as `${string}:${string}`;
 
           if (!observation.has(key)) {
-            const observer: ObservedPropertyHandler<any> = async (stub, prop, oldValue, newValue) => {
+            const observer: ObservedPropertyHandler<any> = async (stub, changes) => {
               // Inform clients whenever a property of an observing object changed
-              socket.emit('remote:update', kind, id, prop, typeof oldValue !== 'object' ? oldValue : undefined, newValue);
+              socket.emit('remote:update', kind, id, changes);
             }
 
             observation.set(key, observer);
@@ -355,16 +356,16 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
     }
   }
 
-  private makeObserverPropertyHandler = (kind: string, id: string): ObservedPropertyHandler<any> => async (stub, prop, oldValue, newValue) => {
+  private makeObserverPropertyHandler = (kind: string, id: string): ObservedPropertyHandler<any> => async (stub, changes) => {
     for (const [, socket] of this.io.sockets.sockets) {
       const observation = this.socketObservations.get(socket);
 
 
       if (observation) {
         const key = `${kind}:${id}` as `${string}:${string}`;
-
         const handler = observation.get(key);
-        handler?.(stub, prop, oldValue, newValue).catch(noop);
+
+        handler?.(stub, changes).catch(noop);
       }
     }
   }
@@ -415,17 +416,46 @@ export class ObjectObserver<T extends object> {
     for (const [prop, desc] of Object.entries(this.#exposingProps)) {
       Object.defineProperty(desc.instance, prop, {
         get: () => {
-          return desc.get?.call(desc.instance) ?? desc.value
+          return desc.get ? desc.get.call(desc.instance) : desc.value;
         },
 
         set: (v) => {
+          const changes: ObservedPropertyChange[] = [];
+
+          const dependents = getDependents(instance, prop)
+            .map(d => {
+              const dep = this.#exposingProps[d];
+              if (!dep) {
+                return undefined;
+              }
+
+              const oldValue = dep.get ? dep.get.call(dep.instance) : dep.value;
+
+              return [dep, oldValue];
+            })
+            .filter((d): d is [dep: TypedPropertyDescriptorOf, oldValue: any] => d !== undefined);
+
           const old = desc.get?.call(desc.instance) ?? desc.value;
 
-          if (typeof prop === 'string' && this.isPublishedProperty(prop) && old !== v) {
-            this.notify(instance, prop, old, v);
+          if (desc.set) {
+            desc.set.call(desc.instance, v);
+          } else {
+            desc.value = v;
           }
 
-          desc.set ? desc.set.call(desc.instance, v) : (desc.value = v);
+          if (typeof prop === 'string' && this.isPublishedProperty(prop) && old !== v) {
+            changes.push({ prop, oldValue: old, newValue: v });
+
+            for (const dep of dependents) {
+              changes.push({
+                prop: dep[0].name,
+                oldValue: dep[1],
+                newValue: dep[0].get ? dep[0].get.call(dep[0].instance) : dep[0].value
+              })
+            }
+
+            this.notify(instance, changes);
+          }
         }
       })
     }

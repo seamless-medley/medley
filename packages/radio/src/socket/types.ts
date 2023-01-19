@@ -42,7 +42,12 @@ type AsyncFunctionsOf<T> = {
 export const $AnyProp: unique symbol = Symbol('$AnyProp');
 export type AnyProp = typeof $AnyProp;
 
-export type Remotable<T, Props = PickProp<T>> = EventEmitterOf<T> & GettersOf<Props> & SettersOf<Props> & AsyncFunctionsOf<PickMethod<T>> & {
+export type Remotable<T, Props = PickProp<T>> =
+  EventEmitterOf<T> &
+  GettersOf<Props> &
+  SettersOf<Props> &
+  AsyncFunctionsOf<PickMethod<T>> &
+{
   getProperties(): Props;
   //
   onPropertyChange<P extends keyof Props>(props: P | AnyProp, listener: (oldValue: Props[P], newValue: Props[P]) => any): () => void;
@@ -51,6 +56,12 @@ export type Remotable<T, Props = PickProp<T>> = EventEmitterOf<T> & GettersOf<Pr
   dispose(): Promise<void>;
 };
 
-export type ObservedPropertyHandler<T> = (instance: T, prop: string, oldValue: any, newValue: any) => Promise<any>;
+export type ObservedPropertyChange<T = any> = {
+  prop: string;
+  oldValue: T;
+  newValue: T;
+}
+
+export type ObservedPropertyHandler<T> = (instance: T, changes: ObservedPropertyChange[]) => Promise<any>;
 
 export type ExtractCtor<T> = T extends new (...args: infer A) => infer R ? { args: A, returns: R } : never;
