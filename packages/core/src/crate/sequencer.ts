@@ -112,6 +112,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends (E
         for (const source of crate.sources) {
           scanned += source.length;
           for (let i = 0; i < source.length; i++) {
+
             const latchSession = (() => {
               const session = this.getActiveLatch();
 
@@ -351,6 +352,10 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends (E
       collection
     }
 
+    if (this._currentCollection?.id !== collection.id) {
+      this._playCounter = 0;
+    }
+
     if (important) {
       this.latchSessions.unshift(newSession);
     } else {
@@ -389,7 +394,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends (E
     }
 
     if (session.max === 0) {
-      this.removeLatch(session);
+      return this.removeLatch(session);
     }
 
     return session;
