@@ -1,6 +1,6 @@
 import { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
 import * as core from '@seamless-medley/core';
-import { fromBoomBoxTrackPlay, TrackPlay } from "./track";
+import { toTrackPlay, TrackPlay } from "./track";
 import { DeckPositions } from "@seamless-medley/core";
 
 export type DeckInfo = Simplify<Writable<
@@ -14,7 +14,7 @@ export type DeckInfoWithPositions = DeckInfo & {
 }
 
 export const fromDeckInfo = async ({ trackPlay, active, playing }: core.DeckInfo): Promise<DeckInfo> => ({
-  trackPlay: trackPlay ? await fromBoomBoxTrackPlay(trackPlay) : undefined,
+  trackPlay: trackPlay ? await toTrackPlay(trackPlay) : undefined,
   active,
   playing
 });
