@@ -1,7 +1,7 @@
 import EventEmitter from "events";
 import type { ConditionalExcept } from "type-fest";
-import TypedEventEmitter from "typed-emitter";
-import { AsyncFunctionOf } from "../types";
+import type TypedEventEmitter from "typed-emitter";
+import type { AsyncFunctionOf } from "../types";
 
 export type SelectKeyBy<O, C> = { [Key in keyof O]: Key extends C ? Key : never}[keyof O];
 export type SelectKeyByValue<O, C> = { [Key in keyof O]: O[Key] extends C ? Key : never}[keyof O];
