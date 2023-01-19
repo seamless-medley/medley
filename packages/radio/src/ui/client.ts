@@ -1,4 +1,4 @@
-import { isFunction, mapValues, pickBy, uniqueId, } from "lodash";
+import { isFunction, mapValues, noop, pickBy, uniqueId, } from "lodash";
 import { EventEmitter } from "eventemitter3";
 import { io, Socket } from "socket.io-client";
 import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents } from '../socket/events';
@@ -204,8 +204,6 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     }
 
     this.surrogates.clear();
-
-    this.socket.close();
   }
 
   get connected() {
@@ -548,7 +546,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     }
 
     const off = (event: string, handler: Callable) => {
-      this.remoteUnsubscribe(kind, id, event, handler);
+      this.remoteUnsubscribe(kind, id, event, handler).catch(noop);
 
       if (subscriptionHandlers.has(event)) {
         const handlers = subscriptionHandlers.get(event)!;

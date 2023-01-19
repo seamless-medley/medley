@@ -18,6 +18,8 @@ export function initClient() {
     window.$client = client;
   }
 
+  client.once('disconnect', () => client.dispose());
+
   return client;
 }
 
