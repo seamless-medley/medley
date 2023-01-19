@@ -4,10 +4,13 @@ import { StubOf } from "../../socket/stub";
 
 class StubbingStation {
   id = undefined as any;
+
   name = undefined as any;
   description = undefined as any;
+
   playing = undefined as any;
   paused = undefined as any;
+
   playState = undefined as any;
 
   start = noop as any;

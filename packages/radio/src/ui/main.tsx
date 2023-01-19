@@ -86,7 +86,7 @@ const App: React.FC = () => {
     if (selectedCollection) {
       client.remoteInvoke('collection', selectedCollection, 5000, 'shuffle')
     }
-  }, [selectedCollection])
+  }, [selectedCollection]);
 
   return (
     <>
