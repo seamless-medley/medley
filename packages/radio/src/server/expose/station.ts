@@ -105,8 +105,16 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     return this.#station.name;
   }
 
+  set name(v) {
+    this.#station.name = v;
+  }
+
   get description() {
     return this.#station.description;
+  }
+
+  set description(v) {
+    this.#station.description = v;
   }
 
   get playing() {

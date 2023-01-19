@@ -136,8 +136,9 @@ export type StationEvents = {
 
 export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
   readonly id: string;
-  readonly name: string;
-  readonly description?: string;
+
+  name: string;
+  description?: string;
 
   readonly queue: Queue<StationTrack>;
   readonly medley: Medley<StationTrack>;

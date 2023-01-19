@@ -3,8 +3,9 @@ import * as deckPO from "../po/deck";
 
 export interface Station {
   readonly id: string;
-  readonly name: string;
-  readonly description?: string;
+
+  name: string;
+  description?: string;
 
   readonly playing: boolean;
   readonly paused: boolean;
