@@ -5,7 +5,7 @@ const { random, omitBy } = require('lodash');
 const { Logger } = require('tslog');
 
 /** @typedef {import('@seamless-medley/core').MusicDb} MusicDb */
-/** @typedef {import('@seamless-medley/core').MusicTrack} MusicTrack */
+/** @typedef {import('@seamless-medley/core').MusicDbTrack} MusicDbTrack */
 /** @typedef {import('@seamless-medley/core').SearchHistory} SearchHistory */
 /** @typedef {import('@seamless-medley/core').SearchQuery} SearchQuery */
 /** @typedef {import('@seamless-medley/core').TrackHistory} TrackHistory */
@@ -20,7 +20,7 @@ let client;
 /** @type {Db} */
 let db;
 
-/** @type {Collection<MusicTrack>} */
+/** @type {Collection<MusicDbTrack>} */
 let musics;
 
 /** @type {Collection<SearchQuery & { stationId: string, timestamp: Date }>} */
@@ -140,7 +140,7 @@ const findByISRC = (musicId) => find(musicId, 'isrc');
 /**
  * @param {string} value
  * @param {'trackId' | 'path' | 'isrc'} by
- * @returns {Promise<MusicTrack | undefined>}
+ * @returns {Promise<MusicDbTrack | undefined>}
  */
 async function find(value, by) {
   if (!musics) {
