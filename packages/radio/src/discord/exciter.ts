@@ -1,23 +1,23 @@
 import { pipeline, Readable, Transform, TransformCallback } from "stream";
 import type { RequestAudioStreamResult } from "@seamless-medley/core";
 import { createAudioResource, StreamType } from "@discordjs/voice";
-import { Codec, CodecOptions } from "./codec";
+import { Opus, OpusOptions } from "../codec/opus";
 
-export type ExciterOptions = Partial<CodecOptions> & {
+export type ExciterOptions = Partial<OpusOptions> & {
   source: RequestAudioStreamResult;
 }
 
 class BufferredEncoder extends Transform {
   private buffer = Buffer.alloc(0);
 
-  private codec: Codec;
+  private opus: Opus;
 
   private packets: Buffer[] = [];
 
-  constructor(options?: Partial<CodecOptions>) {
+  constructor(options?: Partial<OpusOptions>) {
     super({ readableObjectMode: true });
 
-    this.codec = Codec.create(options);
+    this.opus = Opus.create(options);
   }
 
   _transform(chunk: Buffer, encoding: BufferEncoding, done: TransformCallback): void {
@@ -31,7 +31,7 @@ class BufferredEncoder extends Transform {
       const start = blocksProcessed * requiredBytes;
       const end = start + requiredBytes;
       const block = this.buffer.slice(start, end);
-      const packet = this.codec.encode(block, 960);
+      const packet = this.opus.encode(block, 960);
       //
       this.packets.push(packet);
       //

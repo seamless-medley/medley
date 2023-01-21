@@ -1,9 +1,9 @@
 type Loader = {
-  new(options?: Partial<CodecOptions>): Codec;
+  new(options?: Partial<OpusOptions>): Opus;
   load: () => boolean;
 }
 
-export type CodecOptions = {
+export type OpusOptions = {
   /**
    * Bitrate in bps
    */
@@ -12,20 +12,20 @@ export type CodecOptions = {
   packetLossPercentage: number;
 }
 
-const makeCodecOptions = (options?: Partial<CodecOptions>): CodecOptions => ({
+const makeOpusOptions = (options?: Partial<OpusOptions>): OpusOptions => ({
   bitrate: options?.bitrate || 128_000,
   errorCorrection: options?.errorCorrection ?? false,
   packetLossPercentage: options?.packetLossPercentage ?? 0
 })
 
-export abstract class Codec {
+export abstract class Opus {
   protected native: any = undefined;
 
   encode(audio: Buffer, frameSize: number): Buffer {
     return this.native.encode(audio, frameSize);
   }
 
-  protected init(options: CodecOptions): void {
+  protected init(options: OpusOptions): void {
     this.bitrate = options.bitrate;
     this.errorCorrection = options.errorCorrection;
     this.packetLossPercentage = options.packetLossPercentage;
@@ -49,8 +49,8 @@ export abstract class Codec {
     this.ctl(4014, percent);
   }
 
-  static create(options?: Partial<CodecOptions>): Codec {
-    const Ctor = [DiscordOpusCodec, OpusScriptCodec].find(c => c.load()) as Loader | undefined;
+  static create(options?: Partial<OpusOptions>): Opus {
+    const Ctor = [DiscordOpus, OpusScript].find(c => c.load()) as Loader | undefined;
 
     if (!Ctor) {
       throw new ReferenceError('Could not find Opus native module');
@@ -60,11 +60,11 @@ export abstract class Codec {
   }
 }
 
-export class OpusScriptCodec extends Codec {
-  constructor(options?: Partial<CodecOptions>) {
+export class OpusScript extends Opus {
+  constructor(options?: Partial<OpusOptions>) {
     super();
-    this.native = new OpusScriptCodec.Opus(48000, 2, OpusScriptCodec.Opus.Application.AUDIO);
-    this.init(makeCodecOptions(options));
+    this.native = new OpusScript.Opus(48000, 2, OpusScript.Opus.Application.AUDIO);
+    this.init(makeOpusOptions(options));
   }
 
   private static Opus: any;
@@ -86,11 +86,11 @@ export class OpusScriptCodec extends Codec {
   }
 }
 
-export class DiscordOpusCodec extends Codec {
-  constructor(options?: Partial<CodecOptions>) {
+export class DiscordOpus extends Opus {
+  constructor(options?: Partial<OpusOptions>) {
     super();
-    this.native = new DiscordOpusCodec.OpusEncoder(48000, 2);
-    this.init(makeCodecOptions(options));
+    this.native = new DiscordOpus.OpusEncoder(48000, 2);
+    this.init(makeOpusOptions(options));
   }
 
   private static OpusEncoder: any;
