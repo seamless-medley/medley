@@ -155,3 +155,16 @@ export function retryable<R>(fn: () => Promise<R>, options: RetryOptions) {
     wrapper(options.retries).then(resolve).catch(reject)
   });
 }
+
+export function concatUint8Array(...items: Uint8Array[]): Uint8Array {
+  const size = items.reduce((size, a) => size + a.byteLength, 0);
+  const result = new Uint8Array(size);
+  let offset = 0;
+  for (const item of items) {
+    result.set(item, offset);
+    offset += item.byteLength;
+  }
+  return result;
+}
+
+export const makeUint8ArrayFromText = (s: string) => Uint8Array.from(s.split('').map(c => c.charCodeAt(0)));

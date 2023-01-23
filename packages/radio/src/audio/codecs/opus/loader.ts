@@ -1,3 +1,5 @@
+// This module works in Node env only
+
 type Loader = {
   new(options?: Partial<OpusOptions>): Opus;
   load: () => boolean;

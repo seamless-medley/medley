@@ -2,6 +2,7 @@ import http from 'http';
 import express from 'express';
 import { SocketServer as SocketIOServer } from '../socket';
 import { MedleyServer } from './medley-server';
+import { AudioServer } from './audio/transport';
 
 const port = +(process.env.PORT || 3001);
 
@@ -17,7 +18,9 @@ async function run() {
   console.info('Initializing');
 
   const ioServer = new SocketIOServer(httpServer, '/socket.io');
-  const server = new MedleyServer(ioServer);
+  const audioServer = new AudioServer(httpServer);
+
+  const server = new MedleyServer(ioServer, audioServer);
 
   server.once('ready', () => {
     httpServer

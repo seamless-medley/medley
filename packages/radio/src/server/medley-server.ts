@@ -1,6 +1,6 @@
 import { MusicDb, Station, StationEvents} from "@seamless-medley/core";
 import { MongoMusicDb, Options as MongoDBOptions } from "../musicdb/mongo";
-import { SocketServer, SocketServerController } from "../socket";
+import { Socket, SocketServer, SocketServerController } from "../socket";
 import { RemoteTypes } from "../socket/remote";
 import { Config } from "../socket/remote/config";
 import { ExposedConfig, ExposedConfigCallback } from "./expose/config";
@@ -8,6 +8,9 @@ import { ExposedStation } from "./expose/station";
 import { musicCollections, sequences, sweeperRules } from "../fixtures";
 import { ExposedColection } from "./expose/collection";
 import { Unpacked } from "../types";
+import { AudioStreamPlayer } from "./audio/player";
+import { AudioDispatcher } from "./audio/dispatcher";
+import { AudioServer } from "./audio/transport";
 
 export class MedleyServer extends SocketServerController<RemoteTypes> {
   private config: Config;
@@ -16,7 +19,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
   private demoStation!: Station;
 
-  constructor(io: SocketServer) {
+  constructor(io: SocketServer, private audioServer: AudioServer) {
     super(io);
 
     this.config = new ExposedConfig({
@@ -53,6 +56,8 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     this.demoStation.sweeperInsertionRules = sweeperRules;
 
     this.registerStation(this.demoStation);
+
+    this.audioServer.publish(this.demoStation);
 
     // TODO: Register a demo automaton
 

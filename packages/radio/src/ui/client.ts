@@ -9,6 +9,7 @@ import { Callable, ParametersOf, ReturnTypeOf } from "../types";
 import { DisconnectDescription } from "socket.io-client/build/esm/socket";
 import { waitFor } from "@seamless-medley/utils";
 import { getRemoteTimeout } from "../socket/decorator";
+import { AudioClient } from "./audio/client";
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, changes: ObservedPropertyChange<T>[]) => Promise<any>;
 
@@ -81,7 +82,10 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   constructor() {
     super();
 
+    new AudioClient();
+
     this.socket = io({ transports: ['websocket'] });
+
     this.socket.on('remote:event', this.handleRemoteEvent);
     this.socket.on('remote:update', this.handleRemoteUpdate);
     this.socket.io.on('reconnect', this.handleSocketReconnect);
