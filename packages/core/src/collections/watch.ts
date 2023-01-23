@@ -23,11 +23,11 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     });
   }
 
-  protected afterConstruct() {
+  protected override afterConstruct() {
 
   }
 
-  protected becomeReady(): void {
+  protected override becomeReady(): void {
     if (!this._ready) {
       setInterval(this.resubscribe, 5000);
     }

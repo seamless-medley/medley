@@ -21,7 +21,7 @@ export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
   }
 }
 
-type Socket = IOSocket<ClientEvents, ServerEvents>;
+export type Socket = IOSocket<ClientEvents, ServerEvents>;
 
 type Handlers = {
   [key in keyof ClientEvents]: (socket: Socket, ...args: Parameters<ClientEvents[key]>) => any;
@@ -36,7 +36,7 @@ export type SocketServerEvents = {
 export class SocketServerController<Remote> extends (EventEmitter as new () => TypedEventEmitter<SocketServerEvents>) {
   constructor(private io: SocketServer) {
     super();
-    io.on('connection', this.addSocket);
+    io.on('connection', socket => this.addSocket(socket));
   }
 
   private objectNamespaces = new Map<string, Map<string, ObjectObserver<object>>>();
@@ -45,7 +45,7 @@ export class SocketServerController<Remote> extends (EventEmitter as new () => T
 
   private socketObservations = new Map<Socket, Map<`${string}:${string}`, ObservedPropertyHandler<any>>>();
 
-  private addSocket = (socket: Socket) => {
+  protected addSocket(socket: Socket) {
     for (const [name, handler] of Object.entries(this.handlers)) {
       socket.on(name as keyof ClientEvents, (...args: any[]) => {
         handler(socket, ...args);
