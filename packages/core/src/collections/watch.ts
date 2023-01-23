@@ -222,7 +222,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     const files = await glob(`${normalizePath(dir)}/**/*.{${supportedExts.join(',')}}`).catch(stubFalse);
 
     if (files !== false) {
-      this.add(shuffle(files));
+      await this.add(shuffle(files));
     }
   }
 
