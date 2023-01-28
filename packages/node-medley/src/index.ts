@@ -1,11 +1,10 @@
-import { inherits } from 'util';
 import { EventEmitter } from 'node:events';
 import { Readable } from 'stream';
 import type { AudioFormat, RequestAudioCallbackOptions, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult } from './index.d';
 
 const medley = require('node-gyp-build')(process.env.MEDLEY_DEMO ? process.cwd() : __dirname);
 
-inherits(medley.Medley, EventEmitter);
+Object.setPrototypeOf(medley.Medley.prototype, EventEmitter.prototype);
 
 export const Medley = medley.Medley;
 export const Queue = medley.Queue;
