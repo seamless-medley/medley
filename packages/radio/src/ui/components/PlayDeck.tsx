@@ -4,12 +4,12 @@ import { Station } from "../../socket/remote";
 import { Remotable } from "../../socket/types";
 import { useDeck } from "../hooks/useDeck";
 
-export type DeckProps = {
+export type PlayDeckProps = {
   station?: Remotable<Station>;
   index: DeckIndex;
 }
 
-export const Deck: React.FC<DeckProps> = ({ station, index }) => {
+export const PlayDeck: React.FC<PlayDeckProps> = ({ station, index }) => {
   const { info, cover } = useDeck(station, index);
 
   return (

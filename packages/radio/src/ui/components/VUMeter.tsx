@@ -46,16 +46,15 @@ const Reduction = styled.div`
 `;
 
 export type VUMeterProps = {
-  stationId: string;
   channel: 'left' | 'right';
 }
 
-export const VUMeter: React.FC<VUMeterProps> = ({ stationId, channel }) => {
+export const VUMeter: React.FC<VUMeterProps> = ({ channel }) => {
   const levelRef = useRef<HTMLDivElement>(null);
   const reductionRef = useRef<HTMLDivElement>(null);
   const peakRef = useRef<HTMLDivElement>(null);
 
-  useAudioLevels(stationId, (data) => {
+  useAudioLevels((data) => {
     const { current: levelEl } = levelRef;
     const { current: reductionEl } = reductionRef;
     const { current: peakEl } = peakRef;

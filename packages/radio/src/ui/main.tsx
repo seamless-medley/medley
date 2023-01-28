@@ -5,12 +5,11 @@ import { Button, Group, MantineProvider } from '@mantine/core';
 import { useClient } from './hooks/useClient';
 import { useStation } from './hooks/useStation';
 import { useRemotableProps } from './hooks/remotable';
-import { StubCollection } from './stubs/collection';
-import { VUMeter } from './components/vu-meter';
+import { VUMeter } from './components/VUMeter';
 import { useCollection } from './hooks/useCollection';
 import { Track } from '../socket/po/track';
-import { PickMethod } from '../socket/types';
-import { Collection, Station } from '../socket/remote';
+import { Station } from '../socket/remote';
+import { PlayDeck } from './components';
 
 const CollectionList: React.FC<{ id: string }> = ({ id }) => {
   const collection = useCollection(id);
@@ -91,10 +90,10 @@ const App: React.FC = () => {
   return (
     <>
       <div>
-        Left: <VUMeter stationId={'demo'} channel="left" />
+        Left: <VUMeter channel="left" />
       </div>
       <div>
-        Right: <VUMeter stationId={'demo'} channel="right" />
+        Right: <VUMeter channel="right" />
       </div>
 
       <br />
@@ -115,12 +114,14 @@ const App: React.FC = () => {
 
       {/* <h2>Deck1</h2>
       <Deck station={station} index={0} />
+      <h2>Deck1</h2>
+      <PlayDeck station={station} index={0} />
 
       <h2>Deck2</h2>
-      <Deck station={station} index={1} />
+      <PlayDeck station={station} index={1} />
 
       <h2>Deck3</h2>
-      <Deck station={station} index={2} /> */}
+      <PlayDeck station={station} index={2} />
 
       {collections.map(c => <h4 key={c} onClick={() => setSelectedCollection(c)}>{c}</h4>)}
       <h2>{selectedCollection}</h2>

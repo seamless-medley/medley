@@ -42,7 +42,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     this.demoStation = new Station({
       id: 'demo',
       name: 'Demo station',
-      useNullAudioDevice: false,
+      useNullAudioDevice: true,
       musicDb: this._musicDb!
     });
 

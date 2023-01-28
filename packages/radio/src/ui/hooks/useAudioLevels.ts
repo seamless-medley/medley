@@ -3,9 +3,8 @@ import { gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { mapValues } from "lodash";
 import { compose } from "lodash/fp";
 import { useEffect } from "react";
-import { Station } from "../../socket/remote";
+import { AudioTransportExtra } from "../../audio/types";
 import { useClient } from "./useClient";
-import { useStation } from "./useStation";
 
 const emptyLevel: StationAudioLevels = {
   left: {
@@ -30,34 +29,12 @@ export type UseAudioLevelsData = {
   reduction: number;
 }
 
-function arrayBufferToAudioLevels(buffer?: ArrayBuffer): StationAudioLevels {
-  if (!buffer || (buffer.byteLength < 8 * 5)) {
-    return emptyLevel;
-  }
-
-  const view = new Float64Array(buffer);
-
-  return {
-    left: {
-      magnitude: view[0],
-      peak: view[1]
-    },
-    right: {
-      magnitude: view[2],
-      peak: view[3]
-    },
-    reduction: view[4]
-  }
-}
-
-
-export function useAudioLevels(stationId: string, callback: (data: UseAudioLevelsData) => any, options?: { max?: number }) {
+export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, options?: { max?: number }) {
   const max = options?.max ?? 0;
   const normalize = (v: number) => interpolate(Math.min(v, max), [-100, max], [0, 1]);
   const process = compose(normalize, gainToDecibels);
 
   const client = useClient();
-  const station = useStation(stationId);
 
   let raf = 0;
 
@@ -83,25 +60,30 @@ export function useAudioLevels(stationId: string, callback: (data: UseAudioLevel
     });
   }
 
-  const handleAudioLevels: Station['ϟaudioLevels'] = (buffer) => update(arrayBufferToAudioLevels(buffer));
-  const handleDisconnect = () => update({
-    left: { magnitude: 0, peak: 0 },
-    right: { magnitude: 0, peak: 0 },
-    reduction: 0
-  });
+  const handleAudioExtra = ([,, left, right, reduction]: AudioTransportExtra) => {
+    update({
+      left: {
+        magnitude: left[0],
+        peak: left[1]
+      },
+      right: {
+        magnitude: right[0],
+        peak: right[1]
+      },
+      reduction
+    })
+  }
+
+  const handleDisconnect = () => update(emptyLevel);
 
   useEffect(() => {
-    if (!station) {
-      return;
-    }
-
-    client.on('disconnect', handleDisconnect)
-    station.on('audioLevels', handleAudioLevels);
+    client.on('audioExtra', handleAudioExtra);
+    client.on('disconnect', handleDisconnect);
 
     return () => {
       cancelAnimationFrame(raf);
-      station.off('audioLevels', handleAudioLevels);
+      client.off('audioExtra', handleAudioExtra);
       client.off('disconnect', handleDisconnect);
     }
-  }, [station]);
+  }, []);
 }

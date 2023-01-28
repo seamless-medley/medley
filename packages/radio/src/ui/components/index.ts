@@ -1,1 +1,2 @@
-export * from './deck';
+export * from './PlayDeck';
+export * from './VUMeter';
