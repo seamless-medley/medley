@@ -19,8 +19,6 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#station.on('deckActive', this.#onDeckActive);
     this.#station.on('collectionChange', this.#onCollectionChange);
     this.#station.on('crateChange', this.#onCrateChange);
-
-    this.#audiLevelTimer = setInterval(this.#audioLevelDispatcher, 1000 / 60);
   }
 
   dispose() {
@@ -29,8 +27,6 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#station.off('deckStarted', this.#onDeckStarted);
     this.#station.off('deckActive', this.#onDeckActive);
     this.#station.off('collectionChange', this.#onCollectionChange);
-
-    clearInterval(this.#audiLevelTimer);
   }
 
   get #station() {
@@ -39,30 +35,6 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   #prefixWithStationId(s: string) {
     return `${this.id}/${s}`
-  }
-
-  #audiLevelTimer: NodeJS.Timer;
-
-  #audioLevelDispatcher = () => {
-    const { audioLevels: { left, right, reduction } } = this.#station;
-
-    const values = [
-      left.magnitude, left.peak,
-      right.magnitude, right.peak,
-      reduction
-    ];
-
-    const isSilence = every(values, equals(0));
-
-    const buffer = !isSilence ? Buffer.alloc(values.length * 8) : undefined;
-
-    if (buffer) {
-      for (const [index, value] of values.entries()) {
-        buffer.writeDoubleLE(value, index * 8);
-      }
-    }
-
-    this.emit('audioLevels', buffer);
   }
 
   #onDeckLoaded: StationEvents['deckLoaded'] = async (deckIndex: number) => {

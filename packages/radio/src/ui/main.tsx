@@ -125,7 +125,7 @@ const App: React.FC = () => {
           Start
         </Button>
         <Button disabled={!station} onClick={() => station?.pause()}>Pause</Button>
-        <Button disabled={!station} onClick={() => console.log('Skip', station?.skip())} color="red">Skip</Button>
+        <Button disabled={!station} onClick={() => station?.skip()?.then(r => console.log('Skip', r)) } color="red">Skip</Button>
         <Button onClick={shuffle}>Shuffle {collection?.description()} collection</Button>
       </Group>
       <h4>Play State: { stationProps?.playState }</h4>
