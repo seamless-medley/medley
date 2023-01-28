@@ -9,7 +9,7 @@ import { Callable, ParametersOf, ReturnTypeOf } from "../types";
 import { DisconnectDescription } from "socket.io-client/build/esm/socket";
 import { waitFor } from "@seamless-medley/utils";
 import { getRemoteTimeout } from "../socket/decorator";
-import { AudioClient } from "./audio/client";
+import { AudioClient, type AudioClientEvents } from "./audio/client";
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, changes: ObservedPropertyChange<T>[]) => Promise<any>;
 
@@ -52,7 +52,7 @@ class ObservingStore<T extends object> {
   }
 }
 
-type ClientEvents = {
+type ClientEvents = AudioClientEvents & {
   connect(): void;
   disconnect(reason?: DisconnectReason): void;
 }
@@ -79,10 +79,10 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
   private surrogates = new Map<string, Remotable<Types[any]>>();
 
+  private audioClient: AudioClient;
+
   constructor() {
     super();
-
-    new AudioClient();
 
     this.socket = io({ transports: ['websocket'] });
 
@@ -92,6 +92,9 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     this.socket.on('connect', this.handleSocketConnect);
     this.socket.on('disconnect', this.handleSocketDisconnect);
+
+    this.audioClient = new AudioClient()
+      .on('audioExtra', e => this.emit('audioExtra', e));
   }
 
   private handleRemoteEvent: ServerEvents['remote:event'] = (kind, id, event, ...args) => {
@@ -161,6 +164,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
   private handleSocketConnect = () => {
     this.emit('connect');
+    this.connectAudioSocket();
   }
 
   private handleSocketDisconnect = (reason: Socket.DisconnectReason, description?: DisconnectDescription) => {
@@ -217,6 +221,15 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   get ready() {
     // TODO: This should also check whether connection initialization was done (auth, etc)
     return this.connected;
+  }
+
+  private async connectAudioSocket() {
+    return this.audioClient.connect(this.socket.id);
+  }
+
+  async playAudio(stationId: string) {
+    await this.connectAudioSocket();
+    this.audioClient.play(stationId);
   }
 
   private getDelegateEvents(ns: string, id: string) {

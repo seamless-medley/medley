@@ -99,7 +99,14 @@ const App: React.FC = () => {
 
       <br />
       <Group>
-        <Button disabled={!station} onClick={() => station?.start()}>Start</Button>
+        <Button disabled={!station} onClick={() => {
+          if (station) {
+            station.start();
+            client.playAudio(station.id());
+          }
+        }}>
+          Start
+        </Button>
         <Button disabled={!station} onClick={() => station?.pause()}>Pause</Button>
         <Button disabled={!station} onClick={() => console.log('Skip', station?.skip())} color="red">Skip</Button>
         <Button onClick={shuffle}>Shuffle {collection?.description()} collection</Button>
