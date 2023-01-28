@@ -10,6 +10,7 @@ import { useCollection } from './hooks/useCollection';
 import { Track } from '../socket/po/track';
 import { Station } from '../socket/remote';
 import { PlayDeck } from './components';
+import { usePlayHead } from './hooks/usePlayHead';
 
 const CollectionList: React.FC<{ id: string }> = ({ id }) => {
   const collection = useCollection(id);
@@ -49,6 +50,23 @@ const CollectionList: React.FC<{ id: string }> = ({ id }) => {
   return (
     <>
       {items.map((item, index) => <div key={item.id}>{item.path}</div>)}
+    </>
+  )
+}
+
+const PlayHead: React.FC = () => {
+  const [deck, setDeck] = useState<number | undefined>();
+  const [position, setPosition] = useState(0);
+
+  usePlayHead((update) => {
+    setDeck(update.deck);
+    setPosition(update.position);
+  })
+
+  return (
+    <>
+      <h4>Deck: {deck !== undefined ? deck + 1 : 'None'}</h4>
+      <h4>Position: {position.toFixed(2)}</h4>
     </>
   )
 }
@@ -112,8 +130,8 @@ const App: React.FC = () => {
       </Group>
       <h4>Play State: { stationProps?.playState }</h4>
 
-      {/* <h2>Deck1</h2>
-      <Deck station={station} index={0} />
+      <PlayHead />
+
       <h2>Deck1</h2>
       <PlayDeck station={station} index={0} />
 
