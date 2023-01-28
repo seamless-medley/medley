@@ -3,6 +3,7 @@ import { random } from "lodash";
 import { OggPage } from "../../containers/ogg/page";
 import { OpusHead, OpusTags } from "./frame";
 
+/** @deprecated */
 export function makeOpusOGGHeaders(head: OpusHead, vendorString: string, serial: number = random(2**32)) {
   return concatUint8Array(
     new OggPage({
@@ -22,6 +23,7 @@ export function makeOpusOGGHeaders(head: OpusHead, vendorString: string, serial:
   )
 }
 
+/** @deprecated */
 export class OpusOggPageMaker {
   #rawHeaders: Uint8Array;
   #serial: number;

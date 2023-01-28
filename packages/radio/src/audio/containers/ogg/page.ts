@@ -33,6 +33,7 @@ function lacing(n: number): number[] {
 
 export const pageMarker = makeUint8ArrayFromText('OggS');
 
+/** @deprecated */
 export class OggPage {
   #info: OggPageInfo;
 
