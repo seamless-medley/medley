@@ -1,9 +1,9 @@
 import EventEmitter from "events";
 import http from "http";
-import { capitalize, chain, isFunction, isObject, mapValues, noop, pickBy } from "lodash";
+import { capitalize, isFunction, isObject, mapValues, noop, pickBy } from "lodash";
 import { Server as IOServer, Socket as IOSocket } from "socket.io";
 import { ConditionalKeys } from "type-fest";
-import TypedEventEmitter from "typed-emitter";
+import { TypedEmitter } from "tiny-typed-emitter";
 import { getDependents } from "./decorator";
 import { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "./events";
 import { $Exposing } from "./expose";
@@ -33,7 +33,7 @@ export type SocketServerEvents = {
   ready(): void;
 }
 
-export class SocketServerController<Remote> extends (EventEmitter as new () => TypedEventEmitter<SocketServerEvents>) {
+export class SocketServerController<Remote> extends TypedEmitter<SocketServerEvents> {
   constructor(private io: SocketServer) {
     super();
     io.on('connection', socket => this.addSocket(socket));

@@ -23,6 +23,7 @@
     "node-gyp-build": "4.3.0",
     "normalize-path": "^3.0.0",
     "string-similarity": "^4.0.4",
+    "tiny-typed-emitter": "^2.1.0",
     "tslog": "^4.7.1",
     "workerpool": "^6.2.0"
   },

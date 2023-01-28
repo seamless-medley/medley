@@ -28,12 +28,11 @@ import {
   AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents, Logger, ILogObj, createLogger, StationTrack, StationTrackPlay,
 } from "@seamless-medley/core";
 
-import type TypedEventEmitter from 'typed-emitter';
+import { TypedEmitter } from 'tiny-typed-emitter';
 
 import { createCommandDeclarations, createInteractionHandler } from "./command";
 import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
-import EventEmitter from "events";
 import { createExciter } from "./exciter";
 import { decibelsToGain, retryable, waitFor } from "@seamless-medley/utils";
 
@@ -101,7 +100,7 @@ export type AutomatonEvents = {
 
 const makeAudienceGroup = (id: string): AudienceGroupId => makeStationAudienceGroup(AudienceType.Discord, id);
 
-export class MedleyAutomaton extends (EventEmitter as new () => TypedEventEmitter<AutomatonEvents>) {
+export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   readonly id: string;
 
   botToken: string;

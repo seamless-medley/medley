@@ -1,7 +1,6 @@
 import os from 'node:os';
 import { createHash } from 'crypto';
-import EventEmitter from "events";
-import type TypedEventEmitter from "typed-emitter";
+import { TypedEmitter } from "tiny-typed-emitter";
 import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, random, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
@@ -43,21 +42,21 @@ export type TrackPeek<T extends Track<any>> = {
   track: T;
 }
 
-export type TrackCollectionEvents = {
+export type TrackCollectionEvents<T extends Track<any>> = {
   ready: () => void;
   refresh: () => void;
-  trackShift: (track: Track<any>) => void;
-  trackPush: (track: Track<any>) => void;
-  tracksAdd: (tracks: Track<any>[], indexes: number[]) => void;
-  tracksRemove: (tracks: Track<any>[], indexes?: number[]) => void;
-  tracksUpdate: (tracks: Track<any>[]) => void;
+  trackShift: (track: T) => void;
+  trackPush: (track: T) => void;
+  tracksAdd: (tracks: T[], indexes: number[]) => void;
+  tracksRemove: (tracks: T[], indexes?: number[]) => void;
+  tracksUpdate: (tracks: T[]) => void;
 }
 
 export const supportedExts = ['mp3', 'flac', 'wav', 'ogg', 'aiff'];
 
 export const knownExtRegExp = new RegExp(`\\.(${supportedExts.join('|')})$`, 'i')
 
-export class TrackCollection<T extends Track<any>, Extra = any> extends (EventEmitter as new () => TypedEventEmitter<TrackCollectionEvents>) {
+export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmitter<TrackCollectionEvents<T>> {
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];

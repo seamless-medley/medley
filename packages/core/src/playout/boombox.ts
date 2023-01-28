@@ -1,8 +1,7 @@
 import { parse as parsePath } from 'path';
 import { castArray, flatten, matches, some, toLower, trim, uniq, without } from "lodash";
-import { EventEmitter } from "stream";
 import { compareTwoStrings } from "string-similarity";
-import type TypedEventEmitter from "typed-emitter";
+import { TypedEmitter } from "tiny-typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track, TrackExtra } from "../track";
@@ -126,7 +125,7 @@ export type DeckInfoWithPositions = DeckInfo & {
   positions: DeckPositions;
 }
 
-export class BoomBox<Requester = any> extends (EventEmitter as new () => TypedEventEmitter<BoomBoxEvents>) {
+export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
   readonly id: string;
 
   readonly sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>;

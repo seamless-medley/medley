@@ -1,5 +1,4 @@
-import EventEmitter from "events";
-import type TypedEventEmitter from "typed-emitter";
+import { TypedEmitter } from "tiny-typed-emitter";
 import { chain, isObjectLike, isString } from "lodash";
 import { TrackCollection } from "../collections";
 import { SequencedTrack, Track, TrackExtra, TrackSequencing } from "../track";
@@ -8,8 +7,8 @@ import { createLogger } from "../logging";
 import { randomUUID } from "crypto";
 import { moveArrayIndexes } from "@seamless-medley/utils";
 
-export type CrateSequencerEvents = {
-  change: (crate: Crate<any>, oldCrate?: Crate<any>) => void;
+export type CrateSequencerEvents<T extends Track<any>> = {
+  change: (crate: Crate<T>, oldCrate?: Crate<T>) => void;
   rescue: (scanned: number, ignore: number) => void;
 }
 
@@ -52,7 +51,7 @@ export type LatchOptions<T extends Track<any>> = (LatchWithLength | LatchIncreme
   important?: boolean;
 }
 
-export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends (EventEmitter as new () => TypedEventEmitter<CrateSequencerEvents>) {
+export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends TypedEmitter<CrateSequencerEvents<T>> {
   private _playCounter = 0;
   private _crateIndex = 0;
   private _lastCrate: Crate<T> | undefined;

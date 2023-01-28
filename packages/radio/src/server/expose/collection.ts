@@ -1,4 +1,4 @@
-import { MusicTrackCollection, Station, TrackCollectionEvents } from "@seamless-medley/core";
+import { MusicTrackCollection, MusicTrackCollectionEvents, Station, TrackCollectionEvents } from "@seamless-medley/core";
 import { isFunction, isObject, omitBy } from "lodash";
 import { $Exposing, Exposable } from "../../socket/expose";
 import { toTrack } from "../../socket/po/track";
@@ -32,26 +32,26 @@ export class ExposedColection extends MixinEventEmitterOf<Collection>() implemen
     return this[$Exposing];
   }
 
-  #onRefresh: TrackCollectionEvents['refresh'] = () => {
+  #onRefresh: MusicTrackCollectionEvents<Station>['refresh'] = () => {
     this.emit('refresh');
   }
 
-  #onTracksShift: TrackCollectionEvents['trackShift'] = async (track) => {
+  #onTracksShift: MusicTrackCollectionEvents<Station>['trackShift'] = async (track) => {
     this.emit('trackShift', await toTrack(track, true));
   }
 
-  #onTracksPush: TrackCollectionEvents['trackPush'] = async (track) => {
+  #onTracksPush: MusicTrackCollectionEvents<Station>['trackPush'] = async (track) => {
     this.emit('trackPush', await toTrack(track, true));
   }
 
-  #onTracksAdd: TrackCollectionEvents['tracksAdd'] = async (tracks, indexes) => {
+  #onTracksAdd: MusicTrackCollectionEvents<Station>['tracksAdd'] = async (tracks, indexes) => {
     this.emit('tracksAdd',
       await Promise.all(tracks.map(t => toTrack(t, true))),
       indexes
     );
   }
 
-  #onTracksRemove: TrackCollectionEvents['tracksRemove'] = async (tracks, indexes) => {
+  #onTracksRemove: MusicTrackCollectionEvents<Station>['tracksRemove'] = async (tracks, indexes) => {
     this.emit('tracksRemove',
       await Promise.all(tracks.map(t => toTrack(t, true))),
       indexes

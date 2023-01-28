@@ -1,6 +1,6 @@
 import { castArray, chain, isString, noop } from 'lodash';
 import normalizePath from 'normalize-path';
-import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions } from '../collections';
+import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollection, TrackCollectionEvents } from '../collections';
 import { createLogger } from '../logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
@@ -23,6 +23,8 @@ export type MusicLibraryExtra<O> = {
 export type MusicTrack<O> = TrackWithCollectionExtra<BoomBoxTrack, MusicLibraryExtra<O>>;
 
 export type MusicTrackCollection<O> = WatchTrackCollection<MusicTrack<O>, MusicLibraryExtra<O>>;
+
+export type MusicTrackCollectionEvents<O> = TrackCollectionEvents<MusicTrack<O>>;
 
 export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
   private logger = createLogger({ name: `library/${this.id}` });

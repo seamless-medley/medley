@@ -1,7 +1,6 @@
-import EventEmitter from "events";
 import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions, TrackPlay } from "@seamless-medley/medley";
 import { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
-import type TypedEventEmitter from 'typed-emitter';
+import { TypedEmitter } from 'tiny-typed-emitter';
 import { TrackCollectionBasicOptions, TrackPeek } from "./collections";
 import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
 import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "./library";
@@ -134,7 +133,7 @@ export type StationEvents = {
   collectionUpdated: (collection: StationTrackCollection) => void;
 }
 
-export class Station extends (EventEmitter as new () => TypedEventEmitter<StationEvents>) {
+export class Station extends TypedEmitter<StationEvents> {
   readonly id: string;
 
   name: string;
