@@ -381,6 +381,10 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.boombox.getDeckInfo(index);
   }
 
+  get activeDeck() {
+    return this.boombox.activeDeck;
+  }
+
   get trackPlay() {
     return this.boombox.trackPlay as StationTrackPlay;
   }

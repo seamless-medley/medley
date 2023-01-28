@@ -228,6 +228,11 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
     }
   }
 
+  get activeDeck() {
+    const index = this.decks.findIndex(d => d.active);
+    return index !== -1 ? index : undefined;
+  }
+
   private requests: TrackCollection<TrackWithRequester<BoomBoxTrack, Requester>> = new TrackCollection('$_requests', undefined);
 
   private isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path);
