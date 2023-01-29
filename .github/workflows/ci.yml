@@ -34,6 +34,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: PNPM I
+        run: pnpm install --ignore-scripts
+
       - name: Build native
         working-directory: ./packages/node-medley
         run: |-
