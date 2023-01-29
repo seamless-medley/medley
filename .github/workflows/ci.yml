@@ -42,14 +42,14 @@ jobs:
           sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
 
       - name: Dependencies (macOS)
-        if: contains(matrix.build-arch, 'macos')
+        if: contains(matrix.build-arch, 'darwin')
         run: |
           brew install --build-from-source taglib
           brew install libsamplerate
 
-      - name: PKGCONFIG
-        if: contains(matrix.build-arch, 'macos')
-        run: export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+      # - name: PKGCONFIG
+      #   if: contains(matrix.build-arch, 'darwin')
+      #   run: export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
       - name: Checkout
         uses: actions/checkout@v3
