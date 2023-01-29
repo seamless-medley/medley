@@ -5,6 +5,9 @@ jobs:
   build:
     strategy:
       matrix:
+        os:
+          # - ubuntu-latest
+          - macos-12
         node_version:
           - 18
         node_arch:
