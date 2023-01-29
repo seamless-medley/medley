@@ -32,7 +32,7 @@
     "build:ts": "tsc",
     "prebuild-linux-x64": "prebuildify --napi --strip",
     "prebuild-win32-x64": "prebuildify --napi --strip",
-    "prebuild-darwin-x64+arm64": "prebuildify --napi --strip --arch x64+arm64",
+    "prebuild-darwin-arm64": "prebuildify --napi --strip --arch arm64",
     "pack": "npm-run-all pack:prepare --parallel pack:js pack:prebuilds pack:package pack:readme",
     "pack:prepare": "rimraf dist && mkdirp dist",
     "pack:js": "copyfiles -u 1 out/*.js src/index.d.ts dist",

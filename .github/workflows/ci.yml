@@ -6,7 +6,8 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
+          # - ubuntu-latest
+          - macos-12
         node_version:
           - 18
         node_arch:
@@ -21,8 +22,9 @@ jobs:
           # - os: windows-latest
           #   build-arch: win32-x64
 
-          # - os: macos-11
-          #   build-arch: darwin-x64+arm64
+          - os: macos-12
+            node_arch: arm64
+            build-arch: darwin-arm64
 
     name: Build ${{ matrix.build-arch }}
     runs-on: ${{ matrix.os }}
@@ -43,6 +45,12 @@ jobs:
         if: contains(matrix.build-arch, 'linux')
         run: |
           sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
+
+      - name: Dependencies (macOS)
+        if: contains(matrix.build-arch, 'macos')
+        run: |
+          brew install --build-from-source taglib
+          brew install libsamplerate
 
       - name: Checkout
         uses: actions/checkout@v3
