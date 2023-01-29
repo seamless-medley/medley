@@ -5,22 +5,35 @@ jobs:
   build:
     strategy:
       matrix:
+        os:
+          - ubuntu-latest
+        node_version:
+          - 18
+        node_arch:
+          - x64
+        arch:
+          - x64
+
         include:
           - os: ubuntu-latest
             build-arch: linux-x64
+
           # - os: windows-latest
           #   build-arch: win32-x64
+
           # - os: macos-11
           #   build-arch: darwin-x64+arm64
 
     name: Build ${{ matrix.build-arch }}
     runs-on: ${{ matrix.os }}
+    env:
+      BUILD_ARCH: ${{ matrix.build-arch }}
     steps:
       - name: Install Node
         uses: actions/setup-node@v3
         with:
-          node-version: 18
-          architecture: x64
+          node-version: ${{ matrix.node_version }}
+          architecture: ${{ matrix.node_arch }}
 
       - uses: pnpm/action-setup@v2.2.4
         with:
@@ -40,11 +53,12 @@ jobs:
         working-directory: ./packages/node-medley
         run: |
           pnpm install --no-frozen-lockfile --ignore-scripts
-          pnpm run build:native
+          pnpm run prebuild-$BUILD_ARCH
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
+          name: ${{ matrix.build-arch }}
           path: ./packages/node-medley/prebuilds
 
 
