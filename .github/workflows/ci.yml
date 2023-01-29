@@ -18,8 +18,8 @@ jobs:
 
           - os: macos-12
             node_version: 18
-            node_arch: arm64
-            build-arch: darwin-arm64
+            node_arch: x64
+            build-arch: darwin-x64+arm64
 
     name: Build ${{ matrix.build-arch }}
     runs-on: ${{ matrix.os }}
