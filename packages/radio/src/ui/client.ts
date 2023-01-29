@@ -1,6 +1,7 @@
 import { isFunction, mapValues, noop, pickBy, uniqueId, } from "lodash";
 import { EventEmitter } from "eventemitter3";
 import { io, Socket } from "socket.io-client";
+import msgpackParser from 'socket.io-msgpack-parser';
 import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents } from '../socket/events';
 import { isProperty } from "../socket/remote/utils";
 import { Stub } from "../socket/stub";
@@ -84,7 +85,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   constructor() {
     super();
 
-    this.socket = io({ transports: ['websocket'] });
+    this.socket = io({ transports: ['websocket'], parser: msgpackParser });
 
     this.socket.on('remote:event', this.handleRemoteEvent);
     this.socket.on('remote:update', this.handleRemoteUpdate);

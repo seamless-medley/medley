@@ -63,6 +63,7 @@
     "reflect-metadata": "^0.1.13",
     "socket.io": "^4.5.2",
     "socket.io-client": "^4.5.2",
+    "socket.io-msgpack-parser": "^3.0.2",
     "tiny-typed-emitter": "^2.1.0",
     "tslog": "4.7.1",
     "typed-emitter": "2.1.0",

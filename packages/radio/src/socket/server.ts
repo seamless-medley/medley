@@ -2,6 +2,7 @@ import EventEmitter from "events";
 import http from "http";
 import { capitalize, isFunction, isObject, mapValues, noop, pickBy } from "lodash";
 import { Server as IOServer, Socket as IOSocket } from "socket.io";
+import msgpackParser from 'socket.io-msgpack-parser';
 import { ConditionalKeys } from "type-fest";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { getDependents } from "./decorator";
@@ -16,7 +17,7 @@ export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
       path,
       serveClient: false,
       transports: ['websocket'],
-      // parser: msgpackParser // TODO: msgPack
+      parser: msgpackParser
     });
   }
 }
