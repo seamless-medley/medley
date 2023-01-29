@@ -1,4 +1,4 @@
-name: Test
+name: CI
 on:
   - push
 jobs:
@@ -28,7 +28,7 @@ jobs:
 
       - name: Dependencies (Linux)
         if: contains(matrix.build-arch, 'linux')
-        run: >
+        run: |
           sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
 
       - name: Checkout
@@ -38,13 +38,13 @@ jobs:
 
       - name: Build native
         working-directory: ./packages/node-medley
-        run: |-
+        run: |
           pnpm install --no-frozen-lockfile --ignore-scripts
           pnpm run build:native
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          path: ./prebuilds
+          path: ./packages/node-medley/prebuilds
 
 
