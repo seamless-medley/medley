@@ -28,13 +28,8 @@ jobs:
 
       - name: Dependencies (Linux)
         if: contains(matrix.build-arch, 'linux')
-        run: >-
-          sudo apt install
-            g++ make pkg-config
-            libtag1-dev libsamplerate0-dev
-            libfreetype6-dev libcurl4-openssl-dev
-            libasound2-dev
-            libx11-dev libxrandr-dev
+        run: >
+          sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
 
       - name: Checkout
         uses: actions/checkout@v3
