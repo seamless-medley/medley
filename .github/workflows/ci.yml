@@ -42,4 +42,9 @@ jobs:
           pnpm install --no-frozen-lockfile --ignore-scripts
           pnpm run build:native
 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./prebuilds
+
 
