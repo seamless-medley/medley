@@ -1,0 +1,46 @@
+name: Test
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            build-arch: linux-x64
+          # - os: windows-latest
+          #   build-arch: win32-x64
+          # - os: macos-11
+          #   build-arch: darwin-x64+arm64
+
+    name: Build ${{ matrix.build-arch }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          architecture: x64
+
+      - uses: pnpm/action-setup@v2.2.4
+        with:
+          version: latest
+
+      - name: Dependencies (Linux)
+        if: contains(matrix.build-arch, 'linux')
+        run: >-
+          apt install
+          g++ make pkg-config
+          libtag1-dev libsamplerate0-dev
+          libfreetype6-dev libcurl4-openssl-dev
+          libasound2-dev
+          libx11-dev libxrandr-dev
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build native
+        working-directory: ./packages/node-medley
+        run: |-
+          pnpm install --ignore-scripts
+          pnpm run build:native
+
+
