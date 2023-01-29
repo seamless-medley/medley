@@ -1,4 +1,6 @@
 name: Test
+on:
+  - push
 jobs:
   build:
     strategy:
