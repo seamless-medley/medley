@@ -33,6 +33,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Build native
         working-directory: ./packages/node-medley
