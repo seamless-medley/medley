@@ -1,6 +1,9 @@
 name: node-medley native node module
 on:
-  - push
+  push:
+    paths:
+      - .github/workflows/node-medley.yml
+      - packages/node-medley/**
 jobs:
   build:
     strategy:
@@ -17,10 +20,10 @@ jobs:
           #   build-arch: win32-x64
 
           # Github Action only supports x86_64 arch for now.
-          # - os: macos-12
-          #   node_version: 18
-          #   node_arch: x64
-          #   build-arch: darwin-x64
+          - os: macos-12
+            node_version: 18
+            node_arch: x64
+            build-arch: darwin-x64
 
     name: Build ${{ matrix.build-arch }}
     runs-on: ${{ matrix.os }}
