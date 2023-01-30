@@ -1,4 +1,3 @@
-import assert from "assert";
 import { ChildProcessByStdio, spawn } from "child_process";
 import ffmpegPath from "ffmpeg-static";
 import { camelCase } from "lodash";
@@ -240,7 +239,7 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
       spawning = true;
       kill();
 
-      process = spawnFFmpeg(options?.exePath ?? ffmpegPath, options.args);
+      process = spawnFFmpeg(options?.exePath ?? ffmpegPath!, options.args);
 
       if (!process.pid) {
         process.on('error', err => reject(new FFMpegOverseerStartupError(err.message)));
@@ -304,7 +303,7 @@ type CapabilityFlags = {
   decoders: EncoderCaps;
 }
 
-export async function getFFmpegCaps<C extends keyof CapabilityFlags>(capsType: C, exePath: string = ffmpegPath) {
+export async function getFFmpegCaps<C extends keyof CapabilityFlags>(capsType: C, exePath: string = ffmpegPath!) {
   const process = spawn(exePath, [`-${capsType}`]);
 
   const lines: string[] = [];

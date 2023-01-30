@@ -97,6 +97,7 @@ export type StationOptions = {
 export enum AudienceType {
   Discord = 'discord',
   Icy = 'icy'
+  // TODO: New audience type
 }
 
 export type AudienceGroupId = `${AudienceType}$${string}`;
@@ -350,6 +351,7 @@ export class Station extends TypedEmitter<StationEvents> {
       }
     }
 
+    // TODO: Make this an option
     if (isSameCollection && this.boombox.isKnownCollection(track.collection)) {
       this.boombox.increasePlayCount();
     }

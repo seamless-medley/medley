@@ -34,7 +34,7 @@ async function main() {
   station.sweeperInsertionRules = sweeperRules;
 
   await createShoutAdapter(station, {
-    ffmpegPath: 'D:\\Tools\\ffmpeg\\bin\\ffmpegx',
+    ffmpegPath: 'D:\\Tools\\ffmpeg\\bin\\ffmpeg',
     outputFormat: 'he-aac',
     icecast: {
       host: 'localhost',

@@ -72,6 +72,8 @@ const PlayHead: React.FC = () => {
 }
 
 const App: React.FC = () => {
+  console.log('App');
+
   const client = useClient();
   const station = useStation('demo');
   const stationProps = useRemotableProps(station);

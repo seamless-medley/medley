@@ -33,3 +33,5 @@ async function run() {
 }
 
 run();
+
+// TODO: Add global error handlers

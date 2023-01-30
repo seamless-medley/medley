@@ -64,6 +64,11 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     this.emit('ready');
   }
 
+  protected override addSocket(socket: Socket) {
+    super.addSocket(socket);
+    console.log('Adding socket', socket.id);
+  }
+
   private mongoDBConfigHandlers: ExposedConfigCallback = {
     onMongoDB: () => this.connectMongoDB()
   }
@@ -77,6 +82,8 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
       this._musicDb?.dispose();
       this._musicDb = newInstance;
+
+      console.log('Connected to MongoDB');
     }
     catch (e) {
       throw e;
@@ -129,15 +136,22 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
 /**
  * List of Stations
- *  |- Station
+ *  |- Station // Partially done
  *    |- Intro
  *    |- Sweeper Rule[]
  *    |- Request Sweeper[]
- *    |- Music Collection
+ *    |- Music Collection // Partially done
  *    |- Crate/Sequence
+ *    |- Settings
+ *    |- Audience Report
+ *    |- Search
+ *      |- Auto suggest
+ *    |- Requests
  *
  * List of Automaton
  *  |- Automaton
- *    |- Station Registry
+ *    |- Roles
+ *    |- Discord Server
+ *    |- Settings
  */
 

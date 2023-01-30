@@ -77,6 +77,8 @@ export class AudioServer extends EventEmitter {
     }
 
     this.#stationListeners.get(stationId)!.add(socket);
+
+    // TODO: Station audience
   }
 
   async publish(station: Station) {

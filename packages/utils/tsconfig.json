@@ -13,7 +13,6 @@
     "forceConsistentCasingInFileNames": true,
     "sourceMap" : true,
     "composite": true,
-    "noEmit": true,
     "rootDir": "src"
   },
   "include": ["src"]
