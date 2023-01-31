@@ -6,9 +6,7 @@
   "scripts": {
     "clean": "rimraf .turbo dist",
     "build": "tsc && tsx scripts/package.ts",
-    "dev": "npm-run-all dev:*",
-    "dev:pre": "copyfiles --up 4 ../node-medley/build/Release/medley.node build/Release/",
-    "dev:run": "cross-env MEDLEY_DEMO=1 DEBUG=1 tsx watch src/start.ts"
+    "dev": "cross-env MEDLEY_DEV=1 DEBUG=1 tsx watch src/start.ts"
   },
   "author": "",
   "license": "ISC",

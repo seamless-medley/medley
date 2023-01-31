@@ -5,6 +5,7 @@
     "allowJs": true,
     "declaration": false,
     "isolatedModules": true,
+    "removeComments": true,
     "strict": true,
     "experimentalDecorators": true,
     "esModuleInterop": true,

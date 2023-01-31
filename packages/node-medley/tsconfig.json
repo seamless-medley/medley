@@ -4,6 +4,7 @@
     "module": "CommonJS",
     "allowJs": false,
     "declaration": false,
+    "removeComments": true,
     "isolatedModules": true,
     "strict": true,
     "esModuleInterop": true,

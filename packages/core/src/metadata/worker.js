@@ -1,11 +1,17 @@
 // @ts-check
 
+const { dirname } = require('path');
 const workerpool = require('workerpool');
 const lyricsSearcher = require('lyrics-searcher');
 
+const nativePath = require.resolve('@seamless-medley/medley');
+
 /** @type {import('@seamless-medley/medley')} */
-// @ts-ignore
-const { Medley } = require('node-gyp-build')(process.cwd() + '/../core/node_modules/@seamless-medley/medley');
+const { Medley } = process.env.MEDLEY_DEV
+    // @ts-ignore
+    ? require('node-gyp-build')(dirname(require.resolve('@seamless-medley/medley')))
+    : require('@seamless-medley/medley')
+
 
 workerpool.worker({
   metadata: Medley.getMetadata,

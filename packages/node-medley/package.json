@@ -39,7 +39,7 @@
     "pack:prebuilds": "copyfiles prebuilds/**/* dist",
     "pack:package": "tsx scripts/package.ts",
     "pack:readme": "copyfiles README.md dist",
-    "demo": "cross-env MEDLEY_DEMO=1 tsx test/demo.ts"
+    "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts"
   },
   "devDependencies": {
     "prebuildify": "^5.0.0"

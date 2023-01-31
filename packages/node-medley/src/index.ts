@@ -1,8 +1,8 @@
 import { EventEmitter } from 'node:events';
+import { dirname } from 'node:path';
 import { Readable } from 'stream';
 import type { AudioFormat, RequestAudioCallbackOptions, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult } from './index.d';
-
-const medley = require('node-gyp-build')(process.env.MEDLEY_DEMO ? process.cwd() : __dirname);
+const medley = require('node-gyp-build')(process.env.MEDLEY_DEV ? dirname(__dirname) : __dirname);
 
 Object.setPrototypeOf(medley.Medley.prototype, EventEmitter.prototype);
 
