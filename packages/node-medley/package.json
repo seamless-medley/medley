@@ -21,12 +21,12 @@
   "types": "src/index.d.ts",
   "dependencies": {
     "node-addon-api": "3.0.2",
-    "node-gyp-build": "^4.3.0"
+    "node-gyp-build": "^4.6.0"
   },
   "gypfile": true,
   "scripts": {
     "install": "node-gyp-build",
-    "clean": "rimraf build out dist",
+    "clean": "rimraf .turbo build out dist",
     "compile": "node-gyp configure && node-gyp build",
     "build": "npm-run-all clean --parallel build:*",
     "build:ts": "tsc",
@@ -42,15 +42,6 @@
     "demo": "cross-env MEDLEY_DEMO=1 tsx test/demo.ts"
   },
   "devDependencies": {
-    "@types/mkdirp": "^1.0.2",
-    "@types/node": "16.11.17",
-    "copyfiles": "^2.4.1",
-    "cross-env": "^7.0.3",
-    "mkdirp": "^1.0.4",
-    "npm-run-all": "^4.1.5",
-    "prebuildify": "^5.0.0",
-    "rimraf": "^3.0.2",
-    "tsx": "^3.9.0",
-    "typescript": "4.9.4"
+    "prebuildify": "^5.0.0"
   }
 }

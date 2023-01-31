@@ -15,9 +15,5 @@
     "sourceMap" : true,
     "outDir": "./dist"
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../core" },
-    { "path": "../utils" },
-  ]
+  "include": ["src"]
 }

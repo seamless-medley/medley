@@ -12,12 +12,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap" : true,
-    "composite": true,
     "outDir": "./dist",
     "rootDir": "src"
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../utils" }
-  ]
+  "include": ["src"]
 }

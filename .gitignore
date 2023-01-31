@@ -9,6 +9,8 @@ package-lock.json
 .pnpm-debug.log
 
 *.tsbuildinfo
+.turbo
+*.log
 
 [Dd]ebug/
 [Dd]ebugPublic/

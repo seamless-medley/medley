@@ -4,7 +4,7 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, random, sample, shuffle, sortBy } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
-import { Track, TrackExtra } from "../track";
+import { Track } from "../track";
 import { breath, moveArrayElements, moveArrayIndexes } from '@seamless-medley/utils';
 
 export type TrackAddingMode = 'prepend' | 'append' | 'spread';
