@@ -3,7 +3,7 @@
     "target": "es2020",
     "module": "commonjs",
     "allowJs": true,
-    "declaration": true,
+    "declaration": false,
     "isolatedModules": true,
     "strict": true,
     "experimentalDecorators": true,
