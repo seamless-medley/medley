@@ -72,14 +72,14 @@ export class OpusScript extends Opus {
   private static Opus: any;
 
   static load() {
-    if (!this.Opus) return true;
+    if (this.Opus) return true;
 
     try {
       this.Opus = require('opusscript');
       return true;
     }
     catch {
-
+      return false;
     }
   }
 
@@ -104,8 +104,8 @@ export class DiscordOpus extends Opus {
       this.OpusEncoder = require('@discordjs/opus').OpusEncoder;
       return true;
     }
-    catch {
-
+    catch (e) {
+      return false;
     }
   }
 
