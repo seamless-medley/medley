@@ -40,10 +40,18 @@ function add(track) {
 
 /**
  *
- * @param {TrackDocument[]} tracks
+ * @param {TrackDocument['id'][]} trackIds
  */
-function removeAll(tracks) {
-  acquire().removeAll(tracks);
+function removeAll(trackIds) {
+  const m = acquire();
+  for (const id of trackIds) {
+    try {
+      m.discard(id);
+    }
+    catch (e) {
+      console.error(e);
+    }
+  }
 }
 
 /**

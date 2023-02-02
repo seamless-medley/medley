@@ -223,8 +223,12 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
 
   async update(paths: string[]) {
     return this.transform(paths, async updated => {
-      this.logger.debug('Track updated', updated.length);
-      this.emit('tracksUpdate', updated);
+      const existing = updated.filter(it => this.trackIdMap.has(it.id));
+
+      if (existing.length > 0) {
+        this.logger.debug('Track updated', existing.length);
+        this.emit('tracksUpdate', existing);
+      }
     });
   }
 

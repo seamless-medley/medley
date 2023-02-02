@@ -72,7 +72,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
   }
 
   private handleTrackUpdates = async (tracks: MusicTrack<O>[]) => {
-    await this.searchEngine.removeAll(tracks).catch(noop);
+    await this.searchEngine.removeAll(tracks).catch(e => this.logger.error(e));
 
     for (const track of tracks) {
       await this.indexTrack(track, true);
@@ -118,7 +118,10 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
         .catch(e => this.logger.error(e));
     }
 
-    this.searchEngine.add(track);
+    return this.searchEngine.add(track)
+      .catch(e => {
+        this.logger.error(e.message)
+      });
   }
 
   async addCollection(descriptor: MusicCollectionDescriptor, onceReady?: () => void): Promise<MusicTrackCollection<O> | undefined> {

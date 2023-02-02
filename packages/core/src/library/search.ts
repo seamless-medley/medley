@@ -29,7 +29,7 @@ export type TrackDocumentFields = keyof TrackDocument;
 
 interface Methods {
   add(track: TrackDocument): void;
-  removeAll(tracks: TrackDocument[]): void;
+  removeAll(tracks: TrackDocument['id'][]): void;
   search(query: Query, searchOptions?: SearchOptions): SearchResult[];
   autoSuggest(queryString: string, searchOptions?: SearchOptions): Suggestion[];
 }
@@ -55,7 +55,7 @@ export class SearchEngine extends WorkerPoolAdapter<Methods> {
   }
 
   async removeAll(tracks: BoomBoxTrack[]) {
-    await this.exec('removeAll', tracks.map(documentOf));
+    await this.exec('removeAll', tracks.map(t => t.id));
   }
 
   async search(query: Query, searchOptions?: SearchOptions) {
