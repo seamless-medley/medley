@@ -42,6 +42,6 @@
     "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts"
   },
   "devDependencies": {
-    "prebuildify": "^5.0.0"
+    "prebuildify": "^5.0.1"
   }
 }
