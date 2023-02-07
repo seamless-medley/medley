@@ -1,11 +1,10 @@
 import { EventEmitter } from "eventemitter3";
 import worklet from "./worklet.js?worker&url";
-import AudioClientWorker from './client-worker?worker';
+import AudioClientWorker from './client?worker';
+import type { AudioClientIntf } from "./client";
 import { RingBuffer } from "./ringbuffer";
-
 import type { AudioTransportExtra } from "../../audio/types";
 import type { MedleyStreamProcessorNodeOptions } from "./stream-processor";
-import { AudioClientIntf } from "./client";
 
 export type AudioPipelineEvents = {
   audioExtra(extra: AudioTransportExtra): void;
