@@ -27,7 +27,6 @@ export class MedleyStreamProcessor extends AudioWorkletProcessor {
     Object.setPrototypeOf(this.#pcmBuffer, RingBuffer.prototype);
   }
 
-
   set #current(v: AudioTransportExtra) {
     if (this.#currentExtra !== v) {
       this.#currentExtra = v;

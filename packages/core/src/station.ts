@@ -102,7 +102,6 @@ export enum AudienceType {
 
 export type AudienceGroupId = `${AudienceType}$${string}`;
 
-
 export type Audience = {
   group: AudienceGroupId;
   id: string;
