@@ -134,6 +134,7 @@ self.addEventListener('message', (e: MessageEvent<InputMessage>) => {
       pcmBuffer = e.data.pcmBuffer;
       Object.setPrototypeOf(pcmBuffer, RingBuffer.prototype);
       return;
+
     case 'connect':
       connect(e.data.socketId);
       return;
