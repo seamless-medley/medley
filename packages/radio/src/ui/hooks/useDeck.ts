@@ -20,7 +20,7 @@ const storeCache = (station: Remotable<Station>, index: DeckIndex, info?: Promis
   cache.get(station)![index] = info;
 }
 
-const clearCache = (station: Remotable<Station>, index: DeckIndex) => {
+const deteleCache = (station: Remotable<Station>, index: DeckIndex) => {
   if (cache.has(station)) {
     cache.get(station)![index] = undefined;
   }
@@ -36,6 +36,14 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
   const [info, setInfo] = useState<DeckInfoWithPositions | undefined>();
   const [cover, setCover] = useState<string | undefined>();
 
+  const updateCover = (newURL?: string) => setCover((oldCover) => {
+    if (oldCover) {
+      URL.revokeObjectURL(oldCover);
+    }
+
+    return newURL;
+  })
+
   const update = (deckIndex: number, newInfo: DeckInfoWithPositions) => {
     if (deckIndex !== index) {
       return;
@@ -48,14 +56,13 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
       coverMimeType
     } = newInfo?.trackPlay?.track?.extra?.coverAndLyrics ?? {};
 
-    setCover(cover && coverMimeType ? URL.createObjectURL(new Blob([cover])) : undefined);
+    updateCover(cover && coverMimeType ? URL.createObjectURL(new Blob([cover])) : undefined);
 
     return newInfo;
   }
 
   const refreshDeckInfo = () => {
     if (!station) {
-      console.log('Cannot refresh deck info', index);
       return Promise.resolve(undefined);
     }
 
@@ -66,7 +73,7 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
 
   const invalidateDeckInfo = () => {
     if (station) {
-      clearCache(station, index);
+      deteleCache(station, index);
     }
   }
 
@@ -139,7 +146,7 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
     }
 
     setInfo(undefined);
-    setCover(undefined);
+    updateCover(undefined);
 
     if (!station) {
       return;
@@ -151,7 +158,7 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
       return;
     }
 
-    clearCache(station, deckIndex);
+    deteleCache(station, deckIndex);
   }
 
   useEffect(() => {
@@ -161,6 +168,10 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
     return () => {
       client.off('connect', refreshDeckInfo);
       client.off('disconnect', invalidateDeckInfo);
+
+      if (cover) {
+        URL.revokeObjectURL(cover);
+      }
     }
   }, [])
 
