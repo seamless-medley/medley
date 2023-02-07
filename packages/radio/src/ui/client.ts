@@ -10,7 +10,7 @@ import { Callable, ParametersOf, ReturnTypeOf } from "../types";
 import { DisconnectDescription } from "socket.io-client/build/esm/socket";
 import { waitFor } from "@seamless-medley/utils";
 import { getRemoteTimeout } from "../socket/decorator";
-import { AudioClient, type AudioClientEvents } from "./audio/client";
+import { AudioPipeline, type AudioPipelineEvents } from "./audio/pipeline";
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, changes: ObservedPropertyChange<T>[]) => Promise<any>;
 
@@ -53,7 +53,7 @@ class ObservingStore<T extends object> {
   }
 }
 
-type ClientEvents = AudioClientEvents & {
+type ClientEvents = AudioPipelineEvents & {
   connect(): void;
   disconnect(reason?: DisconnectReason): void;
 }
@@ -80,7 +80,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
   private surrogates = new Map<string, Remotable<Types[any]>>();
 
-  private audioClient: AudioClient;
+  private audioClient: AudioPipeline;
 
   constructor() {
     super();
@@ -94,7 +94,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     this.socket.on('connect', this.handleSocketConnect);
     this.socket.on('disconnect', this.handleSocketDisconnect);
 
-    this.audioClient = new AudioClient()
+    this.audioClient = new AudioPipeline()
       .on('audioExtra', e => this.emit('audioExtra', e));
   }
 

@@ -150,6 +150,6 @@ class AudioSocket {
   }
 
   sendPacket(packet: Buffer) {
-    this.sendPayload(AudioSocketReply.Audio, packet);
+    this.sendPayload(AudioSocketReply.Opus, packet);
   }
 }

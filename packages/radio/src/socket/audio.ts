@@ -9,5 +9,5 @@ export type AudioSocketCommandMap = {
 }
 
 export const enum AudioSocketReply {
-  Audio = 0xCC
+  Opus = 0xCC
 }

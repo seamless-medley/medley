@@ -1,150 +1,149 @@
-import { EventEmitter } from "eventemitter3";
-import { encode, decode } from 'notepack.io';
-import worklet from "./worklet.js?worker&url";
+import { decode, encode } from "notepack.io";
+import { AudioSocketCommand, AudioSocketCommandMap, AudioSocketReply } from "../../socket/audio";
 import Decoder from "./decoder?worker";
+import type { Decoder as DecoderInft } from "./decoder";
+import type { AudioTransportExtra } from "../../audio/types";
 import { RingBuffer } from "./ringbuffer";
 
-import type { AudioTransportExtra } from "../../audio/types";
-import type { MedleyStreamProcessorNodeOptions } from "./stream-processor";
-import type { Decoder as DecoderInft } from "./decoder";
-import { AudioSocketCommand, AudioSocketCommandMap, AudioSocketReply } from "../../socket/audio";
-
-export type AudioClientEvents = {
-  audioExtra(extra: AudioTransportExtra): void;
+export type InitMessage = {
+  type: 'init';
+  pcmBuffer: RingBuffer;
 }
 
-export class AudioClient extends EventEmitter<AudioClientEvents> {
-  #decoder = new Decoder() as unknown as DecoderInft<AudioTransportExtra>;
+export type ConnectMessage = {
+  type: 'connect';
+  socketId: string;
+}
 
-  #ctx?: AudioContext;
+export type DisconnectMessage = {
+  type: 'disconnect';
+}
 
-  #node!: AudioWorkletNode;
+export type PlayMessage = {
+  type: 'play';
+  stationId: string;
+}
 
-  #pcmBuffer = new RingBuffer(960 * 100, 2);
+export type InputMessage = InitMessage | ConnectMessage | DisconnectMessage | PlayMessage;
 
-  #ws?: WebSocket;
+export type OpenMessage = {
+  type: 'open';
+}
 
-  #socketId?: string;
+export type OutputMessage = OpenMessage;
 
-  constructor() {
-    super();
+export interface AudioClientEventMap extends AbstractWorkerEventMap {
+  "message": MessageEvent<OutputMessage>;
+  "messageerror": MessageEvent;
+}
+
+export interface AudioClientIntf extends Worker {
+  onmessage: ((this: AudioClientIntf, ev: MessageEvent<OutputMessage>) => any) | null;
+  onmessageerror: ((this: AudioClientIntf, ev: MessageEvent) => any) | null;
+
+  postMessage(input: InputMessage): void;
+
+  addEventListener<K extends keyof AudioClientEventMap>(type: K, listener: (this: AudioClientIntf, ev: AudioClientEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+  removeEventListener<K extends keyof AudioClientEventMap>(type: K, listener: (this: AudioClientIntf, ev: AudioClientEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+}
+
+let ws: WebSocket | undefined;
+
+let _socketId: string | undefined;
+
+const decoder = new Decoder() as unknown as DecoderInft<AudioTransportExtra>;
+
+let pcmBuffer: RingBuffer | undefined;
+
+decoder.addEventListener('message', (e) => {
+  const { decoded: { channelData, samplesDecoded }, extra } = e.data;
+
+  if (!pcmBuffer) {
+    return;
   }
 
-  async connect(socketId: string): Promise<void> {
-    await this.#prepareAudioContext();
+  pcmBuffer.push(channelData.slice(0, 2), samplesDecoded, extra);
+});
 
-    const isConnectingOrOpen = this.#ws && [WebSocket.CONNECTING, WebSocket.OPEN].includes(this.#ws.readyState);
+async function connect(socketId: string): Promise<void> {
+  const isConnectingOrOpen = ws && [WebSocket.CONNECTING, WebSocket.OPEN].includes(ws.readyState);
 
-    if (isConnectingOrOpen && socketId === this.#socketId) {
-      return;
-    }
-
-    this.#socketId = socketId;
-
-    const websocketUrl = location.protocol.replace('http', 'ws') + '//' + location.host + '/socket.audio';
-    this.#ws = new WebSocket(websocketUrl, 'medley-audio');
-    this.#ws.binaryType = 'arraybuffer';
-
-    this.#ws.onopen = () => {
-      this.#pcmBuffer.reset();
-      this.#sendCommand(AudioSocketCommand.Identify, socketId);
-    }
-
-    this.#ws.addEventListener('message', this.#handleStream);
+  if (isConnectingOrOpen && socketId === socketId) {
+    return;
   }
 
-  disconnect() {
-    this.#ws?.close();
+  _socketId = socketId;
+
+  const websocketUrl = location.protocol.replace('http', 'ws') + '//' + location.host + '/socket.audio';
+  ws = new WebSocket(websocketUrl, 'medley-audio');
+  ws.binaryType = 'arraybuffer';
+
+  ws.onopen = () => {
+    self.postMessage({ type: 'open' });
+    sendCommand(AudioSocketCommand.Identify, socketId);
   }
 
-  play(stationId: string) {
-    this.#sendCommand(AudioSocketCommand.Tune, stationId);
-    this.#ctx?.resume();
+  ws.addEventListener('message', handleStream);
+}
+
+function disconnect() {
+  ws?.close();
+}
+
+function sendCommand<T extends AudioSocketCommand>(command: T, data: Parameters<AudioSocketCommandMap[T]>[0]) {
+  if (!ws) {
+    return;
   }
 
-  async #prepareAudioContext() {
-    if (this.#ctx) {
-      return;
-    }
+  const dataBuffer = encode(data) as ArrayBuffer;
+  const buffer = new Uint8Array(1 + dataBuffer.byteLength);
+  const view = new DataView(buffer.buffer);
+  view.setUint8(0, command);
+  buffer.set(new Uint8Array(dataBuffer), 1);
 
-    try {
-      this.#ctx = new AudioContext();
-      await this.#ctx.audioWorklet.addModule(worklet);
-    }
-    catch (e) {
-      console.log('Error adding AudioWorklet module', e);
-      return;
-    }
+  ws.send(buffer)
+}
 
-    const options: MedleyStreamProcessorNodeOptions = {
-      numberOfInputs: 0,
-      numberOfOutputs: 1,
-      outputChannelCount: [2],
-      processorOptions: {
-        pcmBuffer: this.#pcmBuffer,
-      }
-    }
+function play(stationId: string) {
+  sendCommand(AudioSocketCommand.Tune, stationId);
+}
 
-    this.#node = new AudioWorkletNode(this.#ctx, 'medley-stream-processor', options);
-    this.#node.onprocessorerror = this.#handleProcessorError;
-    this.#node.port.onmessage = this.#handleWorkletNodeMessage;
+function handleStream(ev: MessageEvent<ArrayBuffer>) {
+  const view = new DataView(ev.data);
+  const op = view.getUint8(0);
 
-    this.#node.connect(this.#ctx.destination);
+  const data = new Uint8Array(ev.data, 1);
 
-    this.#decoder.addEventListener('message', (e) => {
-      const { decoded: { channelData, samplesDecoded }, extra } = e.data;
-      this.#pcmBuffer.push(channelData.slice(0, 2), samplesDecoded, extra);
+  if (op === AudioSocketReply.Opus) {
+    const infoLength = new DataView(data.buffer, data.byteOffset).getUint16(0, true);
+    const extra = decode(new Uint8Array(data.buffer, 2 + data.byteOffset, infoLength));
+    const opus = new Uint8Array(data.buffer, 2 + data.byteOffset + infoLength);
+
+    decoder.postMessage({
+      opus,
+      extra
     });
   }
-
-  #sendCommand<T extends AudioSocketCommand>(command: T, data: Parameters<AudioSocketCommandMap[T]>[0]) {
-    if (!this.#ws) {
-      return;
-    }
-
-    const dataBuffer = encode(data) as ArrayBuffer;
-    const buffer = new Uint8Array(1 + dataBuffer.byteLength);
-    const view = new DataView(buffer.buffer);
-    view.setUint8(0, command);
-    buffer.set(new Uint8Array(dataBuffer), 1);
-
-    this.#ws.send(buffer)
-  }
-
-  #handleProcessorError = (e: Event) => {
-    console.log('Processor error', e);
-  }
-
-  #handleWorkletNodeMessage = (e: MessageEvent<AudioTransportExtra>) => {
-    this.emit('audioExtra', e.data);
-  }
-
-  #handleAudioData(data: Uint8Array) {
-    if (!this.#ctx) {
-      return;
-    }
-
-
-    if (this.#ctx.state === 'running') {
-      const infoLength = new DataView(data.buffer, data.byteOffset).getUint16(0, true);
-      const extra = decode(new Uint8Array(data.buffer, 2 + data.byteOffset, infoLength));
-      const opus = new Uint8Array(data.buffer, 2 + data.byteOffset + infoLength);
-
-      this.#decoder.postMessage({
-        opus,
-        extra
-      });
-    }
-  }
-
-  #handleStream = (ev: MessageEvent<ArrayBuffer>) => {
-    const view = new DataView(ev.data);
-    const op = view.getUint8(0);
-
-    const data = new Uint8Array(ev.data).subarray(1);
-
-    if (op === AudioSocketReply.Audio) {
-      this.#handleAudioData(data);
-    }
-  }
 }
+
+self.addEventListener('message', (e: MessageEvent<InputMessage>) => {
+  const { type } = e.data;
+
+  switch (type) {
+    case 'init':
+      pcmBuffer = e.data.pcmBuffer;
+      Object.setPrototypeOf(pcmBuffer, RingBuffer.prototype);
+      return;
+    case 'connect':
+      connect(e.data.socketId);
+      return;
+
+    case 'disconnect':
+      disconnect();
+      return;
+
+    case 'play':
+      play(e.data.stationId);
+      return;
+  }
+});
