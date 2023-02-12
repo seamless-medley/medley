@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, EmbedBuilder, PermissionsBitField } from "discord.js";
 import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { deny, guildIdGuard, permissionGuard, reply, warn } from "../utils";
+import { deny, guildIdGuard, permissionGuard, reply } from "../utils";
 import { createStationSelector } from "./tune";
 
 const declaration: SubCommandLikeOption = {

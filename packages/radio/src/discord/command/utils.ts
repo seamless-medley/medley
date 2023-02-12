@@ -15,25 +15,52 @@ import {
 
 import { castArray, isString, maxBy, padStart } from "lodash";
 import { MedleyAutomaton } from "../automaton";
+import { ansi, Colors, ColorsAndFormat, Formats, simpleFormat } from "./ansi";
 import { CommandError } from "./type";
 
 export const maxSelectMenuOptions = 25;
 
+export type MentionType = 'user' | 'channel' | 'role';
+
+export const formatMention = (type: MentionType, id: string) => {
+  const p = ({user: '@', channel: '#', role: '@#'})[type];
+  return `<${p}${id}>`;
+}
+
+type ReplyableInteraction = CommandInteraction | MessageComponentInteraction;
+
+/** @deprecated */
 export enum HighlightTextType {
   Cyan = 'yaml',
   Yellow = 'fix',
   Red = 'diff'
 }
 
-type ReplyableInteraction = CommandInteraction | MessageComponentInteraction;
+type Strings = (string | undefined)[];
 
-export function makeHighlightedMessage(s: string | (string | undefined)[], type: HighlightTextType, mention?: string) {
+/** @deprecated */
+export function makeHighlightedMessage(s: Strings, type: HighlightTextType) {
   const isRed = type === HighlightTextType.Red;
-  return (mention ? `<${mention}>` : '') +
-    '```' + type + '\n' +
+  return '```' + type + '\n' +
     castArray(s).filter(isString).map(line => (isRed ? '-' : '') + line).join('\n') + '\n' +
     '```'
     ;
+}
+
+export function makeCodeBlockMessage(s: string | Strings, lang: string): Strings {
+  return [
+    '```' + lang,
+    ...castArray(s),
+    '```'
+  ]
+}
+
+export const makeAnsiCodeBlock = (s: string | Strings) => makeCodeBlockMessage(s, 'ansi');
+
+export function makeColoredMessage(color: ColorsAndFormat, s: string | Strings) {
+  const [c, f = 'n'] = color.split('|', 1) as [color: Colors, f: Formats];
+  const formatted = simpleFormat(joinStrings(s), `${c}|${f}`);
+  return makeAnsiCodeBlock(formatted).join('\n')
 }
 
 export const reply = async (interaction: ReplyableInteraction, options: string | MessagePayload | InteractionReplyOptions | InteractionEditReplyOptions) =>
@@ -41,21 +68,34 @@ export const reply = async (interaction: ReplyableInteraction, options: string |
     ? interaction.reply(options as string | MessagePayload | InteractionReplyOptions)
     : interaction.editReply(options);
 
-type SimpleDeclareFn = (interaction: ReplyableInteraction, s: string, mention?: string, ephemeral?: boolean) => Promise<Message<boolean> | InteractionResponse<boolean>>;
+type DeclareOptions = {
+  ephemeral?: boolean;
+  mention?: {
+    type: MentionType;
+    subject: string;
+  }
+}
 
-export const declare = (interaction: ReplyableInteraction, type: HighlightTextType, s: string, mention?: string, ephemeral?: boolean) => reply(interaction, {
-  content: makeHighlightedMessage(s, type, mention),
-  ephemeral
+type SimpleDeclareFn = (interaction: ReplyableInteraction, s: string | Strings, options?: DeclareOptions) => Promise<Message<boolean> | InteractionResponse<boolean>>;
+
+export const joinStrings = (s: string | Strings) => castArray(s).filter(isString).join('\n');
+
+export const declare: SimpleDeclareFn = (interaction, s, options) => reply(interaction, {
+  content: joinStrings([
+    options?.mention ? formatMention(options.mention.type, options.mention.subject) : undefined,
+    ...castArray(s)
+  ]),
+  ephemeral: options?.ephemeral
 });
 
-export const accept: SimpleDeclareFn = (interaction, s, mention?, ephemeral?) =>
-  declare(interaction, HighlightTextType.Cyan, s, mention, ephemeral);
+export const accept: SimpleDeclareFn = (interaction, s, ephemeral?) =>
+  declare(interaction, makeColoredMessage('blue', s), ephemeral);
 
-export const deny: SimpleDeclareFn = (interaction, s, mention?, ephemeral?) =>
-  declare(interaction, HighlightTextType.Red, s, mention, ephemeral);
+export const deny: SimpleDeclareFn = (interaction, s, ephemeral?) =>
+  declare(interaction, makeColoredMessage('red', s), ephemeral);
 
-export const warn: SimpleDeclareFn = (interaction, s, mention?, ephemeral?) =>
-  declare(interaction, HighlightTextType.Yellow, s, mention, ephemeral);
+export const warn: SimpleDeclareFn = (interaction, s, ephemeral?) =>
+  declare(interaction, makeColoredMessage('yellow', s), ephemeral);
 
 export function permissionGuard(permissions: PermissionsBitField | null, perm: PermissionResolvable, checkAdmin: boolean = true) {
   if (permissions && !permissions.any(perm, checkAdmin)) {
@@ -93,8 +133,9 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
 }
 
 const previewTrack = ({ index, track }: TrackPeek<StationRequestedTrack>, padding: number, focus: number | undefined) => {
-  const label = padStart(`${focus === index ? '+ ' : ''}${index + 1}`, padding);
-  return `${label}: ${getTrackBanner(track)} [${track.priority || 0}]`;
+  const isFocusing = focus === index;
+  const label = padStart(`${index + 1}`, padding);
+  return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)} {{red|n}}[{{red|bu}}${track.priority || 0}{{red|n}}]`;
 }
 
 export async function makeRequestPreview(station: Station, index: number = 0, focus?: number, n: number = 5) {
@@ -120,11 +161,5 @@ export async function makeRequestPreview(station: Station, index: number = 0, fo
     lines.push(previewTrack(peek, padding, focus));
   }
 
-  return lines.length
-    ? [
-      '```diff',
-      ...lines,
-      '```'
-    ]
-    : undefined;
+  return lines.length ? makeAnsiCodeBlock(lines) : undefined;
 }

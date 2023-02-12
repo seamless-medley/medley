@@ -24,7 +24,7 @@ import { parse as parsePath, extname } from 'path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
-import { guildStationGuard, HighlightTextType, makeHighlightedMessage, makeRequestPreview, maxSelectMenuOptions, reply } from "../../utils";
+import { formatMention, guildStationGuard, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, reply } from "../../utils";
 
 export type Selection = {
   title: string;
@@ -220,7 +220,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
       if (ok === false || ok.index < 0) {
         interaction.update({
-          content: makeHighlightedMessage('Track could not be requested for some reasons', HighlightTextType.Red),
+          content: makeColoredMessage('red', 'Track could not be requested for some reasons'),
           components: []
         });
         return;
@@ -229,7 +229,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       const preview = await makeRequestPreview(station, ok.index, ok.index);
 
       await interaction.update({
-        content: `Request accepted: \`${getTrackBanner(ok.track)}\``,
+        content: `Request accepted: **\`${getTrackBanner(ok.track)}\`**`,
         components: []
       });
 
@@ -249,7 +249,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
       if (user.id !== issuer) {
         collected.reply({
-          content: `Sorry, this selection is for <@${issuer}> only`,
+          content: `Sorry, this selection is for ${formatMention('user', issuer)} only`,
           ephemeral: true
         });
         return;
@@ -259,7 +259,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       if (customId === 'request:cancel') {
         await stop(false);
         collected.update({
-          content: makeHighlightedMessage('Canceled', HighlightTextType.Yellow),
+          content: makeColoredMessage('yellow', 'Canceled'),
           components: []
         })
         return;
@@ -296,7 +296,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
         if (!choices?.length) {
           collected.update({
-            content: makeHighlightedMessage('Invalid request selection', HighlightTextType.Red),
+            content: makeColoredMessage('red', 'Invalid request selection'),
             components: []
           });
 
@@ -341,7 +341,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       }
 
       collected.reply({
-        content: makeHighlightedMessage('Invalid request interaction', HighlightTextType.Red),
+        content: makeColoredMessage('red', 'Invalid request interaction'),
         ephemeral: true
       });
     });
@@ -349,7 +349,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     collector.on('end', async () => {
       if (!done && selector.editable) {
         await selector.edit({
-          content: makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
+          content: makeColoredMessage('yellow', 'Timed out, please try again'),
           components: []
         })
         .catch(noop);

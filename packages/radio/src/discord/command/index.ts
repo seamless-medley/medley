@@ -110,11 +110,11 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
 
       if (isReplyable(interaction)) {
         if (e instanceof CommandError) {
-          deny(interaction, `Command Error: ${e.message}`, undefined, true);
+          deny(interaction, `Command Error: ${e.message}`, { ephemeral: true });
           return;
         }
 
-        deny(interaction, 'Internal Error', undefined, true);
+        deny(interaction, 'Internal Error', { ephemeral: true });
         return;
       }
     }

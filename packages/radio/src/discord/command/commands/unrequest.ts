@@ -2,7 +2,7 @@ import { parse as parsePath } from 'path';
 import { CommandInteraction, Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageActionRowComponentBuilder, StringSelectMenuBuilder } from "discord.js";
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, reply, makeHighlightedMessage, HighlightTextType } from "../utils";
+import { guildStationGuard, reply, makeHighlightedMessage, HighlightTextType, makeColoredMessage, formatMention } from "../utils";
 import { AudienceType, isRequestTrack, makeAudience } from '@seamless-medley/core';
 
 const declaration: SubCommandLikeOption = {
@@ -82,7 +82,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     collector.on('collect', async i => {
       if (i.user.id !== issuer) {
         i.reply({
-          content: `Sorry, this selection is for <@${issuer}> only`,
+          content: `Sorry, this selection is for${formatMention('user', issuer)} only`,
           ephemeral: true
         })
         return;
@@ -118,7 +118,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
         onGoing.delete(runningKey);
 
         selector.edit({
-          content: makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
+          content: makeColoredMessage('yellow', 'Timed out, please try again'),
           components: []
         });
       }

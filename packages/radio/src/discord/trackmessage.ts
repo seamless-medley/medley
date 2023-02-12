@@ -27,6 +27,7 @@ import { capitalize,
   isEmpty, get, sample } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from 'path';
+import { formatMention } from "./command/utils";
 
 export enum TrackMessageStatus {
   Playing,
@@ -139,7 +140,7 @@ export async function createTrackMessage(guildId: string, station: Station, trac
   }
 
   if (requestedBy?.length) {
-    const mentions =  requesters.length > 0 ? requesters.map(id =>  `<@${id}>`).join(' ') : '> `Someone else`';
+    const mentions =  requesters.length > 0 ? requesters.map(id => formatMention('user', id)).join(' ') : '> `Someone else`';
     embed.addFields({ name: 'Requested by', value: mentions });
   }
 

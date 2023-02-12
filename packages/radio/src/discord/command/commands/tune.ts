@@ -15,7 +15,7 @@ import { stubTrue } from "lodash";
 
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { deny, guildIdGuard, HighlightTextType, makeHighlightedMessage, permissionGuard, reply } from "../utils";
+import { reply, deny, guildIdGuard, permissionGuard, makeColoredMessage, formatMention } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -64,7 +64,7 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
     }
 
     await reply(interaction, {
-      content: makeHighlightedMessage('Could not tune into that station', HighlightTextType.Red),
+      content: makeColoredMessage('red', 'Could not tune into that station'),
       components: []
     });
   }
@@ -121,7 +121,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     collector.on('collect', async i => {
       if (i.user.id !== issuer) {
         reply(i, {
-          content: `Sorry, this selection is for <@${issuer}> only`,
+          content: `Sorry, this selection is for ${formatMention('user', issuer)} only`,
           ephemeral: true
         })
         return;
@@ -148,7 +148,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     collector.on('end', () => {
       if (!done && selector.editable) {
         selector.edit({
-          content: makeHighlightedMessage('Timed out, please try again', HighlightTextType.Yellow),
+          content: makeColoredMessage('yellow', 'Timed out, please try again'),
           components: []
         });
       }

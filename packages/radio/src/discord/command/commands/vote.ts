@@ -3,7 +3,7 @@ import { CommandInteraction, Message, EmbedBuilder, MessageReaction, } from "dis
 import { chain, isEqual, keyBy, sampleSize, take } from "lodash";
 import * as emojis from "../../emojis";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, makeRequestPreview, warn } from "../utils";
+import { formatMention, guildStationGuard, makeRequestPreview, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -25,7 +25,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
   const exisingVote = guildVoteMessage.get(guildId);
   if (exisingVote) {
-    warn(interaction, 'Vote is currently ongoing');
+    warn(interaction, 'Vote is currently on-going');
     return;
   }
 
@@ -176,7 +176,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       const contributorMentions = chain(contributors)
         .uniq()
         .without(automaton.client.user!.id)
-        .map(id => `<@${id}>`)
+        .map(id => formatMention('user', id))
         .value();
 
       const embed = new EmbedBuilder()

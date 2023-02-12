@@ -1,7 +1,7 @@
-import { MusicLibraryExtra } from "@seamless-medley/core";
 import { ButtonInteraction, ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
+import { ansi } from "../ansi";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept, deny, guildStationGuard, permissionGuard, reply } from "../utils";
+import { accept, declare, deny, guildStationGuard, makeAnsiCodeBlock, permissionGuard, reply } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -39,7 +39,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   const exclusiveOption = (hasLength !== hasIncrease);
 
   if (!inquire && !exclusiveOption) {
-    deny(interaction, 'Please use only one option at a time', undefined, true);
+    deny(interaction, 'Please use only one option at a time', { ephemeral: true });
     return;
   }
 
@@ -60,7 +60,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   const { description = latching.collection.id } = latching.collection.extra;
 
   if (latching.max === 0) {
-    accept(interaction, `OK: Stop latching "${description}" collection`);
+    declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Stop latching {{white|u}}{{bgOrange}}${description}{{reset}} collection`));
     return;
   }
 
@@ -76,9 +76,9 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 
   if (hasIncrease) {
     const more = latching.max - latching.count;
-    accept(interaction, `OK: Latching ${more} more tracks from "${description}" collection`)
+    declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Latching {{pink|b}}${more}{{reset}} more tracks from {{white|u}}{{bgOrange}}${description}{{reset}} collection`));
   } else {
-    accept(interaction, `OK: Latching collection "${description ?? latching.collection.id }" for ${latching.max} tracks`);
+    declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Latching collection {{white|u}}{{bgOrange}}${description ?? latching.collection.id }{{reset}} for {{pink|b}}${latching.max}{{reset}} tracks`));
   }
 }
 
@@ -95,7 +95,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   const collection = station.trackPlay?.track?.collection;
 
   if (collection?.id !== collectionId) {
-    deny(interaction, `Could not play more like this, currently playing another collection`, undefined, true);
+    deny(interaction, `Could not play more like this, currently playing another collection`, { ephemeral: true });
     return;
   }
 
@@ -106,16 +106,16 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   });
 
   if (latching === undefined) {
-    deny(interaction, 'Could not play more like this, latching is not allowed for this track', undefined, true);
+    deny(interaction, 'Could not play more like this, latching is not allowed for this track', { ephemeral: true });
     return;
   }
 
   const more = latching.max - latching.count;
   const { description } = latching.collection.extra;
 
-  accept(interaction,
-    `OK: Will play ${more} more like this from "${description}" collection`,
-    `@${interaction.user.id}`
+  declare(interaction,
+    makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Will play {{pink|b}}${more}{{reset}} more like this from {{white|u}}{{bgOrange}}${description}{{reset}} collection`),
+    { mention: { type: 'user', subject: interaction.user.id }}
   );
 }
 

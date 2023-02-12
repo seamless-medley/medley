@@ -1,8 +1,9 @@
 import { AudienceType, extractAudienceGroup, isRequestTrack, Audience, StationTrack } from "@seamless-medley/core";
 import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
+import { ansi } from "../ansi";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept, deny, guildStationGuard, reply, warn } from "../utils";
+import { accept, declare, deny, formatMention, guildStationGuard, makeAnsiCodeBlock, reply, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -43,8 +44,8 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
           .filter(({ type, groupId }) => type === AudienceType.Discord && groupId === guildId)
           .map(r => r.id);
 
-        const mentions = requesters.length > 0 ? requesters.map(id =>  `<@${id}>`).join(' ') : '`Someone else`';
-        await reply(interaction, `<@${interaction.user.id}> Could not skip this track, it was requested by ${mentions}`);
+        const mentions = requesters.length > 0 ? requesters.map(id => formatMention('user', id)).join(' ') : '`Someone else`';
+        await reply(interaction, `${formatMention('user', interaction.user.id)} Could not skip this track, it was requested by ${mentions}`);
         return;
       }
     }
@@ -58,19 +59,28 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
   ]);
 
   if (noPermissions) {
-    await deny(interaction, 'You are not allowed to do that', `@${interaction.user.id}`);
+    await deny(interaction,
+      'You are not allowed to do that',
+      { mention: { type: 'user', subject: interaction.user.id }}
+    );
     return;
   }
 
   if (station.paused || !station.playing) {
-    await deny(interaction, 'Not currently playing', `@${interaction.user.id}`);
+    await deny(interaction,
+      'Not currently playing',
+      { mention: { type: 'user', subject: interaction.user.id }}
+    );
     return;
   }
 
   const result = automaton.skipCurrentSong(guildId);
 
   if (result === true) {
-    await accept(interaction, `OK: Skipping to the next track`, `@${interaction.user.id}`);
+    await declare(interaction,
+      makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, {{blue}}Skipping to the next track`),
+      { mention: { type: 'user', subject: interaction.user.id }}
+    );
     return;
   }
 
@@ -81,7 +91,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   const { station } = guildStationGuard(automaton, interaction);
 
   if (station.trackPlay?.uuid !== playUuid) {
-    await deny(interaction, 'Could not skip this track', undefined, true);
+    await deny(interaction, 'Could not skip this track', { ephemeral: true });
     return;
   }
 

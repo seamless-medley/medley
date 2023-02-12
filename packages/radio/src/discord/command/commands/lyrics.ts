@@ -11,7 +11,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   const track = station.findTrackById(trackId);
 
   if (!track) {
-    deny(interaction, 'Invalid track identifier', undefined, true);
+    deny(interaction, 'Invalid track identifier', { ephemeral: true });
     return;
   }
 

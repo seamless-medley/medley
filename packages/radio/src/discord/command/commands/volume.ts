@@ -1,8 +1,9 @@
 import { decibelsToGain, gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { ChatInputCommandInteraction } from "discord.js";
 import { range, round } from "lodash";
+import { ansi } from "../ansi";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept, deny, guildIdGuard, warn } from "../utils";
+import { accept, declare, deny, guildIdGuard, makeAnsiCodeBlock, warn } from "../utils";
 
 const dbToEmoji = (db: number) => {
   if (db > 3) return '🔊💥';
@@ -70,7 +71,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   let inPercent = interaction.options.getNumber('percent');
 
   if (inDecibels === null && inPercent === null) {
-    accept(interaction, `Current volume: ${volumeToString(oldDecibels)}`);
+    declare(interaction, makeAnsiCodeBlock(ansi`Current volume: {{pink|b}}${volumeToString(oldDecibels)}`));
     return;
   }
 
@@ -88,7 +89,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     return;
   }
 
-  accept(interaction, `OK: Fading volume from ${volumeToString(oldDecibels)} to ${volumeToString(inDecibels)}`);
+  declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Fading volume from {{pink}}${volumeToString(oldDecibels)}{{reset}} to {{cyan}}${volumeToString(inDecibels)}`));
 }
 
 const descriptor: CommandDescriptor = {
