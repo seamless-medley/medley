@@ -87,7 +87,7 @@ export class SweeperInserter {
           collection.push(track);
 
           const id = track.musicId ?? basename(track.path).toLowerCase();
-          this.logger.debug('Insetion id', id);
+          this.logger.debug('Insertion id', id);
 
           if (!this.recent.includes(id)) {
             this.recent.push(id);
