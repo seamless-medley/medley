@@ -219,7 +219,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   }
 
   private async scan(dir: string) {
-    const files = await glob(`${normalizePath(dir)}/**/*.{${supportedExts.join(',')}}`).catch(stubFalse);
+    const files = await glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
 
     if (files !== false) {
       await this.add(shuffle(files));
