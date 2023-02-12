@@ -26,18 +26,17 @@ export class AudioPipeline extends EventEmitter<AudioPipelineEvents> {
 
     this.#clientWorker.onmessage = (e) => {
       if (e.data.type === 'open') {
+        this.#pcmBuffer.reset();
         return;
       }
     }
   }
 
   play(stationId: string) {
-    this.#pcmBuffer.reset();
     this.#clientWorker.postMessage({ type: 'play', stationId });
     this.#ctx?.resume();
   }
 
-  // TODO: Call this when main client is connected
   async connect(socketId: string): Promise<void> {
     await this.#prepareAudioContext();
     this.#clientWorker.postMessage({ type: 'connect', socketId });

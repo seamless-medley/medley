@@ -91,7 +91,7 @@ function disconnect() {
 }
 
 function sendCommand<T extends AudioSocketCommand>(command: T, data: Parameters<AudioSocketCommandMap[T]>[0]) {
-  if (!ws) {
+  if (ws?.readyState !== WebSocket.OPEN) {
     return;
   }
 
@@ -101,7 +101,7 @@ function sendCommand<T extends AudioSocketCommand>(command: T, data: Parameters<
   view.setUint8(0, command);
   buffer.set(new Uint8Array(dataBuffer), 1);
 
-  ws.send(buffer)
+  ws.send(buffer);
 }
 
 function play(stationId: string) {
@@ -115,15 +115,20 @@ function handleStream(ev: MessageEvent<ArrayBuffer>) {
   const data = new Uint8Array(ev.data, 1);
 
   if (op === AudioSocketReply.Opus) {
-    const infoLength = new DataView(data.buffer, data.byteOffset).getUint16(0, true);
-    const extra = decode(new Uint8Array(data.buffer, 2 + data.byteOffset, infoLength));
-    const opus = new Uint8Array(data.buffer, 2 + data.byteOffset + infoLength);
-
-    decoder.postMessage({
-      opus,
-      extra
-    });
+    handleOpus(data);
+    return;
   }
+}
+
+function handleOpus(data: Uint8Array) {
+  const infoLength = new DataView(data.buffer, data.byteOffset).getUint16(0, true);
+  const extra = decode(data.subarray(2, 2 + infoLength));
+  const opus = data.subarray(2 + infoLength);
+
+  decoder.postMessage({
+    opus,
+    extra
+  });
 }
 
 self.addEventListener('message', (e: MessageEvent<InputMessage>) => {
