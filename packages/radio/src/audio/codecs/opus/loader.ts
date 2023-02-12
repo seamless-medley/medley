@@ -33,7 +33,7 @@ export abstract class Opus {
     this.packetLossPercentage = options.packetLossPercentage;
   }
 
-  protected abstract ctl(c: number, value: number): void;
+  protected abstract ctl(c: number, value: number): any;
 
   get bitrate() {
     return this.native.getBitrate();
@@ -83,9 +83,21 @@ export class OpusScript extends Opus {
     }
   }
 
-  protected override ctl(c: number, value: number): void {
-    this.native.encoderCTL(c, value);
+  #bitrate = 128_000;
+
+  protected override ctl(c: number, value: number): any {
+    return this.native.encoderCTL(c, value);
   }
+
+  get bitrate() {
+    return this.#bitrate;
+  }
+
+  set bitrate(value: number) {
+    this.#bitrate = value;
+    this.ctl(4002, value);
+  }
+
 }
 
 export class DiscordOpus extends Opus {
@@ -104,12 +116,12 @@ export class DiscordOpus extends Opus {
       this.OpusEncoder = require('@discordjs/opus').OpusEncoder;
       return true;
     }
-    catch (e) {
+    catch {
       return false;
     }
   }
 
-  protected override ctl(c: number, value: number): void {
+  protected override ctl(c: number, value: number): any {
     this.native.applyEncoderCTL(c, value);
   }
 }
