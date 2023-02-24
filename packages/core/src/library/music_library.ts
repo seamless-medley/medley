@@ -26,6 +26,11 @@ export type MusicTrackCollection<O> = WatchTrackCollection<MusicTrack<O>, MusicL
 
 export type MusicTrackCollectionEvents<O> = TrackCollectionEvents<MusicTrack<O>>;
 
+type IndexInfo<O> = {
+  track: MusicTrack<O>;
+  retried?: number;
+}
+
 export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
   private logger = createLogger({ name: `library/${this.id}` });
 
@@ -61,7 +66,22 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
   }
 
-  private handleTrackAddition = (tracks: MusicTrack<O>[]) => this.indexTracks(tracks, noop);
+  private handleTrackAddition = (tracks: MusicTrack<O>[]) => {
+    this.tryIndexTracks(tracks.map(track => ({ track })));
+  }
+
+  private tryIndexTracks = (info: IndexInfo<O>[]) => {
+    const failures: IndexInfo<O>[] = [];
+
+    this.indexTracks(info, failures, () => {
+      if (failures.length) {
+        setTimeout(() => {
+          this.tryIndexTracks(failures);
+        }, 1000);
+      }
+    });
+  }
+
 
   private handleTrackRemoval = (tracks: MusicTrack<O>[]) => {
     for (const { id } of tracks) {
@@ -75,7 +95,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     await this.searchEngine.removeAll(tracks).catch(e => this.logger.error(e));
 
     for (const track of tracks) {
-      await this.indexTrack(track, true);
+      await this.indexTrack({ track }, true).catch(noop);
     }
   }
 
@@ -92,36 +112,55 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     super.remove(...collections);
   }
 
-  private async indexTracks(tracks: MusicTrack<O>[], done: () => void) {
-    if (tracks.length <= 0) {
+  private async indexTracks(infos: IndexInfo<O>[], failures: IndexInfo<O>[], done: () => void) {
+    if (infos.length <= 0) {
       done();
       return;
     }
 
-    const [track, ...remainings] = tracks;
+    const [first, ...remainings] = infos;
 
-    await this.indexTrack(track);
-    this.indexTracks(remainings, done);
-  }
+    try {
+      await this.indexTrack(first);
+    }
+    catch (e) {
+      first.retried ??= 0;
+      first.retried++;
 
-  private async indexTrack(track: MusicTrack<O>, force: boolean = false) {
-    if (force || !track.extra?.tags) {
-      await helper.fetchMetadata(track, this.musicDb, force)
-        .then(async (result) => {
-          track.musicId = result.metadata.isrc,
-          track.extra = {
-            ...track.extra,
-            tags: result.metadata,
-            kind: TrackKind.Normal
-          };
-        })
-        .catch(e => this.logger.error(e));
+      if (first.retried <= 3)  {
+        failures.push(first);
+      }
     }
 
-    return this.searchEngine.add(track)
-      .catch(e => {
-        this.logger.error(e.message)
-      });
+    this.indexTracks(remainings, failures, done);
+  }
+
+  private async indexTrack({ track }: IndexInfo<O>, force: boolean = false) {
+    if (force || !track.extra?.tags) {
+      try {
+        await helper.fetchMetadata(track, this.musicDb, force)
+          .then(async (result) => {
+            track.musicId = result.metadata.isrc,
+            track.extra = {
+              ...track.extra,
+              tags: result.metadata,
+              kind: TrackKind.Normal
+            };
+          });
+      }
+      catch (e) {
+        this.logger.error('Error while indexing a track: ', (e as any).message);
+        throw e;
+      }
+    }
+
+    try {
+      this.searchEngine.add(track);
+    }
+    catch (e) {
+      this.logger.error(e);
+      throw e;
+    }
   }
 
   async addCollection(descriptor: MusicCollectionDescriptor, onceReady?: () => void): Promise<MusicTrackCollection<O> | undefined> {

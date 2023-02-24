@@ -35,7 +35,12 @@ function acquire() {
  * @param {TrackDocument} track
  */
 function add(track) {
-  acquire().add(track);
+  try {
+    acquire().add(track);
+  }
+  catch (e) {
+
+  }
 }
 
 /**
@@ -49,7 +54,7 @@ function removeAll(trackIds) {
       m.discard(id);
     }
     catch (e) {
-      console.error(e);
+
     }
   }
 }
