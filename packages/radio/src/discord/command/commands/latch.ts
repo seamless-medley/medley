@@ -43,10 +43,12 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     return;
   }
 
+  const collection = station.trackPlay?.track?.collection;
+
   const latching = (() => {
     if (inquire) return station.latch(undefined);
-    if (hasLength) return station.latch({ increase: false, length });
-    if (hasIncrease) return station.latch({ increase });
+    if (hasLength) return station.latch({ increase: false, collection, length });
+    if (hasIncrease) return station.latch({ increase, collection });
   })();
 
   if (latching === undefined) {
