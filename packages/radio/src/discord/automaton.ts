@@ -662,7 +662,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   private handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay, lastTrackPlay) => {
     if (trackPlay.track.extra?.kind !== TrackKind.Insertion) {
-      const sentMessages = await this.sendTrackPlayForStation(trackPlay, station);
+      const sentMessages = await this.sendTrackPlayForStation(trackPlay, deck, station);
 
       // Store message for each guild
       for (const [guildId, trackMsg, maybeMessage] of sentMessages) {
@@ -936,7 +936,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   /**
    * Send to all guilds for a station
    */
-  private async sendTrackPlayForStation(trackPlay: StationTrackPlay, station: Station) {
+  private async sendTrackPlayForStation(trackPlay: StationTrackPlay, deck: DeckIndex, station: Station) {
     const results: [guildId: string, trackMsg: TrackMessage, maybeMessage: Promise<Message<boolean> | undefined> | undefined][] = [];
 
     for (const group of station.audienceGroups) {
@@ -956,7 +956,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
           const channel = textChannelId ? guild.channels.cache.get(textChannelId) : undefined;
           const textChannel = channel?.type == ChannelType.GuildText ? channel : undefined;
 
-          const trackMsg = await createTrackMessage(guildId, station, trackPlay);
+          const positions = station.getDeckPositions(deck);
+          const trackMsg = await createTrackMessage(guildId, station, trackPlay, positions);
 
           const options = trackMessageToMessageOptions({
             ...trackMsg,

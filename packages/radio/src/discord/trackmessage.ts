@@ -7,7 +7,8 @@ import {
   AudienceType,
   StationTrackPlay,
   StationTrackCollection,
-  StationTrack
+  StationTrack,
+  DeckPositions
 } from "@seamless-medley/core";
 import { MetadataHelper } from "@seamless-medley/core/src/metadata";
 
@@ -41,6 +42,7 @@ export type TrackMessage = {
   station: Station;
   trackPlay: StationTrackPlay;
   status: TrackMessageStatus;
+  playDuration: number;
   embed: EmbedBuilder;
   coverImage?: AttachmentBuilder;
   buttons: {
@@ -52,7 +54,7 @@ export type TrackMessage = {
   lyricMessage?: Message;
 }
 
-export async function createTrackMessage(guildId: string, station: Station, trackPlay: StationTrackPlay): Promise<TrackMessage> {
+export async function createTrackMessage(guildId: string, station: Station, trackPlay: StationTrackPlay, positions: DeckPositions): Promise<TrackMessage> {
   const requested = isRequestTrack<StationTrack, Audience>(trackPlay.track) ? trackPlay.track : undefined;
   const requestedBy = requested?.requestedBy;
 
@@ -112,6 +114,13 @@ export async function createTrackMessage(guildId: string, station: Station, trac
     embed.setDescription(parsePath(track.path).name);
   }
 
+  const playDuration = positions.last - positions.first;
+
+  embed.addFields({
+    name: 'Duration',
+    value: `**\`${playDuration ? formatDuration(playDuration) : 'Unnown'}\`**`
+  });
+
   if (track.collection.extra) {
     const { description, owner: station } = track.collection.extra;
 
@@ -169,6 +178,7 @@ export async function createTrackMessage(guildId: string, station: Station, trac
     trackPlay,
     status: TrackMessageStatus.Playing,
     embed,
+    playDuration,
     coverImage,
     buttons: {
       lyric: lyricButton,
@@ -181,7 +191,7 @@ export async function createTrackMessage(guildId: string, station: Station, trac
 export type TrackMessageOptions = Pick<MessageEditOptions, 'embeds' | 'files' | 'components'> ;
 
 export function trackMessageToMessageOptions<T>(msg: TrackMessage): TrackMessageOptions {
-  const { embed, coverImage, buttons } = msg;
+  const { status, embed, coverImage, buttons } = msg;
 
   const { lyric, skip, more } = buttons;
 
@@ -209,3 +219,16 @@ export function trackMessageToMessageOptions<T>(msg: TrackMessage): TrackMessage
     components: actionRow ? [actionRow] : []
   }
 }
+
+const formatDuration = (seconds: number) => seconds > 0
+  ? ([[1, 60], [60, 60], [60 * 60, 24, true]] as [number, number, boolean | undefined][])
+    .reverse()
+    .map(([d, m, optional]) => {
+      const v = Math.trunc(seconds / d) % m;
+      return (v !== 0 || !optional)
+        ? `${v}`.padStart(2, '0')
+        : undefined
+    })
+    .filter(v => v !== undefined)
+    .join(':')
+  : undefined
