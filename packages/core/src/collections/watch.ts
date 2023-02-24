@@ -5,10 +5,10 @@ import fg from 'fast-glob';
 import mm from 'minimatch';
 import { debounce, groupBy, shuffle, stubFalse, uniq } from "lodash";
 import normalizePath from "normalize-path";
-import watcher, { AsyncSubscription, SubscribeCallback } from '@parcel/watcher';
+import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
 
-import { supportedExts, TrackCollection, TrackCollectionOptions } from "./base";
-import { Track, TrackExtra } from "../track";
+import { TrackCollection, TrackCollectionOptions } from "./base";
+import { Track } from "../track";
 
 type WatchInfo = {
   subscription?: AsyncSubscription;
@@ -154,7 +154,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
 
     const info = this.watchInfos.get(normalizedPath)!;
 
-    info.subscription = await watcher.subscribe(normalizedPath, info.handler).catch(() => undefined);
+    info.subscription = await watch(normalizedPath, info.handler);
   }
 
   /**
@@ -253,3 +253,16 @@ const glob = (pattern: string) => fg(pattern, {
   braceExpansion: true,
   suppressErrors: true,
 });
+
+async function watch(path: string, callback: SubscribeCallback) {
+  const backends: (BackendType | undefined)[] = ['watchman', undefined];
+
+  for (const backend of backends) {
+    try {
+      return await watcher.subscribe(path,callback, { backend });
+    }
+    catch (e) {
+      continue;
+    }
+  }
+}
