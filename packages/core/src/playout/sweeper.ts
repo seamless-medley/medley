@@ -70,7 +70,7 @@ export class SweeperInserter {
   private logger: Logger<ILogObj>;
 
   constructor(private boombox: BoomBox, public rules: SweeperInsertionRule[] = []) {
-    this.logger = createLogger({ name: `${boombox.id}/sweeper-inserter` });
+    this.logger = createLogger({ name: `sweeper-inserter/${boombox.id}` });
     boombox.on('collectionChange', this.handler);
   }
 
@@ -87,7 +87,6 @@ export class SweeperInserter {
           collection.push(track);
 
           const id = track.musicId ?? basename(track.path).toLowerCase();
-          this.logger.debug('Insertion id', id);
 
           if (!this.recent.includes(id)) {
             this.recent.push(id);
