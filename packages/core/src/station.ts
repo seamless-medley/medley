@@ -386,8 +386,8 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.boombox.activeDeck;
   }
 
-  get trackPlay() {
-    return this.boombox.trackPlay as StationTrackPlay;
+  get trackPlay(): StationTrackPlay | undefined {
+    return this.boombox.trackPlay;
   }
 
   async trackHistory() {
