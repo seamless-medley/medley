@@ -19,12 +19,12 @@ import {
   StringSelectMenuInteraction
 } from "discord.js";
 
-import { chain, chunk, clamp, Dictionary, isNull, noop, sortBy, truncate, zip } from "lodash";
+import { chain, chunk, clamp, Dictionary, groupBy, identity, isNull, noop, sortBy, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
-import { formatMention, guildStationGuard, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, reply } from "../../utils";
+import { formatMention, guildStationGuard, joinStrings, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, reply } from "../../utils";
 
 export type Selection = {
   title: string;
@@ -107,7 +107,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     })
     .groupBy(({ title, artist = '' }) => createHash('sha256').update(`${title}:${artist}`.toLowerCase()).digest('base64'))
     .transform((d, selection, groupKey) => {
-      selection = sortBy(selection, selectionSortingOrder);
+      selection = sortBy(selection, selectionOrder);
 
       if (selection.length <= maxSelectMenuOptions) {
         d[groupKey] = selection;
@@ -168,6 +168,10 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     .setCustomId('request:nextPage')
     .setStyle(ButtonStyle.Secondary)
 
+  const ttl = 90_000;
+
+  const getTimeout = () => `Request Timeout: <t:${Math.trunc((Date.now() + ttl) / 1000)}:R>`;
+
   const buildSearchResultMenu = (page: number): InteractionReplyOptions => {
     const components: MessageActionRowComponentBuilder[] = [cancelButtonBuilder];
 
@@ -180,7 +184,10 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     }
 
     return {
-      content: isGrouped ? `Search result, page ${page + 1}/${totalPages}:` : 'Select a track',
+      content: joinStrings([
+        getTimeout(),
+        (isGrouped && totalPages > 1) ? `Search result, page ${page + 1}/${totalPages}:` : `Select a track:`
+      ]),
       components: [
         new ActionRowBuilder<MessageActionRowComponentBuilder>()
           .addComponents(
@@ -198,7 +205,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   const selector = await reply(interaction, { ...buildSearchResultMenu(currentPage), fetchReply: true });
 
   if (selector instanceof Message) {
-    const collector = selector.createMessageComponentCollector({ time: 90_000 });
+    const collector = selector.createMessageComponentCollector({ time: ttl });
     let done = false;
 
     const stop = async (shouldDelete: boolean = true) => {
@@ -265,7 +272,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         return;
       }
 
-      collector.resetTimer({ time: 90_000 });
+      collector.resetTimer({ time: ttl });
 
       const paginationNavigation: Record<string, number> = {
         'request:back': 0,
@@ -311,7 +318,11 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         const trackSelections = makeTrackSelections(choices);
 
         collected.update({
-          content: 'Select a track',
+
+          content: joinStrings([
+            getTimeout(),
+            'Select a track']
+          ),
           components: [
             new ActionRowBuilder<MessageActionRowComponentBuilder>()
               .addComponents(
@@ -360,46 +371,98 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   }
 }
 
-function makeTrackSelections(choices: Selection[]) {
-  return chain(choices)
-    .groupBy(selectionSortingOrder)
-    .flatMap((auxGroup) => chain(auxGroup)
-      .groupBy(c => c.track.collection.id) // Collection
-      .flatMap((byCollection) => (byCollection.length === 1)
-        ? { by: [], selection: byCollection[0] }
-        : chain(byCollection)
-        .groupBy(c => extname(c.track.path.toUpperCase()).substring(1)) // Extension
-        .flatMap((byExt, ext) => (byExt.length === 1)
-            ? { by: [ext], selection: byExt[0] }
-            : chain(byExt)
-              .groupBy(c => c.track.extra?.tags?.album ?? '') // Album
-              .flatMap((byAlbum, album) => byAlbum.map(selection => ({ by: [ext, album], selection })))
-              .value()
-       )
-       .value()
-    )
-    .value()
-  )
-  .take(maxSelectMenuOptions)
-  .map(({ selection: { title, artist = 'Unknown Artist', track }, by }) => {
-    const collectionName = track.collection.extra.description ?? track.collection.id;
+const isExtensionLossless = (ext: string) => /(flac|wav)/i.test(ext);
 
-    if (title.length + artist.length + 3 > 100) {
-      title = truncate(title, { length: 100 - artist.length - 3 })
+const makeTrackSelections = (choices: Selection[]) => clarifySelection(choices,
+  [
+    {
+      getKey: selectionOrder,
+      prioritize: identity,
+      clarify: (_, sample) => sample.track.collection.extra.description
+    },
+    {
+      getKey: s => extname(s.track.path.toUpperCase()).substring(1),
+      prioritize: key => isExtensionLossless(key) ? -1 : 0
+    },
+    {
+      getKey: ({ track }) => ((track.extra?.tags?.sampleRate ?? 0) / 1000).toFixed(1),
+      prioritize: k => -k
+    },
+    {
+      getKey: sel => sel.track.extra?.tags?.bitrate ?? 0,
+      prioritize: k => -k
+    },
+    {
+      getKey: s => s.track.extra?.tags?.album ?? '',
+      prioritize: identity,
+      clarify: key => key
     }
+  ],
+)
 
-    return {
-      label: `${title} - ${artist}`,
-      description: [collectionName, ...by].filter(Boolean).join('/'),
-      value: track.id
-    }
-  })
-  .value()
-}
-
-function selectionSortingOrder(selection: Selection): 0 | 1 | 2 {
+function selectionOrder(selection: Selection): 0 | 1 | 2 {
   const { options } = selection.track.collection;
   if (options.auxiliary) return 2;
   if (options.noFollowOnRequest) return 1;
   return 0;
+}
+
+function selectionToComponentData(selection: Selection, clarified: string[]): SelectMenuComponentOptionData {
+  const { title, artist = 'Unknown Artist', track } = selection;
+  const { bitrate = 0, sampleRate = 0 } = selection.track.extra?.tags ?? {};
+
+  const c = clarified.filter(Boolean).join('/');
+  const fmt = [
+    extname(selection.track.path.toUpperCase()).substring(1),
+    sampleRate ? `${(sampleRate / 1000).toFixed(1)}KHz` : undefined,
+    bitrate ? `${bitrate}Kbps` : undefined
+  ].filter(Boolean).join('; ');
+
+  const description =  [c, fmt].filter(Boolean).join(' - ');
+
+  return {
+    label: `${title} - ${artist}`,
+    description,
+    value: track.id
+  };
+}
+
+type ClarificationProcessor = {
+  getKey: (s: Selection) => any;
+  prioritize: (key: string) => number;
+  clarify?: (key: string, sample: Selection) => string;
+}
+
+function clarifySelection(selections: Selection[], processors: ClarificationProcessor[], clarified: string[] = []) {
+  if (processors.length < 1) {
+    return selections.map(sel => selectionToComponentData(sel, clarified));
+  }
+
+  const [processor, ...nextProcessors] = processors;
+
+  const result: SelectMenuComponentOptionData[] = [];
+
+  const groups = groupBy(selections, s => processor.getKey(s));
+  const keys = Object.keys(groups).sort(processor.prioritize);
+
+  for (const key of keys) {
+    const group = groups[key];
+
+    if (group.length < 1) {
+      continue;
+    }
+
+    const nextClarifications = [...clarified, processor.clarify?.(key, group[0]) ?? ''];
+
+    if (group.length > 1) {
+      result.push(...clarifySelection(group, nextProcessors, nextClarifications));
+      continue;
+    }
+
+    if (group.length === 1) {
+      result.push(selectionToComponentData(group[0], nextClarifications))
+    }
+  }
+
+  return result;
 }
