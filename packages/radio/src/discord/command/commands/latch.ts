@@ -62,7 +62,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   const { description = latching.collection.id } = latching.collection.extra;
 
   if (latching.max === 0) {
-    declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Stop latching {{white|u}}{{bgOrange}}${description}{{reset}} collection`));
+    declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Stop latching {{bgOrange}} {{white|u}}${description}{{bgOrange|n}} {{reset}} collection`));
     return;
   }
 
@@ -78,9 +78,9 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 
   if (hasIncrease) {
     const more = latching.max - latching.count;
-    declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Latching {{pink|b}}${more}{{reset}} more tracks from {{white|u}}{{bgOrange}}${description}{{reset}} collection`));
+    declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Latching {{pink|b}}${more}{{reset}} more tracks from {{bgOrange}} {{white|u}}${description}{{bgOrange|n}} {{reset}} collection`));
   } else {
-    declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Latching collection {{white|u}}{{bgOrange}}${description ?? latching.collection.id }{{reset}} for {{pink|b}}${latching.max}{{reset}} tracks`));
+    declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Latching collection {{bgOrange}} {{white|u}}${description ?? latching.collection.id }{{bgOrange|n}} {{reset}} for {{pink|b}}${latching.max}{{reset}} tracks`));
   }
 }
 
@@ -116,7 +116,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   const { description } = latching.collection.extra;
 
   declare(interaction,
-    makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Will play {{pink|b}}${more}{{reset}} more like this from {{white|u}}{{bgOrange}}${description}{{reset}} collection`),
+    makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Will play {{pink|b}}${more}{{reset}} more like this from {{bgOrange}} {{white|u}}${description}{{bgOrange|n}} {{reset}} collection`),
     { mention: { type: 'user', subject: interaction.user.id }}
   );
 }

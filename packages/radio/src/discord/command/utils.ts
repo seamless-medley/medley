@@ -135,7 +135,7 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
 const previewTrack = ({ index, track }: TrackPeek<StationRequestedTrack>, padding: number, focus: number | undefined) => {
   const isFocusing = focus === index;
   const label = padStart(`${index + 1}`, padding);
-  return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)} {{red|n}}[{{red|bu}}${track.priority || 0}{{red|n}}]`;
+  return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)} {{red|b}}[${track.priority || 0}]`;
 }
 
 export async function makeRequestPreview(station: Station, index: number = 0, focus?: number, n: number = 5) {

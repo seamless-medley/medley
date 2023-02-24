@@ -2,8 +2,9 @@ import { parse as parsePath } from 'path';
 import { CommandInteraction, Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageActionRowComponentBuilder, StringSelectMenuBuilder } from "discord.js";
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, reply, makeHighlightedMessage, HighlightTextType, makeColoredMessage, formatMention } from "../utils";
+import { guildStationGuard, reply, makeHighlightedMessage, HighlightTextType, makeColoredMessage, formatMention, makeAnsiCodeBlock, joinStrings } from "../utils";
 import { AudienceType, isRequestTrack, makeAudience } from '@seamless-medley/core';
+import { ansi } from '../ansi';
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -106,10 +107,10 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
       i.update({
         components: [],
-        content: makeHighlightedMessage([
-          `OK, ${unrequested.removed.length} track(s) canceled`,
-          alreadyLoaded ? 'Some tracks are loaded' : undefined
-        ], HighlightTextType.Cyan)
+        content: joinStrings(makeAnsiCodeBlock([
+          ansi`{{green}}OK{{reset}}, {{pink}}${unrequested.removed.length}{{reset}} track(s) canceled`,
+          alreadyLoaded ? '{{pink|b}}{{bgDarkBlue}}Some tracks are loaded and cannot be canceled' : undefined
+        ]))
       });
     });
 
