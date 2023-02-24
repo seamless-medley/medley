@@ -32,8 +32,14 @@
                 "../engine/src/Fader.cpp",
                 "../engine/src/NullAudioDevice.cpp"
             ],
-            "cflags!": ["-fno-exceptions", '-fno-rtti'],
-            "cflags_cc!": ["-fno-exceptions", '-fno-rtti'],
+            "cflags!": [
+                "-fno-exceptions",
+                '-fno-rtti'
+            ],
+            "cflags_cc!": [
+                "-fno-exceptions",
+                '-fno-rtti'
+            ],
             'defines': [
                 'UNICODE',
                 '_UNICODE',
@@ -88,12 +94,11 @@
                                 'msvs_settings': {
                                     'VCCLCompilerTool': {
                                         'RuntimeTypeInfo': 'true',
-                                        'ExceptionHandling': 'true',
                                         'EnableIntrinsicFunctions': 'true',
                                         'Optimization': 2,
                                         'WholeProgramOptimization': 'true',
                                         'AdditionalIncludeDirectories': ['$(VcpkgRoot)\\installed\\x64-windows-static\\include'],
-                                        'AdditionalOptions': ['/EHsc', '/MTd', '/MP', '/O2', '/GL', '/Gy', '/Oi', '/source-charset:utf-8', '-std:c++17'],
+                                        'AdditionalOptions': ['/EHa', '/MTd', '/MP', '/O2', '/GL', '/Gy', '/Oi', '/source-charset:utf-8', '-std:c++17'],
                                     },
                                     'VCLinkerTool': {
                                         'OptimizeReferences': 2,
@@ -110,12 +115,11 @@
                                 'msvs_settings': {
                                     'VCCLCompilerTool': {
                                         'RuntimeTypeInfo': 'true',
-                                        'ExceptionHandling': 'true',
                                         'EnableIntrinsicFunctions': 'true',
                                         'Optimization': 2,
                                         'WholeProgramOptimization': 'true',
                                         'AdditionalIncludeDirectories': ['$(VcpkgRoot)\\installed\\x64-windows-static\\include'],
-                                        'AdditionalOptions': ['/EHsc', '/MT', '/MP', '/O2', '/GL', '/Gy', '/Oi', '/source-charset:utf-8', '-std:c++17'],
+                                        'AdditionalOptions': ['/EHa', '/MT', '/MP', '/O2', '/GL', '/Gy', '/Oi', '/source-charset:utf-8', '-std:c++17'],
                                     },
                                     'VCLinkerTool': {
                                         'OptimizeReferences': 2,

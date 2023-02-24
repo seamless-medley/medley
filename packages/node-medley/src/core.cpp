@@ -337,6 +337,7 @@ void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley:
             auto obj = Napi::Object::New(env);
             obj.Set("uuid", Napi::String::New(env, uuid.toStdString()));
             obj.Set("track", track);
+            obj.Set("duration", trackPlay.getDuration());
 
             emitFn.Call(self.Value(), {
                 Napi::String::New(env, name),
@@ -768,8 +769,18 @@ Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
 
     juce::String trackFile = info[0].ToString().Utf8Value();
     medley::Metadata metadata;
+    bool ok = false;
 
-    metadata.readFromFile(trackFile);
+    try {
+        ok = metadata.readFromFile(trackFile);
+    }
+    catch (std::exception e) {
+        throw Napi::Error::New(info.Env(), e.what());
+    }
+
+    if (!ok) {
+        return env.Undefined();
+    }
 
     auto result = Object::New(env);
 
@@ -777,6 +788,16 @@ Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
     result.Set("artist", safeString(env, metadata.getArtist()));
     result.Set("album", safeString(env, metadata.getAlbum()));
     result.Set("isrc", safeString(env, metadata.getISRC()));
+    result.Set("albumArtist", safeString(env, metadata.getAlbumArtist()));
+    result.Set("originalArtist", safeString(env, metadata.getOriginalArtist()));
+
+    auto bitrate = metadata.getBitrate();
+    auto sampleRate = metadata.getSampleRate();
+    auto duration = metadata.getDuration();
+
+    result.Set("bitrate", bitrate != 0.0f ? Napi::Number::New(env, bitrate) : env.Undefined());
+    result.Set("sampleRate", sampleRate != 0.0f ? Napi::Number::New(env, sampleRate) : env.Undefined());
+    result.Set("duration", duration != 0.0f ? Napi::Number::New(env, duration) : env.Undefined());
 
     auto trackGain = metadata.getTrackGain();
     auto bpm = metadata.getBeatsPerMinute();

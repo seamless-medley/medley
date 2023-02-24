@@ -111,6 +111,7 @@ export declare enum DeckIndex {
 export type TrackPlay<T extends TrackInfo> = {
   uuid: string;
   track: T;
+  duration: number;
 }
 
 export type Listener<T = void> = () => T;
@@ -240,7 +241,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   deleteAudioStream(id: number): void;
 
-  static getMetadata(path: string): Metadata;
+  static getMetadata(path: string): Metadata | undefined;
 
   static getCoverAndLyrics(path: string): CoverAndLyrics;
 
@@ -321,6 +322,11 @@ export type Metadata = {
   artist?: string;
   album?: string;
   isrc?: string;
+  albumArtist?: string;
+  originalArtist?: string;
+  bitrate?: number;
+  sampleRate?: number;
+  duration?: number;
   trackGain?: number;
   bpm?: number;
 }

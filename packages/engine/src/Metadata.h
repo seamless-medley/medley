@@ -64,23 +64,31 @@ public:
     };
 
     Metadata();
-    void readFromTrack(const ITrack::Ptr track);
-    void readFromFile(const File& file);
+
+    bool readFromTrack(const ITrack::Ptr track);
+    bool readFromFile(const File& file);
 
     FileType getFileType() const { return type; }
     const juce::String& getTitle() const { return title; }
     const juce::String& getArtist() const { return artist; }
     const juce::String& getAlbum() const { return album; }
     const juce::String& getISRC() const { return isrc; }
+    const juce::String& getAlbumArtist() const { return albumArtist; }
+    const juce::String& getOriginalArtist() const { return originalArtist; }
+
     float getTrackGain() const { return trackGain; }
     float getBeatsPerMinute() const { return bpm; }
     double getCueIn() const { return cueIn; }
     double getCueOut() const { return cueOut; }
     double getLastAudible() const { return lastAudible; }
+    int getBitrate() const { return bitrate; }
+    int getSampleRate() const { return sampleRate; }
+    double getDuration() const { return duration; }
 
 private:
+    void readMpegInfo(const File& f);
     bool readID3V2(const File& f);
-    bool readXiph(const File& f);
+    bool readFLAC(const File& f);
     void readTag(const TagLib::Tag& tag);
 
     FileType type = FileType::Unknown;
@@ -88,11 +96,17 @@ private:
     juce::String artist;
     juce::String album;
     juce::String isrc;
+    juce::String albumArtist;
+    juce::String originalArtist;
     float bpm = 0.0f;
     float trackGain = 0.0f;
     double cueIn = -1.0;
     double cueOut = -1.0;
     double lastAudible = -1.0;
+
+    int bitrate = 0;
+    int sampleRate = 0;
+    double duration = 0;
 };
 
 }

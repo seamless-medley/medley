@@ -25,23 +25,30 @@ public:
 
     }
 
-    TrackPlay(ITrack::Ptr track)
-        : track(track)
+    TrackPlay(ITrack::Ptr track, double duration)
+        :
+        track(track),
+        duration(duration)
     {
 
     }
 
     TrackPlay(const TrackPlay& other)
-        : uuid(other.uuid), track(other.track)
+        :
+        uuid(other.uuid),
+        track(other.track),
+        duration(other.duration)
     {
 
     }
 
     const Uuid& getUuid() const { return uuid; }
     ITrack::Ptr getTrack() const { return track; }
+    double getDuration() const { return duration; }
 private:
     Uuid uuid;
     ITrack::Ptr track;
+    double duration;
 };
 
 }

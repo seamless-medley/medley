@@ -1,7 +1,10 @@
 #include "Metadata.h"
+#include <taglib/tfilestream.h>
 #include <taglib/textidentificationframe.h>
 #include <taglib/xiphcomment.h>
 #include <taglib/attachedpictureframe.h>
+
+#include "MiniMP3AudioFormatReader.h"
 
 namespace {
 
@@ -86,152 +89,285 @@ medley::Metadata::Metadata()
 
 }
 
-void medley::Metadata::readFromTrack(const ITrack::Ptr track)
+bool medley::Metadata::readFromTrack(const ITrack::Ptr track)
 {
-    readFromFile(track->getFile());
+    return readFromFile(track->getFile());
 }
 
-void medley::Metadata::readFromFile(const File& file)
+bool medley::Metadata::readFromFile(const File& file)
 {
     bpm = 0.0f;
     trackGain = 0.0f;
+    cueIn = -1.0;
+    cueOut = -1.0;
+    lastAudible = -1.0;
     title = "";
     artist = "";
     album = "";
     isrc = "";
+    albumArtist = "";
+    originalArtist = "";
 
-    auto filetype = utils::getFileTypeFromFileName(file);
+    try {
+        auto filetype = utils::getFileTypeFromFileName(file);
 
-    switch (filetype) {
-    case utils::FileType::MP3: {
-        readID3V2(file);
-        return;
+        switch (filetype) {
+        case utils::FileType::MP3: {
+            return readID3V2(file);
+        }
+
+        case utils::FileType::FLAC: {
+            return readFLAC(file);
+        }
+
+                                  // TODO: Other file types
+
+        }
+
+        title = file.getFileNameWithoutExtension();
+        return true;
+    }
+    catch (std::exception& e) {
+        throw std::runtime_error(("Could not read metadata from file " + file.getFullPathName() + " Error was: " + e.what()).toStdString());
+    }
+    catch (...) {
+        throw std::runtime_error(("Could not read metadata from file " + file.getFullPathName()).toStdString());
     }
 
-    case utils::FileType::FLAC: {
-        readXiph(file);
-        return;
-    }
-
-    // TODO: Other file types
-
-    }
-
-    title = file.getFileNameWithoutExtension();
+    return false;
 }
 
-bool medley::Metadata::readID3V2(const File& f)
+namespace {
+    static size_t minimp3_read_cb(void* buf, size_t size, void* user_data)
+    {
+        auto input = (FileInputStream*)user_data;
+
+        if (!input) {
+            return -1;
+        }
+
+        return input->read(buf, size);
+    }
+
+    static int minimp3_seek_cb(uint64_t position, void* user_data)
+    {
+        auto input = (FileInputStream*)user_data;
+
+        if (!input) {
+            return -1;
+        }
+
+        return input->setPosition(position) ? 0 : -1;
+    }
+}
+
+void medley::Metadata::readMpegInfo(const File& f)
+{
+    FileInputStream stream(f);
+
+    mp3dec_io_t io{};
+    mp3dec_ex_t dec{};
+
+    io.read = &minimp3_read_cb;
+    io.seek = &minimp3_seek_cb;
+    io.read_data = io.seek_data = &stream;
+
+    mp3dec_ex_open_cb(&dec, &io, MP3D_SEEK_TO_SAMPLE);
+
+    auto lengthInSamples = dec.detected_samples / dec.info.channels;
+
+    if (lengthInSamples <= 0) {
+        lengthInSamples = dec.samples / dec.info.channels;
+    }
+
+    bitrate = dec.info.bitrate_kbps;
+    sampleRate = dec.info.hz;
+    duration = lengthInSamples / (float)sampleRate;
+}
+
+bool medley::Metadata::readID3V2(const juce::File& f)
 {
     #ifdef _WIN32
-    TagLib::MPEG::File file((const wchar_t*)f.getFullPathName().toWideCharPointer());
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
     #else
-    TagLib::MPEG::File file(f.getFullPathName().toRawUTF8());
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+    #endif    
+
+    TagLib::MPEG::File file(fileName, TagLib::ID3v2::FrameFactory::instance());
+
+    if (!file.isValid()) {
+        throw std::runtime_error("Could not open MPEG file for reading");
+    }
+
+    try {
+
+        readMpegInfo(f);
+
+        if (!file.hasID3v2Tag()) {
+            return false;
+        }
+
+        auto& tag = *file.ID3v2Tag();
+        readTag(tag);
+
+        const auto& tpe2Frames = tag.frameListMap()["TPE2"];
+        if (!tpe2Frames.isEmpty()) {
+            for (const auto pFrame : tpe2Frames) {
+                if (pFrame) {
+                    albumArtist = pFrame->toString().toCWString();
+                    break;
+                }
+            }
+        }
+
+        const auto& topeFrames = tag.frameListMap()["TOPE"];
+        if (!topeFrames.isEmpty()) {
+            for (const auto pFrame : topeFrames) {
+                if (pFrame) {
+                    originalArtist = pFrame->toString().toCWString();
+                    break;
+                }
+            }
+        }
+
+        const auto& tsrcFrames = tag.frameListMap()["TSRC"];
+        if (!tsrcFrames.isEmpty()) {
+            for (const auto pFrame : tsrcFrames) {
+                if (pFrame) {
+                    isrc = pFrame->toString().toCWString();
+                    break;
+                }
+            }
+        }
+
+        const auto& tbpmFrames = tag.frameListMap()["TBPM"];
+        if (!tbpmFrames.isEmpty()) {
+            for (const auto pFrame : tbpmFrames) {
+                if (pFrame) {
+                    juce::String bpm = pFrame->toString().toCWString();
+                    this->bpm = bpm.getFloatValue();
+
+                    if (this->bpm < 0.0f) {
+                        this->bpm = 0.0f;
+
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (tag.header()->majorVersion() >= 3) {
+            auto trackGain = readFirstUserTextIdentificationFrame(tag, L"REPLAYGAIN_TRACK_GAIN");
+            this->trackGain = (float)parseReplayGainGain(trackGain);
+
+            auto cueIn = readFirstUserTextIdentificationFrame(tag, L"CUE-IN");
+            if (cueIn.isEmpty()) {
+                cueIn = readFirstUserTextIdentificationFrame(tag, L"CUE_IN");
+            }
+
+            this->cueIn = cueIn.isNotEmpty() ? cueIn.getDoubleValue() : -1.0;
+
+            auto cueOut = readFirstUserTextIdentificationFrame(tag, L"CUE-OUT");
+            if (cueOut.isEmpty()) {
+                cueOut = readFirstUserTextIdentificationFrame(tag, L"CUE_OUT");
+            }
+
+            this->cueOut = cueOut.isNotEmpty() ? cueOut.getDoubleValue() : -1.0;
+
+            auto lastAudible = readFirstUserTextIdentificationFrame(tag, L"LAST_AUDIBLE");
+
+            this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
+        }
+
+        return true;
+    }
+    catch (...) {
+        throw std::runtime_error("reading ID3V2");
+    }
+}
+
+bool medley::Metadata::readFLAC(const File& f)
+{
+    #ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+    #else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
     #endif
 
-    if (!file.hasID3v2Tag()) {
-        return false;
+    TagLib::FileStream stream(fileName);
+    TagLib::FLAC::File file(&stream, TagLib::ID3v2::FrameFactory::instance(), true, TagLib::AudioProperties::Fast);
+
+    if (!file.isValid()) {
+        throw std::runtime_error("Invalid FLAC file");
     }
 
-    auto& tag = *file.ID3v2Tag();
-    readTag(tag);
+    if (TagLib::FLAC::File::isSupported(&stream)) {
+        try {
+            auto const props = file.audioProperties();
 
-    // TODO: Original Artist
-
-    const auto& tsrcFrames = tag.frameListMap()["TSRC"];
-    if (!tsrcFrames.isEmpty()) {
-        for (const auto pFrame : tsrcFrames) {
-            if (pFrame) {
-                isrc = pFrame->toString().toCWString();
-                break;
-            }
+            bitrate = props->bitrate();
+            sampleRate = props->sampleRate();
+            duration = props->lengthInMilliseconds() / 1000.0;
+        }
+        catch (...) {
+            bitrate = 0;
+            sampleRate = 0;
+            duration = 0;
         }
     }
 
-    const auto& tbpmFrames = tag.frameListMap()["TBPM"];
-    if (!tbpmFrames.isEmpty()) {
-        for (const auto pFrame : tbpmFrames) {
-            if (pFrame) {
-                juce::String bpm = pFrame->toString().toCWString();
-                this->bpm = bpm.getFloatValue();
+    try {
 
-                if (this->bpm < 0.0f) {
-                    this->bpm = 0.0f;
-
-                }
-                break;
-            }
+        if (!file.hasXiphComment()) {
+            return false;
         }
-    }
 
-    if (tag.header()->majorVersion() >= 3) {
-        auto trackGain = readFirstUserTextIdentificationFrame(tag, L"REPLAYGAIN_TRACK_GAIN");
+        auto& tag = *file.xiphComment();
+        readTag(tag);
+
+        juce::String isrc;
+        readXiphCommentField(tag, "ISRC", &isrc);
+        this->isrc = isrc;
+
+        juce::String albumArtist;
+        readXiphCommentField(tag, "ALBUMARTIST", &albumArtist);
+        this->albumArtist = albumArtist;
+
+        juce::String originalArtist;
+        readXiphCommentField(tag, "ORIGARTIST", &isrc);
+        this->originalArtist = originalArtist;
+
+
+        juce::String trackGain;
+        readXiphCommentField(tag, "REPLAYGAIN_TRACK_GAIN", &trackGain);
         this->trackGain = (float)parseReplayGainGain(trackGain);
 
-        auto cueIn = readFirstUserTextIdentificationFrame(tag, L"CUE-IN");
+        juce::String cueIn;
+        readXiphCommentField(tag, L"CUE-IN", &cueIn);
         if (cueIn.isEmpty()) {
-            cueIn = readFirstUserTextIdentificationFrame(tag, L"CUE_IN");
+            readXiphCommentField(tag, L"CUE_IN", &cueIn);
         }
 
         this->cueIn = cueIn.isNotEmpty() ? cueIn.getDoubleValue() : -1.0;
 
-        auto cueOut = readFirstUserTextIdentificationFrame(tag, L"CUE-OUT");
+        juce::String cueOut;
+        readXiphCommentField(tag, L"CUE-OUT", &cueOut);
         if (cueOut.isEmpty()) {
-            cueOut = readFirstUserTextIdentificationFrame(tag, L"CUE_OUT");
+            readXiphCommentField(tag, L"CUE_OUT", &cueOut);
         }
 
         this->cueOut = cueOut.isNotEmpty() ? cueOut.getDoubleValue() : -1.0;
 
-        auto lastAudible = readFirstUserTextIdentificationFrame(tag, L"LAST_AUDIBLE");
+        juce::String lastAudible;
+        readXiphCommentField(tag, L"LAST_AUDIBLE", &lastAudible);
 
         this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
+
+        return true;
     }
-
-    return true;
-}
-
-bool medley::Metadata::readXiph(const File& f)
-{
-    #ifdef _WIN32
-    TagLib::FLAC::File file((const wchar_t*)f.getFullPathName().toWideCharPointer());
-    #else
-    TagLib::FLAC::File file(f.getFullPathName().toRawUTF8());
-    #endif
-
-    if (!file.hasXiphComment()) {
-        return false;
+    catch (...) {
+        throw std::runtime_error("reading FLAC");
     }
-
-    auto& tag = *file.xiphComment();
-    readTag(tag);
-
-    juce::String isrc;
-    readXiphCommentField(tag, "ISRC", &isrc);
-    this->isrc = isrc;
-
-    juce::String trackGain;
-    readXiphCommentField(tag, "REPLAYGAIN_TRACK_GAIN", &trackGain);
-    this->trackGain = (float)parseReplayGainGain(trackGain);
-
-    juce::String cueIn;
-    readXiphCommentField(tag, L"CUE-IN", &cueIn);
-    if (cueIn.isEmpty()) {
-        readXiphCommentField(tag, L"CUE_IN", &cueIn);
-    }
-
-    this->cueIn = cueIn.isNotEmpty() ? cueIn.getDoubleValue() : -1.0;
-
-    juce::String cueOut;
-    readXiphCommentField(tag, L"CUE-OUT", &cueOut);
-    if (cueOut.isEmpty()) {
-        readXiphCommentField(tag, L"CUE_OUT", &cueOut);
-    }
-
-    this->cueOut = cueOut.isNotEmpty() ? cueOut.getDoubleValue() : -1.0;
-
-    juce::String lastAudible;
-    readXiphCommentField(tag, L"LAST_AUDIBLE", &lastAudible);
-
-    this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
 }
 
 void medley::Metadata::readTag(const TagLib::Tag& tag)
@@ -282,7 +418,20 @@ void medley::Metadata::CoverAndLyrics::readID3V2(const File& f, bool readCover, 
 
         if (readLyrics) {
             lyrics = readFirstUserTextIdentificationFrame(tag, L"LYRICS");
-            // TODO: Unsynchronized Lyrics
+
+            // TODO: UNSYNCED LYRICS
+
+            if (lyrics.isEmpty()) {
+                const auto& usltFrames = tag.frameListMap()["USLT"];
+                if (!usltFrames.isEmpty()) {
+                    for (const auto pFrame : usltFrames) {
+                        if (pFrame) {
+                            lyrics = pFrame->toString().toCWString();
+                            break;
+                        }
+                    }
+                }
+            }
         }
     }
 }

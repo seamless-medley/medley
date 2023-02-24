@@ -105,7 +105,12 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     auto reader = newReader;
 
-    m_metadata.readFromTrack(track);
+    try {
+        m_metadata.readFromTrack(track);
+    }
+    catch (std::exception& e) {
+        log("Error reading metadata: " + track->getFile().getFullPathName() + " " + e.what());
+    }
 
     auto mid = reader->lengthInSamples / 2;
     firstAudibleSamplePosition = jmax(0LL, reader->searchForLevel(0, mid, kSilenceThreshold, 1.0, (int)(reader->sampleRate * kFirstSoundDuration)));
@@ -143,7 +148,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     trailingSamplePosition = -1;
     trailingDuration = 0;
 
-    auto playDuration = getEndPosition();
+    auto playDuration = getEndPosition() - firstAudibleSamplePosition;
 
     // If no cue in provided
     if (providedCueIn < 0)
@@ -206,7 +211,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     isTrackLoading = false;
 
     listeners.call([this](Callback& cb) {
-        this->trackPlay = TrackPlay(this->track);
+        this->trackPlay = TrackPlay(this->track, getDuration());
 
         cb.deckLoaded(*this, this->trackPlay);
     });
@@ -827,9 +832,14 @@ int Deck::Loader::useTimeSlice()
     ScopedLock sl(lock);
 
     if (track != nullptr) {
-        auto ret = deck.loadTrackInternal(track);
-        track = nullptr;
-        callback(ret);
+        try {
+            auto ret = deck.loadTrackInternal(track);
+            track = nullptr;
+            callback(ret);
+        }
+        catch (...) {
+            callback(false);
+        }
         return 10;
     }
 
