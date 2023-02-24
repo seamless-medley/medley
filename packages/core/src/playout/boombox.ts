@@ -578,16 +578,20 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
 const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).map(trim);
 
 export function getArtists(extra?: BoomBoxTrackExtra): string[] {
-  if (!extra?.tags?.artist) {
+  if (!extra?.tags) {
     return [];
   }
 
-  return extractArtists(extra.tags.artist);
+  const { artist, originalArtist, albumArtist } = extra.tags;
+
+  return [artist, originalArtist, albumArtist]
+    .filter((v: any): v is string => !!v)
+    .flatMap(extractArtists)
 }
 
 export function getTrackBanner(track: BoomBoxTrack) {
   const tags = track.extra?.tags;
-  const info = formatSongBanner(getArtists(track.extra), tags?.title);
+  const info = formatSongBanner(tags?.artist ? extractArtists(tags.artist) : undefined, tags?.title);
   return info ? info : parsePath(track.path).name;
 }
 

@@ -22,7 +22,7 @@ export type FetchResult = {
 }
 
 interface Methods {
-  metadata(path: string): Metadata;
+  metadata(path: string): Metadata | undefined;
   coverAndLyrics(path: string): WorkerCoverAndLyrics | CoverAndLyrics;
   isTrackLoadable(path: string): boolean;
   searchLyrics(artist: string, title: string): string;
@@ -35,14 +35,14 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
 
   private ongoingTasks = new Map<string, Promise<any>>();
 
-  private async runIfNeeded(key: string, executor: () => Promise<any>, ttl: number = 1000): Promise<any> {
+  private async runIfNeeded<E extends () => Promise<any>, R = E extends () => Promise<infer R> ? R : unknown>(key: string, executor: E, ttl: number = 1000): Promise<R> {
     const ongoingTasks = this.ongoingTasks;
 
     if (ongoingTasks.has(key)) {
-      return ongoingTasks.get(key) as ReturnType<typeof executor>;
+      return ongoingTasks.get(key) as Promise<R>;
     }
 
-    const promise = new Promise((resolve, reject) => void executor()
+    const promise = new Promise<R>((resolve, reject) => void executor()
       .then(resolve)
       .catch(reject))
       .finally(() => void setTimeout(() => ongoingTasks.delete(key), ttl));
@@ -51,11 +51,12 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     return promise;
   }
 
-  async metadata(path: string): Promise<Metadata> {
-    return this.runIfNeeded(`metadata:${path}`, async () => this.exec('metadata', path).then(omitBy(falsy)))
+  async metadata(path: string) {
+    const m = await this.runIfNeeded(`metadata:${path}`, async () => this.exec('metadata', path).then(omitBy(falsy)));
+    return (m ?? {}) as Metadata;
   }
 
-  async coverAndLyrics(path: string): Promise<CoverAndLyrics> {
+  async coverAndLyrics(path: string) {
     return this.runIfNeeded(`coverAndLyrics:${path}`, async () => {
       const result = await this.exec('coverAndLyrics', path);
 
