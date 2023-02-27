@@ -331,6 +331,8 @@ export type Metadata = {
   bpm?: number;
 }
 
+export type MetadataFields = keyof Metadata;
+
 export type CoverAndLyrics = {
   cover: Buffer;
   coverMimeType: string;

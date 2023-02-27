@@ -31,10 +31,11 @@ import {
 import { TypedEmitter } from 'tiny-typed-emitter';
 
 import { createCommandDeclarations, createInteractionHandler } from "./command";
-import { createTrackMessage, TrackMessage, TrackMessageStatus, trackMessageToMessageOptions } from "./trackmessage";
 
 import { createExciter } from "./exciter";
 import { decibelsToGain, retryable, waitFor } from "@seamless-medley/utils";
+import { TrackMessage, TrackMessageStatus } from "./trackmessage/types";
+import { createTrackMessage, trackMessageToMessageOptions } from "./trackmessage";
 
 export type MedleyAutomatonOptions = {
   id: string;
