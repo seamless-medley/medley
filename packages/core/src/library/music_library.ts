@@ -53,12 +53,12 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
       return;
     }
 
-    const { trackId: id, isrc: musicId, ...tags } = fromDb;
+    const { trackId: id, ...tags } = fromDb;
 
     return {
       id,
       path,
-      musicId,
+      musicId: fromDb.isrc,
       extra: {
         kind: TrackKind.Normal,
         tags
