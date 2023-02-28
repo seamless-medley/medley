@@ -66,7 +66,6 @@ type StationLink = {
   audioRequest: RequestAudioStreamResult;
   audioResource: AudioResource<RequestAudioStreamResult>;
   audioPlayer: AudioPlayer;
-  voiceConnection?: VoiceConnection;
 }
 
 type GuildState = {
@@ -77,6 +76,7 @@ type GuildState = {
   serverMuted: boolean;
   selectedStation?: Station;
   stationLink?: StationLink;
+  voiceConnection?: VoiceConnection;
   gain: number;
 }
 
@@ -211,9 +211,9 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         station.removeAudiencesForGroup(group)
       }
 
-      if (closeConnection && state.stationLink?.voiceConnection) {
-        state.stationLink.voiceConnection.destroy();
-        state.stationLink.voiceConnection = undefined;
+      if (closeConnection && state.voiceConnection) {
+        state.voiceConnection.destroy();
+        state.voiceConnection = undefined;
       }
     }
   }
@@ -227,7 +227,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     for (const [guildId, state] of this._guildStates) {
 
-      const { voiceChannelId, stationLink } = state;
+      const { voiceChannelId, stationLink, voiceConnection } = state;
 
       if (!voiceChannelId) {
         continue;
@@ -238,8 +238,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       if (channel?.type !== ChannelType.GuildVoice) {
         continue;
       }
-
-      const voiceConnection = stationLink?.voiceConnection;
 
       if (!voiceConnection) {
         continue;
@@ -376,12 +374,12 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       station: selectedStation,
       audioPlayer,
       audioResource: exciter,
-      audioRequest: exciter.metadata,
-      voiceConnection: stationLink?.voiceConnection
+      audioRequest: exciter.metadata
     };
 
-    if (newLink.voiceConnection) {
-      const { channelId } = newLink.voiceConnection.joinConfig;
+    if (state.voiceConnection) {
+      const channelId = state.voiceChannelId;
+
       if (channelId) {
         const channel = this.client.guilds.cache.get(guildId)?.channels.cache.get(channelId);
         if (channel?.type === ChannelType.GuildVoice) {
@@ -420,6 +418,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     station.medley.deleteAudioStream(audioRequest.id);
     station.removeAudiencesForGroup(makeAudienceGroup(guildId));
+
+    state.stationLink = undefined;
   }
 
   getGain(guildId: Guild['id']) {
@@ -469,10 +469,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       return { status: 'no_station' };
     }
 
-    if (stationLink.voiceConnection) {
-      stationLink.voiceConnection.destroy();
-      stationLink.voiceConnection = undefined;
-    }
+    state.voiceConnection?.destroy();
+    state.voiceConnection = undefined;
 
     let voiceConnection = joinVoiceChannel({
       channelId,
@@ -491,13 +489,13 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     catch (e) {
       voiceConnection?.destroy();
       voiceConnection = undefined;
-      stationLink.voiceConnection = undefined;
+      state.voiceConnection = undefined;
       //
       this.logger.error(e);
       throw e;
     }
 
-    stationLink.voiceConnection = voiceConnection;
+    state.voiceConnection = voiceConnection;
 
     return { status: 'joined', station: stationLink.station };
   }
@@ -542,6 +540,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         // Me Leaving
         station?.removeAudiencesForGroup(audienceGroup);
         guildState.voiceChannelId = undefined;
+
+        guildState.voiceConnection?.destroy();
+        guildState.voiceConnection = undefined;
+
         return;
       }
 
