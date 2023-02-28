@@ -24,7 +24,7 @@ namespace {
             auto outputBytesPerSample = request->outputBytesPerSample;
             auto numChannels = request->numChannels;
 
-            while (request->buffer.getNumReady() < request->buffering) {
+            while (request->running && request->buffer.getNumReady() < request->buffering) {
                 std::this_thread::sleep_for(5ms);
             }
 
@@ -752,6 +752,7 @@ Napi::Value Medley::reqAudioDispose(const CallbackInfo& info) {
 
     auto it = audioRequests.find(streamId);
     if (it != audioRequests.end()) {
+        it->second->running = false;
         audioRequests.erase(it);
         return Boolean::From(env, true);
     }
