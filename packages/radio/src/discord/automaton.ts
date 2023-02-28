@@ -9,6 +9,7 @@ import {
   entersState,
   joinVoiceChannel,
   NoSubscriberBehavior,
+  PlayerSubscription,
   VoiceConnection,
   VoiceConnectionStatus
 } from "@discordjs/voice";
@@ -77,6 +78,7 @@ type GuildState = {
   selectedStation?: Station;
   stationLink?: StationLink;
   voiceConnection?: VoiceConnection;
+  playerSubscription?: PlayerSubscription;
   gain: number;
 }
 
@@ -345,6 +347,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       return stationLink;
     }
 
+    if (currentStation) {
+      this.detune(guildId);
+    }
+
     const requestedAudioStream = await selectedStation.requestAudioStream({
       bufferSize: 48000 * 2.5, // This should be large enough to hold PCM data while waiting for node stream to comsume
       buffering: 960, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
@@ -360,8 +366,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       bitrate: 256_000
     });
 
-    // Create discord voice AudioPlayer if neccessary
-    const audioPlayer = stationLink?.audioPlayer ?? createAudioPlayer({
+    const audioPlayer = createAudioPlayer({
       behaviors: {
         noSubscriber: NoSubscriberBehavior.Play,
         maxMissedFrames: 1000
@@ -388,10 +393,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       }
     }
 
-    if (currentStation) {
-      this.detune(guildId);
-    }
-
     state.stationLink = newLink;
     state.gain = this.initialGain;
 
@@ -399,14 +400,25 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   async tune(guildId: Guild['id'], station?: Station): Promise<Station | false> {
+    const state = this.ensureGuildState(guildId);
+
     if (station) {
       this.setGuildStation(guildId, station);
     }
 
     const link = await this.internal_tune(guildId);
+
+    if (link) {
+      state.playerSubscription?.unsubscribe();
+      state.playerSubscription = state.voiceConnection?.subscribe(link.audioPlayer);
+    }
+
     return link?.station ?? false;
   }
 
+  /**
+   * De-tune the current station
+   */
   private async detune(guildId: Guild['id']) {
     const state = this._guildStates.get(guildId);
 
@@ -414,7 +426,12 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       return;
     }
 
-    const { station, audioRequest } = state.stationLink;
+    const { station, audioRequest, audioPlayer } = state.stationLink;
+
+    state.playerSubscription?.unsubscribe();
+    state.playerSubscription = undefined;
+
+    audioPlayer.stop(true);
 
     station.medley.deleteAudioStream(audioRequest.id);
     station.removeAudiencesForGroup(makeAudienceGroup(guildId));
@@ -450,27 +467,34 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     const state = this.ensureGuildState(guildId);
 
-    let { stationLink, selectedStation } = state;
+    let { stationLink } = state;
 
-    // Auto-tuning
-    if (!stationLink && this.stations.size === 1) {
-      if (!selectedStation) {
-        selectedStation = this.stations.first();
+    if (!stationLink) {
+      // Auto-tuning
+      if (!state.selectedStation && this.stations.size === 1) {
+        const singleStation = this.stations.first();
 
-        if (selectedStation) {
-          this.setGuildStation(guildId, selectedStation);
+        if (singleStation) {
+          this.setGuildStation(guildId, singleStation);
         }
       }
 
-      stationLink = await this.internal_tune(guildId);
+      // A station was selected, but no stationLink presented
+      if (state.selectedStation) {
+        stationLink = await this.internal_tune(guildId);
+      }
     }
 
     if (!stationLink) {
       return { status: 'no_station' };
     }
 
-    state.voiceConnection?.destroy();
+    const existingConnection = state.voiceConnection;
+    // Release the voiceConnection to make VoiceStateUpdate handler aware of the this join command
     state.voiceConnection = undefined;
+
+    // This should be called after setting state.voiceConnection to `undefined`
+    existingConnection?.destroy();
 
     let voiceConnection = joinVoiceChannel({
       channelId,
@@ -484,12 +508,13 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     try {
       await entersState(voiceConnection, VoiceConnectionStatus.Ready, timeout);
-      voiceConnection.subscribe(stationLink.audioPlayer);
+      state.playerSubscription = voiceConnection.subscribe(stationLink.audioPlayer);
     }
     catch (e) {
       voiceConnection?.destroy();
       voiceConnection = undefined;
       state.voiceConnection = undefined;
+      state.playerSubscription = undefined;
       //
       this.logger.error(e);
       throw e;
@@ -537,12 +562,16 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     if (isMe) {
       if (channelChange === 'leave') {
-        // Me Leaving
-        station?.removeAudiencesForGroup(audienceGroup);
-        guildState.voiceChannelId = undefined;
+        // Me Leaving,
+        // if the voiceConnection is defined, meaning the voice state has been forcefully closed
+        // if the voiceConnection is undefined here, meaning it might be the result of the `join` command
+        if (guildState.voiceConnection) {
+          this.detune(guildId);
 
-        guildState.voiceConnection?.destroy();
-        guildState.voiceConnection = undefined;
+          guildState.voiceConnection?.destroy();
+          guildState.voiceConnection = undefined;
+          guildState.voiceChannelId = undefined;
+        }
 
         return;
       }
