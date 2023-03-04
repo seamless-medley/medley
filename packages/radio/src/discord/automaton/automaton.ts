@@ -1,29 +1,15 @@
-import { REST, Routes } from "discord.js";
 import { OAuth2Scopes, PermissionFlagsBits } from "discord-api-types/v10";
 
 import {
-  AudioPlayer,
-  AudioResource,
-  createAudioPlayer,
-  DiscordGatewayAdapterCreator,
-  entersState,
-  joinVoiceChannel,
-  NoSubscriberBehavior,
-  PlayerSubscription,
-  VoiceConnection,
-  VoiceConnectionStatus
-} from "@discordjs/voice";
-
-import {
-  BaseGuildTextChannel,
-  BaseGuildVoiceChannel, Client, Guild,
+  REST, Routes,
+  Client, Guild,
   GatewayIntentBits, Message,
   OAuth2Guild,
-  Snowflake, VoiceBasedChannel, VoiceState, ChannelType, PermissionsBitField, PartialMessage
+  Snowflake, ChannelType, PermissionsBitField, PartialMessage
 } from "discord.js";
 
 import {
-  IReadonlyLibrary, RequestAudioStreamResult, TrackKind,
+  IReadonlyLibrary, TrackKind,
   Station,
   makeAudienceGroup as makeStationAudienceGroup,
   AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents, Logger, ILogObj, createLogger, StationTrack, StationTrackPlay,
@@ -31,12 +17,12 @@ import {
 
 import { TypedEmitter } from 'tiny-typed-emitter';
 
-import { createCommandDeclarations, createInteractionHandler } from "./command";
+import { createCommandDeclarations, createInteractionHandler } from "../command";
 
-import { createExciter } from "./exciter";
 import { decibelsToGain, retryable, waitFor } from "@seamless-medley/utils";
-import { TrackMessage, TrackMessageStatus } from "./trackmessage/types";
-import { createTrackMessage, trackMessageToMessageOptions } from "./trackmessage";
+import { TrackMessage, TrackMessageStatus } from "../trackmessage/types";
+import { createTrackMessage, trackMessageToMessageOptions } from "../trackmessage";
+import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
 
 export type MedleyAutomatonOptions = {
   id: string;
@@ -60,33 +46,6 @@ export type MedleyAutomatonOptions = {
    * @default 3
    */
   maxTrackMessages?: number;
-}
-
-type StationLink = {
-  station: Station;
-  audioRequest: RequestAudioStreamResult;
-  audioResource: AudioResource<RequestAudioStreamResult>;
-  audioPlayer: AudioPlayer;
-}
-
-type GuildState = {
-  guildId: Guild['id'],
-  voiceChannelId?: BaseGuildVoiceChannel['id'];
-  textChannelId?: BaseGuildTextChannel['id'];
-  trackMessages: TrackMessage[];
-  serverMuted: boolean;
-  selectedStation?: Station;
-  stationLink?: StationLink;
-  voiceConnection?: VoiceConnection;
-  playerSubscription?: PlayerSubscription;
-  gain: number;
-}
-
-export type JoinResult = {
-  status: 'no_station' | 'not_joined';
-} | {
-  status: 'joined';
-  station: Station;
 }
 
 export type UpdateTrackMessageOptions = {
@@ -182,7 +141,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.client.on('ready', this.handleClientReady);
     this.client.on('guildCreate', this.handleGuildCreate);
     this.client.on('guildDelete', this.handleGuildDelete);
-    this.client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
+    // this.client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
     this.client.on('interactionCreate', createInteractionHandler(this));
 
     this.client.on('messageDelete', this.handleMessageDeletion);
@@ -213,9 +172,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         station.removeAudiencesForGroup(group)
       }
 
-      if (closeConnection && state.voiceConnection) {
-        state.voiceConnection.destroy();
-        state.voiceConnection = undefined;
+      if (closeConnection) {
+        state.destroyVoiceConnection();
       }
     }
   }
@@ -229,7 +187,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     for (const [guildId, state] of this._guildStates) {
 
-      const { voiceChannelId, stationLink, voiceConnection } = state;
+      const { voiceChannelId } = state;
 
       if (!voiceChannelId) {
         continue;
@@ -241,7 +199,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         continue;
       }
 
-      if (!voiceConnection) {
+      if (!state.hasVoiceConnection()) {
         continue;
       }
 
@@ -254,13 +212,13 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
             return { status: 'not_joined' }
           }
 
-          const result = await this.join(channel, joinTimeout);
+          const result = state.join(channel, joinTimeout);
 
           this.rejoining = false;
           this.logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
 
           return result;
-      }, { retries, wait: 1000 }).then(() => stationLink?.station?.updatePlayback());
+      }, { retries, wait: 1000 }).then(() => state.preferredStation?.updatePlayback());
     }
   }
 
@@ -294,15 +252,19 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
   }
 
+  private makeAdapter(guildId: Guild['id']): GuildStateAdapter {
+    return ({
+      getClient: () => this.client,
+      getLogger: () => this.logger,
+      getInitialGain: () => this.initialGain,
+      getChannel: (id) => this.client.guilds.cache.get(guildId)?.channels.cache.get(id),
+      getStations: () => this.stations,
+    });
+  }
+
   ensureGuildState(guildId: Guild['id']) {
     if (!this._guildStates.has(guildId)) {
-      this._guildStates.set(guildId, {
-        guildId,
-        voiceChannelId: undefined,
-        trackMessages: [],
-        serverMuted: false,
-        gain: 1.0
-      });
+      this._guildStates.set(guildId, new GuildState(guildId, this.makeAdapter(guildId)));
     }
 
     return this._guildStates.get(guildId)!;
@@ -310,232 +272,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   getGuildState(id: Guild['id']): GuildState | undefined {
     return this._guildStates.get(id);
-  }
-
-  getTunedStation(id: Guild['id']): Station | undefined {
-    const state = this.getGuildState(id);
-    return state?.stationLink?.station;
-  }
-
-  getGuildStation(id: Guild['id']): Station | undefined {
-    const state = this.getGuildState(id);
-    return state?.selectedStation;
-  }
-
-  setGuildStation(id: Guild['id'], station: Station): boolean {
-    const state = this.getGuildState(id);
-    if (!state) {
-      return false;
-    }
-
-    state.selectedStation = station;
-    return true;
-  }
-
-  private async internal_tune(guildId: Guild['id']): Promise<StationLink | undefined> {
-    const state = this.ensureGuildState(guildId);
-
-    const { selectedStation, stationLink } = state;
-
-    if (!selectedStation) {
-      return stationLink;
-    }
-
-    const currentStation = stationLink?.station;
-
-    if (currentStation === selectedStation) {
-      return stationLink;
-    }
-
-    if (currentStation) {
-      this.detune(guildId);
-    }
-
-    const requestedAudioStream = await selectedStation.requestAudioStream({
-      bufferSize: 48000 * 2.5, // This should be large enough to hold PCM data while waiting for node stream to comsume
-      buffering: 960, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
-      preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
-      // discord voice only accept 48KHz sample rate, 16 bit per sample
-      sampleRate: 48000,
-      format: 'Int16LE',
-      gain: this.initialGain
-    })
-
-    const exciter = createExciter({
-      source: requestedAudioStream,
-      bitrate: 256_000
-    });
-
-    const audioPlayer = createAudioPlayer({
-      behaviors: {
-        noSubscriber: NoSubscriberBehavior.Play,
-        maxMissedFrames: 1000
-      }
-    });
-
-    audioPlayer.play(exciter);
-
-    const newLink: StationLink = {
-      station: selectedStation,
-      audioPlayer,
-      audioResource: exciter,
-      audioRequest: exciter.metadata
-    };
-
-    if (state.voiceConnection) {
-      const channelId = state.voiceChannelId;
-
-      if (channelId) {
-        const channel = this.client.guilds.cache.get(guildId)?.channels.cache.get(channelId);
-        if (channel?.type === ChannelType.GuildVoice) {
-          this.updateStationAudiences(selectedStation, channel);
-        }
-      }
-    }
-
-    state.stationLink = newLink;
-    state.gain = this.initialGain;
-
-    return newLink;
-  }
-
-  async tune(guildId: Guild['id'], station?: Station): Promise<Station | false> {
-    const state = this.ensureGuildState(guildId);
-
-    if (station) {
-      this.setGuildStation(guildId, station);
-    }
-
-    const link = await this.internal_tune(guildId);
-
-    if (link) {
-      state.playerSubscription?.unsubscribe();
-      state.playerSubscription = state.voiceConnection?.subscribe(link.audioPlayer);
-    }
-
-    return link?.station ?? false;
-  }
-
-  /**
-   * De-tune the current station
-   */
-  private async detune(guildId: Guild['id']) {
-    const state = this._guildStates.get(guildId);
-
-    if (!state?.stationLink) {
-      return;
-    }
-
-    const { station, audioRequest, audioPlayer } = state.stationLink;
-
-    state.playerSubscription?.unsubscribe();
-    state.playerSubscription = undefined;
-
-    audioPlayer.stop(true);
-
-    station.medley.deleteAudioStream(audioRequest.id);
-    station.removeAudiencesForGroup(makeAudienceGroup(guildId));
-
-    state.stationLink = undefined;
-  }
-
-  getGain(guildId: Guild['id']) {
-    const state = this._guildStates.get(guildId);
-    return state?.gain ?? this.initialGain ?? 1.0;
-  }
-
-  setGain(guildId: Guild['id'], gain: number): boolean {
-    const state = this._guildStates.get(guildId);
-    if (!state) {
-      return false;
-    }
-
-    state.gain = gain;
-
-    const { stationLink } = state;
-
-    if (stationLink) {
-      const { station, audioRequest } = stationLink;
-      station.medley.updateAudioStream(audioRequest.id, { gain });
-    }
-
-    return true;
-  }
-
-  async join(channel: BaseGuildVoiceChannel, timeout: number = 5000): Promise<JoinResult> {
-    const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
-
-    const state = this.ensureGuildState(guildId);
-
-    let { stationLink } = state;
-
-    if (!stationLink) {
-      // Auto-tuning
-      if (!state.selectedStation && this.stations.size === 1) {
-        const singleStation = this.stations.first();
-
-        if (singleStation) {
-          this.setGuildStation(guildId, singleStation);
-        }
-      }
-
-      // A station was selected, but no stationLink presented
-      if (state.selectedStation) {
-        stationLink = await this.internal_tune(guildId);
-      }
-    }
-
-    if (!stationLink) {
-      return { status: 'no_station' };
-    }
-
-    const existingConnection = state.voiceConnection;
-    // Release the voiceConnection to make VoiceStateUpdate handler aware of the this join command
-    state.voiceConnection = undefined;
-
-    // This should be called after setting state.voiceConnection to `undefined`
-    existingConnection?.destroy();
-
-    let voiceConnection = joinVoiceChannel({
-      channelId,
-      guildId,
-      adapterCreator: voiceAdapterCreator as DiscordGatewayAdapterCreator
-    }) as VoiceConnection | undefined;
-
-    if (!voiceConnection) {
-      return { status: 'not_joined' };
-    }
-
-    voiceConnection.on('stateChange', (oldState, newState) => {
-      const oldNetworking = Reflect.get(oldState, 'networking');
-      const newNetworking = Reflect.get(newState, 'networking');
-
-      const networkStateChangeHandler = (oldNetworkState: any, newNetworkState: any) => {
-        const newUdp = Reflect.get(newNetworkState, 'udp');
-        clearInterval(newUdp?.keepAliveInterval);
-      }
-
-      oldNetworking?.off('stateChange', networkStateChangeHandler);
-      newNetworking?.on('stateChange', networkStateChangeHandler);
-    });
-
-    try {
-      await entersState(voiceConnection, VoiceConnectionStatus.Ready, timeout);
-      state.playerSubscription = voiceConnection.subscribe(stationLink.audioPlayer);
-    }
-    catch (e) {
-      voiceConnection?.destroy();
-      voiceConnection = undefined;
-      state.voiceConnection = undefined;
-      state.playerSubscription = undefined;
-      //
-      this.logger.error(e);
-      throw e;
-    }
-
-    state.voiceConnection = voiceConnection;
-
-    return { status: 'joined', station: stationLink.station };
   }
 
   private handleClientReady = async (client: Client) => {
@@ -549,146 +285,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.emit('ready');
   }
 
-  private updateStationAudiences(station: Station, channel: VoiceBasedChannel) {
-    station.updateAudiences(
-      makeAudienceGroup(channel.guildId),
-      channel.members
-        .filter(member => !member.user.bot && !channel.guild.voiceStates.cache.get(member.id)?.deaf)
-        .map(member => [member.id, undefined])
-    );
-  }
-
-  private handleVoiceStateUpdate = async (oldState: VoiceState, newState: VoiceState) => {
-    const guildId = newState.guild.id;
-    const guildState = this.ensureGuildState(guildId);
-    const station = guildState?.stationLink?.station;
-
-    const channelChange = detectVoiceChannelChange(oldState, newState);
-    if (channelChange === 'invalid' || !newState.member) {
-      return;
-    }
-
-    const audienceGroup = makeAudienceGroup(guildId);
-
-    const myId = this.client.user?.id;
-    const isMe = (newState.member.id === myId);
-
-    if (isMe) {
-      if (channelChange === 'leave') {
-        // Me Leaving,
-        // if the voiceConnection is defined, meaning the voice state has been forcefully closed
-        // if the voiceConnection is undefined here, meaning it might be the result of the `join` command
-        if (guildState.voiceConnection) {
-          this.detune(guildId);
-
-          guildState.voiceConnection?.destroy();
-          guildState.voiceConnection = undefined;
-          guildState.voiceChannelId = undefined;
-        }
-
-        return;
-      }
-
-      if (newState.channelId !== guildState.voiceChannelId) {
-        // Me Just joined or moved, collecting...
-
-        guildState.voiceChannelId = newState.channelId || undefined;
-        guildState.serverMuted = !!newState.serverMute;
-
-        if (station) {
-          if (guildState.serverMuted) {
-            station.removeAudiencesForGroup(audienceGroup);
-          } else {
-            this.updateStationAudiences(station, newState.channel!);
-          }
-        }
-
-        return;
-      }
-
-      if (oldState.serverMute != newState.serverMute) {
-        guildState.serverMuted = !!newState.serverMute;
-
-        if (station) {
-          if (guildState.serverMuted) {
-            station.removeAudiencesForGroup(audienceGroup);
-          } else {
-            this.updateStationAudiences(station, newState.channel!);
-          }
-        }
-      }
-
-      return;
-    }
-
-    if (newState.member.user.bot) {
-      // Ignoring bot user
-      return;
-    }
-
-    if (!guildState.voiceChannelId) {
-      // Me not in a room, ignoring...
-      return;
-    }
-
-    if (guildState.serverMuted) {
-      return;
-    }
-
-    if (!station) {
-      return;
-    }
-
-    // state change is originated from other member that is in the same room as me.
-    if (channelChange === 'leave') {
-      if (oldState.channelId !== guildState.voiceChannelId) {
-        // is not leaving my channel
-        return;
-      }
-
-      // is leaving
-      station.removeAudience(audienceGroup, newState.member.id);
-      return;
-    }
-
-    if (channelChange === 'join' || channelChange === 'move') {
-      if (newState.channelId === guildState.voiceChannelId) {
-        // Check if the bot is actually in this channel
-        const channel = this.client.channels.cache.get(newState.channelId);
-        if (channel?.isVoiceBased() && myId) {
-          if (!channel.members.has(myId)) {
-            return;
-          }
-        }
-
-        if (!newState.deaf) {
-          // User has joined or moved into
-          station.addAudiences(audienceGroup, newState.member.id);
-        }
-
-        return;
-      }
-
-      if (oldState.channelId === guildState.voiceChannelId) {
-        // User has moved away
-        station.removeAudience(audienceGroup, newState.member.id);
-        return;
-      }
-
-      // is joining or moving to other channel
-      return;
-    }
-
-    // No channel change
-    if (oldState.deaf !== newState.deaf && newState.channelId === guildState.voiceChannelId) {
-      if (!newState.deaf) {
-        station.addAudiences(audienceGroup, newState.member.id);
-      } else {
-        station.removeAudience(audienceGroup, newState.member.id);
-      }
-    }
-  }
-
   private handleGuildCreate = async (guild: Guild) => {
     // Invited to
     this.logger.info(`Invited to ${guild.name}`);
@@ -696,12 +292,14 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.ensureGuildState(guild.id);
     this.registerCommands(guild);
 
+    // TODO: Show command prefix
     guild?.systemChannel?.send('Greetings :notes:, use `/medley join` command to invite me to a voice channel');
   }
 
   private handleGuildDelete = async (guild: Guild) => {
     // Removed from
     this.logger.info(`Removed from ${guild.name}`);
+    this._guildStates.get(guild.id)?.dispose();
     this._guildStates.delete(guild.id);
   }
 
@@ -907,7 +505,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   async removeLyricsButton(trackId: StationTrack['id']) {
     for (const state of this._guildStates.values()) {
-      const currentCollectionId = state.stationLink?.station.trackPlay?.track?.collection?.id;
+      const currentCollectionId = state.tunedStation?.trackPlay?.track?.collection?.id;
 
       const messages = state.trackMessages.filter(msg => msg.trackPlay.track.id === trackId);
       for (const msg of messages) {
@@ -939,7 +537,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   skipCurrentSong(id: Guild['id']) {
-    const station = this.getTunedStation(id);
+    const station = this.getGuildState(id)?.tunedStation;
 
     if (!station) {
       return false;
@@ -993,11 +591,11 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
       const state = this._guildStates.get(guildId);
 
-      if (state?.stationLink?.station === station) {
+      if (state?.tunedStation === station) {
         const guild = this.client.guilds.cache.get(guildId);
-        const { voiceChannelId, textChannelId } = state;
+        const { textChannelId } = state;
 
-        if (guild && voiceChannelId) {
+        if (guild && state.hasVoiceChannel()) {
           const channel = textChannelId ? guild.channels.cache.get(textChannelId) : undefined;
           const textChannel = channel?.type == ChannelType.GuildText ? channel : undefined;
 
@@ -1080,19 +678,3 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 }
 
-function detectVoiceChannelChange(oldState: VoiceState, newState: VoiceState): 'join' | 'leave' | 'move' | 'invalid' | undefined {
-  if (!oldState.channelId && !newState.channelId) {
-    // Doesn't make any sense
-    return 'invalid';
-  }
-
-  if (!oldState.channelId) {
-    return 'join'
-  }
-
-  if (!newState.channelId) {
-    return 'leave';
-  }
-
-  return oldState.channelId !== newState.channelId ? 'move' : undefined;
-}

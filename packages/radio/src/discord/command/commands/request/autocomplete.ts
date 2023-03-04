@@ -5,7 +5,7 @@ import { InteractionHandlerFactory } from "../../type";
 
 export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteInteraction> = (automaton) => async (interaction) => {
   const { guildId } = interaction;
-  const station = guildId ? automaton.getTunedStation(guildId) : undefined;
+  const station = guildId ? automaton.getGuildState(guildId)?.tunedStation : undefined;
 
   if (!station) {
     interaction.respond([]);

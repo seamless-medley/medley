@@ -46,7 +46,7 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
       embeds: []
     });
 
-    const ok = await automaton.tune(guildId, station);
+    const ok = await automaton.ensureGuildState(guildId).tune(station);
 
     if (ok) {
       await reply(interaction, {
@@ -80,7 +80,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     return;
   }
 
-  const currentStationId = interaction.guildId ? automaton.getGuildStation(interaction.guildId) : undefined;
+  const preferredStation = interaction.guildId ? automaton.getGuildState(interaction.guildId)?.preferredStation : undefined;
 
   const issuer = interaction.user.id;
 
@@ -88,7 +88,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     label: station.name,
     value: station.id,
     description: station.description,
-    default: station.id === currentStationId?.id
+    default: station.id === preferredStation?.id
   }));
 
   const selector = await reply(interaction, {

@@ -1,8 +1,8 @@
 import { pipeline, Readable } from "stream";
 import type { RequestAudioStreamResult } from "@seamless-medley/core";
 import { createAudioResource, StreamType } from "@discordjs/voice";
-import { type OpusOptions } from "../audio/codecs/opus/loader";
-import { OpusPacketEncoder } from "../audio/codecs/opus/stream";
+import { type OpusOptions } from "../../audio/codecs/opus/loader";
+import { OpusPacketEncoder } from "../../audio/codecs/opus/stream";
 import { noop } from "lodash";
 
 export type ExciterOptions = Partial<OpusOptions> & {

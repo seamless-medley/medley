@@ -3,7 +3,7 @@ import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "disc
 import { MedleyAutomaton } from "../../automaton";
 import { ansi } from "../ansi";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept, declare, deny, formatMention, guildStationGuard, makeAnsiCodeBlock, reply, warn } from "../utils";
+import { declare, deny, formatMention, guildStationGuard, makeAnsiCodeBlock, reply, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -20,7 +20,12 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
 
   const state = automaton.getGuildState(guildId);
 
-  if (!state?.voiceChannelId) {
+  if (!state) {
+    deny(interaction, 'No station linked');
+    return;
+  }
+
+  if (!state.hasVoiceChannel()) {
     await deny(interaction, 'Not in a voice channel');
     return;
   }

@@ -59,12 +59,12 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     return;
   }
 
-  if (!state.voiceChannelId) {
+  if (!state.hasVoiceChannel()) {
     deny(interaction, 'Not in a voice channel');
     return;
   }
 
-  const oldGain = automaton.getGain(guildId);
+  const oldGain = state.gain;
   const oldDecibels = g2d(oldGain);
 
   let inDecibels = interaction.options.getNumber('db');
@@ -84,10 +84,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     inDecibels = percentToDb(inPercent!)
   }
 
-  if (!automaton.setGain(guildId, decibelsToGain(inDecibels))) {
-    deny(interaction, 'Not in a voice channel');
-    return;
-  }
+  state.gain = decibelsToGain(inDecibels);
 
   declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Fading volume from {{pink}}${volumeToString(oldDecibels)}{{reset}} to {{cyan}}${volumeToString(inDecibels)}`));
 }

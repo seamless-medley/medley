@@ -63,7 +63,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   }
 
   const createEmbed = () => {
-    const stationName = state.stationLink?.station?.name;
+    const stationName = state.tunedStation?.name;
 
     const embed = new EmbedBuilder()
       .setColor('Random')
@@ -78,7 +78,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   }
 
   try {
-    const result = await automaton.join(channelToJoin);
+    const result = await state.join(channelToJoin);
 
     if (result.status === 'joined') {
       reply(interaction, {
@@ -92,7 +92,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     if (result.status === 'no_station') {
       createStationSelector(automaton, interaction, async (tuned) => {
         if (tuned) {
-          if ((await automaton.join(channelToJoin)).status !== 'joined') {
+          if ((await state.join(channelToJoin)).status !== 'joined') {
             deny(interaction, 'Could not tune and join');
             return;
           }
