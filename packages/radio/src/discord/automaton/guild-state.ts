@@ -1,7 +1,7 @@
 import { AudioPlayer, AudioResource, createAudioPlayer, entersState, joinVoiceChannel, NoSubscriberBehavior, PlayerSubscription, VoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
 import { AudienceGroupId, AudienceType, ILogObj, IReadonlyLibrary, Logger, makeAudienceGroup as makeStationAudienceGroup, RequestAudioStreamResult, Station } from "@seamless-medley/core";
 import { BaseGuildVoiceChannel, ChannelType, Client, Guild, GuildBasedChannel, GuildMember, VoiceBasedChannel, VoiceState } from "discord.js";
-import { createExciter } from "./exciter";
+import { createExciter } from "../voice/exciter";
 import { TrackMessage } from "../trackmessage/types";
 import { voiceConnectionKeepAlivePatch } from "../voice/patch";
 
