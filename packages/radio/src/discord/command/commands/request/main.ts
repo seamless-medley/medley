@@ -24,7 +24,8 @@ import { parse as parsePath, extname } from 'path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
-import { formatMention, guildStationGuard, joinStrings, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, reply } from "../../utils";
+import { formatMention, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, reply } from "../../utils";
+import { ansi } from "../../ansi";
 
 export type Selection = {
   title: string;
@@ -73,22 +74,20 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   }, maxSelectMenuOptions * 10); // 10 pages
 
   if (results.length < 1) {
-    const escq = (s: string) => s.replace(/"/g, '\\"');
+    const highlight = (n: string, v: string)  => ansi`({{yellow}}${n} {{cyan}}~ {{pink}}{{bgDarkBlue|b}}${v}{{reset}})`
 
     const tagTerms = zip(['artist', 'title'], [artist, title])
-      .filter((t): t is [any, string] => !!t[1])
-      .map(([n, v]) => `('${n}' ~ "${escq(v)}")`)
-      .join(' AND ');
+      .filter((t): t is [name: string, value: string] => !!t[1])
+      .map(([n, v]) => highlight(n, v))
+      .join(ansi` AND `);
 
-    const queryString = [tagTerms, query ? `(any ~ "${escq(query)}")` : null]
+    const queryString = [tagTerms, query ? highlight('any', query) : null]
       .filter(t => !!t)
       .join(' OR ');
 
     reply(interaction, [
       'Your search:',
-      '**```scheme',
-      queryString,
-      '```**',
+      ...makeAnsiCodeBlock(queryString),
       'Did not match any tracks'
     ].join('\n'))
     return;
