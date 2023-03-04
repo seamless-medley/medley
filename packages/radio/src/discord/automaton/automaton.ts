@@ -74,7 +74,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   initialGain: number;
 
-  readonly baseCommand: string;
+  #baseCommand: string;
 
   readonly client: Client;
 
@@ -97,7 +97,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.owners = options.owners || [];
     this.maxTrackMessages = options.maxTrackMessages ?? 3;
     this.initialGain = options.initialGain ?? decibelsToGain(-3);
-    this.baseCommand = options.baseCommand || 'medley';
+    this.#baseCommand = options.baseCommand || 'medley';
 
     this.client = new Client({
       intents: [
@@ -153,6 +153,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       station.on('trackFinished', this.handleTrackFinished);
       station.on('collectionChange', this.handleCollectionChange(station));
     }
+  }
+
+  get baseCommand() {
+    return this.#baseCommand || 'medley';
   }
 
   private handleShardError = (error: Error, shardId: number) => {
@@ -292,8 +296,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.ensureGuildState(guild.id);
     this.registerCommands(guild);
 
-    // TODO: Show command prefix
-    guild?.systemChannel?.send('Greetings :notes:, use `/medley join` command to invite me to a voice channel');
+    guild?.systemChannel?.send(`Greetings :notes:, use \`/${this.baseCommand} join\` command to invite me to a voice channel`);
   }
 
   private handleGuildDelete = async (guild: Guild) => {
@@ -646,7 +649,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
           : Routes.applicationCommands(this.clientId)
         ),
         {
-          body: [createCommandDeclarations(this.baseCommand || 'medley')]
+          body: [createCommandDeclarations(this.baseCommand)]
         }
       )
 
