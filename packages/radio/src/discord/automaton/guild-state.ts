@@ -75,8 +75,6 @@ export class GuildState {
       return false;
     }
 
-    console.log('Destroy voice connection');
-
     this.voiceConnector.destroy();
     this.voiceConnector = undefined;
 
@@ -89,8 +87,6 @@ export class GuildState {
   }
 
   leftVoiceChannel() {
-    console.log('Left voice channel');
-
     // if the voiceConnection is defined, meaning the voice state has been forcefully closed
     // if the voiceConnection is undefined here, meaning it might be the result of the `join` command
 
@@ -131,8 +127,6 @@ export class GuildState {
       this.detune();
     }
 
-    console.log('Create station link');
-
     const newAudioPlayer = new DiscordAudioPlayer(preferredStation, this.adapter.getInitialGain());
 
     this.adapter.getAudioDispatcher().add(newAudioPlayer);
@@ -154,8 +148,6 @@ export class GuildState {
       return;
     }
 
-    console.log('DETUNE');
-
     const { station, newAudioPlayer } = this.stationLink;
 
     if (this.voiceConnector) {
@@ -173,7 +165,6 @@ export class GuildState {
     let { stationLink } = this;
 
     if (!stationLink) {
-      console.log('No stationLink');
       // Auto-tuning
       if (!this.preferredStation) {
         const stations = this.adapter.getStations();
