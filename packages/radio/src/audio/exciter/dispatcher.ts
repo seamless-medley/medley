@@ -45,16 +45,16 @@ export class AudioDispatcher {
     setImmediate(() => this.#prepare(exciters));
   }
 
-  has(player: IExciter) {
-    return this.#exciters.includes(player);
+  has(exciter: IExciter) {
+    return this.#exciters.includes(exciter);
   }
 
-  add(player: IExciter) {
-    if (this.has(player)) {
+  add(exciter: IExciter) {
+    if (this.has(exciter)) {
       return;
     }
 
-    this.#exciters.push(player);
+    this.#exciters.push(exciter);
 
     if (this.#exciters.length === 1) {
       // Just added
@@ -64,8 +64,8 @@ export class AudioDispatcher {
     }
   }
 
-  remove(player: IExciter) {
-    const index = this.#exciters.indexOf(player);
+  remove(exciter: IExciter) {
+    const index = this.#exciters.indexOf(exciter);
     if (index === -1) {
       return;
     }

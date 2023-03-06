@@ -16,6 +16,7 @@ export interface IExciter {
 export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {}> extends TypedEmitter<Listeners> implements IExciter {
   protected request?: RequestAudioStreamResult;
   protected stream?: Readable;
+  protected opusEncoder: OpusPacketEncoder;
 
   constructor(
     protected station: Station,
@@ -23,6 +24,8 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     protected encoderOptions: Partial<OpusPacketEncoderOptions>
   ) {
     super();
+
+    this.opusEncoder = new OpusPacketEncoder(this.encoderOptions);
   }
 
   async start() {
@@ -35,7 +38,7 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     this.stream = pipeline(
       [
         this.request.stream,
-        new OpusPacketEncoder(this.encoderOptions)
+        this.opusEncoder
       ],
       noop
     ) as unknown as Readable;
@@ -51,6 +54,22 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     //
     this.stream?.destroy();
     this.stream = undefined;
+  }
+
+  get bitrate() {
+    return this.opusEncoder.bitrate;
+  }
+
+  set bitrate(value: number) {
+    this.opusEncoder.bitrate = value;
+  }
+
+  setGain(gain: number) {
+    if (!this.request) {
+      return;
+    }
+
+    this.station.updateAudioStream(this.request.id, { gain });
   }
 
   get isPlayable(): boolean {

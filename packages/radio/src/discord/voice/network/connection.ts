@@ -96,6 +96,7 @@ export interface VoiceConnectionEvents {
   stateChange(oldState: ConnectionState, newState: ConnectionState): void;
   close(code: number): void;
   error(error: Error): void;
+  ping(): void;
 }
 
 export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
@@ -134,6 +135,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       oldWs.off('open', this.#onWsOpen);
       oldWs.off('payload', this.#onWsPayload);
       oldWs.off('close', this.#onWsClose);
+      oldWs.off('ping', this.#onPing);
       oldWs.destroy();
     }
 
@@ -155,6 +157,10 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
   #onError = (e: Error) => {
     this.emit('error', e);
+  }
+
+  #onPing = () => {
+    this.emit('ping');
   }
 
   #onWsOpen: WebSocketConnectionEvents['open'] = () => {
@@ -310,6 +316,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       .once('close', this.#onWsClose)
       .on('error',this.#onError)
       .on('payload', this.#onWsPayload)
+      .on('ping', this.#onPing)
   }
 
   #createUDP({ ip, port, ssrc, modes }: ReadyVoicePayload['d']) {
@@ -432,6 +439,16 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 			},
 		});
 	}
+
+  get ping() {
+    const ws = Reflect.get(this.#state, 'ws') as WebSocketConnection | undefined;
+    const udp = Reflect.get(this.#state, 'udp') as UDPConnection | undefined;
+
+    return {
+      ws: ws?.ping,
+      udp: udp?.ping
+    }
+  }
 }
 
 const randomNBit = (numberOfBits: number) => Math.floor(Math.random() * 2 ** numberOfBits);

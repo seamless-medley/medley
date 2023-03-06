@@ -23,6 +23,7 @@ import { decibelsToGain, retryable, waitFor } from "@seamless-medley/utils";
 import { TrackMessage, TrackMessageStatus } from "../trackmessage/types";
 import { createTrackMessage, trackMessageToMessageOptions } from "../trackmessage";
 import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
+import { AudioDispatcher } from "../../audio/exciter";
 
 export type MedleyAutomatonOptions = {
   id: string;
@@ -85,6 +86,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   private rejoining = false;
 
   private shardReady = false;
+
+  #audioDispatcher = new AudioDispatcher();
 
   constructor(readonly stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
     super();
@@ -256,13 +259,18 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
   }
 
+  #baseAdapter: Omit<GuildStateAdapter, 'getChannel'> = {
+    getClient: () => this.client,
+    getLogger: () => this.logger,
+    getInitialGain: () => this.initialGain,
+    getStations: () => this.stations,
+    getAudioDispatcher: () => this.#audioDispatcher
+  }
+
   private makeAdapter(guildId: Guild['id']): GuildStateAdapter {
     return ({
-      getClient: () => this.client,
-      getLogger: () => this.logger,
-      getInitialGain: () => this.initialGain,
-      getChannel: (id) => this.client.guilds.cache.get(guildId)?.channels.cache.get(id),
-      getStations: () => this.stations,
+      ...this.#baseAdapter,
+      getChannel: (id) => this.client.guilds.cache.get(guildId)?.channels.cache.get(id)
     });
   }
 

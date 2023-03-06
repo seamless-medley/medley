@@ -9,6 +9,7 @@ export interface WebSocketConnectionEvents {
   close(event: WebSocket.CloseEvent): void;
   error(error: Error): void;
   payload(payload: VoiceServerPayload): void;
+  ping(latency: number): void;
 }
 
 export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents> {
@@ -61,8 +62,6 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
       return;
     }
 
-    console.log('[WS] <<', e.data);
-
     try {
 			this.#handlePayload(JSON.parse(e.data) as VoicePayload);
 		} catch (error) {
@@ -82,12 +81,12 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
     this.#heartbeatAcked = Date.now();
     this.#missedHeartbeats = 0;
     this.#ping = this.#heartbeatAcked - this.#heartbeatSent;
+    this.emit('ping', this.#ping);
   }
 
   sendPayload(payload: VoiceClientPayload) {
     try {
       const raw = JSON.stringify(payload);
-      console.log('[WS] >>', raw);
       this.#ws.send(raw);
     } catch (error) {
       this.emit('error', error as Error);

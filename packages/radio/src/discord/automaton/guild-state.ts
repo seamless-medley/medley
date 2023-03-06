@@ -1,10 +1,9 @@
-import { AudioPlayer, AudioResource, createAudioPlayer, entersState, joinVoiceChannel, NoSubscriberBehavior, PlayerSubscription, VoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
-import { AudienceGroupId, AudienceType, ILogObj, IReadonlyLibrary, Logger, makeAudienceGroup as makeStationAudienceGroup, RequestAudioStreamResult, Station } from "@seamless-medley/core";
+import { AudienceGroupId, AudienceType, ILogObj, IReadonlyLibrary, Logger, makeAudienceGroup as makeStationAudienceGroup, Station } from "@seamless-medley/core";
 import { BaseGuildVoiceChannel, ChannelType, Client, Guild, GuildBasedChannel, GuildMember, VoiceBasedChannel, VoiceState } from "discord.js";
-import { createExciter } from "../voice/discord-exciter";
 import { TrackMessage } from "../trackmessage/types";
-import { voiceConnectionKeepAlivePatch } from "../voice/patch";
 import { VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
+import { AudioDispatcher } from "../../audio/exciter";
+import { DiscordAudioPlayer } from "../voice/audio/player";
 
 const makeAudienceGroup = (id: string): AudienceGroupId => makeStationAudienceGroup(AudienceType.Discord, id);
 
@@ -14,12 +13,11 @@ export type GuildStateAdapter = {
   getStations(): IReadonlyLibrary<Station>;
   getLogger(): Logger<ILogObj>;
   getInitialGain(): number;
-  // TODO: getAudioDispatcher
+  getAudioDispatcher(): AudioDispatcher;
 }
 
 export class GuildState {
   constructor (readonly guildId: Guild['id'], readonly adapter: GuildStateAdapter) {
-
     adapter.getClient().on('voiceStateUpdate', this.#handleVoiceStateUpdate);
   }
 
@@ -41,11 +39,7 @@ export class GuildState {
 
   private stationLink?: StationLink;
 
-  // private voiceConnection?: VoiceConnection;
-
   private voiceConnector?: VoiceConnector;
-
-  #playerSubscription?: PlayerSubscription;
 
   get tunedStation() {
     return this.stationLink?.station;
@@ -57,11 +51,7 @@ export class GuildState {
 
   set gain(value: number) {
     this.#gain = value;
-
-    if (this.stationLink) {
-      const { station, audioRequest } = this.stationLink;
-      station.medley.updateAudioStream(audioRequest.id, { gain: value });
-    }
+    this.stationLink?.newAudioPlayer.setGain(value);
   }
 
   get voiceChannelId() {
@@ -115,9 +105,11 @@ export class GuildState {
 
     const link = await this.createStationLink();
 
-    if (link) {
-      this.playerSubscription = this.voiceConnector?.subscribe(link.audioPlayer);
+    if (link && this.voiceConnector) {
+      link.newAudioPlayer.addConnector(this.voiceConnector);
     }
+
+    this.#updateAudiences();
 
     return link?.station;
   }
@@ -141,35 +133,14 @@ export class GuildState {
 
     console.log('Create station link');
 
-    const requestedAudioStream = await preferredStation.requestAudioStream({
-      bufferSize: 48000 * 2.5, // This should be large enough to hold PCM data while waiting for node stream to comsume
-      buffering: 960, // discord voice consumes stream every 20ms, so we buffer more 20ms ahead of time, making 40ms latency in total
-      preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
-      // discord voice only accept 48KHz sample rate, 16 bit per sample
-      sampleRate: 48000,
-      format: 'Int16LE',
-      gain: this.adapter.getInitialGain()
-    })
+    const newAudioPlayer = new DiscordAudioPlayer(preferredStation, this.adapter.getInitialGain());
 
-    const exciter = createExciter({
-      source: requestedAudioStream,
-      bitrate: 256_000
-    });
-
-    const audioPlayer = createAudioPlayer({
-      behaviors: {
-        noSubscriber: NoSubscriberBehavior.Play,
-        maxMissedFrames: 1000
-      }
-    });
-
-    audioPlayer.play(exciter);
+    this.adapter.getAudioDispatcher().add(newAudioPlayer);
+    newAudioPlayer.start();
 
     const newLink: StationLink = {
       station: preferredStation,
-      audioPlayer,
-      audioResource: exciter,
-      audioRequest: exciter.metadata
+      newAudioPlayer
     };
 
     this.stationLink = newLink;
@@ -185,25 +156,17 @@ export class GuildState {
 
     console.log('DETUNE');
 
-    const { station, audioRequest, audioPlayer } = this.stationLink;
+    const { station, newAudioPlayer } = this.stationLink;
 
-    this.playerSubscription = undefined;
+    if (this.voiceConnector) {
+      newAudioPlayer.removeConnector(this.voiceConnector);
+    }
 
-    audioPlayer.stop(true);
+    newAudioPlayer.stop();
 
-    station.medley.deleteAudioStream(audioRequest.id);
     station.removeAudiencesForGroup(makeAudienceGroup(this.guildId));
 
     this.stationLink = undefined;
-  }
-
-  get playerSubscription() {
-    return this.#playerSubscription;
-  }
-
-  set playerSubscription(value: PlayerSubscription | undefined) {
-    this.#playerSubscription?.unsubscribe();
-    this.#playerSubscription = value;
   }
 
   async join(channel: BaseGuildVoiceChannel, timeout: number = 5000): Promise<JoinResult> {
@@ -223,7 +186,6 @@ export class GuildState {
 
       // A station was selected
       if (this.preferredStation) {
-        // TODO: Tune in a station without start playing
         stationLink = await this.createStationLink();
       }
     }
@@ -240,46 +202,25 @@ export class GuildState {
 
     const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
 
-    // let voiceConnection: VoiceConnection | undefined = voiceConnectionKeepAlivePatch(joinVoiceChannel({
-    //   channelId,
-    //   guildId,
-    //   adapterCreator: voiceAdapterCreator
-    // }));
-
-    // if (!voiceConnection) {
-    //   return { status: 'not_joined' };
-    // }
-
     let connector: VoiceConnector | undefined = VoiceConnector.connect({ channelId, guildId, selfDeaf: true, selfMute: false }, voiceAdapterCreator);
-
-    console.log('connector', connector);
 
     if (!connector) {
       return { status: 'not_joined' };
     }
 
-    // let voiceConnection: VoiceConnection | undefined = undefined;
-
     try {
-      // await entersState(voiceConnection, VoiceConnectionStatus.Ready, timeout);
-      // this.playerSubscription = voiceConnection.subscribe(stationLink.audioPlayer);
-
       await connector.waitForState(VoiceConnectorStatus.Ready, timeout);
-      connector.subscribe(stationLink.audioPlayer);
+      stationLink.newAudioPlayer.addConnector(connector);
     }
     catch (e) {
       connector?.destroy();
       connector = undefined;
-      // voiceConnection?.destroy();
-      // voiceConnection = undefined;
       this.voiceConnector = undefined;
-      this.playerSubscription = undefined;
       //
       this.adapter.getLogger().error(e);
       throw e;
     }
 
-    // this.voiceConnection = voiceConnection;
     this.voiceConnector = connector;
 
     this.#updateAudiences();
@@ -454,12 +395,7 @@ export type JoinResult = {
 
 export type StationLink = {
   station: Station;
-  // This is Discord specific
-  audioRequest: RequestAudioStreamResult;
-  audioResource: AudioResource<RequestAudioStreamResult>;
-  audioPlayer: AudioPlayer;
-  //
-  // TODO: Use Exciter
+  newAudioPlayer: DiscordAudioPlayer;
 }
 
 export function updateStationAudiences(station: Station, channel: VoiceBasedChannel) {

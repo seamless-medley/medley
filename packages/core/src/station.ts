@@ -1,4 +1,4 @@
-import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions, TrackPlay } from "@seamless-medley/medley";
+import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions, TrackPlay, UpdateAudioStreamOptions } from "@seamless-medley/medley";
 import { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { TrackCollectionBasicOptions, TrackPeek } from "./collections";
@@ -455,6 +455,10 @@ export class Station extends TypedEmitter<StationEvents> {
 
   deleteAudioStream(streamId: number) {
     this.medley.deleteAudioStream(streamId);
+  }
+
+  updateAudioStream(streamId: number, options: UpdateAudioStreamOptions) {
+    this.medley.updateAudioStream(streamId, options);
   }
 
   //#region Collection

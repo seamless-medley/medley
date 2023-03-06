@@ -6,6 +6,7 @@ export interface UDPConnectionEvents {
   close(): void;
   error(error: Error): void;
   message(message: Buffer): void;
+  ping(latency: number): void;
 }
 
 export type SocketConfig = {
@@ -33,7 +34,7 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
 
   #keepAliveTimer: NodeJS.Timeout;
 
-  ping?: number;
+  #ping?: number;
 
   constructor(readonly config: SocketConfig) {
     super();
@@ -59,6 +60,10 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
     clearInterval(this.#keepAliveTimer);
   }
 
+  get ping() {
+    return this.#ping;
+  }
+
   #onMessage = (buffer: Buffer) => {
     if (buffer.length === 8 && buffer.readUInt32BE(0) === LEETCAFE) {
       const counter = buffer.readUInt32LE(4);
@@ -67,8 +72,10 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
       if (index === -1)
         return;
 
-      this.ping = Date.now() - this.#keepAlives[index].timestamp;
+      this.#ping = Date.now() - this.#keepAlives[index].timestamp;
       this.#keepAlives.splice(0, index);
+
+      this.emit('ping', this.#ping);
     }
 
     this.emit('message', buffer);
@@ -83,11 +90,7 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
   }
 
   #keepAlive() {
-    console.log(this.#keepAlives);
-
-		if (this.#keepAlives.length >= 3) {
-      console.log('KEEP ALIVE LIMIT');
-
+		if (this.#keepAlives.length >= 12) {
 			this.destroy();
 			return;
 		}
