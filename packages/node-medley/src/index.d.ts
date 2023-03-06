@@ -237,7 +237,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   requestAudioCallback(options: RequestAudioCallbackOptions): RequestAudioResult;
 
-  updateAudioStream(id: RequestAudioResult['id'], options: Partial<Pick<RequestAudioOptions, 'buffering' | 'gain'>>): boolean;
+  updateAudioStream(id: RequestAudioResult['id'], options: UpdateAudioStreamOptions): boolean;
 
   deleteAudioStream(id: number): void;
 
@@ -287,6 +287,8 @@ export type RequestAudioOptions = {
    */
   gain?: number;
 }
+
+export type UpdateAudioStreamOptions = Partial<Pick<RequestAudioOptions, 'buffering' | 'gain'>>;
 
 export type RequestAudioCallbackOptions = RequestAudioOptions & {
   callback: (buffer: Buffer) => Promise<any> | any;
