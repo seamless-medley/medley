@@ -22,7 +22,6 @@ export function voiceConnectionKeepAlivePatch(voiceConnection: VoiceConnection) 
       clearInterval(newUdp?.keepAliveInterval);
 
       if (newUdp && !Reflect.get(newUdp, $Patch)) {
-
         newUdp.onMessage = (buffer: Buffer) => {
           if (buffer.length === 8) {
             const counter = buffer.readUInt32LE(4);

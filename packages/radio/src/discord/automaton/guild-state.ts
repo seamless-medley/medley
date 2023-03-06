@@ -1,9 +1,10 @@
 import { AudioPlayer, AudioResource, createAudioPlayer, entersState, joinVoiceChannel, NoSubscriberBehavior, PlayerSubscription, VoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
 import { AudienceGroupId, AudienceType, ILogObj, IReadonlyLibrary, Logger, makeAudienceGroup as makeStationAudienceGroup, RequestAudioStreamResult, Station } from "@seamless-medley/core";
 import { BaseGuildVoiceChannel, ChannelType, Client, Guild, GuildBasedChannel, GuildMember, VoiceBasedChannel, VoiceState } from "discord.js";
-import { createExciter } from "../voice/exciter";
+import { createExciter } from "../voice/discord-exciter";
 import { TrackMessage } from "../trackmessage/types";
 import { voiceConnectionKeepAlivePatch } from "../voice/patch";
+import { VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
 
 const makeAudienceGroup = (id: string): AudienceGroupId => makeStationAudienceGroup(AudienceType.Discord, id);
 
@@ -13,6 +14,7 @@ export type GuildStateAdapter = {
   getStations(): IReadonlyLibrary<Station>;
   getLogger(): Logger<ILogObj>;
   getInitialGain(): number;
+  // TODO: getAudioDispatcher
 }
 
 export class GuildState {
@@ -39,7 +41,9 @@ export class GuildState {
 
   private stationLink?: StationLink;
 
-  private voiceConnection?: VoiceConnection;
+  // private voiceConnection?: VoiceConnection;
+
+  private voiceConnector?: VoiceConnector;
 
   #playerSubscription?: PlayerSubscription;
 
@@ -69,7 +73,7 @@ export class GuildState {
   }
 
   hasVoiceConnection() {
-    return this.voiceConnection !== undefined;
+    return this.voiceConnector !== undefined;
   }
 
   hasVoiceChannel() {
@@ -77,8 +81,16 @@ export class GuildState {
   }
 
   destroyVoiceConnection() {
-    this.voiceConnection?.destroy();
-    this.voiceConnection = undefined;
+    if (this.voiceConnector === undefined) {
+      return false;
+    }
+
+    console.log('Destroy voice connection');
+
+    this.voiceConnector.destroy();
+    this.voiceConnector = undefined;
+
+    return true;
   }
 
   joinedVoiceChannel(voiceChannelId: string | undefined, muted: boolean) {
@@ -87,13 +99,15 @@ export class GuildState {
   }
 
   leftVoiceChannel() {
-    this.detune();
+    console.log('Left voice channel');
 
     // if the voiceConnection is defined, meaning the voice state has been forcefully closed
     // if the voiceConnection is undefined here, meaning it might be the result of the `join` command
 
-    this.destroyVoiceConnection();
-    this.#voiceChannelId = undefined;
+    if (this.destroyVoiceConnection()) {
+      this.detune();
+      this.#voiceChannelId = undefined;
+    }
   }
 
   async tune(station: Station): Promise<Station | undefined> {
@@ -102,7 +116,7 @@ export class GuildState {
     const link = await this.createStationLink();
 
     if (link) {
-      this.playerSubscription = this.voiceConnection?.subscribe(link.audioPlayer);
+      this.playerSubscription = this.voiceConnector?.subscribe(link.audioPlayer);
     }
 
     return link?.station;
@@ -124,6 +138,8 @@ export class GuildState {
     if (currentStation) {
       this.detune();
     }
+
+    console.log('Create station link');
 
     const requestedAudioStream = await preferredStation.requestAudioStream({
       bufferSize: 48000 * 2.5, // This should be large enough to hold PCM data while waiting for node stream to comsume
@@ -156,16 +172,6 @@ export class GuildState {
       audioRequest: exciter.metadata
     };
 
-    if (this.voiceConnection) {
-      if (this.voiceChannelId) {
-        const channel = this.adapter.getChannel(this.voiceChannelId);
-
-        if (channel?.type === ChannelType.GuildVoice) {
-          updateStationAudiences(preferredStation, channel);
-        }
-      }
-    }
-
     this.stationLink = newLink;
     this.gain = this.adapter.getInitialGain();
 
@@ -176,6 +182,8 @@ export class GuildState {
     if (!this.stationLink) {
       return;
     }
+
+    console.log('DETUNE');
 
     const { station, audioRequest, audioPlayer } = this.stationLink;
 
@@ -202,6 +210,7 @@ export class GuildState {
     let { stationLink } = this;
 
     if (!stationLink) {
+      console.log('No stationLink');
       // Auto-tuning
       if (!this.preferredStation) {
         const stations = this.adapter.getStations();
@@ -212,8 +221,9 @@ export class GuildState {
         }
       }
 
-      // A station was selected, but no stationLink presented
+      // A station was selected
       if (this.preferredStation) {
+        // TODO: Tune in a station without start playing
         stationLink = await this.createStationLink();
       }
     }
@@ -222,42 +232,75 @@ export class GuildState {
       return { status: 'no_station' };
     }
 
-    const existingConnection = this.voiceConnection;
+    const existingConnection = this.voiceConnector;
     // Release the voiceConnection to make VoiceStateUpdate handler aware of the this join command
-    this.voiceConnection = undefined;
-
+    this.voiceConnector = undefined;
     // This should be called after setting state.voiceConnection to `undefined`
     existingConnection?.destroy();
 
     const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
 
-    let voiceConnection: VoiceConnection | undefined = voiceConnectionKeepAlivePatch(joinVoiceChannel({
-      channelId,
-      guildId,
-      adapterCreator: voiceAdapterCreator
-    }));
+    // let voiceConnection: VoiceConnection | undefined = voiceConnectionKeepAlivePatch(joinVoiceChannel({
+    //   channelId,
+    //   guildId,
+    //   adapterCreator: voiceAdapterCreator
+    // }));
 
-    if (!voiceConnection) {
+    // if (!voiceConnection) {
+    //   return { status: 'not_joined' };
+    // }
+
+    let connector: VoiceConnector | undefined = VoiceConnector.connect({ channelId, guildId, selfDeaf: true, selfMute: false }, voiceAdapterCreator);
+
+    console.log('connector', connector);
+
+    if (!connector) {
       return { status: 'not_joined' };
     }
 
+    // let voiceConnection: VoiceConnection | undefined = undefined;
+
     try {
-      await entersState(voiceConnection, VoiceConnectionStatus.Ready, timeout);
-      this.playerSubscription = voiceConnection.subscribe(stationLink.audioPlayer);
+      // await entersState(voiceConnection, VoiceConnectionStatus.Ready, timeout);
+      // this.playerSubscription = voiceConnection.subscribe(stationLink.audioPlayer);
+
+      await connector.waitForState(VoiceConnectorStatus.Ready, timeout);
+      connector.subscribe(stationLink.audioPlayer);
     }
     catch (e) {
-      voiceConnection?.destroy();
-      voiceConnection = undefined;
-      this.voiceConnection = undefined;
+      connector?.destroy();
+      connector = undefined;
+      // voiceConnection?.destroy();
+      // voiceConnection = undefined;
+      this.voiceConnector = undefined;
       this.playerSubscription = undefined;
       //
       this.adapter.getLogger().error(e);
       throw e;
     }
 
-    this.voiceConnection = voiceConnection;
+    // this.voiceConnection = voiceConnection;
+    this.voiceConnector = connector;
+
+    this.#updateAudiences();
 
     return { status: 'joined', station: stationLink.station };
+  }
+
+  #updateAudiences() {
+    if (!this.voiceConnector) {
+      return;
+    }
+
+    if (!this.voiceChannelId || !this.preferredStation) {
+      return;
+    }
+
+    const channel = this.adapter.getChannel(this.voiceChannelId);
+
+    if (channel?.type === ChannelType.GuildVoice) {
+      updateStationAudiences(this.preferredStation, channel);
+    }
   }
 
   #handleVoiceStateUpdate = (oldState: VoiceState, newState: VoiceState) => {
@@ -299,8 +342,9 @@ export class GuildState {
       // Me Just joined or moved, collecting...
       this.joinedVoiceChannel(newState.channelId || undefined, newState.serverMute === true)
 
-      if (station) {
-        if (this.#serverMuted) {
+      if (station && this.voiceConnector?.state.status === VoiceConnectorStatus.Ready) {
+
+        if (newState.serverMute) {
           station.removeAudiencesForGroup(audienceGroup);
         } else {
           updateStationAudiences(station, newState.channel!);
@@ -410,9 +454,12 @@ export type JoinResult = {
 
 export type StationLink = {
   station: Station;
+  // This is Discord specific
   audioRequest: RequestAudioStreamResult;
   audioResource: AudioResource<RequestAudioStreamResult>;
   audioPlayer: AudioPlayer;
+  //
+  // TODO: Use Exciter
 }
 
 export function updateStationAudiences(station: Station, channel: VoiceBasedChannel) {

@@ -5,8 +5,8 @@ import { decode } from "notepack.io";
 import { Duplex } from "stream";
 import { WebSocket, WebSocketServer } from "ws";
 import { AudioSocketCommand, AudioSocketReply } from "../../socket/audio";
-import { AudioDispatcher } from "./dispatcher";
-import { AudioStreamPlayer } from "./player";
+import { AudioDispatcher } from "../../audio/exciter/dispatcher";
+import { WebStreamExciter } from "./stream";
 
 export class AudioServer extends EventEmitter {
   #server: WebSocketServer;
@@ -15,7 +15,7 @@ export class AudioServer extends EventEmitter {
 
   #dispatcher = new AudioDispatcher();
 
-  #published = new Map<Station, AudioStreamPlayer>();
+  #published = new Map<Station, WebStreamExciter>();
 
   constructor(httpServer: http.Server) {
     super();
@@ -82,7 +82,7 @@ export class AudioServer extends EventEmitter {
   }
 
   async publish(station: Station) {
-    const player = new AudioStreamPlayer(station);
+    const player = new WebStreamExciter(station);
     await player.start();
 
     player.on('packet', (packet) => {

@@ -8,8 +8,8 @@ import { ExposedStation } from "./expose/station";
 import { musicCollections, sequences, sweeperRules } from "../fixtures";
 import { ExposedColection } from "./expose/collection";
 import { Unpacked } from "../types";
-import { AudioStreamPlayer } from "./audio/player";
-import { AudioDispatcher } from "./audio/dispatcher";
+import { AudioStreamPlayer } from "../audio/exciter/exciter";
+import { AudioDispatcher } from "../audio/exciter/dispatcher";
 import { AudioServer } from "./audio/transport";
 
 export class MedleyServer extends SocketServerController<RemoteTypes> {
