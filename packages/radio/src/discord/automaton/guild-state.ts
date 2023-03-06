@@ -1,5 +1,24 @@
-import { AudienceGroupId, AudienceType, ILogObj, IReadonlyLibrary, Logger, makeAudienceGroup as makeStationAudienceGroup, Station } from "@seamless-medley/core";
-import { BaseGuildVoiceChannel, ChannelType, Client, Guild, GuildBasedChannel, GuildMember, VoiceBasedChannel, VoiceState } from "discord.js";
+import {
+  AudienceGroupId,
+  AudienceType,
+  ILogObj,
+  IReadonlyLibrary,
+  Logger,
+  makeAudienceGroup as makeStationAudienceGroup,
+  Station
+} from "@seamless-medley/core";
+
+import {
+  BaseGuildVoiceChannel,
+  ChannelType,
+  Client,
+  Guild,
+  GuildBasedChannel,
+  GuildMember,
+  VoiceBasedChannel,
+  VoiceState
+} from "discord.js";
+
 import { TrackMessage } from "../trackmessage/types";
 import { VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
 import { AudioDispatcher } from "../../audio/exciter";
