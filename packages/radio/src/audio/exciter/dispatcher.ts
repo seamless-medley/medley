@@ -10,7 +10,7 @@ export class AudioDispatcher {
 
   #timer?: NodeJS.Timeout;
 
-  #cycle() {
+  #cycle = () => {
     if (this.#nextTime === -1) {
       return;
     }
@@ -33,7 +33,7 @@ export class AudioDispatcher {
     if (!next) {
       // but still has some exciters doing their works
       if (this.#nextTime !== -1) {
-        this.#timer = setTimeout(() => this.#cycle(), this.#nextTime - Date.now());
+        this.#timer = setTimeout(this.#cycle, this.#nextTime - Date.now());
       }
 
       return;
@@ -60,7 +60,7 @@ export class AudioDispatcher {
       // Just added
 
       this.#nextTime = Date.now();
-      setImmediate(() => this.#cycle());
+      setImmediate(this.#cycle);
     }
   }
 

@@ -438,10 +438,10 @@ export class Station extends TypedEmitter<StationEvents> {
     }
   }
 
-  pause() {
+  pause(reason?: string) {
     if (!this.medley.paused) {
       this.medley.togglePause(false);
-      this.logger.info('Playing paused');
+      this.logger.info('Playing paused', { reason });
     }
 
     this.playState = PlayState.Paused;
@@ -634,7 +634,7 @@ export class Station extends TypedEmitter<StationEvents> {
     this.boombox.setCrateIndex(newIndex);
   }
 
-  addAudiences(groupId: AudienceGroupId, audienceId: string, data?: any) {
+  addAudience(groupId: AudienceGroupId, audienceId: string, data?: any) {
     if (!this.audiences.has(groupId)) {
       this.audiences.set(groupId, new Map());
     }
@@ -645,12 +645,12 @@ export class Station extends TypedEmitter<StationEvents> {
 
   removeAudience(groupId: AudienceGroupId, audienceId: string) {
     this.getAudiences(groupId)?.delete(audienceId);
-    return this.pauseIfNoAudiences();
+    return this.pauseIfNoAudiences('an audience removed');
   }
 
   removeAudiencesForGroup(groupId: AudienceGroupId) {
     this.audiences.delete(groupId);
-    return this.pauseIfNoAudiences();
+    return this.pauseIfNoAudiences('audiences group removed');
   }
 
   updateAudiences(groupId: AudienceGroupId, audiences: [id: string, data: any][]) {
@@ -662,7 +662,7 @@ export class Station extends TypedEmitter<StationEvents> {
     if (this.hasAudiences) {
       this.start();
     } else {
-      this.pause();
+      this.pause('Update playback, no audiences');
     }
 
     return !this.medley.paused;
@@ -676,9 +676,9 @@ export class Station extends TypedEmitter<StationEvents> {
     return !this.medley.paused;
   }
 
-  pauseIfNoAudiences() {
+  pauseIfNoAudiences(reason?: string) {
     if (this.playState === PlayState.Playing && !this.hasAudiences) {
-      this.pause();
+      this.pause('No audiences: ' + reason);
     }
 
     return this.medley.paused;

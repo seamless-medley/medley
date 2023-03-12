@@ -5,6 +5,7 @@ import { makeVoiceStateUpdatePayload, Payload } from "./network/payload";
 import { ConnectionStatus, VoiceConnection, VoiceConnectionEvents } from './network/connection'
 import { noop } from "lodash";
 import EventEmitter, { once } from "events";
+import { ICarrier } from "../../audio/exciter";
 
 export enum VoiceConnectorStatus {
   Connecting = "connecting",
@@ -86,7 +87,7 @@ type VoiceConnectorEvents = {
   [K in VoiceConnectorStatus]: (oldState: VoiceConnectorState, newState: VoiceConnectorState) => void;
 }
 
-export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> {
+export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implements ICarrier {
   #state: VoiceConnectorState;
 
   readonly #data: VoiceConnecterInternalData = {};
@@ -165,10 +166,14 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> {
 		}
   }
 
-  get #readyState() {
+  get #readyState(): ReadyState | undefined {
     if (this.state.status === VoiceConnectorStatus.Ready) {
-      return this.state as ReadyState;
+      return this.state;
     }
+  }
+
+  get isReady(): boolean {
+    return this.state.status === VoiceConnectorStatus.Ready;
   }
 
   prepareAudioPacket(buffer: Buffer): Buffer | undefined {
@@ -180,10 +185,10 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> {
     return state.connection.prepareAudioPacket(buffer);
   }
 
-  dispatchAudio(): boolean | undefined {
+  dispatchAudio(): boolean {
 		if (this.#state.status !== VoiceConnectorStatus.Ready) {
       console.log('Cannot dispatchAudio', this.#state.status);
-      return;
+      return false;
     }
 
 		return this.#state.connection.dispatchAudio();

@@ -1,10 +1,7 @@
 import { Station } from "@seamless-medley/core";
 import { Exciter, IExciter } from "../../../audio/exciter";
-import { VoiceConnector, VoiceConnectorStatus } from "../connector";
 
 export class DiscordAudioPlayer extends Exciter implements IExciter {
-  #connectors: VoiceConnector[] = [];
-
   constructor(station: Station, initialGain: number, bitrate = 256_000) {
     super(
       station,
@@ -20,48 +17,4 @@ export class DiscordAudioPlayer extends Exciter implements IExciter {
       { bitrate }
     );
   }
-
-  get isPlayable(): boolean {
-    return super.isPlayable;
-  }
-
-  private get playableConnectors() {
-    return this.#connectors.filter(isConnectorReady);
-  }
-
-  prepare(): void {
-    const opus = this.read();
-
-    if (!opus) {
-      return;
-    }
-
-    for (const connector of this.playableConnectors) {
-			connector.prepareAudioPacket(opus);
-		}
-  }
-
-  dispatch(): void {
-    for (const connector of this.playableConnectors) {
-			connector.dispatchAudio();
-		}
-  }
-
-  addConnector(connector: VoiceConnector) {
-    if (this.#connectors.includes(connector)) {
-      return;
-    }
-
-    this.#connectors.push(connector);
-  }
-
-  removeConnector(connector: VoiceConnector) {
-    const index = this.#connectors.indexOf(connector);
-
-    if (index > -1) {
-      this.#connectors.splice(index, 1);
-    }
-  }
 }
-
-const isConnectorReady = ({ state }: VoiceConnector) => state.status === VoiceConnectorStatus.Ready;

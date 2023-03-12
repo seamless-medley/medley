@@ -5,11 +5,35 @@ import { ListenerSignature, TypedEmitter } from 'tiny-typed-emitter';
 import { OpusPacketEncoder, OpusPacketEncoderOptions } from '../codecs/opus/stream';
 
 export interface IExciter {
+  readonly station: Station;
+  readonly audioOptions: RequestAudioOptions;
+  readonly encoderOptions: Partial<OpusPacketEncoderOptions>;
+
+  start(): Promise<void>;
+
+  stop(): void;
+
+  get bitrate(): number;
+
+  set bitrate(value: number);
+
+  setGain(gain: number): void;
+
   get isPlayable(): boolean;
+
+  addCarrier(carrier: ICarrier): void;
+  removeCarrier(carrier: ICarrier): void;
+
   prepare(): void;
   dispatch(): void;
 }
 
+export interface ICarrier {
+  get isReady(): boolean;
+
+  prepareAudioPacket(buffer: Buffer): Buffer | undefined;
+  dispatchAudio(): boolean;
+}
 /**
  * An Exciter read PCM stream from node-medley and encode it into Opus packets.
  */
@@ -18,10 +42,12 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
   protected stream?: Readable;
   protected opusEncoder: OpusPacketEncoder;
 
+  protected readonly carriers: ICarrier[] = [];
+
   constructor(
-    protected station: Station,
-    protected audioOptions: RequestAudioOptions,
-    protected encoderOptions: Partial<OpusPacketEncoderOptions>
+    readonly station: Station,
+    readonly audioOptions: RequestAudioOptions,
+    readonly encoderOptions: Partial<OpusPacketEncoderOptions>
   ) {
     super();
 
@@ -80,8 +106,43 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     return this.stream?.read() as (Buffer | undefined | null);
   }
 
-  abstract prepare(): void;
-  abstract dispatch(): void;
+  protected get playableCarriers() {
+    return this.carriers.filter(c => c.isReady);
+  }
+
+  prepare(): void {
+    const opus = this.read();
+
+    if (!opus) {
+      return;
+    }
+
+    for (const connector of this.playableCarriers) {
+			connector.prepareAudioPacket(opus);
+		}
+  }
+
+  dispatch(): void {
+    for (const connector of this.playableCarriers) {
+			connector.dispatchAudio();
+		}
+  }
+
+  addCarrier(carrier: ICarrier) {
+    if (this.carriers.includes(carrier)) {
+      return;
+    }
+
+    this.carriers.push(carrier);
+  }
+
+  removeCarrier(carrier: ICarrier) {
+    const index = this.carriers.indexOf(carrier);
+
+    if (index > -1) {
+      this.carriers.splice(index, 1);
+    }
+  }
 }
 
 

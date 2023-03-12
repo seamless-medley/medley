@@ -21,7 +21,7 @@ import {
 
 import { TrackMessage } from "../trackmessage/types";
 import { VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
-import { AudioDispatcher } from "../../audio/exciter";
+import { AudioDispatcher, IExciter } from "../../audio/exciter";
 import { DiscordAudioPlayer } from "../voice/audio/player";
 
 const makeAudienceGroup = (id: string): AudienceGroupId => makeStationAudienceGroup(AudienceType.Discord, id);
@@ -70,7 +70,7 @@ export class GuildState {
 
   set gain(value: number) {
     this.#gain = value;
-    this.stationLink?.newAudioPlayer.setGain(value);
+    this.stationLink?.exciter.setGain(value);
   }
 
   get voiceChannelId() {
@@ -121,7 +121,7 @@ export class GuildState {
     const link = await this.createStationLink();
 
     if (link && this.voiceConnector) {
-      link.newAudioPlayer.addConnector(this.voiceConnector);
+      link.exciter.addCarrier(this.voiceConnector);
     }
 
     this.#updateAudiences();
@@ -146,14 +146,14 @@ export class GuildState {
       this.detune();
     }
 
-    const newAudioPlayer = new DiscordAudioPlayer(preferredStation, this.adapter.getInitialGain());
+    const audioPlayer = new DiscordAudioPlayer(preferredStation, this.adapter.getInitialGain());
 
-    this.adapter.getAudioDispatcher().add(newAudioPlayer);
-    newAudioPlayer.start();
+    this.adapter.getAudioDispatcher().add(audioPlayer);
+    audioPlayer.start();
 
     const newLink: StationLink = {
       station: preferredStation,
-      newAudioPlayer
+      exciter: audioPlayer
     };
 
     this.stationLink = newLink;
@@ -167,13 +167,13 @@ export class GuildState {
       return;
     }
 
-    const { station, newAudioPlayer } = this.stationLink;
+    const { station, exciter } = this.stationLink;
 
     if (this.voiceConnector) {
-      newAudioPlayer.removeConnector(this.voiceConnector);
+      exciter.removeCarrier(this.voiceConnector);
     }
 
-    newAudioPlayer.stop();
+    exciter.stop();
 
     station.removeAudiencesForGroup(makeAudienceGroup(this.guildId));
 
@@ -220,7 +220,7 @@ export class GuildState {
 
     try {
       await connector.waitForState(VoiceConnectorStatus.Ready, timeout);
-      stationLink.newAudioPlayer.addConnector(connector);
+      stationLink.exciter.addCarrier(connector);
     }
     catch (e) {
       connector?.destroy();
@@ -369,7 +369,7 @@ export class GuildState {
 
         if (!newState.deaf) {
           // User has joined or moved into
-          station.addAudiences(audienceGroup, newState.member.id);
+          station.addAudience(audienceGroup, newState.member.id);
         }
 
         return;
@@ -388,7 +388,7 @@ export class GuildState {
     // No channel change but deaf state change
     if (oldState.deaf !== newState.deaf && newState.channelId === this.voiceChannelId) {
       if (!newState.deaf) {
-        station.addAudiences(audienceGroup, newState.member.id);
+        station.addAudience(audienceGroup, newState.member.id);
       } else {
         station.removeAudience(audienceGroup, newState.member.id);
       }
@@ -405,7 +405,7 @@ export type JoinResult = {
 
 export type StationLink = {
   station: Station;
-  newAudioPlayer: DiscordAudioPlayer;
+  exciter: IExciter;
 }
 
 export function updateStationAudiences(station: Station, channel: VoiceBasedChannel) {

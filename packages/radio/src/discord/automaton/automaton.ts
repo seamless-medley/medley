@@ -77,22 +77,22 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #baseCommand: string;
 
-  readonly client: Client;
+  #client: Client;
 
-  private _guildStates: Map<Guild['id'], GuildState> = new Map();
+  #guildStates: Map<Guild['id'], GuildState> = new Map();
 
-  private logger: Logger<ILogObj>;
+  #logger: Logger<ILogObj>;
 
-  private rejoining = false;
+  #rejoining = false;
 
-  private shardReady = false;
+  #shardReady = false;
 
   #audioDispatcher = new AudioDispatcher();
 
   constructor(readonly stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
     super();
 
-    this.logger = createLogger({ name: `automaton/${options.id}` });
+    this.#logger = createLogger({ name: `automaton/${options.id}` });
 
     this.id = options.id;
     this.botToken = options.botToken;
@@ -102,7 +102,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.initialGain = options.initialGain ?? decibelsToGain(-3);
     this.#baseCommand = options.baseCommand || 'medley';
 
-    this.client = new Client({
+    this.#client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
@@ -111,44 +111,44 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       ]
     });
 
-    this.client.on('warn', message => {
-      this.logger.warn('Automaton Warning', message);
+    this.#client.on('warn', message => {
+      this.#logger.warn('Automaton Warning', message);
     });
 
-    this.client.on('error', (error) => {
-      this.logger.error('Automaton Error', error);
+    this.#client.on('error', (error) => {
+      this.#logger.error('Automaton Error', error);
     });
 
-    this.client.on('shardError', this.handleShardError);
+    this.#client.on('shardError', this.handleShardError);
 
-    this.client.on('shardReconnecting', (shardId) => {
-      this.logger.debug('Shard', shardId, 'reconnecting');
+    this.#client.on('shardReconnecting', (shardId) => {
+      this.#logger.debug('Shard', shardId, 'reconnecting');
     })
 
-    this.client.on('shardResume', (shardId) => {
-      this.logger.debug('Shard', shardId, 'resume');
+    this.#client.on('shardResume', (shardId) => {
+      this.#logger.debug('Shard', shardId, 'resume');
 
-      if (!this.shardReady) {
+      if (!this.#shardReady) {
         this.rejoinVoiceChannels(30);
       }
 
-      this.shardReady = true;
+      this.#shardReady = true;
     });
 
-    this.client.on('shardReady', (shardId) => {
-      this.shardReady = true;
-      this.logger.debug('Shard', shardId, 'ready');
+    this.#client.on('shardReady', (shardId) => {
+      this.#shardReady = true;
+      this.#logger.debug('Shard', shardId, 'ready');
       this.rejoinVoiceChannels(30);
     })
 
-    this.client.on('ready', this.handleClientReady);
-    this.client.on('guildCreate', this.handleGuildCreate);
-    this.client.on('guildDelete', this.handleGuildDelete);
-    // this.client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
-    this.client.on('interactionCreate', createInteractionHandler(this));
+    this.#client.on('ready', this.handleClientReady);
+    this.#client.on('guildCreate', this.handleGuildCreate);
+    this.#client.on('guildDelete', this.handleGuildDelete);
+    // this.#client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
+    this.#client.on('interactionCreate', createInteractionHandler(this));
 
-    this.client.on('messageDelete', this.handleMessageDeletion);
-    this.client.on('messageDeleteBulk', async messages => void messages.mapValues(this.handleMessageDeletion))
+    this.#client.on('messageDelete', this.handleMessageDeletion);
+    this.#client.on('messageDeleteBulk', async messages => void messages.mapValues(this.handleMessageDeletion))
 
     for (const station of stations) {
       station.on('trackStarted', this.handleTrackStarted(station));
@@ -158,21 +158,25 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
   }
 
+  get client() {
+    return this.#client;
+  }
+
   get baseCommand() {
     return this.#baseCommand || 'medley';
   }
 
   private handleShardError = (error: Error, shardId: number) => {
-    this.logger.error('Shard', shardId, 'error', error.message);
+    this.#logger.error('Shard', shardId, 'error', error.message);
 
-    this.shardReady = false;
-    this.rejoining = false;
+    this.#shardReady = false;
+    this.#rejoining = false;
     this.removeAllAudiences();
   }
 
   private removeAllAudiences(closeConnection?: boolean) {
     // Remove audiences from all stations
-    for (const [guildId, state] of this._guildStates) {
+    for (const [guildId, state] of this.#guildStates) {
       const group = makeAudienceGroup(guildId);
 
       for (const station of this.stations) {
@@ -186,13 +190,13 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   private async rejoinVoiceChannels(timeoutSeconds: number) {
-    if (this.rejoining) {
+    if (this.#rejoining) {
       return;
     }
 
     const joinTimeout = 5000;
 
-    for (const [guildId, state] of this._guildStates) {
+    for (const [guildId, state] of this.#guildStates) {
 
       const { voiceChannelId } = state;
 
@@ -210,19 +214,19 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         continue;
       }
 
-      this.rejoining = true;
+      this.#rejoining = true;
 
       const retries = Math.ceil(timeoutSeconds * 1000 / (joinTimeout + 1000));
 
       retryable<JoinResult>(async () => {
-          if (!this.rejoining) {
+          if (!this.#rejoining) {
             return { status: 'not_joined' }
           }
 
           const result = state.join(channel, joinTimeout);
 
-          this.rejoining = false;
-          this.logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
+          this.#rejoining = false;
+          this.#logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
 
           return result;
       }, { retries, wait: 1000 }).then(() => state.preferredStation?.updatePlayback());
@@ -241,27 +245,27 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     try {
       const result = await retryable(async () => {
-        this.logger.info('Logging in');
+        this.#logger.info('Logging in');
 
         return this.client.login(this.botToken)
           .catch(e => {
-            this.logger.error('Error login', e);
+            this.#logger.error('Error login', e);
             throw e;
           });
       }, { wait: 5000, signal: this.loginAbortController.signal });
 
       if (result !== undefined) {
-        this.logger.debug('Logging in done');
+        this.#logger.debug('Logging in done');
       }
     }
     catch (e) {
-      this.logger.error('Error logging in', e);
+      this.#logger.error('Error logging in', e);
     }
   }
 
   #baseAdapter: Omit<GuildStateAdapter, 'getChannel'> = {
     getClient: () => this.client,
-    getLogger: () => this.logger,
+    getLogger: () => this.#logger,
     getInitialGain: () => this.initialGain,
     getStations: () => this.stations,
     getAudioDispatcher: () => this.#audioDispatcher
@@ -275,15 +279,15 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   ensureGuildState(guildId: Guild['id']) {
-    if (!this._guildStates.has(guildId)) {
-      this._guildStates.set(guildId, new GuildState(guildId, this.makeAdapter(guildId)));
+    if (!this.#guildStates.has(guildId)) {
+      this.#guildStates.set(guildId, new GuildState(guildId, this.makeAdapter(guildId)));
     }
 
-    return this._guildStates.get(guildId)!;
+    return this.#guildStates.get(guildId)!;
   }
 
   getGuildState(id: Guild['id']): GuildState | undefined {
-    return this._guildStates.get(id);
+    return this.#guildStates.get(id);
   }
 
   private handleClientReady = async (client: Client) => {
@@ -293,13 +297,13 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.ensureGuildState(id);
     };
 
-    this.logger.info('Ready');
+    this.#logger.info('Ready');
     this.emit('ready');
   }
 
   private handleGuildCreate = async (guild: Guild) => {
     // Invited to
-    this.logger.info(`Invited to ${guild.name}`);
+    this.#logger.info(`Invited to ${guild.name}`);
 
     this.ensureGuildState(guild.id);
     this.registerCommands(guild);
@@ -309,9 +313,9 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   private handleGuildDelete = async (guild: Guild) => {
     // Removed from
-    this.logger.info(`Removed from ${guild.name}`);
-    this._guildStates.get(guild.id)?.dispose();
-    this._guildStates.delete(guild.id);
+    this.#logger.info(`Removed from ${guild.name}`);
+    this.#guildStates.get(guild.id)?.dispose();
+    this.#guildStates.delete(guild.id);
   }
 
   private handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay, lastTrackPlay) => {
@@ -320,7 +324,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
       // Store message for each guild
       for (const [guildId, trackMsg, maybeMessage] of sentMessages) {
-        const state = this._guildStates.get(guildId);
+        const state = this.#guildStates.get(guildId);
 
         if (!state?.voiceChannelId) {
           continue;
@@ -464,7 +468,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   async updateTrackMessage(predicate: (msg: TrackMessage) => Promise<UpdateTrackMessageOptions | undefined>) {
     let count = 0;
 
-    for (const state of this._guildStates.values()) {
+    for (const state of this.#guildStates.values()) {
       for (const msg of state.trackMessages) {
         const options = await predicate(msg);
 
@@ -506,7 +510,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
             sentMessage.edit({ embeds, components })
               .then(resolve)
               .catch((error) => {
-                this.logger.error('Error updating track message in guild', sentMessage.guild?.name, error);
+                this.#logger.error('Error updating track message in guild', sentMessage.guild?.name, error);
               });
           });
         })
@@ -515,7 +519,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   async removeLyricsButton(trackId: StationTrack['id']) {
-    for (const state of this._guildStates.values()) {
+    for (const state of this.#guildStates.values()) {
       const currentCollectionId = state.tunedStation?.trackPlay?.track?.collection?.id;
 
       const messages = state.trackMessages.filter(msg => msg.trackPlay.track.id === trackId);
@@ -600,7 +604,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         continue;
       }
 
-      const state = this._guildStates.get(guildId);
+      const state = this.#guildStates.get(guildId);
 
       if (state?.tunedStation === station) {
         const guild = this.client.guilds.cache.get(guildId);
@@ -622,7 +626,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
             }
           });
 
-          const d = (textChannel || guild.systemChannel)?.send(options).catch(e => void this.logger.error(e));
+          const d = (textChannel || guild.systemChannel)?.send(options).catch(e => void this.#logger.error(e));
 
           results.push([guildId, trackMsg, d]);
         }
@@ -644,9 +648,9 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   async registerCommands(guild?: Guild | OAuth2Guild) {
     try {
       if (guild) {
-        this.logger.info('Registering commands with guild id:', guild.id, `(${guild.name})`);
+        this.#logger.info('Registering commands with guild id:', guild.id, `(${guild.name})`);
       } else {
-        this.logger.info('Registering commands');
+        this.#logger.info('Registering commands');
       }
 
       this.#rest.setToken(this.botToken);
@@ -661,10 +665,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         }
       )
 
-      this.logger.debug('Registered', guild?.id, guild?.name);
+      this.#logger.debug('Registered', guild?.id, guild?.name);
     }
     catch (e) {
-      this.logger.error('Error registering command', e);
+      this.#logger.error('Error registering command', e);
     }
   }
 
