@@ -117,14 +117,14 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
       return;
     }
 
-    for (const connector of this.playableCarriers) {
-			connector.prepareAudioPacket(opus);
+    for (const carrier of this.playableCarriers) {
+			carrier.prepareAudioPacket(opus);
 		}
   }
 
   dispatch(): void {
-    for (const connector of this.playableCarriers) {
-			connector.dispatchAudio();
+    for (const carrier of this.playableCarriers) {
+			carrier.dispatchAudio();
 		}
   }
 
