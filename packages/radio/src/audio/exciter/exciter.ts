@@ -110,6 +110,10 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     return this.carriers.filter(c => c.isReady);
   }
 
+  protected prepareAudioPacket(opus: Buffer): Buffer {
+    return opus;
+  }
+
   prepare(): void {
     const opus = this.read();
 
@@ -117,8 +121,10 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
       return;
     }
 
+    const prepared = this.prepareAudioPacket(opus);
+
     for (const carrier of this.playableCarriers) {
-			carrier.prepareAudioPacket(opus);
+			carrier.prepareAudioPacket(prepared);
 		}
   }
 
