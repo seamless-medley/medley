@@ -1,10 +1,7 @@
 import {
-  AudienceGroupId,
-  AudienceType,
   ILogObj,
   IReadonlyLibrary,
   Logger,
-  makeAudienceGroup as makeStationAudienceGroup,
   Station
 } from "@seamless-medley/core";
 
@@ -23,20 +20,18 @@ import { TrackMessage } from "../trackmessage/types";
 import { VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
 import { AudioDispatcher, IExciter } from "../../audio/exciter";
 import { DiscordAudioPlayer } from "../voice/audio/player";
-
-const makeAudienceGroup = (id: string): AudienceGroupId => makeStationAudienceGroup(AudienceType.Discord, id);
+import { MedleyAutomaton } from "./automaton";
 
 export type GuildStateAdapter = {
   getClient(): Client;
   getChannel(id: string): GuildBasedChannel | undefined;
   getStations(): IReadonlyLibrary<Station>;
   getLogger(): Logger<ILogObj>;
-  getInitialGain(): number;
   getAudioDispatcher(): AudioDispatcher;
 }
 
 export class GuildState {
-  constructor (readonly guildId: Guild['id'], readonly adapter: GuildStateAdapter) {
+  constructor (readonly automaton: MedleyAutomaton, readonly guildId: Guild['id'], readonly adapter: GuildStateAdapter) {
     adapter.getClient().on('voiceStateUpdate', this.#handleVoiceStateUpdate);
   }
 
@@ -46,6 +41,9 @@ export class GuildState {
 
   preferredStation?: Station;
 
+  /**
+   * @deprecated
+   */
   #gain = 1.0;
 
   #voiceChannelId?: string;
@@ -64,13 +62,18 @@ export class GuildState {
     return this.stationLink?.station;
   }
 
+  /**
+   * @deprecated
+   */
   get gain() {
     return this.#gain;
   }
 
+  /**
+   * @deprecated
+   */
   set gain(value: number) {
     this.#gain = value;
-    this.stationLink?.exciter.setGain(value);
   }
 
   get voiceChannelId() {
@@ -146,18 +149,19 @@ export class GuildState {
       this.detune();
     }
 
-    const audioPlayer = new DiscordAudioPlayer(preferredStation, this.adapter.getInitialGain());
+    // const exciter = new DiscordAudioPlayer(preferredStation, this.adapter.getInitialGain());
+    const exciter = DiscordAudioPlayer.make(preferredStation);
 
-    this.adapter.getAudioDispatcher().add(audioPlayer);
-    audioPlayer.start();
+    this.adapter.getAudioDispatcher().add(exciter);
+    exciter.start();
 
     const newLink: StationLink = {
       station: preferredStation,
-      exciter: audioPlayer
+      exciter: exciter
     };
 
     this.stationLink = newLink;
-    this.gain = this.adapter.getInitialGain();
+    this.gain = 1.0;
 
     return newLink;
   }
@@ -175,7 +179,7 @@ export class GuildState {
 
     exciter.stop();
 
-    station.removeAudiencesForGroup(makeAudienceGroup(this.guildId));
+    station.removeAudiencesForGroup(this.automaton.makeAudienceGroup(this.guildId));
 
     this.stationLink = undefined;
   }
@@ -212,7 +216,16 @@ export class GuildState {
 
     const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
 
-    let connector: VoiceConnector | undefined = VoiceConnector.connect({ channelId, guildId, selfDeaf: true, selfMute: false }, voiceAdapterCreator);
+    let connector: VoiceConnector | undefined = VoiceConnector.connect(
+      {
+        automatonId: this.automaton.id,
+        channelId,
+        guildId,
+        selfDeaf: true,
+        selfMute: false,
+      },
+      voiceAdapterCreator
+    );
 
     if (!connector) {
       return { status: 'not_joined' };
@@ -250,7 +263,7 @@ export class GuildState {
     const channel = this.adapter.getChannel(this.voiceChannelId);
 
     if (channel?.type === ChannelType.GuildVoice) {
-      updateStationAudiences(this.preferredStation, channel);
+      updateStationAudiences(this.automaton, this.preferredStation, channel);
     }
   }
 
@@ -281,7 +294,7 @@ export class GuildState {
       return;
     }
 
-    const audienceGroup = makeAudienceGroup(this.guildId);
+    const audienceGroup = this.automaton.makeAudienceGroup(this.guildId);
 
     if (channelChange === 'leave') {
       // Me Leaving,
@@ -298,7 +311,7 @@ export class GuildState {
         if (newState.serverMute) {
           station.removeAudiencesForGroup(audienceGroup);
         } else {
-          updateStationAudiences(station, newState.channel!);
+          updateStationAudiences(this.automaton, station, newState.channel!);
         }
       }
 
@@ -313,7 +326,7 @@ export class GuildState {
         if (this.#serverMuted) {
           station.removeAudiencesForGroup(audienceGroup);
         } else {
-          updateStationAudiences(station, newState.channel!);
+          updateStationAudiences(this.automaton, station, newState.channel!);
         }
       }
     }
@@ -341,7 +354,7 @@ export class GuildState {
     }
 
     const myId = this.adapter.getClient().user?.id;
-    const audienceGroup = makeAudienceGroup(this.guildId);
+    const audienceGroup = this.automaton.makeAudienceGroup(this.guildId);
 
     // state change is originated from other member that is in the same room as me.
     if (channelChange === 'leave') {
@@ -408,9 +421,9 @@ export type StationLink = {
   exciter: IExciter;
 }
 
-export function updateStationAudiences(station: Station, channel: VoiceBasedChannel) {
+export function updateStationAudiences(automaton: MedleyAutomaton, station: Station, channel: VoiceBasedChannel) {
   station.updateAudiences(
-    makeAudienceGroup(channel.guildId),
+    automaton.makeAudienceGroup(channel.guildId),
     channel.members
       .filter(member => !member.user.bot && !channel.guild.voiceStates.cache.get(member.id)?.deaf)
       .map(member => [member.id, undefined])

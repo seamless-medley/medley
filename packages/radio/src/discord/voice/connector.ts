@@ -1,4 +1,4 @@
-import { GatewayVoiceServerUpdateDispatchData, GatewayVoiceStateUpdateData, GatewayVoiceStateUpdateDispatchData } from "discord.js";
+import { GatewayVoiceServerUpdateDispatchData, GatewayVoiceStateUpdateData, GatewayVoiceStateUpdateDispatchData, Guild } from "discord.js";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { CamelCase } from "type-fest";
 import { makeVoiceStateUpdatePayload, Payload } from "./network/payload";
@@ -6,6 +6,7 @@ import { ConnectionStatus, VoiceConnection, VoiceConnectionEvents } from './netw
 import { noop } from "lodash";
 import EventEmitter, { once } from "events";
 import { ICarrier } from "../../audio/exciter";
+import { MedleyAutomaton } from "../automaton";
 
 export enum VoiceConnectorStatus {
   Connecting = "connecting",
@@ -77,7 +78,11 @@ type VoiceConnecterInternalData = {
   voiceState?: GatewayVoiceStateUpdateDispatchData;
 }
 
-const connectors = new Map<string, VoiceConnector>();
+const connectors = new Map<MedleyAutomaton['id'], Map<Guild['id'], VoiceConnector>>();
+
+export const getVoiceConnectors = (automatonId: MedleyAutomaton['id']) => connectors.get(automatonId);
+
+export const getVoiceConnector = (automatonId: MedleyAutomaton['id'], guildId: string) => getVoiceConnectors(automatonId)?.get(guildId);
 
 type VoiceConnectorEvents = {
   stateChange(oldState: VoiceConnectorState, newState: VoiceConnectorState): void;
@@ -111,8 +116,10 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 			throw new Error('Cannot destroy VoiceConnection - it has already been destroyed');
 		}
 
-    if (connectors.get(this.joinConfig.guildId) === this) {
-      connectors.delete(this.joinConfig.guildId);
+    const { automatonId, guildId } = this.joinConfig;
+
+    if (getVoiceConnector(automatonId, guildId) === this) {
+      getVoiceConnectors(automatonId)?.delete(guildId);
     }
 
     if (!fromGateway) {
@@ -365,7 +372,7 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
     }
   }
 
-  public rejoin(joinConfig?: Omit<JoinConfig, 'guildId'>) {
+  public rejoin(joinConfig?: Omit<JoinConfig, 'guildId' | 'automatonId'>) {
 		if (this.#state.status === VoiceConnectorStatus.Destroyed) {
 			return false;
 		}
@@ -401,7 +408,13 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
   static connect(joinConfig: JoinConfig, adapter: DiscordGatewayAdapter) {
     const payload = makeVoiceStateUpdatePayload(joinConfig2Data(joinConfig));
 
-    const existing = connectors.get(joinConfig.guildId);
+    const group = connectors.get(joinConfig.automatonId) ?? (() => {
+      const map = new Map<Guild['id'], VoiceConnector>();
+	    connectors.set(joinConfig.automatonId, map);
+	    return map;
+    })();
+
+    const existing = group.get(joinConfig.automatonId);
 
     if (existing && existing.state.status !== VoiceConnectorStatus.Destroyed) {
       if (existing.state.status === VoiceConnectorStatus.Disconnected) {
@@ -423,7 +436,7 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 
     const connector = new VoiceConnector(joinConfig, adapter);
 
-    connectors.set(joinConfig.guildId, connector);
+    group.set(joinConfig.guildId, connector);
 
     if (connector.state.status !== VoiceConnectorStatus.Destroyed) {
       connector.state.gateway.sendPayload(payload);
@@ -434,7 +447,9 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 }
 
 type JoinConfig = {
-  [K in keyof GatewayVoiceStateUpdateData as CamelCase<K>]: GatewayVoiceStateUpdateData[K]
+  [K in keyof GatewayVoiceStateUpdateData as CamelCase<K>]: GatewayVoiceStateUpdateData[K];
+} & {
+  automatonId: MedleyAutomaton['id'];
 }
 
 const joinConfig2Data = ({ channelId, guildId, selfDeaf, selfMute }: JoinConfig): GatewayVoiceStateUpdateData => ({

@@ -96,16 +96,33 @@ export type StationOptions = {
 
 export enum AudienceType {
   Discord = 'discord',
-  Icy = 'icy'
-  // TODO: New audience type
+  Icy = 'icy',
+  Web = 'web'
 }
 
-export type AudienceGroupId = `${AudienceType}$${string}`;
+export type DiscordAudienceGroupId = `${AudienceType.Discord}${string}/${string}`;
 
-export type Audience = {
-  group: AudienceGroupId;
+export type AudienceGroupId = DiscordAudienceGroupId | `${Exclude<AudienceType, AudienceType.Discord>}$${string}`;
+
+type AudienceT<T extends AudienceType, G = string> = {
+  type: T;
+  group: G;
   id: string;
 }
+
+export type DiscordAudience = AudienceT<AudienceType.Discord, never> & {
+  group: {
+    automatonId: string;
+    guildId: string;
+  }
+}
+
+
+export type IcyAudience = AudienceT<AudienceType.Icy>;
+
+export type WebAudience = AudienceT<AudienceType.Web>;
+
+export type Audience = DiscordAudience | IcyAudience | WebAudience;
 
 export type StationTrack = MusicTrack<Station>;
 export type StationTrackPlay = TrackPlay<StationTrack>;
@@ -812,17 +829,30 @@ export class StationRegistry<S extends Station> extends Library<S, S['id']> {
 
 }
 
-export const makeAudienceGroup = (type: AudienceType, groupId: string): AudienceGroupId => `${type}$${groupId}`;
+export function makeAudienceGroupId(type: AudienceType.Discord, automatonId: string, guildId: string): DiscordAudienceGroupId;
+export function makeAudienceGroupId(type: AudienceType.Icy | AudienceType.Web, groupId: string): AudienceGroupId;
+export function makeAudienceGroupId(type: AudienceType, ...groupIds: string[]): AudienceGroupId {
+  return `${type}$${groupIds.join('/')}` as AudienceGroupId;
+}
 
 export const extractAudienceGroup = (id: AudienceGroupId) => {
   const [type, groupId] = id.split('$', 2);
+
+  if (type === AudienceType.Discord) {
+    return {
+      type: type as AudienceType.Discord,
+      groupId: groupId as DiscordAudienceGroupId
+    }
+  }
+
   return {
-    type,
+    type: type as (AudienceType.Icy | AudienceType.Web),
     groupId
   }
 }
 
-export const makeAudience = curry((type: AudienceType, groupId: string, id: string): Audience => ({
-  group: makeAudienceGroup(type, groupId),
+export const makeAudience = curry(<T extends AudienceType, G>(type: T, group: G, id: string): AudienceT<T, G> => ({
+  type,
+  group: group,
   id
 }));

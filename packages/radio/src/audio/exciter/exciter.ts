@@ -1,5 +1,5 @@
 import { RequestAudioOptions, RequestAudioStreamResult, Station } from '@seamless-medley/core';
-import { noop } from 'lodash';
+import { isEqual, noop } from 'lodash';
 import { pipeline, Readable } from 'stream';
 import { ListenerSignature, TypedEmitter } from 'tiny-typed-emitter';
 import { OpusPacketEncoder, OpusPacketEncoderOptions } from '../codecs/opus/stream';
@@ -34,6 +34,52 @@ export interface ICarrier {
   prepareAudioPacket(buffer: Buffer): Buffer | undefined;
   dispatchAudio(): boolean;
 }
+
+type ExciterRegistration = {
+  readonly constructor: Function;
+  readonly station: Station;
+  readonly audioOptions: RequestAudioOptions;
+  readonly encoderOptions: Partial<OpusPacketEncoderOptions>;
+}
+
+const cache = new Map<ExciterRegistration, WeakRef<IExciter>>();
+
+const registry = new FinalizationRegistry<ExciterRegistration>((registration) => {
+  if (!cache.get(registration)?.deref()) {
+    cache.delete(registration)
+  }
+});
+
+export function isSameRegistration(a: ExciterRegistration, b: ExciterRegistration) {
+  return (a.constructor === b.constructor)
+    && (a.station === b.station)
+    && isEqual(a.audioOptions, b.audioOptions)
+    && isEqual(a.encoderOptions, b.encoderOptions)
+}
+
+export function getExciterFromCache(registration: ExciterRegistration): IExciter | undefined {
+  const entry = [...cache].find(([r]) => isSameRegistration(registration, r));
+
+  if (entry) {
+    const [key] = entry;
+    return cache.get(key)?.deref();
+  }
+}
+
+export function registerExciter(exciter: IExciter): IExciter {
+  const registration: ExciterRegistration = {
+    constructor: exciter.constructor,
+    station: exciter.station,
+    audioOptions: exciter.audioOptions,
+    encoderOptions: exciter.encoderOptions
+  }
+
+  registry.register(exciter, registration);
+  cache.set(registration, new WeakRef(exciter));
+
+  return exciter;
+}
+
 /**
  * An Exciter read PCM stream from node-medley and encode it into Opus packets.
  */

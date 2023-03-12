@@ -3,7 +3,14 @@ import { ChatInputCommandInteraction } from "discord.js";
 import { range, round } from "lodash";
 import { ansi } from "../ansi";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { accept, declare, deny, guildIdGuard, makeAnsiCodeBlock, warn } from "../utils";
+import { declare, deny, guildIdGuard, makeAnsiCodeBlock, warn } from "../utils";
+
+/*
+This file is DEPRECATED, keep for referencing only.
+
+As setting volume for each Automaton requires separating Exciter and thus requires more CPU power.
+Removing this allow an Exciter for a station to be shared with multiple Automaton
+*/
 
 const dbToEmoji = (db: number) => {
   if (db > 3) return '🔊💥';
@@ -13,7 +20,6 @@ const dbToEmoji = (db: number) => {
   if (db > -60) return '🔈';
   return '🔇';
 }
-
 
 const g2d = (g: number) => round(gainToDecibels(g));
 const percentToDb = (p: number) => interpolate(p, [0, 100], [-60, 0]);

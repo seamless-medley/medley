@@ -7,7 +7,6 @@ import volume from "./commands/volume";
 import lyrics from "./commands/lyrics";
 import request from "./commands/request";
 import unrequest from './commands/unrequest';
-import vote from './commands/vote';
 import message from './commands/message';
 import history from './commands/history';
 import tune from './commands/tune';
@@ -24,7 +23,6 @@ const descriptors = {
   lyrics,
   request,
   unrequest,
-  vote,
   message,
   history,
   tune,

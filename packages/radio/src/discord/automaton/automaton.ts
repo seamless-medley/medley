@@ -11,15 +11,24 @@ import {
 import {
   IReadonlyLibrary, TrackKind,
   Station,
-  makeAudienceGroup as makeStationAudienceGroup,
-  AudienceGroupId, AudienceType, extractAudienceGroup, DeckIndex, StationEvents, Logger, ILogObj, createLogger, StationTrack, StationTrackPlay,
+  makeAudienceGroupId as makeStationAudienceGroup,
+  AudienceGroupId,
+  AudienceType,
+  extractAudienceGroup,
+  DeckIndex,
+  StationEvents,
+  Logger,
+  ILogObj,
+  createLogger,
+  StationTrack,
+  StationTrackPlay,
 } from "@seamless-medley/core";
 
 import { TypedEmitter } from 'tiny-typed-emitter';
 
 import { createCommandDeclarations, createInteractionHandler } from "../command";
 
-import { decibelsToGain, retryable, waitFor } from "@seamless-medley/utils";
+import { retryable, waitFor } from "@seamless-medley/utils";
 import { TrackMessage, TrackMessageStatus } from "../trackmessage/types";
 import { createTrackMessage, trackMessageToMessageOptions } from "../trackmessage";
 import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
@@ -61,8 +70,6 @@ export type AutomatonEvents = {
   ready: () => void;
 }
 
-const makeAudienceGroup = (id: string): AudienceGroupId => makeStationAudienceGroup(AudienceType.Discord, id);
-
 export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   readonly id: string;
 
@@ -72,8 +79,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   owners: Snowflake[] = [];
 
   maxTrackMessages: number = 3;
-
-  initialGain: number;
 
   #baseCommand: string;
 
@@ -99,7 +104,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.clientId = options.clientId;
     this.owners = options.owners || [];
     this.maxTrackMessages = options.maxTrackMessages ?? 3;
-    this.initialGain = options.initialGain ?? decibelsToGain(-3);
+    // this.initialGain = options.initialGain ?? decibelsToGain(-3);
     this.#baseCommand = options.baseCommand || 'medley';
 
     this.#client = new Client({
@@ -177,7 +182,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   private removeAllAudiences(closeConnection?: boolean) {
     // Remove audiences from all stations
     for (const [guildId, state] of this.#guildStates) {
-      const group = makeAudienceGroup(guildId);
+      const group = this.makeAudienceGroup(guildId);
 
       for (const station of this.stations) {
         station.removeAudiencesForGroup(group)
@@ -266,7 +271,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   #baseAdapter: Omit<GuildStateAdapter, 'getChannel'> = {
     getClient: () => this.client,
     getLogger: () => this.#logger,
-    getInitialGain: () => this.initialGain,
     getStations: () => this.stations,
     getAudioDispatcher: () => this.#audioDispatcher
   }
@@ -280,7 +284,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   ensureGuildState(guildId: Guild['id']) {
     if (!this.#guildStates.has(guildId)) {
-      this.#guildStates.set(guildId, new GuildState(guildId, this.makeAdapter(guildId)));
+      this.#guildStates.set(guildId, new GuildState(this, guildId, this.makeAdapter(guildId)));
     }
 
     return this.#guildStates.get(guildId)!;
@@ -591,19 +595,42 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     return true;
   }
 
+  makeAudienceGroup(guildId: string): AudienceGroupId {
+    return makeStationAudienceGroup(AudienceType.Discord, this.id, guildId);
+  }
+
+  /**
+   * Returns guild id which has audiences for this station
+   */
+  private getAudienceGuildsForStation(station: Station): string[] {
+    return station.audienceGroups
+      .map(group => {
+        if ((station.getAudiences(group)?.size ?? 0) < 1) {
+          return;
+        }
+
+        const { type, groupId } = extractAudienceGroup(group);
+
+        if (type !== AudienceType.Discord) {
+          return;
+        }
+
+        const [automatonId, guildId] = groupId.split('/', 2);
+
+        return (automatonId === this.id) ? guildId : undefined;
+      })
+      .filter((guildId): guildId is string => !!guildId);
+  }
+
   /**
    * Send to all guilds for a station
    */
   private async sendTrackPlayForStation(trackPlay: StationTrackPlay, deck: DeckIndex, station: Station) {
     const results: [guildId: string, trackMsg: TrackMessage, maybeMessage: Promise<Message<boolean> | undefined> | undefined][] = [];
 
-    for (const group of station.audienceGroups) {
-      const { groupId: guildId } = extractAudienceGroup(group);
+    const guildIds = this.getAudienceGuildsForStation(station);
 
-      if ((station.getAudiences(group)?.size ?? 0) < 1) {
-        continue;
-      }
-
+    for (const guildId of guildIds) {
       const state = this.#guildStates.get(guildId);
 
       if (state?.tunedStation === station) {
