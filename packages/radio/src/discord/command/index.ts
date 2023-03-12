@@ -3,10 +3,10 @@ import { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction
 import { createLogger } from "@seamless-medley/core";
 import join from "./commands/join";
 import skip from './commands/skip';
-import volume from "./commands/volume";
 import lyrics from "./commands/lyrics";
 import request from "./commands/request";
 import unrequest from './commands/unrequest';
+import vote from './commands/vote';
 import message from './commands/message';
 import history from './commands/history';
 import tune from './commands/tune';
@@ -19,10 +19,10 @@ import { MedleyAutomaton } from "../automaton";
 const descriptors = {
   join,
   skip,
-  volume,
   lyrics,
   request,
   unrequest,
+  vote,
   message,
   history,
   tune,
