@@ -2,7 +2,7 @@ import { parse as parsePath } from 'path';
 import { CommandInteraction, Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageActionRowComponentBuilder, StringSelectMenuBuilder } from "discord.js";
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, reply, makeHighlightedMessage, HighlightTextType, makeColoredMessage, formatMention, makeAnsiCodeBlock, joinStrings } from "../utils";
+import { guildStationGuard, reply, makeColoredMessage, formatMention, makeAnsiCodeBlock, joinStrings } from "../utils";
 import { AudienceType, isRequestTrack, makeAudience } from '@seamless-medley/core';
 import { ansi } from '../ansi';
 
