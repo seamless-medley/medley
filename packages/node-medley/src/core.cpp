@@ -24,8 +24,12 @@ namespace {
             auto outputBytesPerSample = request->outputBytesPerSample;
             auto numChannels = request->numChannels;
 
-            while (request->running && request->buffer.getNumReady() < request->buffering) {
+            while (request->buffer.getNumReady() < request->buffering) {
                 std::this_thread::sleep_for(5ms);
+
+                if (!request->running) {
+                    break;
+                }
             }
 
             request->currentTime = Time::getMillisecondCounterHiRes();
