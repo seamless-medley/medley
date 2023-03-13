@@ -37,6 +37,11 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     return;
   }
 
+  if (!station.lockRequests(interaction.guildId)) {
+    warn(interaction, 'Voting is currently happening somewhere else');
+    return;
+  }
+
   const collectibleEmojis = sampleSize(emojis.distinguishable, emojis.distinguishable.length);
 
   const nominatees = peekings.map<Nominatee>((p, i) => ({
@@ -50,7 +55,6 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     nominatees.map(n => [n.emoji, n])
   );
 
-  station.requestsEnabled = false;
 
   // TODO: Show time out
   const createMessageContent = () =>
@@ -197,7 +201,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       await msg.delete();
 
       // TODO: Should be in 'finally' block
-      station.requestsEnabled = true;
+      station.unlockRequests(interaction.guildId);
     })
   }
 }

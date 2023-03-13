@@ -312,15 +312,36 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
     this.requests.sort(t => -(t.priority || 0), t => (t.lastRequestTime?.valueOf() || 0));
   }
 
-  // TODO: Rename this to a new better name
-  private _requestsEnabled = true;
+  #requestLockObject: any = undefined;
 
-  get requestsEnabled() {
-    return this._requestsEnabled;
+  lockRequests(by: any): boolean {
+    if (this.#requestLockObject === by) {
+      return true;
+    }
+
+    if (this.#requestLockObject !== undefined) {
+      return false;
+    }
+
+    this.#requestLockObject = by;
+    return true;
   }
 
-  set requestsEnabled(value: boolean) {
-    this._requestsEnabled = value;
+  unlockRequests(by: any): boolean {
+    if (this.#requestLockObject === undefined) {
+      return true;
+    }
+
+    if (this.#requestLockObject !== by) {
+      return false;
+    }
+
+    this.#requestLockObject = undefined;
+    return true;
+  }
+
+  get requestsEnabled() {
+    return this.#requestLockObject === undefined;
   }
 
   get requestsCount() {
@@ -328,7 +349,7 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
   }
 
   private async fetchRequestTrack(): Promise<TrackWithRequester<BoomBoxTrack, Requester> | undefined> {
-    while (this._requestsEnabled && this.requests.length) {
+    while (this.requestsEnabled && this.requests.length) {
       const track = this.requests.shift()!;
 
       if (await this.isTrackLoadable(track.path)) {

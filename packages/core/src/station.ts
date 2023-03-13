@@ -622,12 +622,12 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.boombox.peekRequests(from, n);
   }
 
-  get requestsEnabled() {
-    return this.boombox.requestsEnabled;
+  lockRequests(by: any): boolean {
+    return this.boombox.lockRequests(by);
   }
 
-  set requestsEnabled(value: boolean) {
-    this.boombox.requestsEnabled = value;
+  unlockRequests(by: any): boolean {
+    return this.boombox.unlockRequests(by);
   }
 
   sortRequests() {
