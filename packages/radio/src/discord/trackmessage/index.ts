@@ -3,16 +3,6 @@ import { ActionRowBuilder, MessageActionRowComponentBuilder, MessageEditOptions 
 import { makeCreator } from './creator';
 import { TrackMessage } from './types';
 
-/** @deprecated */
-export async function createTrackMessage(guildId: string, station: Station, trackPlay: StationTrackPlay, positions: DeckPositions): Promise<TrackMessage> {
-  return makeCreator('extended').create({
-    guildId,
-    station,
-    trackPlay,
-    positions
-  });
-}
-
 export type TrackMessageOptions = Pick<MessageEditOptions, 'embeds' | 'files' | 'components'> ;
 
 export function trackMessageToMessageOptions<T>(msg: TrackMessage): TrackMessageOptions {

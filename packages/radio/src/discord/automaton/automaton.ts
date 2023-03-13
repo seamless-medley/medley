@@ -30,9 +30,10 @@ import { createCommandDeclarations, createInteractionHandler } from "../command"
 
 import { retryable, waitFor } from "@seamless-medley/utils";
 import { TrackMessage, TrackMessageStatus } from "../trackmessage/types";
-import { createTrackMessage, trackMessageToMessageOptions } from "../trackmessage";
+import { trackMessageToMessageOptions } from "../trackmessage";
 import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
 import { AudioDispatcher } from "../../audio/exciter";
+import { makeCreator } from "../trackmessage/creator";
 
 export type MedleyAutomatonOptions = {
   id: string;
@@ -622,6 +623,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       .filter((guildId): guildId is string => !!guildId);
   }
 
+  #trackMessageCreator = makeCreator('extended');
   /**
    * Send to all guilds for a station
    */
@@ -642,7 +644,12 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
           const textChannel = channel?.type == ChannelType.GuildText ? channel : undefined;
 
           const positions = station.getDeckPositions(deck);
-          const trackMsg = await createTrackMessage(guildId, station, trackPlay, positions);
+          const trackMsg = await this.#trackMessageCreator.create({
+            guildId,
+            station,
+            trackPlay,
+            positions
+          });
 
           const options = trackMessageToMessageOptions({
             ...trackMsg,
