@@ -25,7 +25,6 @@ const declaration: SubCommandLikeOption = {
   ]
 }
 
-
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const { station } = guildStationGuard(automaton, interaction);
 

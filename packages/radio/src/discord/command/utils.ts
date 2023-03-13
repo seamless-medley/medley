@@ -55,6 +55,8 @@ export function makeCodeBlockMessage(s: string | Strings, lang: string): Strings
   ]
 }
 
+export const makeBlockmessage = (s: string | Strings) => makeCodeBlockMessage(s, '');
+
 export const makeAnsiCodeBlock = (s: string | Strings) => makeCodeBlockMessage(s, 'ansi');
 
 export function makeColoredMessage(color: ColorsAndFormat, s: string | Strings) {
