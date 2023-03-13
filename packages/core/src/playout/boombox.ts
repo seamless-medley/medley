@@ -327,13 +327,17 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
     return true;
   }
 
-  unlockRequests(by: any): boolean {
+  unlockRequests(by: any, force?: boolean): boolean {
     if (this.#requestLockObject === undefined) {
       return true;
     }
 
     if (this.#requestLockObject !== by) {
-      return false;
+      if (!force) {
+        return false;
+      }
+
+      // Forcefully release the lockObject
     }
 
     this.#requestLockObject = undefined;

@@ -632,8 +632,8 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.boombox.lockRequests(by);
   }
 
-  unlockRequests(by: any): boolean {
-    return this.boombox.unlockRequests(by);
+  unlockRequests(by: any, force?: boolean): boolean {
+    return this.boombox.unlockRequests(by, force);
   }
 
   sortRequests() {
