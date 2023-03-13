@@ -110,7 +110,7 @@ type AudienceT<T extends AudienceType, G = string> = {
   id: string;
 }
 
-export type DiscordAudience = AudienceT<AudienceType.Discord, never> & {
+export type DiscordAudience = Omit<AudienceT<AudienceType.Discord, never>, 'group'> & {
   group: {
     automatonId: string;
     guildId: string;
@@ -851,8 +851,11 @@ export const extractAudienceGroup = (id: AudienceGroupId) => {
   }
 }
 
-export const makeAudience = curry(<T extends AudienceType, G>(type: T, group: G, id: string): AudienceT<T, G> => ({
-  type,
-  group: group,
-  id
-}));
+export function makeAudience(type: AudienceType.Discord, group: DiscordAudience['group'], id: string): DiscordAudience
+export function makeAudience(type: AudienceType, group: string |  DiscordAudience['group'], id: string): Audience {
+  return {
+    type,
+    group: group as any,
+    id
+  }
+}

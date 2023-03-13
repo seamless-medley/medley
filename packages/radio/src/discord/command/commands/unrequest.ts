@@ -19,7 +19,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
   await interaction.deferReply();
 
-  const requests = station.getRequestsOf(makeAudience(AudienceType.Discord, guildId, interaction.user.id));
+  const requests = station.getRequestsOf(makeAudience(AudienceType.Discord, { automatonId: automaton.id, guildId }, interaction.user.id));
 
   if (requests.length < 1) {
     reply(interaction, {

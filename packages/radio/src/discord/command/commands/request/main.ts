@@ -222,7 +222,14 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     }
 
     const makeRequest = async (interaction: StringSelectMenuInteraction, trackId: string) => {
-      const ok = await station.request(trackId, makeAudience(AudienceType.Discord, guildId, interaction.user.id));
+      const ok = await station.request(
+        trackId,
+        makeAudience(
+          AudienceType.Discord,
+          { automatonId: automaton.id, guildId },
+          interaction.user.id
+        )
+      );
 
       if (ok === false || ok.index < 0) {
         interaction.update({

@@ -1,6 +1,7 @@
 import { AudienceType, extractAudienceGroup, isRequestTrack, Audience, StationTrack } from "@seamless-medley/core";
 import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
+import { extractRequestersForGuild } from "../../trackmessage/creator/base";
 import { ansi } from "../ansi";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { declare, deny, formatMention, guildStationGuard, makeAnsiCodeBlock, reply, warn } from "../utils";
@@ -41,14 +42,7 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
       canSkip = requestedBy.some(r => r.id === interaction.user.id);
 
       if (!canSkip) {
-        const requesters = requestedBy
-          .map(({ group, id }) => ({
-            ...extractAudienceGroup(group),
-            id
-          }))
-          .filter(({ type, groupId }) => type === AudienceType.Discord && groupId === guildId)
-          .map(r => r.id);
-
+        const requesters = extractRequestersForGuild(guildId, requestedBy);
         const mentions = requesters.length > 0 ? requesters.map(id => formatMention('user', id)).join(' ') : '`Someone else`';
         await reply(interaction, `${formatMention('user', interaction.user.id)} Could not skip this track, it was requested by ${mentions}`);
         return;

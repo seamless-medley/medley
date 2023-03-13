@@ -165,10 +165,12 @@ export function getEmbedDataForTrack({ path, extra, sequencing, collection }: St
 
 export function extractRequestersForGuild(guildId: string, requesters: Audience[]) {
   return requesters
-    .map(r => ({
-      ...extractAudienceGroup(r.group),
-      id: r.id
-    }))
-    .filter(({ type, groupId }) => type === AudienceType.Discord && groupId === guildId)
-    .map(r => r.id);
+    .map(({ type, group, id }) => {
+      if (type !== AudienceType.Discord) {
+        return;
+      }
+
+      return group.guildId === guildId ? id : undefined;
+    })
+    .filter((id): id is string => !!id);
 }

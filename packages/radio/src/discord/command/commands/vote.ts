@@ -163,12 +163,10 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
             contributors = contributors.concat(userIds);
 
-            const audienceMaker = makeAudience(AudienceType.Discord, guildId);
-
             request.track.requestedBy = chain(request.track.requestedBy)
-              .concat(userIds.map(audienceMaker))
+              .concat(userIds.map(id => makeAudience(AudienceType.Discord, { automatonId: automaton.id, guildId }, id)))
               .uniqWith(isEqual)
-              .reject(audienceMaker(automaton.client.user!.id))
+              .reject(audience => audience.id === automaton.client.user!.id)
               .value();
           }
         }
