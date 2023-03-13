@@ -318,8 +318,7 @@ export class GuildState {
       return;
     }
 
-    if (oldState.serverMute != newState.serverMute) {
-
+    if (oldState.serverMute !== newState.serverMute) {
       this.#serverMuted = !!newState.serverMute;
 
       if (station) {
@@ -400,10 +399,10 @@ export class GuildState {
 
     // No channel change but deaf state change
     if (oldState.deaf !== newState.deaf && newState.channelId === this.voiceChannelId) {
-      if (!newState.deaf) {
-        station.addAudience(audienceGroup, newState.member.id);
-      } else {
+      if (newState.deaf === true) {
         station.removeAudience(audienceGroup, newState.member.id);
+      } else {
+        station.addAudience(audienceGroup, newState.member.id);
       }
     }
   }
