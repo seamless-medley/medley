@@ -117,7 +117,6 @@ export type DiscordAudience = Omit<AudienceT<AudienceType.Discord, never>, 'grou
   }
 }
 
-
 export type IcyAudience = AudienceT<AudienceType.Icy>;
 
 export type WebAudience = AudienceT<AudienceType.Web>;
@@ -322,7 +321,7 @@ export class Station extends TypedEmitter<StationEvents> {
     const { requestSweepers } = this;
 
     const currentTrack =  this.boombox.trackPlay?.track;
-    let isSameCollection = currentTrack?.collection.id === track.collection.id
+    let isSameCollection = currentTrack?.collection.id === track.collection.id;
 
     if (requestSweepers) {
       const shouldSweep = this.noRequestSweeperOnIdenticalCollection
@@ -330,21 +329,28 @@ export class Station extends TypedEmitter<StationEvents> {
         : true
 
       if (currentTrack?.extra?.kind !== TrackKind.Request && shouldSweep) {
-        const sweeper = requestSweepers.shift();
+        const count = requestSweepers.length;
 
-        if (sweeper && await MetadataHelper.isTrackLoadable(sweeper.path)) {
-          if (sweeper.extra?.kind === undefined) {
-            sweeper.extra = {
-              ...sweeper.extra,
-              kind: TrackKind.Insertion
+        for (let i = 0; i < count; i++) {
+          const sweeper = requestSweepers.shift();
+
+          if (sweeper && await MetadataHelper.isTrackLoadable(sweeper.path)) {
+            if (sweeper.extra?.kind === undefined) {
+              sweeper.extra = {
+                ...sweeper.extra,
+                kind: TrackKind.Insertion
+              }
             }
-          }
 
-          this.queue.add({
-            ...sweeper,
-            disableNextLeadIn: true
-          });
-          requestSweepers.push(sweeper);
+            this.queue.add({
+              ...sweeper,
+              disableNextLeadIn: true
+            });
+
+            requestSweepers.push(sweeper);
+
+            break;
+          }
         }
       }
     }
