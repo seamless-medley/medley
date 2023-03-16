@@ -35,17 +35,19 @@ export type BoomBoxTrackPlay = TrackPlay<BoomBoxTrack>;
 export type BoomBoxCrate = Crate<BoomBoxTrack>;
 export type BoomBoxTrackCollection = TrackCollection<BoomBoxTrack>;
 
-export type TrackWithRequester<T extends BoomBoxTrack, Requester> = T & {
+export type Requester = any;
+
+export type TrackWithRequester<T extends BoomBoxTrack, R extends Requester> = T & {
   rid: number;
   priority?: number;
-  requestedBy: Requester[];
-  lastRequestTime?: Date;
+  requestedBy: R[];
+  firstRequestTime?: Date;
   original: T; // Store the original track as a RequestTrack is likely to be a clone
 }
 
-export type OnInsertRequestTrack<T extends BoomBoxTrack, R> = (track: TrackWithRequester<T, R>) => Promise<void>;
+export type OnInsertRequestTrack<T extends BoomBoxTrack, R extends Requester> = (track: TrackWithRequester<T, R>) => Promise<void>;
 
-export function isRequestTrack<T extends BoomBoxTrack, R>(o: any): o is TrackWithRequester<T, R> {
+export function isRequestTrack<T extends BoomBoxTrack, R extends Requester>(o: any): o is TrackWithRequester<T, R> {
   return !!o && !!o.requestedBy;
 }
 
@@ -87,7 +89,7 @@ export type BoomBoxEvents = {
   error: (error: Error) => void;
 }
 
-type BoomBoxOptions<T extends BoomBoxTrack, Requester = any> = {
+type BoomBoxOptions<T extends BoomBoxTrack, R extends Requester> = {
   id: string;
 
   medley: Medley<BoomBoxTrack>;
@@ -112,7 +114,7 @@ type BoomBoxOptions<T extends BoomBoxTrack, Requester = any> = {
    */
   duplicationSimilarity?: number;
 
-  onInsertRequestTrack?: OnInsertRequestTrack<T, Requester>;
+  onInsertRequestTrack?: OnInsertRequestTrack<T, R>;
 }
 
 export type DeckInfo = {
@@ -124,14 +126,13 @@ export type DeckInfo = {
 export type DeckInfoWithPositions = DeckInfo & {
   positions: DeckPositions;
 }
-
-export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
+export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   readonly id: string;
 
   readonly sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>;
   private readonly sweeperInserter: SweeperInserter;
 
-  options: Required<Pick<BoomBoxOptions<BoomBoxTrack, Requester>, 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
+  options: Required<Pick<BoomBoxOptions<BoomBoxTrack, R>, 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
 
   private decks = Array(3).fill(0).map<DeckInfo>(() => ({ playing: false, active: false })) as [DeckInfo, DeckInfo, DeckInfo];
 
@@ -140,13 +141,13 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
 
   readonly musicDb?: MusicDb;
 
-  private readonly onInsertRequestTrack?: OnInsertRequestTrack<BoomBoxTrack, Requester>;
+  private readonly onInsertRequestTrack?: OnInsertRequestTrack<BoomBoxTrack, R>;
 
   artistHistory: string[][] = [];
 
   private logger: Logger<ILogObj>;
 
-  constructor(options: BoomBoxOptions<BoomBoxTrack, Requester>) {
+  constructor(options: BoomBoxOptions<BoomBoxTrack, R>) {
     super();
     //
     this.id = options.id;
@@ -233,7 +234,7 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
     return index !== -1 ? index : undefined;
   }
 
-  private requests: TrackCollection<TrackWithRequester<BoomBoxTrack, Requester>> = new TrackCollection('$_requests', undefined);
+  private requests: TrackCollection<TrackWithRequester<BoomBoxTrack, R>> = new TrackCollection('$_requests', undefined);
 
   private isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path);
 
@@ -268,12 +269,11 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
 
   private _lastRequestId = 0;
 
-  request(track: BoomBoxTrack, requestedBy?: Requester): TrackPeek<TrackWithRequester<BoomBoxTrack, Requester>> {
+  request(track: BoomBoxTrack, requestedBy?: R): TrackPeek<TrackWithRequester<BoomBoxTrack, R>> {
     const existing = this.requests.fromId(track.id);
 
     if (existing) {
       existing.priority = (existing.priority || 0) + 1;
-      existing.lastRequestTime = new Date();
 
       if (requestedBy) {
         existing.requestedBy.push(requestedBy)
@@ -288,13 +288,13 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
     }
 
     // This is a shallow copy
-    const requested: TrackWithRequester<BoomBoxTrack, Requester> = {
+    const requested: TrackWithRequester<BoomBoxTrack, R> = {
       ...track,
       original: track,
       rid: ++this._lastRequestId,
       priority: 0,
       requestedBy: requestedBy ? [requestedBy]: [],
-      lastRequestTime: new Date()
+      firstRequestTime: new Date()
     };
 
     requested.extra = {
@@ -308,10 +308,10 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
     }
   }
 
-  sortRequests(scopedBy?: (t: TrackWithRequester<BoomBoxTrack, Requester>) => string[]) {
+  sortRequests(scopedBy?: (t: TrackWithRequester<BoomBoxTrack, R>) => string[]) {
     const functions = [
-      (t: TrackWithRequester<BoomBoxTrack, Requester>) => -(t.priority || 0),
-      (t: TrackWithRequester<BoomBoxTrack, Requester>) => (t.firstRequestTime?.valueOf() || 0)
+      (t: TrackWithRequester<BoomBoxTrack, R>) => -(t.priority || 0),
+      (t: TrackWithRequester<BoomBoxTrack, R>) => (t.firstRequestTime?.valueOf() || 0)
     ];
 
     if (!scopedBy) {
@@ -373,7 +373,7 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
     return this.requests.length;
   }
 
-  private async fetchRequestTrack(): Promise<TrackWithRequester<BoomBoxTrack, Requester> | undefined> {
+  private async fetchRequestTrack(): Promise<TrackWithRequester<BoomBoxTrack, R> | undefined> {
     while (this.requestsEnabled && this.requests.length) {
       const track = this.requests.shift()!;
 
@@ -389,7 +389,7 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
     return this.requests.peek(from, n, filterFn);
   }
 
-  getRequestsOf(requester: Requester) {
+  getRequestsOf(requester: R) {
     const matchRequester = matches(requester);
     return this.requests.all().filter(r => r.requestedBy.some(matchRequester));
   }
