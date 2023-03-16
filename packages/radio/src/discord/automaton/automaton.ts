@@ -715,6 +715,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     const permissions = new PermissionsBitField(
       PermissionFlagsBits.ViewChannel |
       PermissionFlagsBits.SendMessages |
+      PermissionFlagsBits.ManageMessages |
       PermissionFlagsBits.AttachFiles |
       PermissionFlagsBits.AddReactions |
       PermissionFlagsBits.Connect |
