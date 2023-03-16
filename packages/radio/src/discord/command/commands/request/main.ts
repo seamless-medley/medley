@@ -26,6 +26,7 @@ import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
 import { formatMention, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
 import { ansi } from "../../ansi";
+import { getVoteMessage } from "../vote";
 
 export type Selection = {
   title: string;
@@ -250,9 +251,23 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         components: []
       });
 
+      const peekings = peekRequestsForGuild(station, 0, 20, guildId);
+
       if (preview) {
         interaction.followUp({
-          content: preview.join('\n')
+          content: joinStrings(preview),
+          components: (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
+            ? [
+              new ActionRowBuilder<MessageActionRowComponentBuilder>()
+                .addComponents(
+                  new ButtonBuilder()
+                    .setLabel('Vote')
+                    .setEmoji(sample(['✋🏼', '🤚🏼', '🖐🏼', '🙋🏼‍♀️', '🙋🏼‍♂️'])!)
+                    .setStyle(ButtonStyle.Secondary)
+                    .setCustomId(`vote:-`)
+                )
+            ]
+            : undefined
         })
       }
 
