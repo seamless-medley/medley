@@ -1,4 +1,4 @@
-import { getTrackBanner, TrackPeek, Station, StationRequestedTrack } from "@seamless-medley/core";
+import { getTrackBanner, TrackPeek, Station, StationRequestedTrack, AudienceType, TrackWithRequester, BoomBoxTrack, Audience } from "@seamless-medley/core";
 import {
   BaseInteraction,
   CommandInteraction,
@@ -140,26 +140,52 @@ const previewTrack = ({ index, track }: TrackPeek<StationRequestedTrack>, paddin
   return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)} {{red|b}}[${track.priority || 0}]`;
 }
 
-export async function makeRequestPreview(station: Station, index: number = 0, focus?: number, n: number = 5) {
-  const peeking = station.peekRequests(index, n);
+export function isTrackRequestedFromGuild(track: TrackWithRequester<BoomBoxTrack, Audience>, guildId: string) {
+  return track.requestedBy.some(({ type, group }) => (type === AudienceType.Discord) && (group.guildId === guildId));
+}
 
-  if (peeking.length <= 0) {
+export function peekRequestsForGuild(station: Station, from: number, count: number, guildId?: string) {
+  return station.peekRequests(
+    from, count,
+    guildId
+      ? track => isTrackRequestedFromGuild(track, guildId)
+      : undefined
+  );
+}
+
+export type MakeRequestPreviewOptions = {
+  /**
+   * @default 0
+   */
+  index?: number;
+
+  focus?: number;
+
+  /**
+   * @default 5
+   */
+  count?: number;
+
+  guildId?: string;
+}
+
+export async function makeRequestPreview(station: Station, options: MakeRequestPreviewOptions = {}) {
+  const { index = 0, focus, count = 5, guildId } = options;
+  const peekings = peekRequestsForGuild(station, index, count, guildId);
+
+  if (peekings.length <= 0) {
     return;
   }
 
-  const padding = 2 + (maxBy(peeking, 'index')?.index.toString().length || 0);
+  const padding = 2 + (maxBy(peekings, 'index')?.index.toString().length || 0);
 
   const lines: string[] = [];
 
-  if (peeking[0].index > 1) {
-    const first = station.peekRequests(0, 1);
-    if (first.length) {
-      lines.push(previewTrack(first[0], padding, focus));
-      lines.push(padStart('...', padding));
-    }
+  if (peekings[0].index > 1) {
+    lines.push(padStart('...', padding));
   }
 
-  for (const peek of peeking) {
+  for (const peek of peekings) {
     lines.push(previewTrack(peek, padding, focus));
   }
 
