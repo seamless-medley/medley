@@ -317,25 +317,36 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     return sample(this.tracks);
   }
 
-  peek(from: number = 0, n: number): TrackPeek<T>[] {
-    const max = this.tracks.length - 1;
-    const sib = Math.floor((n - 1) / 2);
+  peek(from: number = 0, n: number, filterFn: (track: T) => boolean): TrackPeek<T>[] {
+    const sib = Math.round((n - 1) / 2);
 
     let left = from - sib;
     let right = from + sib;
 
+    if (right - left + 1 < n) {
+      right = left + n - 1;
+    }
+
+    const peekings = this.tracks
+      .map((track, i) => ({
+        index: i,
+        track
+      }));
+
+    const max = peekings.length - 1;
+
     if (left <= 0) {
       left = 0;
-      right = Math.min(max, n - 1);
+      right = Math.max(0, Math.min(max, n - 1));
     } else if (right >= max) {
       right = max;
       left = Math.max(0, right - n + 1);
     }
 
-    return this.tracks.slice(left, right + 1).map((track, i) => ({
-      index: left + i,
-      track
-    }));
+
+    return peekings
+      .slice(left, right + 1)
+      .filter(({ track }) => filterFn(track));
   }
 
   [Symbol.iterator](): Iterator<T, any, undefined> {
