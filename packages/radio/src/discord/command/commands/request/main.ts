@@ -19,12 +19,12 @@ import {
   StringSelectMenuInteraction
 } from "discord.js";
 
-import { chain, chunk, clamp, Dictionary, groupBy, identity, isNull, noop, sortBy, truncate, zip } from "lodash";
+import { chain, chunk, clamp, Dictionary, groupBy, identity, isNull, noop, sample, sortBy, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
-import { formatMention, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, reply } from "../../utils";
+import { formatMention, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
 import { ansi } from "../../ansi";
 
 export type Selection = {
@@ -43,12 +43,12 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f));
 
   if (options.every(isNull)) {
-    const preview = await makeRequestPreview(station);
+    const preview = await makeRequestPreview(station, { guildId });
 
     if (preview) {
-      reply(interaction, preview.join('\n'))
+      reply(interaction, joinStrings(preview));
     } else {
-      reply(interaction, 'Request list is empty');
+      reply(interaction, station.requestsCount && interaction.guild?.name ? `Request list for ${interaction.guild.name} is empty` : 'Request list is empty');
     }
 
     return;
@@ -85,11 +85,11 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       .filter(t => !!t)
       .join(' OR ');
 
-    reply(interaction, [
+    reply(interaction, joinStrings([
       'Your search:',
       ...makeAnsiCodeBlock(queryString),
       'Did not match any tracks'
-    ].join('\n'))
+    ]))
     return;
   }
 
@@ -204,7 +204,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   const selector = await reply(interaction, { ...buildSearchResultMenu(currentPage), fetchReply: true });
 
   if (selector instanceof Message) {
-    const collector = selector.createMessageComponentCollector({ time: ttl });
+    const collector = selector.createMessageComponentCollector({ dispose: true, time: ttl });
     let done = false;
 
     const stop = async (shouldDelete: boolean = true) => {
@@ -239,7 +239,11 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         return;
       }
 
-      const preview = await makeRequestPreview(station, ok.index, ok.index);
+      const preview = await makeRequestPreview(station, {
+        index: ok.index,
+        focus: ok.index,
+        guildId
+      });
 
       await interaction.update({
         content: `Request accepted: **\`${getTrackBanner(ok.track)}\`**`,
