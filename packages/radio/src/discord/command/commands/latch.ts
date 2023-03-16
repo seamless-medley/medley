@@ -1,7 +1,7 @@
 import { ButtonInteraction, ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
 import { ansi } from "../ansi";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { declare, deny, guildStationGuard, makeAnsiCodeBlock, permissionGuard, reply } from "../utils";
+import { declare, deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, permissionGuard, reply } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -71,10 +71,10 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
       return ansi`{{pink}}${l.count}/${l.max}{{reset}}${from}`;
     });
 
-    reply(interaction, [
+    reply(interaction, joinStrings([
       'Latching:',
       ...makeAnsiCodeBlock(listing)
-    ].join('\n'));
+    ]));
     return;
   }
 

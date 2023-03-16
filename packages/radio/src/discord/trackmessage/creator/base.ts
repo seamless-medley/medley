@@ -1,4 +1,4 @@
-import { Audience, AudienceType, DeckPositions, extractAudienceGroup, isRequestTrack, Metadata, MetadataFields, Station, StationTrack, StationTrackCollection, StationTrackPlay, TrackSequencingLatch, TrackWithRequester } from "@seamless-medley/core";
+import { Audience, AudienceType, DeckPositions, isRequestTrack, Metadata, MetadataFields, Station, StationTrack, StationTrackCollection, StationTrackPlay, TrackSequencingLatch, TrackWithRequester } from "@seamless-medley/core";
 import { MetadataHelper } from "@seamless-medley/core/src/metadata";
 import { AttachmentBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import { get, isEmpty, sample } from "lodash";

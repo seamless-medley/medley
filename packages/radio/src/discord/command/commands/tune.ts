@@ -40,7 +40,7 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
 
     const station = automaton.stations.get(stationId)!;
 
-    reply(interaction, {
+    await reply(interaction, {
       content: `Tuning into ${station.name}`,
       components: [],
       embeds: []
@@ -130,7 +130,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
       done = true;
       collector.stop();
 
-      if (i.customId === 'tune' && i.componentType === ComponentType.SelectMenu) {
+      if (i.customId === 'tune' && i.componentType === ComponentType.StringSelect) {
         const ok = await handleStationSelection(automaton, i).catch(stubTrue);
         await onDone?.(ok);
         return;

@@ -3,7 +3,7 @@ import { MetadataHelper } from "@seamless-medley/core/src/metadata";
 import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
-import { deny, guildStationGuard, reply, warn } from "../utils";
+import { deny, guildStationGuard, joinStrings, reply, warn } from "../utils";
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, trackId: StationTrack['id']) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
@@ -46,7 +46,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
     const parsed = parseLyrics(lyrics);
 
     lyricsText = parsed.timeline.length > 0
-      ? lyricsToText(parsed, false).join('\n')
+      ? joinStrings(lyricsToText(parsed, false))
       : lyrics.trim();
 
     source = 'metadata';

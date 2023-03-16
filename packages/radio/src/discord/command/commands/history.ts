@@ -1,7 +1,7 @@
 import { formatSongBanner } from "@seamless-medley/core";
 import { CommandInteraction } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard } from "../utils";
+import { guildStationGuard, joinStrings } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -36,11 +36,11 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     length += line.length;
   }
 
-  interaction.reply([
+  interaction.reply(joinStrings([
     `**Tracks History**`,
     '',
     ...lines
-  ].join('\n'));
+  ]));
 }
 
 const descriptor: CommandDescriptor = {

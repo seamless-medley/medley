@@ -1,4 +1,4 @@
-import { AudienceType, extractAudienceGroup, isRequestTrack, Audience, StationTrack } from "@seamless-medley/core";
+import { AudienceType, extractAudienceGroupFromId, isRequestTrack, Audience, StationTrack } from "@seamless-medley/core";
 import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { extractRequestersForGuild } from "../../trackmessage/creator/base";
