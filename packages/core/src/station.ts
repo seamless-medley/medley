@@ -1,5 +1,5 @@
 import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions, TrackPlay, UpdateAudioStreamOptions } from "@seamless-medley/medley";
-import { curry, isFunction, random, sample, shuffle, sortBy } from "lodash";
+import { isFunction, random, sample, shuffle, sortBy } from "lodash";
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { TrackCollectionBasicOptions, TrackPeek } from "./collections";
 import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
@@ -8,6 +8,7 @@ import { createLogger, Logger, type ILogObj } from "./logging";
 import {
   BoomBox,
   BoomBoxEvents,
+  BoomBoxTrack,
   BoomBoxTrackCollection,
   BoomBoxTrackExtra,
   SweeperInsertionRule,
@@ -143,6 +144,7 @@ export type StationEvents = {
   crateChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
 
   requestTrackAdded: (track: TrackPeek<StationRequestedTrack>) => void;
+  requestTracksRemoved: (tracks: StationRequestedTrack[]) => void;
   //
   collectionAdded: (collection: StationTrackCollection) => void;
   collectionRemoved: (collection: StationTrackCollection) => void;
@@ -649,7 +651,13 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 
   unrequest(requestIds: number[]) {
-    return this.boombox.unrequest(requestIds);
+    const result = this.boombox.unrequest(requestIds);
+
+    if (result.removed.length > 0) {
+      this.emit('requestTracksRemoved', result.removed);
+    }
+
+    return result;
   }
 
   getCrateIndex() {
