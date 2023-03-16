@@ -173,7 +173,7 @@ export class Station extends TypedEmitter<StationEvents> {
 
   maxTrackHistory: number = 50;
 
-  private audiences: Map<AudienceGroupId, Map<string, any>> = new Map();
+  private audiences: Map<AudienceGroupId, Set<string>> = new Map();
 
   private logger: Logger<ILogObj>;
 
@@ -660,12 +660,13 @@ export class Station extends TypedEmitter<StationEvents> {
     this.boombox.setCrateIndex(newIndex);
   }
 
-  addAudience(groupId: AudienceGroupId, audienceId: string, data?: any) {
+  addAudience(groupId: AudienceGroupId, audienceId: string) {
+    console.trace('Adding audience', groupId, audienceId);
     if (!this.audiences.has(groupId)) {
-      this.audiences.set(groupId, new Map());
+      this.audiences.set(groupId, new Set());
     }
 
-    this.audiences.get(groupId)!.set(audienceId, data);
+    this.audiences.get(groupId)!.add(audienceId);
     return this.playIfHasAudiences();
   }
 
@@ -679,8 +680,9 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.pauseIfNoAudiences('audiences group removed');
   }
 
-  updateAudiences(groupId: AudienceGroupId, audiences: [id: string, data: any][]) {
-    this.audiences.set(groupId, new Map(audiences));
+  updateAudiences(groupId: AudienceGroupId, audiences: string[]) {
+    console.trace('Adding audiences for group', groupId, 'audiences:', audiences);
+    this.audiences.set(groupId, new Set(audiences));
     this.updatePlayback();
   }
 
@@ -845,7 +847,7 @@ export function makeAudienceGroupId(type: AudienceType, ...groupIds: string[]): 
   return `${type}$${groupIds.join('/')}` as AudienceGroupId;
 }
 
-export const extractAudienceGroup = (id: AudienceGroupId) => {
+export const extractAudienceGroupFromId = (id: AudienceGroupId) => {
   const [type, groupId] = id.split('$', 2);
 
   if (type === AudienceType.Discord) {
@@ -860,6 +862,10 @@ export const extractAudienceGroup = (id: AudienceGroupId) => {
     groupId
   }
 }
+
+export function extractAudienceGroup({ group }: DiscordAudience): DiscordAudience['group'];
+export function extractAudienceGroup({ group }: IcyAudience | WebAudience): string;
+export function extractAudienceGroup({ group }: Audience): Audience['group'] { return group; }
 
 export function makeAudience(type: AudienceType.Discord, group: DiscordAudience['group'], id: string): DiscordAudience
 export function makeAudience(type: AudienceType, group: string |  DiscordAudience['group'], id: string): Audience {
