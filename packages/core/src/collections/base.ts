@@ -1,7 +1,7 @@
 import os from 'node:os';
 import { createHash } from 'crypto';
 import { TypedEmitter } from "tiny-typed-emitter";
-import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, random, sample, shuffle, sortBy } from "lodash";
+import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
@@ -288,13 +288,44 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     this.emit('refresh');
   }
 
-  sort(...sortFn: ((track: T) => unknown)[]) {
+  sort(
+    sortFn: ((track: T) => unknown)[],
+    filter?: (track: T) => boolean,
+    done = true
+  ) {
     if (!sortFn.length) {
       sortFn = [track => track.path];
     }
 
-    this.tracks = sortBy(this.tracks, ...sortFn);
-    this.emit('refresh');
+    if (filter === undefined) {
+      this.tracks = sortBy(this.tracks, ...sortFn);
+      return;
+    }
+
+    const scoped = this.tracks
+      .map<TrackPeek<T>>((track, index) => ({ track, index }))
+      .filter(t => filter(t.track));
+
+    const indexes = scoped.map(p => p.index);
+
+    const sorted = sortBy(scoped, ...sortFn.map(fn => (peek: TrackPeek<T>) => fn(peek.track)));
+
+    for (const [index, t] of zip(indexes, sorted)) {
+      if (index === undefined || t === undefined) {
+        continue;
+      }
+
+      if (index !== t.index) {
+        console.log('Splicing', index, t.track.path);
+        this.tracks.splice(index, 1, t.track);
+      } else {
+        console.log('Skipping', t.track.path)
+      }
+    }
+
+    if (done) {
+      this.emit('refresh');
+    }
   }
 
   indexOf(track: T): number {

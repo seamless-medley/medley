@@ -636,8 +636,12 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.boombox.unlockRequests(by, force);
   }
 
-  sortRequests() {
-    this.boombox.sortRequests();
+  sortRequests(scoped: boolean = false) {
+    this.boombox.sortRequests(
+      scoped
+        ? t => t.requestedBy.map(a => a.type + ':' + (a.type === AudienceType.Discord ? a.group.guildId : a.group))
+        : undefined
+    );
   }
 
   getRequestsOf(requester: Audience) {

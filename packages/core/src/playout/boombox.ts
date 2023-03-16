@@ -308,8 +308,29 @@ export class BoomBox<Requester = any> extends TypedEmitter<BoomBoxEvents> {
     }
   }
 
-  sortRequests() {
-    this.requests.sort(t => -(t.priority || 0), t => (t.lastRequestTime?.valueOf() || 0));
+  sortRequests(scopedBy?: (t: TrackWithRequester<BoomBoxTrack, Requester>) => string[]) {
+    const functions = [
+      (t: TrackWithRequester<BoomBoxTrack, Requester>) => -(t.priority || 0),
+      (t: TrackWithRequester<BoomBoxTrack, Requester>) => (t.firstRequestTime?.valueOf() || 0)
+    ];
+
+    if (!scopedBy) {
+      this.requests.sort(functions);
+      return;
+    }
+
+    const scopes = uniq(this.requests.all().flatMap(scopedBy));
+    for (const [index, scope] of scopes.entries()) {
+      console.group('Sorting scope', scope);
+
+      this.requests.sort(
+        functions,
+        t => scopedBy(t).includes(scope),
+        index === scopes.length - 1
+      );
+
+      console.groupEnd();
+    }
   }
 
   #requestLockObject: any = undefined;
