@@ -1,6 +1,7 @@
 import { AudienceType, createLogger, getTrackBanner, makeAudience, StationRequestedTrack, TrackPeek } from "@seamless-medley/core";
-import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, } from "discord.js";
-import { chain, isEqual, keyBy, sampleSize, take, without } from "lodash";
+import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, } from "discord.js";
+import { chain, isEqual, keyBy, noop, sampleSize, take, without } from "lodash";
+import { MedleyAutomaton } from "../../automaton";
 import * as emojis from "../../emojis";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { formatMention, guildStationGuard, joinStrings, makeRequestPreview, reply, warn } from "../utils";
@@ -21,9 +22,15 @@ const logger = createLogger({ name: 'command/vote' });
 
 const guildVoteMessage = new Map<string, Message>();
 
+export const getVoteMessage = (guildId: string) => guildVoteMessage.get(guildId);
+
 const distinguishableEmojis = without(emojis.distinguishable, '🏁');
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = automaton => interaction => handleVoteCommand(automaton, interaction);
+
+const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = automaton => interaction => handleVoteCommand(automaton, interaction);
+
+async function handleVoteCommand(automaton: MedleyAutomaton, interaction: CommandInteraction | MessageComponentInteraction) {
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
   const exisingVote = guildVoteMessage.get(guildId);
@@ -32,10 +39,11 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     return;
   }
 
-
-
-  const count = Math.min(distinguishableEmojis.length, station.requestsCount, 20);
-  const peekings = station.peekRequests(0, count);
+  const peekings = take(station
+    .peekRequests(0, Math.min(distinguishableEmojis.length, station.requestsCount))
+    .filter(({ track }) => track.requestedBy.some(({ type, group }) => (type === AudienceType.Discord) && (group.guildId === guildId))),
+    20
+  );
 
   if (peekings.length <= 1) {
     warn(interaction, 'Nothing to vote')
@@ -71,7 +79,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     const createMessageContent = () => chain(nominatees)
       .sortBy(
         ({ votes, track: { priority = 0 }}) => -(votes + priority),
-        b => (b.track.lastRequestTime || 0)
+        b => (b.track.firstRequestTime || 0)
       )
       .map(peek => '> ' + previewTrack(peek))
       .join('\n')
@@ -85,7 +93,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       components: [
         new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(new ButtonBuilder()
-        .setCustomId('vote:end')
+        .setCustomId('vote_end')
         .setLabel('End')
         .setStyle(ButtonStyle.Danger)
         .setEmoji('🏁')),
@@ -107,6 +115,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
       function updateMessage() {
         reactionCollector.resetTimer({ time: ttl });
+        componentCollector.resetTimer({ time: ttl });
 
         msg.edit({
           content: joinStrings([
@@ -150,9 +159,36 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
         await msg.react(emoji);
       }
 
-      station.on('requestTrackAdded', handleNewRequest);
+      const handleRemovedRequests = async (tracks: StationRequestedTrack[]) => {
+        let updated = false;
 
-      const componentCollector = message.createMessageComponentCollector({ dispose: true, time: ttl });
+        for (const t of tracks) {
+          const index = nominatees.findIndex(n => n.track.rid === t.rid);
+
+          if (index > -1) {
+            const n = nominatees[index];
+            nominatees.splice(index, 1);
+            emojiToNominateeMap.delete(n.emoji);
+
+            msg.reactions.cache.get(n.emoji)?.remove().catch(noop);
+
+            updated = true;
+          }
+        }
+
+        if (updated) {
+          if (nominatees.length < 1) {
+            reactionCollector.stop();
+          } else {
+            updateMessage();
+          }
+        }
+      }
+
+      station.on('requestTrackAdded', handleNewRequest);
+      station.on('requestTracksRemoved', handleRemovedRequests);
+
+      const componentCollector = msg.createMessageComponentCollector({ dispose: true, time: ttl });
 
       componentCollector.on('collect', async (collected) => {
         const { customId, user } = collected;
@@ -166,19 +202,20 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
         }
 
         // End button
-        if (customId === 'vote:end') {
-          reactionCollector.stop('end');
+        if (customId === 'vote_end') {
+          logger.debug('vote_end');
+          reactionCollector.stop('interaction');
           return;
         }
       });
 
-      const reactionCollector = message.createReactionCollector({
+      const reactionCollector = msg.createReactionCollector({
         dispose: true,
         time: ttl
       });
 
       for (const emoji of take(collectibleEmojis, peekings.length)) {
-        await message.react(emoji!);
+        await msg.react(emoji!);
       }
 
       reactionCollector.on('collect', handleCollect);
@@ -187,7 +224,17 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
         console.log('Reaction colelctor on end', reason);
         try {
           station.off('requestTrackAdded', handleNewRequest);
+          station.off('requestTracksRemoved', handleRemovedRequests);
+
           guildVoteMessage.delete(guildId);
+
+          if (nominatees.length < 1) {
+            if (msg.deletable) {
+              await msg.delete();
+            }
+
+            return;
+          }
 
           const peeks = station.peekRequests(0, nominatees.length);
           const requestsKeyed = keyBy(peeks, n => n.track.rid);
@@ -218,7 +265,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
           station.sortRequests();
 
-          const preview = await makeRequestPreview(station, 0, undefined, nominatees.length) || [];
+          const preview = await makeRequestPreview(station, { count: nominatees.length, guildId }) || [];
           const contributorMentions = chain(contributors)
             .uniq()
             .without(automaton.client.user!.id)
@@ -237,7 +284,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
             embeds: [
               embed
             ],
-            content: preview.join('\n')
+            content: joinStrings(preview)
           });
 
           componentCollector.stop();
@@ -263,7 +310,8 @@ const previewTrack = ({ banner, emoji }: Nominatee) => `${emoji}   ${banner}`;
 
 const descriptor: CommandDescriptor = {
   declaration,
-  createCommandHandler
+  createCommandHandler,
+  createButtonHandler
 }
 
 export default descriptor;
