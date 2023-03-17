@@ -213,8 +213,12 @@ export class GuildState {
     }
 
     const existingConnection = this.voiceConnector;
+
     // Release the voiceConnection to make VoiceStateUpdate handler aware of the this join command
     this.voiceConnector = undefined;
+    // This is crucial for channel change detection to know about this new joining
+    this.#voiceChannelId = undefined;
+
     // This should be called after setting state.voiceConnection to `undefined`
     existingConnection?.destroy();
 
