@@ -126,6 +126,9 @@ export type DeckInfo = {
 export type DeckInfoWithPositions = DeckInfo & {
   positions: DeckPositions;
 }
+
+export type RequestTrackLockPredicate<R extends Requester> = (t: TrackWithRequester<BoomBoxTrack, R>) => boolean;
+
 export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   readonly id: string;
 
@@ -333,40 +336,14 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     }
   }
 
-  #requestLockObject: any = undefined;
+  #requestLockPredicates = new Set<RequestTrackLockPredicate<R>>();
 
-  lockRequests(by: any): boolean {
-    if (this.#requestLockObject === by) {
-      return true;
-    }
-
-    if (this.#requestLockObject !== undefined) {
-      return false;
-    }
-
-    this.#requestLockObject = by;
-    return true;
+  lockRequests(by: RequestTrackLockPredicate<R>) {
+    this.#requestLockPredicates.add(by);
   }
 
-  unlockRequests(by: any, force?: boolean): boolean {
-    if (this.#requestLockObject === undefined) {
-      return true;
-    }
-
-    if (this.#requestLockObject !== by) {
-      if (!force) {
-        return false;
-      }
-
-      // Forcefully release the lockObject
-    }
-
-    this.#requestLockObject = undefined;
-    return true;
-  }
-
-  get requestsEnabled() {
-    return this.#requestLockObject === undefined;
+  unlockRequests(by: RequestTrackLockPredicate<R>): boolean {
+    return this.#requestLockPredicates.delete(by);
   }
 
   get requestsCount() {
@@ -374,8 +351,20 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   }
 
   private async fetchRequestTrack(): Promise<TrackWithRequester<BoomBoxTrack, R> | undefined> {
-    while (this.requestsEnabled && this.requests.length) {
-      const track = this.requests.shift()!;
+    const predicates = [...this.#requestLockPredicates.values()];
+
+    for (let i = 0; i < this.requests.length; i++) {
+      const track = this.requests.at(i);
+
+      if (!track) {
+        break;
+      }
+
+      if (predicates.some(pred => pred(track))) {
+        continue;
+      }
+
+      this.requests.delete(i);
 
       if (await this.isTrackLoadable(track.path)) {
         return track;

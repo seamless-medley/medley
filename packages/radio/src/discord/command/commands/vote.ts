@@ -1,4 +1,4 @@
-import { AudienceType, createLogger, getTrackBanner, makeAudience, StationRequestedTrack, TrackPeek } from "@seamless-medley/core";
+import { Audience, AudienceType, createLogger, getTrackBanner, makeAudience, RequestTrackLockPredicate, StationRequestedTrack, TrackPeek } from "@seamless-medley/core";
 import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, } from "discord.js";
 import { chain, isEqual, keyBy, noop, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
@@ -50,27 +50,26 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
     return;
   }
 
-  if (!station.lockRequests(interaction.guildId)) {
-    warn(interaction, 'Voting is currently happening somewhere else');
-    return;
-  }
+  const issuer = interaction.user.id;
 
+  const collectibleEmojis = sampleSize(distinguishableEmojis, distinguishableEmojis.length);
+
+  const nominatees = peekings.map<Nominatee>((p, i) => ({
+    ...p,
+    banner: getTrackBanner(p.track),
+    votes: 0,
+    voters: [],
+    emoji: collectibleEmojis[i]
+  }));
+
+  const emojiToNominateeMap = new Map(
+    nominatees.map(n => [n.emoji, n])
+  );
+
+  const requestLock: RequestTrackLockPredicate<Audience> = (t) => nominatees.some(n => n.track.rid === t.rid);
+
+  station.lockRequests(requestLock);
   try {
-    const issuer = interaction.user.id;
-
-    const collectibleEmojis = sampleSize(distinguishableEmojis, distinguishableEmojis.length);
-
-    const nominatees = peekings.map<Nominatee>((p, i) => ({
-      ...p,
-      banner: getTrackBanner(p.track),
-      votes: 0,
-      voters: [],
-      emoji: collectibleEmojis[i]
-    }));
-
-    const emojiToNominateeMap = new Map(
-      nominatees.map(n => [n.emoji, n])
-    );
 
     const ttl = 90_000;
 
@@ -102,7 +101,10 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
         new EmbedBuilder()
           .setTitle('Vote')
           .setColor('Random')
-          .setDescription('Click on a reaction emoji to vote for that song')
+          .setDescription('Click on a reaction emoji to vote for that track')
+          .setFooter({
+            text: 'These tracks will not be played during this vote session'
+          })
       ],
       fetchReply: true
     });
@@ -294,15 +296,14 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
           }
         }
         finally {
-          station.unlockRequests(interaction.guildId);
+          station.unlockRequests(requestLock);
         }
       });
     }
   }
   catch(e) {
     logger.error(e);
-
-    station.unlockRequests(guildId, true);
+    station.unlockRequests(requestLock);
   }
 }
 

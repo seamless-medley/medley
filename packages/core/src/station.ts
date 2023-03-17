@@ -11,6 +11,7 @@ import {
   BoomBoxTrack,
   BoomBoxTrackCollection,
   BoomBoxTrackExtra,
+  RequestTrackLockPredicate,
   SweeperInsertionRule,
   TrackKind,
   trackRecordOf,
@@ -630,12 +631,12 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.boombox.peekRequests(from, n, filterFn ?? (() => true));
   }
 
-  lockRequests(by: any): boolean {
-    return this.boombox.lockRequests(by);
+  lockRequests(by: RequestTrackLockPredicate<Audience>) {
+    this.boombox.lockRequests(by);
   }
 
-  unlockRequests(by: any, force?: boolean): boolean {
-    return this.boombox.unlockRequests(by, force);
+  unlockRequests(by: RequestTrackLockPredicate<Audience>): boolean {
+    return this.boombox.unlockRequests(by);
   }
 
   sortRequests(scoped: boolean = false) {

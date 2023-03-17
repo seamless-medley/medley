@@ -332,8 +332,12 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     return findIndex(this.tracks, t => t.id === track.id);
   }
 
-  at(index: number): T {
+  at(index: number): T | undefined {
     return this.tracks[index];
+  }
+
+  delete(index: number): boolean {
+    return this.tracks.splice(index, 1).length > 0;
   }
 
   find(path: string) {
