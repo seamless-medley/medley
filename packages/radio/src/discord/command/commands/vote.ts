@@ -205,7 +205,6 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
 
         // End button
         if (customId === 'vote_end') {
-          logger.debug('vote_end');
           reactionCollector.stop('interaction');
           return;
         }
@@ -223,7 +222,6 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
       reactionCollector.on('collect', handleCollect);
       reactionCollector.on('remove', handleCollect);
       reactionCollector.on('end', async (collected, reason) => {
-        console.log('Reaction colelctor on end', reason);
         try {
           station.off('requestTrackAdded', handleNewRequest);
           station.off('requestTracksRemoved', handleRemovedRequests);
