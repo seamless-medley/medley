@@ -362,13 +362,13 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
       right = left + n - 1;
     }
 
-    const peekings = this.tracks
+    const peeking = this.tracks
       .map((track, i) => ({
         index: i,
         track
       }));
 
-    const max = peekings.length - 1;
+    const max = peeking.length - 1;
 
     if (left <= 0) {
       left = 0;
@@ -379,7 +379,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     }
 
 
-    return peekings
+    return peeking
       .slice(left, right + 1)
       .filter(({ track }) => filterFn(track));
   }

@@ -34,7 +34,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   const runningKey = `${guildId}:${issuer}`;
 
   if (onGoing.has(runningKey)) {
-    reply(interaction, 'Finish the ealier `unrequest` command, please');
+    reply(interaction, 'Finish the earlier `unrequest` command, please');
     return;
   }
 

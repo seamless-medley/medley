@@ -89,7 +89,7 @@ export type StationOptions = {
 
   /**
    * When enabled, a request sweeper will not be inserted
-   * if the conseqcutive tracks are from the same collection
+   * if the consecutive tracks are from the same collection
    *
    * @default true
    */
@@ -141,7 +141,7 @@ export type StationEvents = {
   trackStarted: (deck: DeckIndex, trackPlay: StationTrackPlay, lastTrackPlay?: StationTrackPlay) => void;
   trackActive: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
   trackFinished: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
-  collectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, trasitingFromRequestTrack: boolean) => void;
+  collectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, transitingFromRequestTrack: boolean) => void;
   crateChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
 
   requestTrackAdded: (track: TrackPeek<StationRequestedTrack>) => void;
@@ -312,8 +312,8 @@ export class Station extends TypedEmitter<StationEvents> {
     this.emit('trackFinished', deck, trackPlay);
   }
 
-  private handleCollectionChange: BoomBoxEvents['collectionChange'] = (oldCollection, newCollection, trasitingFromRequestTrack) => {
-    this.emit('collectionChange', oldCollection as StationTrackCollection | undefined, newCollection as StationTrackCollection, trasitingFromRequestTrack);
+  private handleCollectionChange: BoomBoxEvents['collectionChange'] = (oldCollection, newCollection, transitingFromRequestTrack) => {
+    this.emit('collectionChange', oldCollection as StationTrackCollection | undefined, newCollection as StationTrackCollection, transitingFromRequestTrack);
   }
 
   private handleCrateChange: BoomBoxEvents['crateChange'] = (oldCrate, newCrate) => {

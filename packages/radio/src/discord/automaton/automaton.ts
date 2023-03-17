@@ -597,7 +597,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   /**
-   * Make audince group for Discord based on automatonId and guildId
+   * Make audience group for Discord based on automatonId and guildId
    */
   makeAudienceGroup(guildId: string): AudienceGroupId {
     return makeStationAudienceGroup(AudienceType.Discord, this.id, guildId);

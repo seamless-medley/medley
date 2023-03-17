@@ -33,19 +33,19 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = automa
 async function handleVoteCommand(automaton: MedleyAutomaton, interaction: CommandInteraction | MessageComponentInteraction) {
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
-  const exisingVote = guildVoteMessage.get(guildId);
-  if (exisingVote) {
+  const existingVote = guildVoteMessage.get(guildId);
+  if (existingVote) {
     warn(interaction, 'Vote is currently on-going');
     return;
   }
 
-  const peekings = take(station
+  const peeking = take(station
     .peekRequests(0, Math.min(distinguishableEmojis.length, station.requestsCount))
     .filter(({ track }) => track.requestedBy.some(({ type, group }) => (type === AudienceType.Discord) && (group.guildId === guildId))),
     20
   );
 
-  if (peekings.length <= 1) {
+  if (peeking.length <= 1) {
     warn(interaction, 'Nothing to vote')
     return;
   }
@@ -54,7 +54,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
 
   const collectibleEmojis = sampleSize(distinguishableEmojis, distinguishableEmojis.length);
 
-  const nominatees = peekings.map<Nominatee>((p, i) => ({
+  const nominatees = peeking.map<Nominatee>((p, i) => ({
     ...p,
     banner: getTrackBanner(p.track),
     votes: 0,
@@ -215,7 +215,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
         time: ttl
       });
 
-      for (const emoji of take(collectibleEmojis, peekings.length)) {
+      for (const emoji of take(collectibleEmojis, peeking.length)) {
         await msg.react(emoji!);
       }
 

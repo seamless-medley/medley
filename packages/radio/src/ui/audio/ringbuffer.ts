@@ -16,7 +16,7 @@ export class RingBuffer {
   private channelData: Float32Array[];
   private deckData: Int8Array;
   private positionData: Float32Array;
-  private magitudeData: Float32Array[];
+  private magnitudeData: Float32Array[];
   private peakData: Float32Array[];
   private reductionData: Float32Array;
 
@@ -35,7 +35,7 @@ export class RingBuffer {
 
     this.deckData = new Int8Array(new SharedArrayBuffer(this.bufferLength * Uint8Array.BYTES_PER_ELEMENT));
     this.positionData = new Float32Array(new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT));
-    this.magitudeData = chanelList.map<Float32Array>(() => new Float32Array(
+    this.magnitudeData = chanelList.map<Float32Array>(() => new Float32Array(
       new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
     ));
     this.peakData = chanelList.map<Float32Array>(() => new Float32Array(
@@ -47,7 +47,7 @@ export class RingBuffer {
   push(inputs: Float32Array[], blockLength: number, extra: AudioTransportExtra) {
     const [currentRead, currentWrite] = this.getCurrentReadWrite();
 
-    if (this.getAvilableWrite(currentRead, currentWrite) < blockLength) {
+    if (this.getAvailableWrite(currentRead, currentWrite) < blockLength) {
       return false;
     }
 
@@ -86,7 +86,7 @@ export class RingBuffer {
         blockB.fill(position);
       }
 
-      for (const [channel, data] of this.magitudeData.entries()) {
+      for (const [channel, data] of this.magnitudeData.entries()) {
         const blockA = data.subarray(currentWrite);
         const blockB = data.subarray(0, nextWrite);
 
@@ -126,7 +126,7 @@ export class RingBuffer {
         block.fill(position);
       }
 
-      for (const [channel, data] of this.magitudeData.entries()) {
+      for (const [channel, data] of this.magnitudeData.entries()) {
         const block = data.subarray(currentWrite, nextWrite);
         block.fill(levels[channel][0]);
       }
@@ -188,8 +188,8 @@ export class RingBuffer {
       }
 
       {
-        levelL[0] = this.magitudeData[0][nextRead-1];
-        levelR[0] = this.magitudeData[1][nextRead-1];
+        levelL[0] = this.magnitudeData[0][nextRead-1];
+        levelR[0] = this.magnitudeData[1][nextRead-1];
       }
 
       {
@@ -216,8 +216,8 @@ export class RingBuffer {
       }
 
       {
-        levelL[0] = this.magitudeData[0][nextRead-1];
-        levelR[0] = this.magitudeData[1][nextRead-1];
+        levelL[0] = this.magnitudeData[0][nextRead-1];
+        levelR[0] = this.magnitudeData[1][nextRead-1];
       }
 
       {
@@ -248,7 +248,7 @@ export class RingBuffer {
       : writeIndex + this.bufferLength - readIndex;
   }
 
-  getAvilableWrite(readIndex: number, writeIndex: number) {
+  getAvailableWrite(readIndex: number, writeIndex: number) {
     return (writeIndex >= readIndex)
       ? this.bufferLength - writeIndex + readIndex - 1
       : readIndex - writeIndex - 1;

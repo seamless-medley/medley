@@ -64,7 +64,7 @@ export type BoomBoxEvents = {
    *
    * To detect change during the actual playback, listen to `trackStarted` event and check the collection from trackPlay instead
    */
-  collectionChange: (oldCollection: BoomBoxTrackCollection | undefined, newCollection: BoomBoxTrackCollection, trasitingFromRequestTrack: boolean) => void;
+  collectionChange: (oldCollection: BoomBoxTrackCollection | undefined, newCollection: BoomBoxTrackCollection, transitingFromRequestTrack: boolean) => void;
 
   /**
    * Emit when an active crate was changed by any means during track queuing phase
@@ -108,7 +108,7 @@ type BoomBoxOptions<T extends BoomBoxTrack, R extends Requester> = {
   noDuplicatedArtist?: number | false;
 
   /**
-   * Similarity threshold for the artist to be considered as dupplicated
+   * Similarity threshold for the artist to be considered as duplicated
    *
    * @default 0.8
    */
@@ -424,8 +424,8 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
       const collectionChange = currentCollection?.id !== nextCollection.id;
 
       if (collectionChange && nextCollection) {
-        const trasitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
-        this.emit('collectionChange', currentCollection, nextCollection, trasitingFromRequestTrack);
+        const transitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
+        this.emit('collectionChange', currentCollection, nextCollection, transitingFromRequestTrack);
       }
 
       if (this._currentCrate !== nextTrack.sequencing.crate) {
