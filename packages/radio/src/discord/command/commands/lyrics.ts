@@ -37,10 +37,12 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
     return;
   }
 
+  const trackExtra = track.extra;
+
   let lyricsText: string | undefined = undefined;
   let source = 'N/A';
 
-  const { lyrics, cover, coverMimeType } = await (track.extra?.maybeCoverAndLyrics ?? MetadataHelper.coverAndLyrics(track.path));
+  const { lyrics, cover, coverMimeType } = await (trackExtra?.maybeCoverAndLyrics ?? MetadataHelper.coverAndLyrics(track.path));
 
   if (lyrics) {
     const parsed = parseLyrics(lyrics);
@@ -51,14 +53,14 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
 
     source = 'metadata';
 
-  } else if (track.extra?.tags) {
-    const artist = track.extra.tags.artist;
-    const title = track.extra.tags.title;
+  } else if (trackExtra?.tags) {
+    const artist = trackExtra.tags.artist;
+    const title = trackExtra.tags.title;
 
     if (artist && title) {
       await interaction.deferReply();
 
-      track.extra.maybeCoverAndLyrics = new Promise<CoverAndLyrics>(async (resolve) => {
+      trackExtra.maybeCoverAndLyrics = new Promise<CoverAndLyrics>(async (resolve) => {
         const lyrics = await MetadataHelper.searchLyrics(artist, title).catch(() => undefined);
 
         resolve({
@@ -68,7 +70,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
         });
       });
 
-      lyricsText = (await track.extra.maybeCoverAndLyrics).lyrics;
+      lyricsText = (await trackExtra.maybeCoverAndLyrics).lyrics;
       if (lyricsText) {
         source = 'Google';
       }
