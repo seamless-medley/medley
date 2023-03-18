@@ -3,7 +3,7 @@ import { chain, clamp, findIndex, flatMap, max, reject, some } from "lodash";
 export type LyricLine = {
   time: number;
   text: string;
-  far?: boolean; // TODO: calculate far flag from BPM and gap between lines
+  far?: boolean;
 }
 
 export type Timeline = LyricLine[];
@@ -18,7 +18,6 @@ export type Lyrics = {
   infos: Record<string, string[]>;
   timeline: Timeline;
 }
-
 
 const tagExpr = /^\s*(\[([^\]]*)\])/;
 const infoExpr = /([^\d:]+):\s*(.*)\s*/;
@@ -72,7 +71,11 @@ function parseLine(line: string): MaybeLine {
   }
 }
 
-export function parseLyrics(s: string): Lyrics {
+export type ParseLyricOptions = {
+  bpm?: number;
+}
+
+export function parseLyrics(s: string, { bpm = 0 }: ParseLyricOptions = {}): Lyrics {
   const lines = s.replace(/\r\n/g, "\n").split(/\n/).map(parseLine);
 
   const infos = chain(lines)
@@ -149,6 +152,39 @@ export function parseLyrics(s: string): Lyrics {
     .sortBy('time')
     .dropRightWhile(line => line.time >= 59940000 || /^\*{3}.*\*{3}$/.test(line.text))
     .value()
+
+  if (bpm > 0) {
+    const beatInterval = 6e4 / bpm;
+    const measureInterval = 4 * beatInterval;
+
+    let i = 0;
+    let lastNext = -1;
+    while (i < finalTimeline.length) {
+      // be careful with this, lodash's findIndex() should always be used here
+      // since Array.findIndex does not accept the `fromIndex` parameter hence the loop will not advance to the next line
+      const next = findIndex(finalTimeline, ({ text }) => text.trim().length > 0, i + 1);
+
+      if (next > lastNext) {
+        lastNext = next;
+
+        if (next !== -1 && next !== i) {
+          const distance =  finalTimeline[next].time - finalTimeline[i].time;
+          if (distance >= beatInterval * 12) {
+            finalTimeline[next].far = true;
+          }
+
+          i = next;
+          continue;
+        }
+      }
+
+      i++;
+    }
+
+    if (finalTimeline[0]?.time >= 1.5 * measureInterval) {
+      finalTimeline[0].far = true;
+    }
+  }
 
   return {
     infos,
