@@ -1,7 +1,7 @@
 {
   "name": "@seamless-medley/medley",
   "description": "Audio engine for Node.js, with built-in \"radio like\" gapless/seamless playback",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "author": {
     "name": "Wittawas Nakkasem",
     "email": "vittee@hotmail.com"
@@ -20,7 +20,6 @@
   "main": "src/index.ts",
   "types": "src/index.d.ts",
   "dependencies": {
-    "node-addon-api": "3.0.2",
     "node-gyp-build": "^4.6.0"
   },
   "gypfile": true,
@@ -42,6 +41,7 @@
     "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts"
   },
   "devDependencies": {
+    "node-addon-api": "3.0.2",
     "prebuildify": "^5.0.1"
   }
 }
