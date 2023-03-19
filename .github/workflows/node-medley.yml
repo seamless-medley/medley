@@ -4,6 +4,7 @@ on:
     paths:
       - .github/workflows/node-medley.yml
       - packages/node-medley/**
+      - "!packages/node-medley/**"
 jobs:
   build:
     strategy:
