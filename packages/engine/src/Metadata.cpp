@@ -81,6 +81,36 @@ bool readXiphCommentField(const TagLib::Ogg::XiphComment& tag, juce::String key,
     return true;
 }
 
+TagLib::ByteVector readHeader(TagLib::IOStream *stream, unsigned int length, bool skipID3v2)
+{
+    if (!stream || !stream->isOpen()) {
+        return TagLib::ByteVector();
+    }
+
+    const long originalPosition = stream->tell();
+    long bufferOffset = 0;
+
+    if (skipID3v2) {
+        stream->seek(0);
+        const TagLib::ByteVector data = stream->readBlock(TagLib::ID3v2::Header::size());
+        if (data.startsWith(TagLib::ID3v2::Header::fileIdentifier())) {
+            bufferOffset = TagLib::ID3v2::Header(data).completeTagSize();
+        }
+    }
+
+    stream->seek(bufferOffset);
+    const TagLib::ByteVector header = stream->readBlock(length);
+    stream->seek(originalPosition);
+
+    return header;
+}
+
+bool isFLACSupported(TagLib::IOStream *stream)
+{
+    const auto buffer = readHeader(stream, 1024, true);
+    return (buffer.find("fLaC") >= 0);
+}
+
 }
 
 
@@ -191,7 +221,7 @@ bool medley::Metadata::readID3V2(const juce::File& f)
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
     #else
     TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
-    #endif    
+    #endif
 
     TagLib::MPEG::File file(fileName, TagLib::ID3v2::FrameFactory::instance());
 
@@ -301,7 +331,7 @@ bool medley::Metadata::readFLAC(const File& f)
         throw std::runtime_error("Invalid FLAC file");
     }
 
-    if (TagLib::FLAC::File::isSupported(&stream)) {
+    if (isFLACSupported(&stream)) {
         try {
             auto const props = file.audioProperties();
 
