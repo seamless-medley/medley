@@ -1,6 +1,6 @@
 import { Station } from "@seamless-medley/core";
 import { encode } from 'notepack.io';
-import { IExciter, Exciter } from "../../audio/exciter";
+import { IExciter, Exciter, ICarrier } from "../../audio/exciter";
 import { AudioTransportExtra } from "../../audio/types";
 
 interface AudioStreamPlayerEvents {
@@ -55,5 +55,13 @@ export class WebStreamExciter extends Exciter<AudioStreamPlayerEvents> implement
     }
 
     this.preparedPacket = undefined;
+  }
+
+  addCarrier(carrier: ICarrier) {
+    console.warn('[WebStreamExciter] Adding carrier is not supported');
+  }
+
+  removeCarrier(carrier: ICarrier) {
+
   }
 }
