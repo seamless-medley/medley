@@ -189,7 +189,7 @@ Medley::Medley(const CallbackInfo& info)
             0, 1
         );
     }
-    catch (std::exception& e) {
+    catch (std::exception const& e) {
         throw Napi::Error::New(info.Env(), e.what());
     }
     catch (...) {
@@ -779,7 +779,7 @@ Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
     try {
         ok = metadata.readFromFile(trackFile);
     }
-    catch (std::exception e) {
+    catch (std::exception const& e) {
         throw Napi::Error::New(info.Env(), e.what());
     }
 
