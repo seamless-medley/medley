@@ -21,8 +21,9 @@ export interface IExciter {
 
   get isPlayable(): boolean;
 
-  addCarrier(carrier: ICarrier): void;
-  removeCarrier(carrier: ICarrier): void;
+  addCarrier(carrier: ICarrier): number;
+  removeCarrier(carrier: ICarrier): number;
+  hasCarrier(): boolean;
 
   prepare(): void;
   dispatch(): void;
@@ -57,8 +58,12 @@ export function isSameRegistration(a: ExciterRegistration, b: ExciterRegistratio
     && isEqual(a.encoderOptions, b.encoderOptions)
 }
 
+function findRegistrationEntry(registration: ExciterRegistration) {
+  return [...cache].find(([r]) => isSameRegistration(registration, r));
+}
+
 export function getExciterFromCache(registration: ExciterRegistration): IExciter | undefined {
-  const entry = [...cache].find(([r]) => isSameRegistration(registration, r));
+  const entry = findRegistrationEntry(registration);
 
   if (entry) {
     const [key] = entry;
@@ -80,13 +85,28 @@ export function registerExciter(exciter: IExciter): IExciter {
   return exciter;
 }
 
+export function unregisterExciter(exciter: IExciter) {
+  const entry = findRegistrationEntry({
+    constructor: exciter.constructor,
+    station: exciter.station,
+    audioOptions: exciter.audioOptions,
+    encoderOptions: exciter.encoderOptions
+  });
+
+  if (entry) {
+    cache.delete(entry[0]);
+  }
+
+  return entry !== undefined;
+}
+
 /**
  * An Exciter read PCM stream from node-medley and encode it into Opus packets.
  */
 export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {}> extends TypedEmitter<Listeners> implements IExciter {
   protected request?: RequestAudioStreamResult;
-  protected stream?: Readable;
-  protected opusEncoder: OpusPacketEncoder;
+  protected outlet?: Readable;
+  protected opusEncoder?: OpusPacketEncoder;
 
   protected readonly carriers: ICarrier[] = [];
 
@@ -96,8 +116,6 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     readonly encoderOptions: Partial<OpusPacketEncoderOptions>
   ) {
     super();
-
-    this.opusEncoder = new OpusPacketEncoder(this.encoderOptions);
   }
 
   async start() {
@@ -106,8 +124,9 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     }
 
     this.request = await this.station.requestAudioStream(this.audioOptions);
+    this.opusEncoder = new OpusPacketEncoder(this.encoderOptions);
 
-    this.stream = pipeline(
+    this.outlet = pipeline(
       [
         this.request.stream,
         this.opusEncoder
@@ -123,17 +142,19 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
 
     this.station.deleteAudioStream(this.request.id);
     this.request = undefined;
-    //
-    this.stream?.destroy();
-    this.stream = undefined;
+
+    this.outlet?.destroy;
+    this.outlet = undefined;
   }
 
   get bitrate() {
-    return this.opusEncoder.bitrate;
+    return this.opusEncoder?.bitrate ?? this.encoderOptions.bitrate ?? 0;
   }
 
   set bitrate(value: number) {
-    this.opusEncoder.bitrate = value;
+    if (this.opusEncoder) {
+      this.opusEncoder.bitrate = value;
+    }
   }
 
   setGain(gain: number) {
@@ -145,11 +166,11 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
   }
 
   get isPlayable(): boolean {
-    return this.request?.stream.readable ?? false;
+    return this.request?.stream?.readable ?? false;
   }
 
   protected read() {
-    return this.stream?.read() as (Buffer | undefined | null);
+    return this.outlet?.read() as (Buffer | undefined | null);
   }
 
   protected get playableCarriers() {
@@ -182,10 +203,10 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
 
   addCarrier(carrier: ICarrier) {
     if (this.carriers.includes(carrier)) {
-      return;
+      return this.carriers.length;
     }
 
-    this.carriers.push(carrier);
+    return this.carriers.push(carrier);
   }
 
   removeCarrier(carrier: ICarrier) {
@@ -194,6 +215,12 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     if (index > -1) {
       this.carriers.splice(index, 1);
     }
+
+    return this.carriers.length;
+  }
+
+  hasCarrier() {
+    return this.carriers.length > 0;
   }
 }
 

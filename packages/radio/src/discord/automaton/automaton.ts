@@ -93,7 +93,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #shardReady = false;
 
-  #audioDispatcher = new AudioDispatcher();
+  #audioDispatcher: AudioDispatcher;
 
   constructor(readonly stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
     super();
@@ -107,6 +107,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.maxTrackMessages = options.maxTrackMessages ?? 3;
     // this.initialGain = options.initialGain ?? decibelsToGain(-3);
     this.#baseCommand = options.baseCommand || 'medley';
+
+    this.#audioDispatcher = new AudioDispatcher();
 
     this.#client = new Client({
       intents: [
@@ -190,7 +192,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       }
 
       if (closeConnection) {
-        state.destroyVoiceConnection();
+        state.destroyVoiceConnector();
       }
     }
   }

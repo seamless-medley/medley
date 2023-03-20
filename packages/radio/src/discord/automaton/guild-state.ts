@@ -77,15 +77,9 @@ export class GuildState {
     return this.#voiceChannelId !== undefined;
   }
 
-  destroyVoiceConnection() {
-    if (this.voiceConnector === undefined) {
-      return false;
-    }
-
-    this.voiceConnector.destroy();
+  destroyVoiceConnector(): void {
+    this.voiceConnector?.destroy();
     this.voiceConnector = undefined;
-
-    return true;
   }
 
   #updateChannelAudiences(channel: VoiceBasedChannel | null | undefined, muted: boolean) {
@@ -115,8 +109,9 @@ export class GuildState {
     // if the voiceConnection is defined, meaning the voice state has been forcefully closed
     // if the voiceConnection is undefined here, meaning it might be the result of the `join` command
 
-    if (this.destroyVoiceConnection()) {
+    if (this.voiceConnector !== undefined) {
       this.detune();
+      this.destroyVoiceConnector();
       this.#voiceChannelId = undefined;
     }
   }
@@ -175,10 +170,12 @@ export class GuildState {
     const { station, exciter } = this.stationLink;
 
     if (this.voiceConnector) {
-      exciter.removeCarrier(this.voiceConnector);
+      if (exciter.removeCarrier(this.voiceConnector) <= 0) {
+        exciter.stop();
+        this.adapter.getAudioDispatcher().remove(exciter);
+        DiscordAudioPlayer.destroy(exciter);
+      }
     }
-
-    exciter.stop();
 
     station.removeAudiencesForGroup(this.automaton.makeAudienceGroup(this.guildId));
 

@@ -59,9 +59,10 @@ export class WebStreamExciter extends Exciter<AudioStreamPlayerEvents> implement
 
   addCarrier(carrier: ICarrier) {
     console.warn('[WebStreamExciter] Adding carrier is not supported');
+    return 0;
   }
 
   removeCarrier(carrier: ICarrier) {
-
+    return 0;
   }
 }

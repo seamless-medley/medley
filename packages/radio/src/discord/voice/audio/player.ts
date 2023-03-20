@@ -1,5 +1,5 @@
 import { RequestAudioOptions, Station } from "@seamless-medley/core";
-import { Exciter, getExciterFromCache, IExciter, registerExciter } from "../../../audio/exciter";
+import { Exciter, getExciterFromCache, IExciter, registerExciter, unregisterExciter } from "../../../audio/exciter";
 
 export class DiscordAudioPlayer extends Exciter implements IExciter {
   private constructor(station: Station, bitrate = 256_000) {
@@ -28,5 +28,11 @@ export class DiscordAudioPlayer extends Exciter implements IExciter {
     });
 
     return existing ?? registerExciter(new DiscordAudioPlayer(station, bitrate));
+  }
+
+  static destroy(instance: IExciter) {
+    if (instance instanceof DiscordAudioPlayer) {
+      unregisterExciter(instance);
+    }
   }
 }
