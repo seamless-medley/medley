@@ -45,11 +45,6 @@ export class GuildState {
 
   preferredStation?: Station;
 
-  /**
-   * @deprecated
-   */
-  #gain = 1.0;
-
   #voiceChannelId?: string;
 
   textChannelId?: string;
@@ -64,20 +59,6 @@ export class GuildState {
 
   get tunedStation() {
     return this.stationLink?.station;
-  }
-
-  /**
-   * @deprecated
-   */
-  get gain() {
-    return this.#gain;
-  }
-
-  /**
-   * @deprecated
-   */
-  set gain(value: number) {
-    this.#gain = value;
   }
 
   get voiceChannelId() {
@@ -171,7 +152,6 @@ export class GuildState {
       this.detune();
     }
 
-    // const exciter = new DiscordAudioPlayer(preferredStation, this.adapter.getInitialGain());
     const exciter = DiscordAudioPlayer.make(preferredStation);
 
     this.adapter.getAudioDispatcher().add(exciter);
@@ -183,7 +163,6 @@ export class GuildState {
     };
 
     this.stationLink = newLink;
-    this.gain = 1.0;
 
     return newLink;
   }

@@ -70,6 +70,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     return;
   }
 
+  // @ts-ignore
   const oldGain = state.gain;
   const oldDecibels = g2d(oldGain);
 
@@ -90,6 +91,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     inDecibels = percentToDb(inPercent!)
   }
 
+  // @ts-ignore
   state.gain = decibelsToGain(inDecibels);
 
   declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Fading volume from {{pink}}${volumeToString(oldDecibels)}{{reset}} to {{cyan}}${volumeToString(inDecibels)}`));
