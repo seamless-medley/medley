@@ -48,7 +48,7 @@ export class OpusPacketEncoder extends Transform {
     while (this.buffer.length >= backlogSize + requiredBytes * (blocksProcessed + 1)) {
       const start = blocksProcessed * requiredBytes;
       const end = start + requiredBytes;
-      const block = this.buffer.slice(start, end);
+      const block = this.buffer.subarray(start, end);
       const packet = this.opus.encode(block, this.frameSize);
       //
       this.packets.push(packet);
