@@ -337,7 +337,13 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
   }
 
   delete(index: number): boolean {
-    return this.tracks.splice(index, 1).length > 0;
+    const deleted = this.tracks.splice(index, 1);
+
+    for (const t of deleted) {
+      this.trackIdMap.delete(t.id);
+    }
+
+    return deleted.length > 0;
   }
 
   find(path: string) {

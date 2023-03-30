@@ -69,7 +69,7 @@ export const findRule = (from: string, to: string, rules: SweeperInsertionRule[]
 export class SweeperInserter {
   private logger: Logger<ILogObj>;
 
-  constructor(private boombox: BoomBox, public rules: SweeperInsertionRule[] = []) {
+  constructor(private boombox: BoomBox<any>, public rules: SweeperInsertionRule[] = []) {
     this.logger = createLogger({ name: `sweeper-inserter/${boombox.id}` });
     boombox.on('collectionChange', this.handler);
   }
