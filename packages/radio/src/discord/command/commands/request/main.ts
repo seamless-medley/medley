@@ -233,6 +233,8 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       );
 
       if (ok === false || ok.index < 0) {
+        onGoing.delete(runningKey);
+
         interaction.update({
           content: makeColoredMessage('red', 'Track could not be requested for some reasons'),
           components: []
