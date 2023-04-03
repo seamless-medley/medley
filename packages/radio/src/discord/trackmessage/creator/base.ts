@@ -1,7 +1,7 @@
 import { Audience, AudienceType, DeckPositions, isRequestTrack, Metadata, MetadataFields, Station, StationTrack, StationTrackCollection, StationTrackPlay, TrackSequencingLatch, TrackWithRequester } from "@seamless-medley/core";
 import { MetadataHelper } from "@seamless-medley/core/src/metadata";
 import { AttachmentBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
-import { get, isEmpty, sample } from "lodash";
+import { chain, get, isEmpty, sample } from "lodash";
 import mime from 'mime-types';
 import { parse as parsePath } from 'path';
 import { TrackMessage, TrackMessageStatus } from "../types";
@@ -164,7 +164,7 @@ export function getEmbedDataForTrack({ path, extra, sequencing, collection }: St
 }
 
 export function extractRequestersForGuild(guildId: string, requesters: Audience[]) {
-  return requesters
+  return chain(requesters)
     .map(({ type, group, id }) => {
       if (type !== AudienceType.Discord) {
         return;
@@ -172,5 +172,7 @@ export function extractRequestersForGuild(guildId: string, requesters: Audience[
 
       return group.guildId === guildId ? id : undefined;
     })
-    .filter((id): id is string => !!id);
+    .filter((id): id is string => !!id)
+    .uniq()
+    .value()
 }
