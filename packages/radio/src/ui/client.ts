@@ -651,7 +651,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
           return methods[prop as keyof typeof methods];
         }
       }
-    }) as Remotable<Types[Kind]>;
+    }) as Remotable<Types[any]>;
 
     this.surrogates.set(uuid, surrogate);
     this.surrogateCache.set(objectId, new WeakRef(surrogate));
