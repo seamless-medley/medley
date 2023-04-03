@@ -3,7 +3,7 @@ import {
   BoomBoxEvents,
   BoomBoxTrackPlay,
   getTrackBanner,
-  makeAudienceGroup,
+  makeAudienceGroupId,
   RequestAudioStreamResult,
   Station
 } from "@seamless-medley/core";
@@ -116,16 +116,14 @@ export async function createIcyAdapter(station: Station, options?: IcyAdapterOpt
 
       const url = new URL(req.url, `http://${req.headers.host ?? '0.0.0.0'}`);
 
-      const audienceGroup = makeAudienceGroup(AudienceType.Icy, `${url.host}${url.pathname}`);
+      const audienceGroup = makeAudienceGroupId(AudienceType.Icy, `${url.host}${url.pathname}`);
       const audienceId = `${req.ip}:${req.socket.remotePort}`;
 
-      station.addAudiences(audienceGroup, audienceId, { req, res });
+      station.addAudience(audienceGroup, audienceId);
 
       if (!overseer.running) {
         overseer.respawn();
       }
-
-      currentTrackPlay = station.trackPlay;
 
       const transformers: Transform[] = [];
       const mux = new MetadataMux(needMetadata ? metadataInterval : 0);
