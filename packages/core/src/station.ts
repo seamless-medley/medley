@@ -670,7 +670,6 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 
   addAudience(groupId: AudienceGroupId, audienceId: string) {
-    console.trace('Adding audience', groupId, audienceId);
     if (!this.audiences.has(groupId)) {
       this.audiences.set(groupId, new Set());
     }
@@ -690,7 +689,6 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 
   updateAudiences(groupId: AudienceGroupId, audiences: string[]) {
-    console.trace('Adding audiences for group', groupId, 'audiences:', audiences);
     this.audiences.set(groupId, new Set(audiences));
     this.updatePlayback();
   }
