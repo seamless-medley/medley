@@ -1,10 +1,12 @@
-import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions, TrackPlay, UpdateAudioStreamOptions } from "@seamless-medley/medley";
-import { isFunction, random, sample, shuffle, sortBy } from "lodash";
-import { TypedEmitter } from 'tiny-typed-emitter';
-import { TrackCollectionBasicOptions, TrackPeek } from "./collections";
-import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
-import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "./library";
-import { createLogger, Logger, type ILogObj } from "./logging";
+import {AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions, TrackPlay, UpdateAudioStreamOptions} from "@seamless-medley/medley";
+import {isFunction, random, sample, shuffle, sortBy} from "lodash";
+import {TypedEmitter} from 'tiny-typed-emitter';
+import {TrackCollectionBasicOptions, TrackPeek} from "./collections";
+import {Chanceable, Crate, CrateLimit, LatchOptions, LatchSession} from "./crate";
+import {Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection} from "./library";
+import {SearchQuery, SearchQueryField} from "./library/search";
+import {Logger, createLogger, type ILogObj} from "./logging";
+import {MetadataHelper} from "./metadata";
 import {
   BoomBox,
   BoomBoxEvents,
@@ -14,15 +16,13 @@ import {
   RequestTrackLockPredicate,
   SweeperInsertionRule,
   TrackKind,
-  trackRecordOf,
-  TrackWithRequester
+  TrackWithRequester,
+  trackRecordOf
 } from "./playout";
-import { MetadataHelper } from "./metadata";
-import { SearchQuery, SearchQueryField } from "./library/search";
 
 export type StationAudioLevels = AudioLevels & {
   reduction: number;
-}
+};
 
 export enum PlayState {
   Idle = 'idle',
@@ -35,26 +35,26 @@ export type SequenceChance = 'random' | [yes: number, no: number] | (() => Promi
 export type LimitByUpto = {
   by: 'upto';
   upto: number;
-}
+};
 
 export type LimitByRange = {
   by: 'range';
   range: [number, number];
-}
+};
 
 export type LimitBySample = {
   by: 'sample' | 'one-of';
   list: number[];
-}
+};
 
 export type SequenceLimit = number | 'all' | LimitByUpto | LimitByRange | LimitBySample;
 
 export type SequenceConfig = {
   crateId: string;
-  collections: { id: string; weight?: number }[];
+  collections: {id: string; weight?: number;}[];
   chance?: SequenceChance;
   limit: SequenceLimit;
-}
+};
 
 export type StationOptions = {
   id: string;
@@ -62,6 +62,8 @@ export type StationOptions = {
   name: string;
 
   description?: string;
+
+  skipCheckAudioDevice?: boolean;
 
   useNullAudioDevice?: boolean;
 
@@ -94,7 +96,7 @@ export type StationOptions = {
    * @default true
    */
   noRequestSweeperOnIdenticalCollection?: boolean;
-}
+};
 
 export enum AudienceType {
   Discord = 'discord',
@@ -110,14 +112,14 @@ type AudienceT<T extends AudienceType, G = string> = {
   type: T;
   group: G;
   id: string;
-}
+};
 
 export type DiscordAudience = Omit<AudienceT<AudienceType.Discord, never>, 'group'> & {
   group: {
     automatonId: string;
     guildId: string;
-  }
-}
+  };
+};
 
 export type IcyAudience = AudienceT<AudienceType.Icy>;
 
@@ -150,13 +152,15 @@ export type StationEvents = {
   collectionAdded: (collection: StationTrackCollection) => void;
   collectionRemoved: (collection: StationTrackCollection) => void;
   collectionUpdated: (collection: StationTrackCollection) => void;
-}
+};
 
 export class Station extends TypedEmitter<StationEvents> {
   readonly id: string;
 
   name: string;
   description?: string;
+
+  skipCheckAudioDevice?: boolean;
 
   readonly queue: Queue<StationTrack>;
   readonly medley: Medley<StationTrack>;
@@ -186,13 +190,14 @@ export class Station extends TypedEmitter<StationEvents> {
     this.id = options.id;
     this.name = options.name;
     this.description = options.description;
+    this.skipCheckAudioDevice = options.skipCheckAudioDevice || false;
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
     this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? true;
     this.maxTrackHistory = options.maxTrackHistory || 50;
     this.noRequestSweeperOnIdenticalCollection = options.noRequestSweeperOnIdenticalCollection ?? true;
 
-    this.logger = createLogger({ name: `station/${this.id}`});
+    this.logger = createLogger({name: `station/${this.id}`});
     this.logger.debug('Creating station');
 
     this.queue = new Queue();
@@ -200,9 +205,26 @@ export class Station extends TypedEmitter<StationEvents> {
     this.medley = new Medley(this.queue);
     this.logger.debug('Medley engine created');
 
-    if (options.useNullAudioDevice ?? true) {
-      if (this.getCurrentAudioDevice().type !== 'Null') {
-        this.setAudioDevice({ type: 'Null', device: 'Null Device'});
+    //
+    /**
+     * ISSUE:
+     * - after call this method `this.getCurrentAudioDevice()` there are no return value when it fail at native level and cause application exit without reason
+     * WORKAROUND:
+     * - pass environment variable from container layer (from medley/radio) to bypass calling getCurrentAudioDevice method, then application will able to start but it's not sending audio out due to no unknow audio specs
+     *
+     * TODO:
+     * - need to work at native level ...
+     */
+
+    this.logger.debug(`skipCheckAudioDevice: ${options.skipCheckAudioDevice}`);
+
+    if (options.skipCheckAudioDevice) {
+      this.setAudioDevice({type: 'Null', device: 'Null Device'});
+    } else {
+      if (options.useNullAudioDevice ?? true) {
+        if (this.getCurrentAudioDevice().type !== 'Null') {
+          this.setAudioDevice({type: 'Null', device: 'Null Device'});
+        }
       }
     }
 
@@ -256,7 +278,7 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.medley.getAudioDevice();
   }
 
-  setAudioDevice(descriptor: { type?: string, device?: string }) {
+  setAudioDevice(descriptor: {type?: string, device?: string;}) {
     return this.medley.setAudioDevice(descriptor);
   }
 
@@ -267,32 +289,32 @@ export class Station extends TypedEmitter<StationEvents> {
     return {
       ...levels,
       reduction
-    }
+    };
   }
 
   private handleTrackQueued: BoomBoxEvents['trackQueued'] = (track: StationTrack) => {
     this.emit('trackQueued', track);
-  }
+  };
 
   private handleDeckLoaded: BoomBoxEvents['deckLoaded'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckLoaded', deck, trackPlay);
-  }
+  };
 
   private handleDeckUnloaded: BoomBoxEvents['deckUnloaded'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckUnloaded', deck, trackPlay);
-  }
+  };
 
   private handleDeckStarted: BoomBoxEvents['deckStarted'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckStarted', deck, trackPlay);
-  }
+  };
 
   private handleDeckActive: BoomBoxEvents['deckActive'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckActive', deck, trackPlay);
-  }
+  };
 
   private handleDeckFinished: BoomBoxEvents['deckFinished'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckFinished', deck, trackPlay);
-  }
+  };
 
   private handleTrackStarted: BoomBoxEvents['trackStarted'] = (deck, trackPlay: StationTrackPlay, lastTrackPlay?: StationTrackPlay) => {
     this._starting = false;
@@ -302,34 +324,34 @@ export class Station extends TypedEmitter<StationEvents> {
       ...trackRecordOf(trackPlay.track),
       playedTime: new Date()
     }, this.maxTrackHistory);
-  }
+  };
 
   private handleTrackActive: BoomBoxEvents['trackActive'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('trackActive', deck, trackPlay);
-  }
+  };
 
   private handleTrackFinished: BoomBoxEvents['trackFinished'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('trackFinished', deck, trackPlay);
-  }
+  };
 
   private handleCollectionChange: BoomBoxEvents['collectionChange'] = (oldCollection, newCollection, transitingFromRequestTrack) => {
     this.emit('collectionChange', oldCollection as StationTrackCollection | undefined, newCollection as StationTrackCollection, transitingFromRequestTrack);
-  }
+  };
 
   private handleCrateChange: BoomBoxEvents['crateChange'] = (oldCrate, newCrate) => {
     this.emit('crateChange', oldCrate, newCrate);
-  }
+  };
 
   private handleRequestTrack = async (track: StationRequestedTrack) => {
-    const { requestSweepers } = this;
+    const {requestSweepers} = this;
 
-    const currentTrack =  this.boombox.trackPlay?.track;
+    const currentTrack = this.boombox.trackPlay?.track;
     let isSameCollection = currentTrack?.collection.id === track.collection.id;
 
     if (requestSweepers) {
       const shouldSweep = this.noRequestSweeperOnIdenticalCollection
         ? !isSameCollection
-        : true
+        : true;
 
       if (currentTrack?.extra?.kind !== TrackKind.Request && shouldSweep) {
         const count = requestSweepers.length;
@@ -342,7 +364,7 @@ export class Station extends TypedEmitter<StationEvents> {
               sweeper.extra = {
                 ...sweeper.extra,
                 kind: TrackKind.Insertion
-              }
+              };
             }
 
             this.queue.add({
@@ -360,14 +382,14 @@ export class Station extends TypedEmitter<StationEvents> {
 
     if (this.followCrateAfterRequestTrack && !track.collection.options.noFollowOnRequest) {
       if (!this.isLatchActive) {
-        const indices = this.boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
+        const indices = this.boombox.crates.map((crate, index) => ({ids: new Set(crate.sources.map(s => s.id)), index}));
 
         const crateIndex = this.boombox.getCrateIndex();
 
         const a = indices.slice(0, crateIndex);
         const b = indices.slice(crateIndex);
 
-        const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
+        const located = [...b, ...a].find(({ids}) => ids.has(track.collection.id));
 
         if (located) {
           // isSameCollection = true;
@@ -379,7 +401,7 @@ export class Station extends TypedEmitter<StationEvents> {
     if (isSameCollection && this.boombox.isKnownCollection(track.collection)) {
       this.boombox.increasePlayCount();
     }
-  }
+  };
 
   get playing() {
     return this.medley.playing;
@@ -442,7 +464,7 @@ export class Station extends TypedEmitter<StationEvents> {
             intro.extra = {
               ...intro.extra,
               kind: TrackKind.Insertion
-            }
+            };
           }
 
           this.queue.add({
@@ -466,7 +488,7 @@ export class Station extends TypedEmitter<StationEvents> {
   pause(reason?: string) {
     if (!this.medley.paused) {
       this.medley.togglePause(false);
-      this.logger.info('Playing paused', { reason });
+      this.logger.info('Playing paused', {reason});
     }
 
     this.playState = PlayState.Paused;
@@ -520,8 +542,8 @@ export class Station extends TypedEmitter<StationEvents> {
       return false;
     }
 
-    const collection = this.library.get(id)!
-    collection.options = { ...options };
+    const collection = this.library.get(id)!;
+    collection.options = {...options};
     this.emit('collectionUpdated', collection);
   }
 
@@ -543,7 +565,7 @@ export class Station extends TypedEmitter<StationEvents> {
     this.addCrates(...crates);
   }
 
-  private createCrate({ crateId, collections, chance, limit }: SequenceConfig) {
+  private createCrate({crateId, collections, chance, limit}: SequenceConfig) {
     const validCollections = collections.filter(col => this.library.has(col.id));
 
     if (validCollections.length === 0) {
@@ -554,7 +576,7 @@ export class Station extends TypedEmitter<StationEvents> {
 
     return new Crate({
       id: crateId,
-      sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.library.get(id)!, weight })),
+      sources: validCollections.map(({id, weight = 1}) => ({collection: this.library.get(id)!, weight})),
       chance: createChanceable(chance),
       limit: crateLimitFromSequenceLimit(limit),
       max: existing?.max
@@ -588,7 +610,7 @@ export class Station extends TypedEmitter<StationEvents> {
   async search(q: SearchQuery, limit?: number) {
     const result = await this.library.search(q, limit);
 
-    this.musicDb.searchHistory.add(this.id, { ...q, resultCount: result.length });
+    this.musicDb.searchHistory.add(this.id, {...q, resultCount: result.length});
 
     return result as StationTrack[];
   }
@@ -771,11 +793,11 @@ const always = () => true;
 
 function createChanceable(def: SequenceChance | undefined): Chanceable {
   if (def === 'random') {
-    return { next: randomChance };
+    return {next: randomChance};
   }
 
   if (isFunction(def)) {
-    return { next: def };
+    return {next: def};
   }
 
   if (Array.isArray(def) && def.length > 1) {
@@ -785,7 +807,7 @@ function createChanceable(def: SequenceChance | undefined): Chanceable {
   return {
     next: always,
     chances: () => [true]
-  }
+  };
 }
 
 function chanceOf(n: [yes: number, no: number]): Chanceable {
@@ -811,10 +833,10 @@ function chanceOf(n: [yes: number, no: number]): Chanceable {
       return v ?? false;
     },
     chances: () => all
-  }
+  };
 }
 
-function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit  {
+function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit {
   if (typeof limit === 'number') {
     return limit;
   }
@@ -823,7 +845,7 @@ function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit  {
     return limit;
   }
 
-  const { by } = limit;
+  const {by} = limit;
 
   if (by === 'upto') {
     const upto = () => random(1, limit.upto);
@@ -861,24 +883,24 @@ export const extractAudienceGroupFromId = (id: AudienceGroupId) => {
     return {
       type: type as AudienceType.Discord,
       groupId: groupId as DiscordAudienceGroupId
-    }
+    };
   }
 
   return {
     type: type as (AudienceType.Icy | AudienceType.Web),
     groupId
-  }
-}
+  };
+};
 
-export function extractAudienceGroup({ group }: DiscordAudience): DiscordAudience['group'];
-export function extractAudienceGroup({ group }: IcyAudience | WebAudience): string;
-export function extractAudienceGroup({ group }: Audience): Audience['group'] { return group; }
+export function extractAudienceGroup({group}: DiscordAudience): DiscordAudience['group'];
+export function extractAudienceGroup({group}: IcyAudience | WebAudience): string;
+export function extractAudienceGroup({group}: Audience): Audience['group'] {return group;}
 
-export function makeAudience(type: AudienceType.Discord, group: DiscordAudience['group'], id: string): DiscordAudience
-export function makeAudience(type: AudienceType, group: string |  DiscordAudience['group'], id: string): Audience {
+export function makeAudience(type: AudienceType.Discord, group: DiscordAudience['group'], id: string): DiscordAudience;
+export function makeAudience(type: AudienceType, group: string | DiscordAudience['group'], id: string): Audience {
   return {
     type,
     group: group as any,
     id
-  }
+  };
 }

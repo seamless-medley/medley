@@ -57,9 +57,9 @@ const storedConfigs: StoredConfig = {
   automatons: [
     {
       id: 'medley',
-      botToken: `${process.env.DISCORD_BOT_TOKEN}`,
-      clientId: `${process.env.DISCORD_CLIENT_ID}`,
-      baseCommand: `${process.env.DISCORD_BASE_COMMAND}`
+      botToken: 'MTA5MzE0NDg0MjUyMTAzODkzOA.GQr-oW.wDnnEv3eC6AsI8y-CJam7NLjLUXyxvjsL_zigo',
+      clientId: '1093144842521038938',
+      baseCommand: 'sing'
       // tuning: {
       //   guilds: {
       //     'guild_id1': 'station_id1',
@@ -107,9 +107,10 @@ async function main() {
         id: config.id,
         name: config.name,
         description: config.description,
+        skipCheckAudioDevice: process.env.SKIP_CHECK_AUDIO_DEVICE === "true" || false,
         intros,
         requestSweepers,
-        musicDb
+        musicDb,
       });
 
       for (const desc of musicCollections) {

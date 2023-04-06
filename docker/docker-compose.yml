@@ -22,6 +22,7 @@ services:
       MONGO_DB_PASSWORD: example
       MONGO_DB_DATABASE: medley
       MUSIC_PATH: /musics
+      SKIP_CHECK_AUDIO_DEVICE: true
     volumes:
       - "/Users/coke/Library/CloudStorage/GoogleDrive-visualizeq@gmail.com/My Drive/musics:/musics"
     depends_on:
