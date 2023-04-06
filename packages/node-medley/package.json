@@ -1,7 +1,7 @@
 {
   "name": "@seamless-medley/medley",
   "description": "Audio engine for Node.js, with built-in \"radio like\" gapless/seamless playback",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "author": {
     "name": "Wittawas Nakkasem",
     "email": "vittee@hotmail.com"
