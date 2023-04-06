@@ -12,8 +12,10 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "sourceMap" : true,
+    "sourceMap": true,
     "outDir": "./dist"
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }
