@@ -145,6 +145,7 @@ void Medley::Initialize(Object& exports) {
         StaticMethod<&Medley::static_getMetadata>("getMetadata"),
         StaticMethod<&Medley::static_getCoverAndLyrics>("getCoverAndLyrics"),
         StaticMethod<&Medley::static_isTrackLoadable>("isTrackLoadable"),
+        StaticMethod<&Medley::static_getInfo>("getInfo"),
     };
 
     auto env = exports.Env();
@@ -850,6 +851,72 @@ Napi::Value Medley::static_isTrackLoadable(const CallbackInfo& info) {
 
     auto trackPtr = Track::fromJS(info[0]);
     return Boolean::New(env, medley::utils::isTrackLoadable(supportedFormats, trackPtr));
+}
+
+Napi::Value Medley::static_getInfo(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    auto result = Object::New(env);
+
+    {
+        auto version = Object::New(env);
+        version.Set("major", Napi::Number::New(env, MEDLEY_VERSION_MAJOR));
+        version.Set("minor", Napi::Number::New(env, MEDLEY_VERSION_MINOR));
+        version.Set("patch", Napi::Number::New(env, MEDLEY_VERSION_PATCH));
+
+        result.Set("version", version);
+    }
+
+    // TODO: Other infos
+
+    {
+        auto juce = Object::New(env);
+
+        {
+            auto version = Object::New(env);
+            version.Set("major", Napi::Number::New(env, JUCE_MAJOR_VERSION));
+            version.Set("minor", Napi::Number::New(env, JUCE_MINOR_VERSION));
+            version.Set("build", Napi::Number::New(env, JUCE_BUILDNUMBER));
+
+            juce.Set("version", version);
+        }
+        {
+            auto cpu = Object::New(env);
+
+            #if JUCE_INTEL
+            cpu.Set("intel", Napi::Boolean::New(env, true));
+            #endif
+
+            #if JUCE_USE_SSE_INTRINSICS
+            cpu.Set("sse", Napi::Boolean::New(env, true));
+            #endif
+
+            #if defined (__aarch64__)
+            cpu.Set("aarch64", Napi::Boolean::New(env, true));
+            #endif
+
+            #if JUCE_ARM
+            cpu.Set("arm", Napi::Boolean::New(env, true));
+            #endif
+
+            #if defined (__arm64__)
+            cpu.Set("arm64", Napi::Boolean::New(env, true));
+            #endif
+
+            #if JUCE_USE_ARM_NEON
+            cpu.Set("neon", Napi::Boolean::New(env, true));
+            #endif
+
+            #if JUCE_USE_VDSP_FRAMEWORK
+            cpu.Set("vdsp", Napi::Boolean::New(env, true));
+            #endif
+
+            juce.Set("cpu", cpu);
+        }
+
+        result.Set("juce", juce);
+    }
+
+    return result;
 }
 
 uint32_t Medley::audioRequestId = 0;

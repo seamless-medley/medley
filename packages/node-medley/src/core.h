@@ -6,6 +6,7 @@
 #include <RingBuffer.h>
 #include <ITrack.h>
 #include <Fader.h>
+#include "version.h"
 #include "audio/SecretRabbitCode.h"
 #include "track.h"
 #include "queue.h"
@@ -108,6 +109,8 @@ public:
     static Napi::Value static_getCoverAndLyrics(const Napi::CallbackInfo& info);
 
     static Napi::Value static_isTrackLoadable(const Napi::CallbackInfo& info);
+
+    static Napi::Value static_getInfo(const Napi::CallbackInfo& info);
 
     struct AudioRequest {
         AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter, float preferredGain)
