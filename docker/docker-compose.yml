@@ -15,14 +15,7 @@ services:
       dockerfile: docker/Dockerfile
       context: ../
     # restart: always
-    environment:
-      MONGO_DB_HOST: mongo
-      MONGO_DB_PORT: 27017
-      MONGO_DB_USER: root
-      MONGO_DB_PASSWORD: example
-      MONGO_DB_DATABASE: medley
-      MUSIC_PATH: /musics
-      SKIP_CHECK_AUDIO_DEVICE: true
+    env_file: .env
     volumes:
       - "/Users/coke/Library/CloudStorage/GoogleDrive-visualizeq@gmail.com/My Drive/musics:/musics"
     depends_on:

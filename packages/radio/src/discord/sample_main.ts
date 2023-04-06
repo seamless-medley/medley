@@ -57,9 +57,9 @@ const storedConfigs: StoredConfig = {
   automatons: [
     {
       id: 'medley',
-      botToken: 'MTA5MzE0NDg0MjUyMTAzODkzOA.GQr-oW.wDnnEv3eC6AsI8y-CJam7NLjLUXyxvjsL_zigo',
-      clientId: '1093144842521038938',
-      baseCommand: 'sing'
+      botToken: `${process.env.DISCORD_BOT_TOKEN}`,
+      clientId: `${process.env.DISCORD_CLIENT_ID}`,
+      baseCommand: `${process.env.DISCORD_BASE_COMMAND}`
       // tuning: {
       //   guilds: {
       //     'guild_id1': 'station_id1',

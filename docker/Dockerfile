@@ -14,6 +14,7 @@ RUN pnpm install
 
 # cleanup unnecessary files/folders
 RUN rm -rfv .git .github .dockerignore .editorconfig .gitignore
+RUN rm -rfv /app/packages/radio/.env
 
 WORKDIR /app/packages/radio
 
