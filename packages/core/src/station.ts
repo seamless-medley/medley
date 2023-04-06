@@ -201,7 +201,9 @@ export class Station extends TypedEmitter<StationEvents> {
     this.logger.debug('Medley engine created');
 
     if (options.useNullAudioDevice ?? true) {
-      if (this.getCurrentAudioDevice().type !== 'Null') {
+      const dev = this.getCurrentAudioDevice();
+
+      if ((dev === undefined) || (dev.type !== 'Null')) {
         this.setAudioDevice({ type: 'Null', device: 'Null Device'});
       }
     }

@@ -267,10 +267,14 @@ Napi::Value Medley::getAudioDevice(const CallbackInfo& info) {
     auto env = info.Env();
 
     auto device = engine->getCurrentAudioDevice();
+
+    if (device == nullptr) {
+        return env.Undefined();
+    }
+
     auto desc = Object::New(env);
     desc.Set("type", device->getTypeName().toStdString());
     desc.Set("device", device->getName().toStdString());
-
     return desc;
 }
 

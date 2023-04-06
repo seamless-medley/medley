@@ -227,7 +227,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   setAudioDevice(descriptor: Partial<AudioDeviceDescriptor>): boolean;
 
-  getAudioDevice(): AudioDeviceDescriptor;
+  getAudioDevice(): AudioDeviceDescriptor | undefined;
 
   getDeckMetadata(index: DeckIndex): Metadata;
 
