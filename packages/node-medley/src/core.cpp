@@ -111,6 +111,49 @@ namespace {
     Napi::Value safeString(Napi::Env env, juce::String s) {
         return s.isNotEmpty() ? Napi::String::New(env, s.toRawUTF8()) : env.Undefined();
     }
+
+    Napi::Object createJSMetadata(Napi::Env env, medley::Metadata metadata) {
+        auto result = Object::New(env);
+
+        result.Set("title", safeString(env, metadata.getTitle()));
+        result.Set("artist", safeString(env, metadata.getArtist()));
+        result.Set("album", safeString(env, metadata.getAlbum()));
+        result.Set("isrc", safeString(env, metadata.getISRC()));
+        result.Set("albumArtist", safeString(env, metadata.getAlbumArtist()));
+        result.Set("originalArtist", safeString(env, metadata.getOriginalArtist()));
+
+        auto bitrate = metadata.getBitrate();
+        auto sampleRate = metadata.getSampleRate();
+        auto duration = metadata.getDuration();
+
+        result.Set("bitrate", bitrate != 0.0f ? Napi::Number::New(env, bitrate) : env.Undefined());
+        result.Set("sampleRate", sampleRate != 0.0f ? Napi::Number::New(env, sampleRate) : env.Undefined());
+        result.Set("duration", duration != 0.0f ? Napi::Number::New(env, duration) : env.Undefined());
+
+        auto trackGain = metadata.getTrackGain();
+        auto bpm = metadata.getBeatsPerMinute();
+
+        result.Set("trackGain", trackGain != 0.0f ? Napi::Number::New(env, trackGain) : env.Undefined());
+        result.Set("bpm", bpm != 0.0f ? Napi::Number::New(env, bpm) : env.Undefined());
+
+        auto& metacomments = metadata.getComments();
+
+        auto comments = Napi::Array::New(env);
+        for (auto i = 0; i < metacomments.size(); i++) {
+            auto& comment = metacomments.at(i);
+
+            auto pair = Napi::Array::New(env);
+
+            pair.Set((uint32_t)0, safeString(env, comment.first));
+            pair.Set((uint32_t)1, safeString(env, comment.second));
+
+            comments.Set(i, pair);
+        }
+
+        result.Set("comments", comments);
+
+        return result;
+    }
 }
 
 void Medley::Initialize(Object& exports) {
@@ -510,20 +553,7 @@ Napi::Value Medley::getDeckMetadata(const CallbackInfo& info) {
     auto& deck = (index == 0) ? engine->getDeck1() : (index == 1 ? engine->getDeck2() : engine->getDeck3());
 
     auto metadata = deck.metadata();
-    auto result = Object::New(env);
-
-    result.Set("title", safeString(env, metadata.getTitle()));
-    result.Set("artist", safeString(env, metadata.getArtist()));
-    result.Set("album", safeString(env, metadata.getAlbum()));
-    result.Set("isrc", safeString(env, metadata.getISRC()));
-
-    auto trackGain = metadata.getTrackGain();
-    auto bpm = metadata.getBeatsPerMinute();
-
-    result.Set("trackGain", trackGain != 0.0f ? Napi::Number::New(env, trackGain) : env.Undefined());
-    result.Set("bpm", bpm != 0.0f ? Napi::Number::New(env, bpm) : env.Undefined());
-
-    return result;
+    return createJSMetadata(env, metadata);
 }
 
 Napi::Value Medley::getDeckPositions(const CallbackInfo& info) {
@@ -792,30 +822,7 @@ Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
         return env.Undefined();
     }
 
-    auto result = Object::New(env);
-
-    result.Set("title", safeString(env, metadata.getTitle()));
-    result.Set("artist", safeString(env, metadata.getArtist()));
-    result.Set("album", safeString(env, metadata.getAlbum()));
-    result.Set("isrc", safeString(env, metadata.getISRC()));
-    result.Set("albumArtist", safeString(env, metadata.getAlbumArtist()));
-    result.Set("originalArtist", safeString(env, metadata.getOriginalArtist()));
-
-    auto bitrate = metadata.getBitrate();
-    auto sampleRate = metadata.getSampleRate();
-    auto duration = metadata.getDuration();
-
-    result.Set("bitrate", bitrate != 0.0f ? Napi::Number::New(env, bitrate) : env.Undefined());
-    result.Set("sampleRate", sampleRate != 0.0f ? Napi::Number::New(env, sampleRate) : env.Undefined());
-    result.Set("duration", duration != 0.0f ? Napi::Number::New(env, duration) : env.Undefined());
-
-    auto trackGain = metadata.getTrackGain();
-    auto bpm = metadata.getBeatsPerMinute();
-
-    result.Set("trackGain", trackGain != 0.0f ? Napi::Number::New(env, trackGain) : env.Undefined());
-    result.Set("bpm", bpm != 0.0f ? Napi::Number::New(env, bpm) : env.Undefined());
-
-    return result;
+    return createJSMetadata(env, metadata);
 }
 
 Napi::Value Medley::static_getCoverAndLyrics(const Napi::CallbackInfo& info) {

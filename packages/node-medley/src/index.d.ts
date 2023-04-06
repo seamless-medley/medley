@@ -342,6 +342,7 @@ export type Metadata = {
   duration?: number;
   trackGain?: number;
   bpm?: number;
+  comments: [string, string][];
 }
 
 export type MetadataFields = keyof Metadata;
