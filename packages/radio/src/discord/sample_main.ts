@@ -1,9 +1,12 @@
-import { createLogger, Station, StationOptions, StationRegistry, TrackCollection } from "@seamless-medley/core";
-import { breath } from "@seamless-medley/utils";
-import { shuffle } from "lodash";
-import { musicCollections, sequences, sweeperRules } from "../fixtures";
-import { MongoMusicDb } from "../musicdb/mongo";
-import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
+import {createLogger, Station, StationOptions, StationRegistry, TrackCollection} from "@seamless-medley/core";
+import {breath} from "@seamless-medley/utils";
+import * as dotenv from 'dotenv';
+import _, {shuffle} from "lodash";
+import {musicCollections, sequences, sweeperRules} from "../fixtures";
+import {MongoMusicDb} from "../musicdb/mongo";
+import {MedleyAutomaton, MedleyAutomatonOptions} from "./automaton";
+
+dotenv.config();
 
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);
@@ -16,12 +19,12 @@ process.on('unhandledRejection', (e) => {
 type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicIdentifierCache' | 'musicDb'> & {
   intros?: string[];
   requestSweepers?: string[];
-}
+};
 
 type StoredConfig = {
   stations: StationConfig[];
   automatons: MedleyAutomatonOptions[];
-}
+};
 
 const storedConfigs: StoredConfig = {
   stations: [
@@ -35,9 +38,9 @@ const storedConfigs: StoredConfig = {
       // ],
 
       requestSweepers: [
-        'E:\\medley-drops\\your\\Music Radio Creative - Playing All Your Requests.mp3',
-        'E:\\medley-drops\\your\\Music Radio Creative - Playing Your Favourite Artists.mp3',
-        'E:\\medley-drops\\your\\Music Radio Creative - Simply Made for You.mp3'
+        // 'E:\\medley-drops\\your\\Music Radio Creative - Playing All Your Requests.mp3',
+        // 'E:\\medley-drops\\your\\Music Radio Creative - Playing Your Favourite Artists.mp3',
+        // 'E:\\medley-drops\\your\\Music Radio Creative - Simply Made for You.mp3'
       ]
     },
     // {
@@ -54,28 +57,33 @@ const storedConfigs: StoredConfig = {
   automatons: [
     {
       id: 'medley',
-      botToken: '',
-      clientId: '',
-      tuning: {
-        guilds: {
-          'guild_id1': 'station_id1',
-          'guild_id2': 'station_id2'
-        }
-      }
+      botToken: `${process.env.DISCORD_BOT_TOKEN}`,
+      clientId: `${process.env.DISCORD_CLIENT_ID}`,
+      baseCommand: `${process.env.DISCORD_BASE_COMMAND}`
+      // tuning: {
+      //   guilds: {
+      //     'guild_id1': 'station_id1',
+      //     'guild_id2': 'station_id2'
+      //   }
+      // }
     }
   ]
-}
+};
 
 ////////////////////////////////////////////////////////////////////////////////////
 
 async function main() {
-  const logger = createLogger({ name: 'main' });
+  const logger = createLogger({name: 'main'});
 
   logger.info('Initializing');
+  logger.debug(`----- MONGO DB Configuration from env`);
+  logger.debug(_.pickBy(process.env, (v, k) => {
+    return _.startsWith(k, 'MONGO_');
+  }));
 
   const musicDb = await new MongoMusicDb().init({
-    url: 'mongodb://root:example@localhost:27017',
-    database: 'medley',
+    url: `mongodb://${process.env.MONGO_DB_USER}:${process.env.MONGO_DB_PASSWORD}@${process.env.MONGO_DB_HOST}:${process.env.MONGO_DB_PORT}`,
+    database: `${process.env.MONGO_DB_DATABASE}`,
     ttls: [60 * 60 * 24 * 7, 60 * 60 * 24 * 12]
   });
 
@@ -131,7 +139,7 @@ async function main() {
 
   const stationRepo = new StationRegistry(...stations);
 
-  const automatons = await Promise.all(storedConfigs.automatons.map(({ id, botToken, clientId }) => new Promise<MedleyAutomaton>(async (resolve) => {
+  const automatons = await Promise.all(storedConfigs.automatons.map(({id, botToken, clientId}) => new Promise<MedleyAutomaton>(async (resolve) => {
     // TODO: tuning config
     const automaton = new MedleyAutomaton(stationRepo, {
       id,
