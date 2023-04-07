@@ -55,13 +55,7 @@ const storedConfigs: StoredConfig = {
     {
       id: 'medley',
       botToken: '',
-      clientId: '',
-      tuning: {
-        guilds: {
-          'guild_id1': 'station_id1',
-          'guild_id2': 'station_id2'
-        }
-      }
+      clientId: ''
     }
   ]
 }
@@ -135,12 +129,12 @@ async function main() {
 
   const stationRepo = new StationRegistry(...stations);
 
-  const automatons = await Promise.all(storedConfigs.automatons.map(({ id, botToken, clientId }) => new Promise<MedleyAutomaton>(async (resolve) => {
-    // TODO: tuning config
+  const automatons = await Promise.all(storedConfigs.automatons.map(({ id, botToken, clientId, baseCommand }) => new Promise<MedleyAutomaton>(async (resolve) => {
     const automaton = new MedleyAutomaton(stationRepo, {
       id,
       botToken,
-      clientId
+      clientId,
+      baseCommand
     });
 
     logger.info('OAUthURL', automaton.oAuth2Url.toString());
