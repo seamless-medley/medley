@@ -83,7 +83,7 @@
     "@electron/rebuild": "^3.2.10",
     "@types/audioworklet": "^0.0.36",
     "@types/express": "^4.17.13",
-    "@types/lodash": "^4.14.176",
+    "@types/lodash": "^4.14.181",
     "@types/mime-types": "^2.1.1",
     "@types/react": "18.0.26",
     "@types/react-dom": "18.0.10",
