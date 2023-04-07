@@ -23,17 +23,14 @@ Medley::Medley(IQueue& queue)
     updateFadingFactor();
 
     auto error = deviceMgr.initialiseWithDefaultDevices(0, 2);
-    if (error.isNotEmpty()) {
-        throw std::runtime_error(error.toStdString());
-    }
 
     deviceMgr.addAudioDeviceType(std::make_unique<NullAudioDeviceType>());
-
-    if (getCurrentAudioDevice() == nullptr) {
+    
+    if (error.isNotEmpty() || getCurrentAudioDevice() == nullptr) {
         setCurrentAudioDeviceType("Null");
         setAudioDeviceByIndex(0);
     }
-    
+
     mixer.updateAudioConfig();
 
     deviceMgr.addChangeListener(&mixer);
