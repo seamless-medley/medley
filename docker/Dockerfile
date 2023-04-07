@@ -1,3 +1,4 @@
+# TODO: Move this file into packages/radio
 FROM node:18.13.0
 
 # install build dependencies
@@ -10,6 +11,7 @@ COPY . ./app
 WORKDIR /app
 RUN git submodule update --init --force --recursive
 
+# TODO: Install without devDependencies
 RUN pnpm install
 
 # cleanup unnecessary files/folders
@@ -18,4 +20,5 @@ RUN rm -rfv /app/packages/radio/.env
 
 WORKDIR /app/packages/radio
 
+# TODO: Remove this and use command for starting radio bot
 CMD pnpm run dev:bot
