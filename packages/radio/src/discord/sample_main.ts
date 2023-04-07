@@ -6,6 +6,10 @@ import { musicCollections, sequences, sweeperRules } from "../fixtures";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
 
+// TODO: Merge this file with bot_main.ts
+// TODO: Support for configuration file (YAML), either via ENV or CLI
+// TODO: Support for configurations via ENV
+
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);
 });
@@ -80,6 +84,7 @@ async function main() {
   logger.info(`node-medley version: ${info.version.major}.${info.version.minor}.${info.version.patch}`);
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
   logger.info('Initializing');
+
   logger.debug(`----- MONGO DB Configuration from env`);
   logger.debug(pickBy(process.env, (v, k) => {
     return k.startsWith('MONGO_');
