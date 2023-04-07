@@ -3,10 +3,7 @@ on:
   push:
     paths:
       - .github/workflows/node-medley.yml
-      - packages/node-medley/src/**
-      - packages/node-medley/scripts/**
-      - packages/node-medley/binding.gyp
-      - packages/node-medley/package.json
+      - packages/node-medley/**
 jobs:
   build:
     strategy:
