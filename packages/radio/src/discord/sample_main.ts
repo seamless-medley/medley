@@ -1,7 +1,7 @@
 import { createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection } from "@seamless-medley/core";
 import { breath } from "@seamless-medley/utils";
 import { config as configDotEnv } from 'dotenv';
-import _, { shuffle } from "lodash";
+import { shuffle, pickBy } from "lodash";
 import { musicCollections, sequences, sweeperRules } from "../fixtures";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
@@ -81,8 +81,8 @@ async function main() {
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
   logger.info('Initializing');
   logger.debug(`----- MONGO DB Configuration from env`);
-  logger.debug(_.pickBy(process.env, (v, k) => {
-    return _.startsWith(k, 'MONGO_');
+  logger.debug(pickBy(process.env, (v, k) => {
+    return k.startsWith('MONGO_');
   }));
 
   const musicDb = await new MongoMusicDb().init({
