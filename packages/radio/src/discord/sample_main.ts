@@ -1,12 +1,10 @@
 import { createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection } from "@seamless-medley/core";
 import { breath } from "@seamless-medley/utils";
-import dotenv from 'dotenv';
+import { config as configDotEnv } from 'dotenv';
 import _, { shuffle } from "lodash";
 import { musicCollections, sequences, sweeperRules } from "../fixtures";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
-
-dotenv.config();
 
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);
@@ -15,6 +13,8 @@ process.on('uncaughtException', (e) => {
 process.on('unhandledRejection', (e) => {
   console.error('Rejection', e);
 });
+
+configDotEnv();
 
 type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicIdentifierCache' | 'musicDb'> & {
   intros?: string[];
