@@ -16,7 +16,7 @@ async function bump(type: ReleaseType = 'patch') {
       .join('\n') + '\n')
   }
 
-  await writeFile(path, JSON.stringify(p, null, 2));
+  await writeFile(path, JSON.stringify(p, null, 2) + '\n');
 }
 
 bump(argv[2] as any);
