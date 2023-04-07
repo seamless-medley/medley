@@ -1,10 +1,10 @@
-import {createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection} from "@seamless-medley/core";
-import {breath} from "@seamless-medley/utils";
-import * as dotenv from 'dotenv';
-import _, {shuffle} from "lodash";
-import {musicCollections, sequences, sweeperRules} from "../fixtures";
-import {MongoMusicDb} from "../musicdb/mongo";
-import {MedleyAutomaton, MedleyAutomatonOptions} from "./automaton";
+import { createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection } from "@seamless-medley/core";
+import { breath } from "@seamless-medley/utils";
+import dotenv from 'dotenv';
+import _, { shuffle } from "lodash";
+import { musicCollections, sequences, sweeperRules } from "../fixtures";
+import { MongoMusicDb } from "../musicdb/mongo";
+import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
 
 dotenv.config();
 
@@ -73,7 +73,7 @@ const storedConfigs: StoredConfig = {
 ////////////////////////////////////////////////////////////////////////////////////
 
 async function main() {
-  const logger = createLogger({name: 'main'});
+  const logger = createLogger({ name: 'main' });
   const info = Medley.getInfo();
 
   logger.info('NodeJS version', process.version);
@@ -143,7 +143,7 @@ async function main() {
 
   const stationRepo = new StationRegistry(...stations);
 
-  const automatons = await Promise.all(storedConfigs.automatons.map(({id, botToken, clientId, baseCommand}) => new Promise<MedleyAutomaton>(async (resolve) => {
+  const automatons = await Promise.all(storedConfigs.automatons.map(({ id, botToken, clientId, baseCommand }) => new Promise<MedleyAutomaton>(async (resolve) => {
     const automaton = new MedleyAutomaton(stationRepo, {
       id,
       botToken,
