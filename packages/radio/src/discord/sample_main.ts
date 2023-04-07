@@ -1,4 +1,4 @@
-import {createLogger, Station, StationOptions, StationRegistry, TrackCollection} from "@seamless-medley/core";
+import {createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection} from "@seamless-medley/core";
 import {breath} from "@seamless-medley/utils";
 import * as dotenv from 'dotenv';
 import _, {shuffle} from "lodash";
@@ -74,7 +74,11 @@ const storedConfigs: StoredConfig = {
 
 async function main() {
   const logger = createLogger({name: 'main'});
+  const info = Medley.getInfo();
 
+  logger.info('NodeJS version', process.version);
+  logger.info(`node-medley version: ${info.version.major}.${info.version.minor}.${info.version.patch}`);
+  logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
   logger.info('Initializing');
   logger.debug(`----- MONGO DB Configuration from env`);
   logger.debug(_.pickBy(process.env, (v, k) => {
@@ -139,12 +143,12 @@ async function main() {
 
   const stationRepo = new StationRegistry(...stations);
 
-  const automatons = await Promise.all(storedConfigs.automatons.map(({id, botToken, clientId}) => new Promise<MedleyAutomaton>(async (resolve) => {
-    // TODO: tuning config
+  const automatons = await Promise.all(storedConfigs.automatons.map(({id, botToken, clientId, baseCommand}) => new Promise<MedleyAutomaton>(async (resolve) => {
     const automaton = new MedleyAutomaton(stationRepo, {
       id,
       botToken,
-      clientId
+      clientId,
+      baseCommand
     });
 
     logger.info('OAUthURL', automaton.oAuth2Url.toString());

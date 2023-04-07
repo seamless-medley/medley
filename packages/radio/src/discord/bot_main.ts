@@ -1,4 +1,4 @@
-import { TrackCollection, createLogger, Station, StationRegistry, StationOptions } from "@seamless-medley/core";
+import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, Medley } from "@seamless-medley/core";
 import { breath } from "@seamless-medley/utils";
 import { shuffle } from "lodash";
 import { musicCollections, sequences, sweeperRules } from "../fixtures";
@@ -49,13 +49,7 @@ const storedConfigs: StoredConfig = {
     {
       id: 'medley-dev',
       botToken: '',
-      clientId: '',
-      tuning: {
-        guilds: {
-          'guild_id1': 'station_id1',
-          'guild_id2': 'station_id2'
-        }
-      }
+      clientId: ''
     }
   ]
 }
@@ -64,7 +58,11 @@ const storedConfigs: StoredConfig = {
 
 async function main() {
   const logger = createLogger({ name: 'main' });
+  const info = Medley.getInfo();
 
+  logger.info('NodeJS version', process.version);
+  logger.info(`node-medley version: ${info.version.major}.${info.version.minor}.${info.version.patch}`);
+  logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
   logger.info('Initializing');
 
   const musicDb = await new MongoMusicDb().init({
@@ -131,12 +129,12 @@ async function main() {
 
   const stationRepo = new StationRegistry(...stations);
 
-  const automatons = await Promise.all(storedConfigs.automatons.map(({ id, botToken, clientId }) => new Promise<MedleyAutomaton>(async (resolve) => {
-    // TODO: tuning config
+  const automatons = await Promise.all(storedConfigs.automatons.map(({ id, botToken, clientId, baseCommand }) => new Promise<MedleyAutomaton>(async (resolve) => {
     const automaton = new MedleyAutomaton(stationRepo, {
       id,
       botToken,
-      clientId
+      clientId,
+      baseCommand
     });
 
     logger.info('OAUthURL', automaton.oAuth2Url.toString());
