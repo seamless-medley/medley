@@ -81,9 +81,10 @@ export const toTrackExtra = async (
 
 export const pickId = <T extends { id: any }>({ id }: T): IdOnly<T> => ({ id });
 
-export const toTrackPlay = async ({ uuid, track }: BoomBoxTrackPlay): Promise<TrackPlay> => ({
+export const toTrackPlay = async ({ uuid, track, duration }: BoomBoxTrackPlay): Promise<TrackPlay> => ({
   uuid,
-  track: await toTrack(track)
+  duration,
+  track: await toTrack(track),
 });
 
 export const toTrackSequencing = ({ playOrder, crate, latch }: Sequencing): TrackSequencing => ({

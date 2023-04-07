@@ -20,11 +20,11 @@ export type TrackExtra = {
 export type TrackExtraOf<T extends Track<any>> = T extends Track<infer E> ? E : never;
 
 export type TrackSequencingLatch<T extends Track<E>, E extends TrackExtra> = {
-    /**
-     * Track order in this latch
-     */
-    order: number;
-    session: LatchSession<T, E>;
+  /**
+   * Track order in this latch
+   */
+  order: number;
+  session: LatchSession<T, E>;
 }
 
 export type TrackSequencing<T extends Track<E>, E extends TrackExtra> = {

@@ -227,7 +227,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   setAudioDevice(descriptor: Partial<AudioDeviceDescriptor>): boolean;
 
-  getAudioDevice(): AudioDeviceDescriptor;
+  getAudioDevice(): AudioDeviceDescriptor | undefined;
 
   getDeckMetadata(index: DeckIndex): Metadata;
 
@@ -246,6 +246,17 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
   static getCoverAndLyrics(path: string): CoverAndLyrics;
 
   static isTrackLoadable(track: TrackDescriptor<any>): boolean;
+
+  static getInfo(): MedleyInfo;
+}
+
+export type MedleyInfo = {
+  juce: {
+    version: Record<'major' | 'minor' | 'build', number>;
+    cpu: Record<'intel' | 'arm' | 'arm64', 'aarch64' | 'sse' | 'neon' | 'vdsp', true | undefined>;
+  };
+
+  version: Record<'major' | 'minor' | 'patch', number>;
 }
 
 declare const audioFormats = ['Int16LE', 'Int16BE', 'FloatLE', 'FloatBE'] as const;
@@ -331,6 +342,7 @@ export type Metadata = {
   duration?: number;
   trackGain?: number;
   bpm?: number;
+  comments: [string, string][];
 }
 
 export type MetadataFields = keyof Metadata;

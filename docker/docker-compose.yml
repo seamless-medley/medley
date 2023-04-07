@@ -10,13 +10,22 @@ services:
       - 27017:27017
 
   radio:
-    image: medley/radio
+    image: medley/radio:latest
     build:
       dockerfile: docker/Dockerfile
       context: ../
     # restart: always
-    env_file: .env
+    environment:
+      MUSIC_PATH: /musics
+      MONGO_DB_HOST: mongo
+      MONGO_DB_PORT: 27017
+      MONGO_DB_USER: root
+      MONGO_DB_PASSWORD: example
+      MONGO_DB_DATABASE: medley
+      DISCORD_BOT_TOKEN:
+      DISCORD_CLIENT_ID:
+      DISCORD_BASE_COMMAND: medley
     volumes:
-      - "/Users/coke/Library/CloudStorage/GoogleDrive-visualizeq@gmail.com/My Drive/musics:/musics"
+      - "/musics:/musics"
     depends_on:
       - mongo

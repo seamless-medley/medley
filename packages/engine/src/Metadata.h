@@ -8,6 +8,7 @@
 #include <taglib/mpegfile.h>
 #include <taglib/wavfile.h>
 #include <taglib/fileref.h>
+#include <map>
 #include "ITrack.h"
 #include "utils.h"
 
@@ -85,6 +86,8 @@ public:
     int getSampleRate() const { return sampleRate; }
     double getDuration() const { return duration; }
 
+    std::vector<std::pair<juce::String, juce::String>>&  getComments() { return comments; }
+
 private:
     void readMpegInfo(const File& f);
     bool readID3V2(const File& f);
@@ -103,6 +106,8 @@ private:
     double cueIn = -1.0;
     double cueOut = -1.0;
     double lastAudible = -1.0;
+
+    std::vector<std::pair<juce::String, juce::String>> comments;
 
     int bitrate = 0;
     int sampleRate = 0;

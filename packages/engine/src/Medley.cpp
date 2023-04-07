@@ -29,6 +29,11 @@ Medley::Medley(IQueue& queue)
 
     deviceMgr.addAudioDeviceType(std::make_unique<NullAudioDeviceType>());
 
+    if (getCurrentAudioDevice() == nullptr) {
+        setCurrentAudioDeviceType("Null");
+        setAudioDeviceByIndex(0);
+    }
+    
     mixer.updateAudioConfig();
 
     deviceMgr.addChangeListener(&mixer);

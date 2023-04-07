@@ -66,8 +66,8 @@ double parseReplayGainGain(const juce::String& dbGain) {
     return ratio > 0.0 ? ratio : 0.0;
 }
 
-bool readXiphCommentField(const TagLib::Ogg::XiphComment& tag, juce::String key, juce::String* pValue) {
-    auto map = tag.fieldListMap();
+bool readXiphCommentField(const TagLib::Ogg::XiphComment& comment, juce::String key, juce::String* pValue) {
+    auto map = comment.fieldListMap();
     auto it = map.find(key.toWideCharPointer());
 
     if (it == map.end()) {
@@ -150,7 +150,7 @@ bool medley::Metadata::readFromFile(const File& file)
             return readFLAC(file);
         }
 
-                                  // TODO: Other file types
+        // TODO: Other file types
 
         }
 
@@ -286,6 +286,8 @@ bool medley::Metadata::readID3V2(const juce::File& f)
             }
         }
 
+        this->comments.clear();
+
         if (tag.header()->majorVersion() >= 3) {
             auto trackGain = readFirstUserTextIdentificationFrame(tag, L"REPLAYGAIN_TRACK_GAIN");
             this->trackGain = (float)parseReplayGainGain(trackGain);
@@ -307,6 +309,17 @@ bool medley::Metadata::readID3V2(const juce::File& f)
             auto lastAudible = readFirstUserTextIdentificationFrame(tag, L"LAST_AUDIBLE");
 
             this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
+
+            const auto& textFrames = tag.frameListMap()["TXXX"];
+            for (auto& frame : textFrames) {
+                if (auto pFrame = dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(frame)) {
+                    auto fields = pFrame->fieldList();
+
+                    if (fields.size() >= 2) {
+                        this->comments.push_back(std::make_pair(fields[0].toCWString(), fields[1].toCWString()));
+                    }
+                }
+            }
         }
 
         return true;
@@ -392,6 +405,15 @@ bool medley::Metadata::readFLAC(const File& f)
         readXiphCommentField(tag, L"LAST_AUDIBLE", &lastAudible);
 
         this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
+
+        this->comments.clear();
+
+        for (auto const& field : tag.fieldListMap()) {
+            this->comments.push_back(std::make_pair(
+                field.first.toCWString(),
+                firstNonEmptyStringListItem(field.second).toCWString()
+            ));
+        }
 
         return true;
     }

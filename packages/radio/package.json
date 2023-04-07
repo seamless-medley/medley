@@ -21,7 +21,7 @@
     "dev:react": "vite --port 9586 --host",
     "dev:server-electron": "cross-env MEDLEY_DEV=1 DEBUG=1 ELECTRON_RUN_AS_NODE=1 electron --require ts-node/register src/server/main.ts",
     "dev:server": "cross-env MEDLEY_DEV=1 DEBUG=1 tsx src/server/main.ts",
-    "dev:bot": "cross-env MEDLEY_DEV=1 DEBUG=1 ts-node-dev src/discord/sample_main.ts",
+    "dev:bot": "cross-env MEDLEY_DEV=1 DEBUG=1 ts-node src/discord/sample_main.ts",
     "poc:bot": "cross-env MEDLEY_DEV=1 DEBUG=1 tsx src/discord/bot_main.ts",
     "debug:bot": "cross-env MEDLEY_DEV=1 DEBUG=1 tsx --inspect --trace-warnings src/discord/bot_main.ts",
     "poc:icy": "cross-env MEDLEY_DEV=1 tsx watch src/poc-icy.ts",

@@ -107,7 +107,6 @@ async function main() {
         id: config.id,
         name: config.name,
         description: config.description,
-        skipCheckAudioDevice: process.env.SKIP_CHECK_AUDIO_DEVICE === "true" || false,
         intros,
         requestSweepers,
         musicDb,

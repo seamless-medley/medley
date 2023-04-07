@@ -111,6 +111,49 @@ namespace {
     Napi::Value safeString(Napi::Env env, juce::String s) {
         return s.isNotEmpty() ? Napi::String::New(env, s.toRawUTF8()) : env.Undefined();
     }
+
+    Napi::Object createJSMetadata(Napi::Env env, medley::Metadata metadata) {
+        auto result = Object::New(env);
+
+        result.Set("title", safeString(env, metadata.getTitle()));
+        result.Set("artist", safeString(env, metadata.getArtist()));
+        result.Set("album", safeString(env, metadata.getAlbum()));
+        result.Set("isrc", safeString(env, metadata.getISRC()));
+        result.Set("albumArtist", safeString(env, metadata.getAlbumArtist()));
+        result.Set("originalArtist", safeString(env, metadata.getOriginalArtist()));
+
+        auto bitrate = metadata.getBitrate();
+        auto sampleRate = metadata.getSampleRate();
+        auto duration = metadata.getDuration();
+
+        result.Set("bitrate", bitrate != 0.0f ? Napi::Number::New(env, bitrate) : env.Undefined());
+        result.Set("sampleRate", sampleRate != 0.0f ? Napi::Number::New(env, sampleRate) : env.Undefined());
+        result.Set("duration", duration != 0.0f ? Napi::Number::New(env, duration) : env.Undefined());
+
+        auto trackGain = metadata.getTrackGain();
+        auto bpm = metadata.getBeatsPerMinute();
+
+        result.Set("trackGain", trackGain != 0.0f ? Napi::Number::New(env, trackGain) : env.Undefined());
+        result.Set("bpm", bpm != 0.0f ? Napi::Number::New(env, bpm) : env.Undefined());
+
+        auto& metacomments = metadata.getComments();
+
+        auto comments = Napi::Array::New(env);
+        for (auto i = 0; i < metacomments.size(); i++) {
+            auto& comment = metacomments.at(i);
+
+            auto pair = Napi::Array::New(env);
+
+            pair.Set((uint32_t)0, safeString(env, comment.first));
+            pair.Set((uint32_t)1, safeString(env, comment.second));
+
+            comments.Set(i, pair);
+        }
+
+        result.Set("comments", comments);
+
+        return result;
+    }
 }
 
 void Medley::Initialize(Object& exports) {
@@ -145,6 +188,7 @@ void Medley::Initialize(Object& exports) {
         StaticMethod<&Medley::static_getMetadata>("getMetadata"),
         StaticMethod<&Medley::static_getCoverAndLyrics>("getCoverAndLyrics"),
         StaticMethod<&Medley::static_isTrackLoadable>("isTrackLoadable"),
+        StaticMethod<&Medley::static_getInfo>("getInfo"),
     };
 
     auto env = exports.Env();
@@ -267,10 +311,14 @@ Napi::Value Medley::getAudioDevice(const CallbackInfo& info) {
     auto env = info.Env();
 
     auto device = engine->getCurrentAudioDevice();
+
+    if (device == nullptr) {
+        return env.Undefined();
+    }
+
     auto desc = Object::New(env);
     desc.Set("type", device->getTypeName().toStdString());
     desc.Set("device", device->getName().toStdString());
-
     return desc;
 }
 
@@ -505,20 +553,7 @@ Napi::Value Medley::getDeckMetadata(const CallbackInfo& info) {
     auto& deck = (index == 0) ? engine->getDeck1() : (index == 1 ? engine->getDeck2() : engine->getDeck3());
 
     auto metadata = deck.metadata();
-    auto result = Object::New(env);
-
-    result.Set("title", safeString(env, metadata.getTitle()));
-    result.Set("artist", safeString(env, metadata.getArtist()));
-    result.Set("album", safeString(env, metadata.getAlbum()));
-    result.Set("isrc", safeString(env, metadata.getISRC()));
-
-    auto trackGain = metadata.getTrackGain();
-    auto bpm = metadata.getBeatsPerMinute();
-
-    result.Set("trackGain", trackGain != 0.0f ? Napi::Number::New(env, trackGain) : env.Undefined());
-    result.Set("bpm", bpm != 0.0f ? Napi::Number::New(env, bpm) : env.Undefined());
-
-    return result;
+    return createJSMetadata(env, metadata);
 }
 
 Napi::Value Medley::getDeckPositions(const CallbackInfo& info) {
@@ -787,30 +822,7 @@ Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
         return env.Undefined();
     }
 
-    auto result = Object::New(env);
-
-    result.Set("title", safeString(env, metadata.getTitle()));
-    result.Set("artist", safeString(env, metadata.getArtist()));
-    result.Set("album", safeString(env, metadata.getAlbum()));
-    result.Set("isrc", safeString(env, metadata.getISRC()));
-    result.Set("albumArtist", safeString(env, metadata.getAlbumArtist()));
-    result.Set("originalArtist", safeString(env, metadata.getOriginalArtist()));
-
-    auto bitrate = metadata.getBitrate();
-    auto sampleRate = metadata.getSampleRate();
-    auto duration = metadata.getDuration();
-
-    result.Set("bitrate", bitrate != 0.0f ? Napi::Number::New(env, bitrate) : env.Undefined());
-    result.Set("sampleRate", sampleRate != 0.0f ? Napi::Number::New(env, sampleRate) : env.Undefined());
-    result.Set("duration", duration != 0.0f ? Napi::Number::New(env, duration) : env.Undefined());
-
-    auto trackGain = metadata.getTrackGain();
-    auto bpm = metadata.getBeatsPerMinute();
-
-    result.Set("trackGain", trackGain != 0.0f ? Napi::Number::New(env, trackGain) : env.Undefined());
-    result.Set("bpm", bpm != 0.0f ? Napi::Number::New(env, bpm) : env.Undefined());
-
-    return result;
+    return createJSMetadata(env, metadata);
 }
 
 Napi::Value Medley::static_getCoverAndLyrics(const Napi::CallbackInfo& info) {
@@ -846,6 +858,72 @@ Napi::Value Medley::static_isTrackLoadable(const CallbackInfo& info) {
 
     auto trackPtr = Track::fromJS(info[0]);
     return Boolean::New(env, medley::utils::isTrackLoadable(supportedFormats, trackPtr));
+}
+
+Napi::Value Medley::static_getInfo(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+    auto result = Object::New(env);
+
+    {
+        auto version = Object::New(env);
+        version.Set("major", Napi::Number::New(env, MEDLEY_VERSION_MAJOR));
+        version.Set("minor", Napi::Number::New(env, MEDLEY_VERSION_MINOR));
+        version.Set("patch", Napi::Number::New(env, MEDLEY_VERSION_PATCH));
+
+        result.Set("version", version);
+    }
+
+    // TODO: Other infos
+
+    {
+        auto juce = Object::New(env);
+
+        {
+            auto version = Object::New(env);
+            version.Set("major", Napi::Number::New(env, JUCE_MAJOR_VERSION));
+            version.Set("minor", Napi::Number::New(env, JUCE_MINOR_VERSION));
+            version.Set("build", Napi::Number::New(env, JUCE_BUILDNUMBER));
+
+            juce.Set("version", version);
+        }
+        {
+            auto cpu = Object::New(env);
+
+            #if JUCE_INTEL
+            cpu.Set("intel", Napi::Boolean::New(env, true));
+            #endif
+
+            #if JUCE_USE_SSE_INTRINSICS
+            cpu.Set("sse", Napi::Boolean::New(env, true));
+            #endif
+
+            #if defined (__aarch64__)
+            cpu.Set("aarch64", Napi::Boolean::New(env, true));
+            #endif
+
+            #if JUCE_ARM
+            cpu.Set("arm", Napi::Boolean::New(env, true));
+            #endif
+
+            #if defined (__arm64__)
+            cpu.Set("arm64", Napi::Boolean::New(env, true));
+            #endif
+
+            #if JUCE_USE_ARM_NEON
+            cpu.Set("neon", Napi::Boolean::New(env, true));
+            #endif
+
+            #if JUCE_USE_VDSP_FRAMEWORK
+            cpu.Set("vdsp", Napi::Boolean::New(env, true));
+            #endif
+
+            juce.Set("cpu", cpu);
+        }
+
+        result.Set("juce", juce);
+    }
+
+    return result;
 }
 
 uint32_t Medley::audioRequestId = 0;
