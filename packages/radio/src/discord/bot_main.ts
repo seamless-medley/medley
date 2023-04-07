@@ -1,4 +1,4 @@
-import { TrackCollection, createLogger, Station, StationRegistry, StationOptions } from "@seamless-medley/core";
+import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, Medley } from "@seamless-medley/core";
 import { breath } from "@seamless-medley/utils";
 import { shuffle } from "lodash";
 import { musicCollections, sequences, sweeperRules } from "../fixtures";
@@ -64,7 +64,11 @@ const storedConfigs: StoredConfig = {
 
 async function main() {
   const logger = createLogger({ name: 'main' });
+  const info = Medley.getInfo();
 
+  logger.info('NodeJS version', process.version);
+  logger.info(`node-medley version: ${info.version.major}.${info.version.minor}.${info.version.patch}`);
+  logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
   logger.info('Initializing');
 
   const musicDb = await new MongoMusicDb().init({
