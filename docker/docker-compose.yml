@@ -10,7 +10,7 @@ services:
       - 27017:27017
 
   radio:
-    image: medley/radio:latest
+    image: nexus.coke.fyi/medley/radio:latest
     build:
       dockerfile: docker/Dockerfile
       context: ../
