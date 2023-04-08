@@ -1,124 +1,162 @@
-import { TrackCollection, createLogger, Station, StationRegistry, StationOptions, Medley } from "@seamless-medley/core";
+import { createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
 import { breath } from "@seamless-medley/utils";
+import { Client, GatewayIntentBits } from "discord.js";
 import { shuffle } from "lodash";
-import { musicCollections, sequences, sweeperRules } from "../fixtures";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
+import { loadConfig } from "./config";
+import { ZodError } from "zod";
+import normalizePath from "normalize-path";
 
 process.on('uncaughtException', (e) => {
-  console.error('Uncaught Exception', e, e.stack);
+  console.error('Exception', e, e.stack);
 });
 
 process.on('unhandledRejection', (e) => {
-  console.error('Unhandled Rejection', e);
+  console.error('Rejection', e);
 });
 
-type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicIdentifierCache' | 'musicDb'> & {
+type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicDb'> & {
   intros?: string[];
   requestSweepers?: string[];
-}
+};
 
 type StoredConfig = {
   stations: StationConfig[];
   automatons: MedleyAutomatonOptions[];
-}
-
-const storedConfigs: StoredConfig = {
-  stations: [
-    {
-      id: 'default-dev',
-      name: 'Today FM (Dev)',
-      description: 'Various genres',
-      followCrateAfterRequestTrack: true,
-      intros: [
-        'E:\\medley-drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3',
-      ],
-
-      requestSweepers: [
-        'E:\\medley-drops\\your\\Music Radio Creative - Playing All Your Requests.mp3',
-        'E:\\medley-drops\\your\\Music Radio Creative - Playing Your Favourite Artists.mp3',
-        'E:\\medley-drops\\your\\Music Radio Creative - Simply Made for You.mp3'
-      ]
-    },
-    {
-      id: 'station2-dev',
-      name: 'Station 2'
-    }
-  ],
-  automatons: [
-    {
-      id: 'medley-dev',
-      botToken: '',
-      clientId: ''
-    }
-  ]
-}
+};
 
 ////////////////////////////////////////////////////////////////////////////////////
 
 async function main() {
   const logger = createLogger({ name: 'main' });
+
+  const configFile = (process.argv.at(2) || '').trim();
+
+  if (!configFile) {
+    logger.fatal('No configuration file specified');
+    return;
+  }
+
   const info = Medley.getInfo();
 
   logger.info('NodeJS version', process.version);
   logger.info(`node-medley version: ${info.version.major}.${info.version.minor}.${info.version.patch}`);
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
+
+  const config = await loadConfig(configFile);
+
+  if (config instanceof Error) {
+    logger.fatal('Error loading configurations:');
+
+    if (config instanceof ZodError) {
+      for (const issue of config.issues) {
+        const path = issue.path.join('.') || 'root';
+        logger.fatal(`Issue: ${path} - ${issue.message}`)
+      }
+
+      return;
+    }
+
+    logger.fatal(config.message);
+    return;
+  }
+
+  if (process.argv[2] === 'register') {
+    logger.info('Registering');
+
+    for (const [id, { botToken, clientId, baseCommand }] of Object.entries(config.automatons)) {
+
+      const client = new Client({
+        intents: [ GatewayIntentBits.Guilds ]
+      });
+
+      client.login(botToken)
+
+      await MedleyAutomaton.registerGuildCommands({
+        botToken,
+        clientId,
+        logger,
+        baseCommand: baseCommand || 'medley',
+        guilds: [...(await client.guilds.fetch()).values()]
+      });
+    }
+
+    return;
+  }
+
   logger.info('Initializing');
 
   const musicDb = await new MongoMusicDb().init({
-    url: 'mongodb://root:example@localhost:27017',
-    database: 'medley',
-    ttls: [60 * 60 * 24 * 7, 60 * 60 * 24 * 12]
-  }).catch(e => console.error(`Could not connect to MongoDB, ${e.message}`));
-
-  if (!musicDb) {
-    process.exit(1);
-  }
+    url: config.db.url,
+    database: config.db.database,
+    connectionOptions: config.db.connectionOptions,
+    ttls: [
+      config.db.metadataTTL?.min ?? 60 * 60 * 24 * 7,
+      config.db.metadataTTL?.max ?? 60 * 60 * 24 * 12,
+    ]
+  });
 
   const stations = await Promise.all(
-    storedConfigs.stations.map(config => new Promise<Station>(async (resolve) => {
-      const intros = config.intros ? (() => {
+    Object.entries(config.stations).map(([id, allConfigs]) => new Promise<Station>(async (resolve) => {
+      const { intros, requestSweepers, musicCollections, sequences, sweeperRules, ...config } = allConfigs;
+
+      logger.info('Constructing station:', id);
+
+      const introCollection = intros ? (() => {
         const collection = new TrackCollection('$_intros', undefined);
-        collection.add(config.intros);
+        collection.add(shuffle(intros));
         return collection;
       })() : undefined;
 
-      const requestSweepers = config.requestSweepers ? (() => {
+      const requestSweeperCollection = requestSweepers ? (() => {
         const collection = new TrackCollection('$_req_sweepers', undefined);
-        collection.add(shuffle(config.requestSweepers));
+        collection.add(shuffle(requestSweepers));
         return collection;
       })() : undefined;
-
-      logger.info('Constructing station:', config.id);
 
       const station = new Station({
-        id: config.id,
-        name: config.name,
-        description: config.description,
-        useNullAudioDevice: true,
-        intros,
-        requestSweepers,
-        followCrateAfterRequestTrack: config.followCrateAfterRequestTrack,
-        musicDb
+        id,
+        ...config,
+        intros: introCollection,
+        requestSweepers: requestSweeperCollection,
+        musicDb,
       });
 
-      for (const desc of musicCollections) {
+      for (const [id, desc] of Object.entries(musicCollections)) {
         if (!desc.auxiliary) {
-          await station.addCollection(desc);
+          await station.addCollection({
+            id,
+            ...desc
+          });
         }
       }
 
-      station.updateSequence(sequences);
-      station.sweeperInsertionRules = sweeperRules;
+      station.updateSequence(sequences.map((s, index) => ({
+        crateId: `${index}`,
+        ...s
+      })));
+
+      station.sweeperInsertionRules = (sweeperRules ?? []).map((rule) => ({
+        from: rule.from,
+        to: rule.to,
+        collection: (() => {
+          const c = new WatchTrackCollection(rule.path, undefined);
+          c.watch(normalizePath(rule.path));
+
+          return c;
+        })()
+      }));
 
       resolve(station);
 
-      for (const desc of musicCollections) {
+      for (const [id, desc] of Object.entries(musicCollections)) {
         if (desc.auxiliary) {
           await station.addCollection({
-            ...desc,
-            newTracksAddingMode: 'append'
+            id,
+            ...desc
           });
+
           await breath();
         }
       }
@@ -129,26 +167,24 @@ async function main() {
 
   const stationRepo = new StationRegistry(...stations);
 
-  const automatons = await Promise.all(storedConfigs.automatons.map(({ id, botToken, clientId, baseCommand }) => new Promise<MedleyAutomaton>(async (resolve) => {
-    const automaton = new MedleyAutomaton(stationRepo, {
-      id,
-      botToken,
-      clientId,
-      baseCommand
-    });
+  const automatons = await Promise.all(Object.entries(config.automatons).map(
+    ([id, { botToken, clientId, baseCommand }]) => new Promise<MedleyAutomaton>(async (resolve) => {
+      const automaton = new MedleyAutomaton(stationRepo, {
+        id,
+        botToken,
+        clientId,
+        baseCommand
+      });
 
-    logger.info('OAUthURL', automaton.oAuth2Url.toString());
+      logger.info('OAUthURL', automaton.oAuth2Url.toString());
 
-    automaton.once('ready', () => resolve(automaton));
+      automaton.once('ready', () => resolve(automaton));
 
-    await automaton.login();
+      await automaton.login();
 
-    if (process.argv[2] === 'register') {
-      await automaton.registerGuildCommands([...(await automaton.client.guilds.fetch()).values()]);
-    }
-
-    return automaton;
-  })));
+      return automaton;
+    }))
+  );
 
   if (automatons.some(a => !a.isReady)) {
     logger.warn('Started, with some malfunctioning automatons');
