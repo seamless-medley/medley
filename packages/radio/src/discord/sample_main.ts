@@ -1,7 +1,7 @@
 import { createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection } from "@seamless-medley/core";
 import { breath } from "@seamless-medley/utils";
 import { config as configDotEnv } from 'dotenv';
-import { shuffle, pickBy } from "lodash";
+import { pickBy, shuffle } from "lodash";
 import { musicCollections, sequences, sweeperRules } from "../fixtures";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
@@ -20,6 +20,10 @@ process.on('unhandledRejection', (e) => {
 
 configDotEnv();
 
+// TODO: centralize environment variable into one place
+const musicPath = process.env.MUSIC_PATH || "/musics";
+const dropPath = process.env.DROP_PATH || "/drops";
+
 type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicIdentifierCache' | 'musicDb'> & {
   intros?: string[];
   requestSweepers?: string[];
@@ -37,16 +41,17 @@ const storedConfigs: StoredConfig = {
       name: 'Today FM',
       description: 'Various genres',
       followCrateAfterRequestTrack: true,
-      // intros: [
-      //   'E:\\medley-drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3',
-      // ],
+      intros: [
+        `${dropPath}/Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3`
+      ],
 
       requestSweepers: [
-        // 'E:\\medley-drops\\your\\Music Radio Creative - Playing All Your Requests.mp3',
-        // 'E:\\medley-drops\\your\\Music Radio Creative - Playing Your Favourite Artists.mp3',
-        // 'E:\\medley-drops\\your\\Music Radio Creative - Simply Made for You.mp3'
+        `${dropPath}/your/Music Radio Creative - Playing All Your Requests.mp3`,
+        `${dropPath}/your/Music Radio Creative - Playing Your Favourite Artists.mp3`,
+        `${dropPath}/your/Music Radio Creative - Simply Made for You.mp3`
       ]
     },
+
     // {
     //   id: 'thai',
     //   name: 'Thai',
