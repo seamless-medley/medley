@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/vittee/medley/develop/packages/radio/medley-discord-schema.json
+
 db:
   driver: mongodb
   url: mongodb://localhost:27017
@@ -11,17 +13,218 @@ stations:
   default:
     name: Today FM
     description: Various genres
+    artistBacklog: false
+    duplicationSimilarity: 0.5
     followCrateAfterRequestTrack: true
     intros:
-      - E:\\medley-drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3
+      - E:\medley-drops\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3
     requestSweepers:
-      - E:\\medley-drops\\your\\Music Radio Creative - Playing All Your Requests.mp3
-      - E:\\medley-drops\\your\\Music Radio Creative - Playing Your Favourite Artists.mp3
-      - E:\\medley-drops\\your\\Music Radio Creative - Simply Made for You.mp3
+      - E:\medley-drops\your\Music Radio Creative - Playing All Your Requests.mp3
+      - E:\medley-drops\your\Music Radio Creative - Playing Your Favourite Artists.mp3
+      - E:\medley-drops\your\Music Radio Creative - Simply Made for You.mp3
+    musicCollections:
+      bright:
+        description: Bright
+        path: D:\vittee\Google Drive\musics\bright
+      brokenhearted:
+        description: Broken Hearted
+        path: D:\vittee\Google Drive\musics\brokenhearted
+      chill:
+        description: Chill
+        path: D:\vittee\Google Drive\musics\chill
+      groovy:
+        description: Groovy
+        path: D:\vittee\Google Drive\musics\groovy
+      hurt:
+        description: Hurt
+        path: D:\vittee\Google Drive\musics\hurt
+      lonely:
+        description: Lonely
+        path: D:\vittee\Google Drive\musics\lonely
+      lovesong:
+        description: Love Song
+        path: D:\vittee\Google Drive\musics\lovesong
+      joyful:
+        description: Joyful
+        path: D:\vittee\Google Drive\musics\joyful
+      upbeat:
+        description: Upbeat
+        path: D:\vittee\Google Drive\musics\upbeat
+      new-released:
+        description: New Released
+        path: D:\vittee\Google Drive\musics\new-released
+        disableLatch: true
+        noFollowOnRequest: true
+      thai:
+        auxiliary: true
+        description: Thai
+        path: M:\Repository\th
+      inter:
+        auxiliary: true
+        description: International
+        path: M:\Repository\inter
+
+    sequences:
+      # Randomly select this crate to play tracks from new-released, limited by one of [1, 1, 1, 2]
+      - chance: random
+        collections:
+          - id: new-released
+        limit:
+          by: one-of
+          list: [1, 1, 1, 2]
+
+      # This crate has 1/3 chance of being selected, play up to 2 tracks from bright
+      - chance:
+          yes: 1
+          no: 2
+        collections:
+          - id: bright
+        limit:
+          by: upto
+          upto: 2
+
+      # This crate always play up to 2 tracks from joyful
+      - collections:
+          - id: joyful
+        limit:
+          by: upto
+          upto: 2
+
+       # This crate has 2/6 chance of being selected, play 1-2 tracks from upbeat
+      - chance:
+          yes: 2
+          no: 4
+        collections:
+          - id: upbeat
+        limit:
+          by: range
+          range:
+            min: 1
+            max: 2
+
+      # This crate has 1/4 chance of being selected, play exactly 1 track from groovy
+      - chance:
+          yes: 1
+          no: 3
+        collections:
+          - id: groovy
+        limit: 1
+
+      # This crate always play 2-3 tracks from chill
+      - collections:
+          - id: chill
+        limit:
+          by: range
+          range:
+            min: 2
+            max: 3
+
+      # This crate always play up to 2 tracks from lovesong
+      - collections:
+         - id: lovesong
+        limit:
+          by: upto
+          upto: 2
+
+      # A compound crate, always play a track from either `lonely` or `brokenhearted` (with weights)
+      - collections:
+          - id: lonely
+            weight: 1
+          - id: brokenhearted
+            weight: 0.5
+        limit:
+          by: upto
+          upto: 1
+
+      # This crate always play 1-2 tracks from brokenhearted
+      - collections:
+          - id: brokenhearted
+        limit:
+          by: range
+          range:
+            min: 1
+            max: 2
+
+      # This crate has 1/3 chance of being selected, play 0 or 1 track from hurt
+      - chance:
+          yes: 1
+          no: 2
+        collections:
+          - id: hurt
+        limit:
+          by: upto
+          upto: 1
+
+      # This crate always play 1-2 tracks from lonely
+      - collections:
+          - id: lonely
+        limit:
+          by: range
+          range:
+            min: 1
+            max: 2
+
+      # This crate always play upto 2 tracks from lovesong
+      - collections:
+          - id: lovesong
+        limit:
+          by: upto
+          upto: 2
+
+      # This crate has 1/2 chance of being selected, play upto 2 tracks from chill
+      - chance:
+          yes: 1
+          no: 1
+        collections:
+          - id: chill
+        limit:
+          by: upto
+          upto: 2
+
+    sweeperRules:
+      - to:
+          - lonely
+          - brokenhearted
+          - hurt
+        path: E:\medley-drops\to_blue
+
+      - from:
+          - lonely
+          - brokenhearted
+          - hurt
+        to:
+          - lovesong
+          - chill
+        path: E:\medley-drops\blue_to_easy
+
+      - from:
+          - lonely
+          - brokenhearted
+          - hurt
+        to:
+          - upbeat
+          - groovy
+          - joyful
+        path: E:\medley-drops\blue_to_up
+
+      - to:
+          - upbeat
+          - groovy
+          - joyful
+        path: E:\medley-drops\to_up
+
+      - from:
+          - upbeat
+          - groovy
+          - joyful
+          - bright
+        path: E:\medley-drops\from_up
+
+      - to:
+          - new-released
+        path: E:\medley-drops\fresh
 
 automatons:
-  bot_id_1:
-    botToken: unknown_token
-    clientId: invalid_client_id
-    owners:
-      - 'owner_id'
+  medley:
+    botToken: 'invalid_token'
+    clientId: 'unknown_id'
