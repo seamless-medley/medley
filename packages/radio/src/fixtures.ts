@@ -1,8 +1,9 @@
 import { MusicCollectionDescriptor, SequenceConfig, SweeperInsertionRule, WatchTrackCollection, createLogger } from "@seamless-medley/core";
-import * as dotenv from 'dotenv';
+import { config as configDotEnv } from 'dotenv';
+import normalizePath from "normalize-path";
 import { basename } from "path";
 
-dotenv.config();
+configDotEnv();
 
 const moods = {
   bright: ['bright'],
@@ -15,9 +16,12 @@ const logger = createLogger({
   name: `fixtures`
 });
 
-// console.log(`process.env: ${JSON.stringify(process.env, null, 2)}`);
-const musicPath = process.env.MUSIC_PATH || "/music";
+// TODO: centralize environment variable into one place
+const musicPath = process.env.MUSIC_PATH || "/musics";
+const dropPath = process.env.DROP_PATH || "/drops";
+
 logger.debug(`musicPath: ${musicPath}`);
+logger.debug(`dropPath: ${dropPath}`);
 
 export const musicCollections: MusicCollectionDescriptor[] = [
   { id: 'bright', description: 'Bright', path: `${musicPath}/bright` },
@@ -29,9 +33,9 @@ export const musicCollections: MusicCollectionDescriptor[] = [
   { id: 'lovesong', description: 'Love Song', path: `${musicPath}/lovesong` },
   { id: 'joyful', description: 'Joyful', path: `${musicPath}/joyful` },
   { id: 'upbeat', description: 'Upbeat', path: `${musicPath}/upbeat` },
-  { id: 'new-released', description: 'New Released', path: `${musicPath}/new-released', disableLatch: true, noFollowOnRequest: tru` },
-  // {id: 'thai', auxiliary: true, description: 'Thai', path: 'M:\\Repository\\th'},
-  // {id: 'inter', auxiliary: true, description: 'International', path: 'M:\\Repository\\inter'},
+  { id: 'new-released', description: 'New Released', path: `${musicPath}/new-released', disableLatch: true, noFollowOnRequest: true` },
+  // { id: 'thai', auxiliary: true, description: 'Thai', path: `${musicPath}/repository/thai` },
+  // { id: 'inter', auxiliary: true, description: 'International', path: `${musicPath}/repository/inter` },
 ];
 
 export const sequences: SequenceConfig[] = [
@@ -62,7 +66,7 @@ const makeSweeperRule = (type: string) => {
     trackCreator: async (path) => ({ id: basename(path), path })
   });
 
-  // collection.watch(normalizePath(`E:\\medley-drops\\${type}`));
+  collection.watch(normalizePath(`${dropPath}`));
 
   return collection;
 };
