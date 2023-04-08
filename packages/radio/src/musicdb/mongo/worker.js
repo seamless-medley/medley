@@ -147,6 +147,7 @@ async function find(value, by) {
     throw new Error('Not initialized');
   }
 
+  // @ts-ignore
   const found = await musics.findOne({
     [by]: value,
     expires: { $gte: Date.now() }
