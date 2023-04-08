@@ -61,6 +61,14 @@ export type UpdateTrackMessageOptions = {
   showSkip?: boolean;
 }
 
+export type RegisterOptions = {
+  guild: Guild | OAuth2Guild;
+  clientId: string;
+  botToken: string;
+  baseCommand: string;
+  logger: Logger<ILogObj>
+}
+
 export type AutomatonEvents = {
   ready: () => void;
 }
@@ -306,7 +314,14 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#logger.info(`Invited to ${guild.name}`);
 
     this.ensureGuildState(guild.id);
-    this.registerCommands(guild);
+
+    MedleyAutomaton.registerCommands(({
+      guild,
+      botToken: this.botToken,
+      clientId: this.clientId,
+      baseCommand: this.baseCommand,
+      logger: this.#logger
+    }));
 
     guild?.systemChannel?.send(`Greetings :notes:, use \`/${this.baseCommand} join\` command to invite me to a voice channel`);
   }
@@ -668,39 +683,45 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     return results;
   }
 
-  async registerGuildCommands(guilds: OAuth2Guild[]) {
+  static async registerGuildCommands(options: Omit<RegisterOptions, 'guild'> & { guilds: OAuth2Guild[] }) {
+    const { guilds } = options;
+
     return Promise.all(guilds.map(async guild => {
-      await this.registerCommands(guild);
+      await MedleyAutomaton.registerCommands({
+        ...options,
+        guild
+      });
       await waitFor(3000);
     }));
   }
 
-  #rest = new REST();
-
-  async registerCommands(guild?: Guild | OAuth2Guild) {
+  static async registerCommands(options: RegisterOptions) {
+    const { logger, guild, clientId, botToken, baseCommand } = options;
     try {
       if (guild) {
-        this.#logger.info('Registering commands with guild id:', guild.id, `(${guild.name})`);
+        logger.info('Registering commands with guild id:', guild.id, `(${guild.name})`);
       } else {
-        this.#logger.info('Registering commands');
+        logger.info('Registering commands');
       }
 
-      this.#rest.setToken(this.botToken);
+      const rest = new REST();
 
-      await this.#rest.put(
+      rest.setToken(botToken);
+
+      await rest.put(
         (guild
-          ? Routes.applicationGuildCommands(this.clientId, guild.id)
-          : Routes.applicationCommands(this.clientId)
+          ? Routes.applicationGuildCommands(clientId, guild.id)
+          : Routes.applicationCommands(clientId)
         ),
         {
-          body: [createCommandDeclarations(this.baseCommand)]
+          body: [createCommandDeclarations(baseCommand)]
         }
       )
 
-      this.#logger.debug('Registered', guild?.id, guild?.name);
+      logger.debug('Registered', guild?.id, guild?.name);
     }
     catch (e) {
-      this.#logger.error('Error registering command', e);
+      logger.error('Error registering command', e);
     }
   }
 
