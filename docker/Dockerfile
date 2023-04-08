@@ -11,6 +11,8 @@ COPY . ./app
 
 WORKDIR /app
 RUN git submodule update --init --force --recursive
+
+# TODO: Install without devDependencies
 RUN pnpm install
 
 # TODO: proper generate application banner version (git short commit)
@@ -39,5 +41,5 @@ RUN npm i pnpm -g
 
 WORKDIR /app/packages/radio
 
-# TODO: proper get application version (git short commit)
-CMD echo "$(cat /app/version)" && pnpm run dev:bot
+# TODO: Remove this and use command for starting radio bot
+CMD pnpm run dev:bot

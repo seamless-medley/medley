@@ -1,12 +1,14 @@
-import {createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection} from "@seamless-medley/core";
-import {breath} from "@seamless-medley/utils";
-import * as dotenv from 'dotenv';
-import _, {shuffle} from "lodash";
-import {musicCollections, sequences, sweeperRules} from "../fixtures";
-import {MongoMusicDb} from "../musicdb/mongo";
-import {MedleyAutomaton, MedleyAutomatonOptions} from "./automaton";
+import { createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection } from "@seamless-medley/core";
+import { breath } from "@seamless-medley/utils";
+import { config as configDotEnv } from 'dotenv';
+import { shuffle, pickBy } from "lodash";
+import { musicCollections, sequences, sweeperRules } from "../fixtures";
+import { MongoMusicDb } from "../musicdb/mongo";
+import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
 
-dotenv.config();
+// TODO: Merge this file with bot_main.ts
+// TODO: Support for configuration file (YAML), either via ENV or CLI
+// TODO: Support for configurations via ENV
 
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);
@@ -15,6 +17,8 @@ process.on('uncaughtException', (e) => {
 process.on('unhandledRejection', (e) => {
   console.error('Rejection', e);
 });
+
+configDotEnv();
 
 type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicIdentifierCache' | 'musicDb'> & {
   intros?: string[];
@@ -73,16 +77,17 @@ const storedConfigs: StoredConfig = {
 ////////////////////////////////////////////////////////////////////////////////////
 
 async function main() {
-  const logger = createLogger({name: 'main'});
+  const logger = createLogger({ name: 'main' });
   const info = Medley.getInfo();
 
   logger.info('NodeJS version', process.version);
   logger.info(`node-medley version: ${info.version.major}.${info.version.minor}.${info.version.patch}`);
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
   logger.info('Initializing');
+
   logger.debug(`----- MONGO DB Configuration from env`);
-  logger.debug(_.pickBy(process.env, (v, k) => {
-    return _.startsWith(k, 'MONGO_');
+  logger.debug(pickBy(process.env, (v, k) => {
+    return k.startsWith('MONGO_');
   }));
 
   const musicDb = await new MongoMusicDb().init({
@@ -143,7 +148,7 @@ async function main() {
 
   const stationRepo = new StationRegistry(...stations);
 
-  const automatons = await Promise.all(storedConfigs.automatons.map(({id, botToken, clientId, baseCommand}) => new Promise<MedleyAutomaton>(async (resolve) => {
+  const automatons = await Promise.all(storedConfigs.automatons.map(({ id, botToken, clientId, baseCommand }) => new Promise<MedleyAutomaton>(async (resolve) => {
     const automaton = new MedleyAutomaton(stationRepo, {
       id,
       botToken,
