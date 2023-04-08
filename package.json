@@ -39,7 +39,7 @@
     },
     "allowedDeprecatedVersions": {
       "@floating-ui/react-dom-interactions": "*",
-      "@npmcli/move-file@": "*"
+      "@npmcli/move-file": "*"
     }
   }
 }
