@@ -1,0 +1,27 @@
+db:
+  driver: mongodb
+  url: mongodb://localhost:27017
+  database: medley
+  connectionOptions:
+    auth:
+      username: root
+      password: example
+
+stations:
+  default:
+    name: Today FM
+    description: Various genres
+    followCrateAfterRequestTrack: true
+    intros:
+      - E:\\medley-drops\\Music Radio Creative - This is the Station With All Your Music in One Place 1.mp3
+    requestSweepers:
+      - E:\\medley-drops\\your\\Music Radio Creative - Playing All Your Requests.mp3
+      - E:\\medley-drops\\your\\Music Radio Creative - Playing Your Favourite Artists.mp3
+      - E:\\medley-drops\\your\\Music Radio Creative - Simply Made for You.mp3
+
+automatons:
+  bot_id_1:
+    botToken: unknown_token
+    clientId: invalid_client_id
+    owners:
+      - 'owner_id'
