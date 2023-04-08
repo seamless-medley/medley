@@ -41,5 +41,7 @@ RUN npm i pnpm -g
 
 WORKDIR /app/packages/radio
 
-# TODO: Remove this and use command for starting radio bot
-CMD pnpm run dev:bot
+# TODO:
+# - Remove this and use command for starting radio bot
+# - proper get application version (git short commit)
+CMD echo "$(cat /app/version)" && pnpm run dev:bot
