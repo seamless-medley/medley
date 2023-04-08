@@ -1,5 +1,5 @@
 import { TypedEmitter } from "tiny-typed-emitter";
-import { chain, isObjectLike, isString } from "lodash";
+import { chain, debounce, isObjectLike, isString } from "lodash";
 import { TrackCollection } from "../collections";
 import { SequencedTrack, Track, TrackExtra, TrackSequencing } from "../track";
 import { Crate } from "./base";
@@ -77,8 +77,11 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     return isObjectLike(o);
   }
 
+  #logNoCrates = debounce(() => this.logger.error('No crates'), 1000);
+
   async nextTrack(): Promise<SequencedTrack<T> | undefined> {
     if (this._crates.length < 1) {
+      this.#logNoCrates();
       return undefined;
     }
 
