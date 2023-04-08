@@ -122,7 +122,15 @@ export function guildIdGuard(interaction: BaseInteraction): string {
 
 export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseInteraction): { guildId: string, station: Station } {
   const guildId = guildIdGuard(interaction);
-  const station = automaton.getGuildState(guildId)?.tunedStation;
+
+  const state = automaton.getGuildState(guildId);
+
+  if (!state) {
+    console.error('No guild state found for:', interaction.guild?.name);
+    throw new CommandError('Unknown guild');
+  }
+
+  const station = state.tunedStation;
 
   if (!station) {
     throw new CommandError('No station linked');
