@@ -1,0 +1,440 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "title": "Medley Discord",
+  "description": "Configuration filefor Medley/Radio Discord bot",
+  "type": "object",
+  "properties": {
+    "db": {
+      "$ref": "#/$defs/db"
+    },
+    "stations": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "$ref": "#/$defs/station"
+        }
+      }
+    },
+    "automatons": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "$ref": "#/$defs/automaton"
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "db": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "MongoDB options",
+          "properties": {
+            "driver": {
+              "const": "mongodb"
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "database": {
+              "type": "string",
+              "minLength": 1
+            },
+            "connectionOptions": {
+              "type": "object"
+            },
+            "metadataTTL": {
+              "description": "Time-To-Live for music metadata",
+              "type": "object",
+              "properties": {
+                "min": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "max": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": ["driver", "url", "database"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "station": {
+      "title": "Station",
+      "description": "Station",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Station name",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "Station description"
+        },
+        "maxTrackHistory": {
+          "type": "integer",
+          "description": "Number of tracks to keep in history",
+          "minimum": 0,
+          "default": 20
+        },
+        "artistBacklog": {
+          "oneOf": [
+            {
+              "type": "boolean",
+              "const": false,
+              "description": "No artist duplication check"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "default": 50,
+              "description": "Number of last tracks used to check for duplicated artists"
+            }
+          ]
+        },
+        "duplicationSimilarity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "A fraction from 0 to 1 which indicates the degree of similarity between the two artists"
+        },
+        "followCrateAfterRequestTrack": {
+          "type": "boolean",
+          "description": "Whether to follow crate on a requested track",
+          "default": true
+        },
+        "noRequestSweeperOnIdenticalCollection": {
+          "type": "boolean",
+          "description": "When enabled, a request sweeper will not be inserted\nif the consecutive tracks are from the same collection",
+          "default": true
+        },
+        "intros": {
+          "title": "Intros",
+          "description": "List of files to play randomly before starting a station",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "requestSweepers": {
+          "title": "Request Sweepers",
+          "type": "array",
+          "description": "List of files to play randomly before transition into a new request session",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "musicCollections": {
+          "title": "Music Collections",
+          "type": "object",
+          "description": "Map of music collection",
+          "patternProperties": {
+            "^.+$": {
+              "$ref": "#/$defs/musicCollection"
+            }
+          }
+        },
+        "sequences": {
+          "title": "Sequences",
+          "description": "List of crate containing rules for selecting music track to play",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sequence"
+          }
+        },
+        "sweeperRules": {
+          "title": "Sweeper Rules",
+          "description": "List of rules for inserting jingle track while transiting between music collections",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sweeperRule"
+          }
+        }
+      },
+      "required": ["name", "description", "musicCollections", "sequences"],
+      "additionalProperties": false
+    },
+    "automaton": {
+      "title": "Automaton",
+      "description": "Automaton (Bot)",
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "botToken": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owners": {
+          "type": "array",
+          "description": "List of bot owner ID",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "baseCommand": {
+          "type": "string",
+          "description": "Base command",
+          "minLength": 1,
+          "default": "medley"
+        }
+      },
+      "required": ["clientId", "botToken"],
+      "additionalProperties": false
+    },
+    "musicCollection": {
+      "title": "Music collection",
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/dirPath"
+        },
+        "description": {
+          "type": "string"
+        },
+        "auxiliary": {
+          "type": "boolean",
+          "description": "Mark this collection as an auxiliary\nAn auxiliary collection cannot be used in a playing sequence"
+        },
+        "noFollowOnRequest": {
+          "type": "boolean",
+          "description": "Disable crate following on a requested track",
+          "default": false
+        },
+        "disableLatch": {
+          "type": "boolean",
+          "description": "Disable latching",
+          "default": false
+        },
+        "newTracksAddingMode": {
+          "type": "string",
+          "description": "Specify how the new tracks should be added to the collection",
+          "enum": ["prepend", "append", "spread"],
+          "default": "spread"
+        },
+        "reshuffleEvery": {
+          "type": "integer",
+          "description": "Specify a number of tracks played from this collection that will trigger re-shuffling",
+          "minimum": 0
+        }
+      },
+      "required": ["path", "description"],
+      "additionalProperties": false
+    },
+    "sequence": {
+      "title": "Play sequence",
+      "type": "object",
+      "properties": {
+        "collections": {
+          "type": "array",
+          "description": "List of collection IDs and weights",
+          "items": {
+            "title": "Sequence collection",
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "weight": {
+                "type": "number"
+              }
+            },
+            "required": ["id"],
+            "additionalProperties": false
+          }
+        },
+        "chance": {
+          "title": "Sequence Chance",
+          "description": "Chance of this collection being selected",
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "random"
+            },
+            {
+              "type": "object",
+              "title": "Yes/No chance",
+              "properties": {
+                "yes": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Chance of being selected"
+                },
+                "no": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Chance of not being selected"
+                }
+              },
+              "required": ["yes", "no"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "limit": {
+          "title": "Sequence play limit",
+          "description": "Limit number of tracks to play after being selected",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "description": "Limit by the total number of tracks\nUsing this value will cause the entire collection to be played before switching to the next collection",
+              "const": "entirely"
+            },
+            {
+              "type": "object",
+              "title": "Up to limit",
+              "description": "Limit by the `upto` value",
+              "properties": {
+                "by": {
+                  "type": "string",
+                  "const": "upto"
+                },
+                "upto": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": ["by", "upto"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "title": "Range limit",
+              "description": "Limit by the `range` value",
+              "properties": {
+                "by": {
+                  "type": "string",
+                  "const": "range"
+                },
+                "range": {
+                  "type": "object",
+                  "properties": {
+                    "min": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "max": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": ["min", "max"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["by", "range"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "title": "Sample limit",
+              "description": "Limit by the `list` value",
+              "properties": {
+                "by": {
+                  "type": "string",
+                  "enum": ["sample", "one-of"]
+                },
+                "list": {
+                  "description": "List of number of tracks\nA value from this list will be picked randomly",
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              "required": ["by", "list"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["collections", "limit"],
+      "additionalProperties": false
+    },
+    "sweeperRule": {
+      "title": "Sweeper Rule",
+      "oneOf": [
+        {
+          "properties": {
+            "from": {
+              "$ref": "#/$defs/sweeperRuleFrom"
+            },
+            "path": {
+              "$ref": "#/$defs/dirPath"
+            }
+          },
+          "required": ["from", "path"],
+          "not": {"required": ["to"]},
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "to": {
+              "$ref": "#/$defs/sweeperRuleTo"
+            },
+            "path": {
+              "$ref": "#/$defs/dirPath"
+            }
+          },
+          "required": ["to", "path"],
+          "not": {"required": ["from"]},
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "from": {
+              "$ref": "#/$defs/sweeperRuleFrom"
+            },
+            "to": {
+              "$ref": "#/$defs/sweeperRuleTo"
+            },
+            "path": {
+              "$ref": "#/$defs/dirPath"
+            }
+          },
+          "required": ["from", "to", "path"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "sweeperRuleFrom": {
+      "description": "List of collection id that this sweeper should be inserted while transiting from",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sweeperRuleTo": {
+      "description": "List of collection id that this sweeper should be inserted while transiting to",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dirPath": {
+      "type": "string",
+      "description": "Path to a directory\nRecursively scan and watch for music files",
+      "minLength": 1
+    }
+  }
+}
