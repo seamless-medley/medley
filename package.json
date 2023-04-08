@@ -38,7 +38,8 @@
       }
     },
     "allowedDeprecatedVersions": {
-      "@floating-ui/react-dom-interactions": "*"
+      "@floating-ui/react-dom-interactions": "*",
+      "@npmcli/move-file@": "*"
     }
   }
 }
