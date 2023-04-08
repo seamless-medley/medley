@@ -1,22 +1,12 @@
 import { MusicCollectionDescriptor, SequenceConfig, SweeperInsertionRule, WatchTrackCollection, createLogger } from "@seamless-medley/core";
-import * as dotenv from 'dotenv';
+import normalizePath from "normalize-path";
 import { basename } from "path";
-
-dotenv.config();
-
-const moods = {
-  bright: ['bright'],
-  up: ['upbeat', 'groovy', 'joyful'],
-  easy: ['lovesong', 'chill'],
-  sad: ['lonely', 'brokenhearted', 'hurt']
-};
 
 const logger = createLogger({
   name: `fixtures`
 });
 
-// console.log(`process.env: ${JSON.stringify(process.env, null, 2)}`);
-const musicPath = process.env.MUSIC_PATH || "/music";
+const musicPath = process.env.MUSIC_PATH || "D:\\vittee\\Google Drive\\musics";
 logger.debug(`musicPath: ${musicPath}`);
 
 export const musicCollections: MusicCollectionDescriptor[] = [
@@ -29,18 +19,18 @@ export const musicCollections: MusicCollectionDescriptor[] = [
   { id: 'lovesong', description: 'Love Song', path: `${musicPath}/lovesong` },
   { id: 'joyful', description: 'Joyful', path: `${musicPath}/joyful` },
   { id: 'upbeat', description: 'Upbeat', path: `${musicPath}/upbeat` },
-  { id: 'new-released', description: 'New Released', path: `${musicPath}/new-released', disableLatch: true, noFollowOnRequest: tru` },
-  // {id: 'thai', auxiliary: true, description: 'Thai', path: 'M:\\Repository\\th'},
-  // {id: 'inter', auxiliary: true, description: 'International', path: 'M:\\Repository\\inter'},
+  { id: 'new-released', description: 'New Released', path: `${musicPath}/new-released`, disableLatch: true, noFollowOnRequest: true },
+  { id: 'thai', auxiliary: true, description: 'Thai', path: 'M:\\Repository\\th' },
+  { id: 'inter', auxiliary: true, description: 'International', path: 'M:\\Repository\\inter' },
 ];
 
 export const sequences: SequenceConfig[] = [
   { crateId: 'guid1', collections: [{ id: 'new-released' }], chance: 'random', limit: { by: 'one-of', list: [1, 1, 1, 2] } },
-  { crateId: 'guid2', collections: [{ id: 'bright' }], chance: [1, 2], limit: { by: 'upto', upto: 2 } },
+  { crateId: 'guid2', collections: [{ id: 'bright' }], chance: { yes: 1, no: 2 }, limit: { by: 'upto', upto: 2 } },
   { crateId: 'guid3', collections: [{ id: 'joyful' }], limit: { by: 'upto', upto: 2 } },
-  { crateId: 'guid4', collections: [{ id: 'upbeat' }], chance: [2, 4], limit: { by: 'range', range: [1, 2] } },
-  { crateId: 'guid5', collections: [{ id: 'groovy' }], chance: [1, 3], limit: 1 },
-  { crateId: 'guid7', collections: [{ id: 'chill' }], limit: { by: 'range', range: [2, 3] } },
+  { crateId: 'guid4', collections: [{ id: 'upbeat' }], chance: { yes: 2, no: 4 }, limit: { by: 'range', range: { min: 1, max: 2 } } },
+  { crateId: 'guid5', collections: [{ id: 'groovy' }], chance: { yes: 1, no: 3 }, limit: 1 },
+  { crateId: 'guid7', collections: [{ id: 'chill' }], limit: { by: 'range', range: { min: 2, max: 3 } } },
   { crateId: 'guid8', collections: [{ id: 'lovesong' }], limit: { by: 'upto', upto: 2 } },
   {
     crateId: 'guid9',
@@ -50,11 +40,11 @@ export const sequences: SequenceConfig[] = [
     ],
     limit: { by: 'upto', upto: 1 }
   },
-  { crateId: 'guid10', collections: [{ id: 'brokenhearted' }], limit: { by: 'range', range: [1, 2] } },
-  { crateId: 'guid11', collections: [{ id: 'hurt' }], chance: [1, 2], limit: { by: 'upto', upto: 1 } },
-  { crateId: 'guid12', collections: [{ id: 'lonely' }], limit: { by: 'range', range: [1, 2] } },
+  { crateId: 'guid10', collections: [{ id: 'brokenhearted' }], limit: { by: 'range', range: { min: 1, max: 2 } } },
+  { crateId: 'guid11', collections: [{ id: 'hurt' }], chance: { yes: 1, no: 2 }, limit: { by: 'upto', upto: 1 } },
+  { crateId: 'guid12', collections: [{ id: 'lonely' }], limit: { by: 'range', range: { min: 1, max: 2 } } },
   { crateId: 'guid13', collections: [{ id: 'lovesong' }], limit: { by: 'upto', upto: 2 } },
-  { crateId: 'guid14', collections: [{ id: 'chill' }], chance: [1, 1], limit: { by: 'upto', upto: 2 } }
+  { crateId: 'guid14', collections: [{ id: 'chill' }], chance: { yes: 1, no: 1 }, limit: { by: 'upto', upto: 2 } }
 ];
 
 const makeSweeperRule = (type: string) => {
@@ -62,9 +52,16 @@ const makeSweeperRule = (type: string) => {
     trackCreator: async (path) => ({ id: basename(path), path })
   });
 
-  // collection.watch(normalizePath(`E:\\medley-drops\\${type}`));
+  collection.watch(normalizePath(`E:\\medley-drops\\${type}`));
 
   return collection;
+};
+
+const moods = {
+  bright: ['bright'],
+  up: ['upbeat', 'groovy', 'joyful'],
+  easy: ['lovesong', 'chill'],
+  sad: ['lonely', 'brokenhearted', 'hurt']
 };
 
 export const sweeperRules: SweeperInsertionRule[] = [
@@ -92,10 +89,6 @@ export const sweeperRules: SweeperInsertionRule[] = [
   },
   { // Fresh
     to: ['new-released'],
-    collection: makeSweeperRule('fresh')
-  },
-  {
-    from: ['new-released'],
     collection: makeSweeperRule('fresh')
   }
 ];
