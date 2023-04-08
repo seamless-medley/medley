@@ -30,7 +30,7 @@ export enum PlayState {
   Paused = 'paused'
 }
 
-export type SequenceChance = 'random' | [yes: number, no: number] | (() => Promise<boolean>);
+export type SequenceChance = 'random' | { yes: number, no: number } | (() => Promise<boolean>);
 
 export type LimitByUpto = {
   by: 'upto';
@@ -39,7 +39,10 @@ export type LimitByUpto = {
 
 export type LimitByRange = {
   by: 'range';
-  range: [number, number];
+  range: {
+    min: number;
+    max: number;
+  }
 }
 
 export type LimitBySample = {
@@ -47,7 +50,7 @@ export type LimitBySample = {
   list: number[];
 }
 
-export type SequenceLimit = number | 'all' | LimitByUpto | LimitByRange | LimitBySample;
+export type SequenceLimit = number | 'entirely' | LimitByUpto | LimitByRange | LimitBySample;
 
 export type SequenceConfig = {
   crateId: string;
@@ -78,7 +81,7 @@ export type StationOptions = {
    */
   maxTrackHistory?: number;
 
-  noDuplicatedArtist?: number | false;
+  artistBacklog?: number | false;
   duplicationSimilarity?: number;
 
   /**
@@ -222,7 +225,7 @@ export class Station extends TypedEmitter<StationEvents> {
       medley: this.medley,
       queue: this.queue,
       crates: [],
-      noDuplicatedArtist: options.noDuplicatedArtist !== false ? Math.max(options.noDuplicatedArtist ?? 0, this.maxTrackHistory) : false,
+      artistBacklog: options.artistBacklog !== false ? Math.max(options.artistBacklog ?? 0, this.maxTrackHistory) : false,
       duplicationSimilarity: options.duplicationSimilarity,
       onInsertRequestTrack: this.handleRequestTrack
     });
@@ -780,8 +783,8 @@ function createChanceable(def: SequenceChance | undefined): Chanceable {
     return { next: def };
   }
 
-  if (Array.isArray(def) && def.length > 1) {
-    return chanceOf(def);
+  if (def !== undefined) {
+    return chanceOf([def.yes, def.no]);
   }
 
   return {
@@ -821,7 +824,7 @@ function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit  {
     return limit;
   }
 
-  if (limit === 'all') {
+  if (limit === 'entirely') {
     return limit;
   }
 

@@ -99,13 +99,13 @@ type BoomBoxOptions<T extends BoomBoxTrack, R extends Requester> = {
   db?: MusicDb;
 
   /**
-   * Number of tracks to be kept to be check for duplication
+   * Number of last tracks used to check for duplicated artists
    * Default value is 50
    * `false` means no duplication check should be done
    *
    * @default 50
    */
-  noDuplicatedArtist?: number | false;
+  artistBacklog?: number | false;
 
   /**
    * Similarity threshold for the artist to be considered as duplicated
@@ -135,7 +135,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   readonly sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>;
   private readonly sweeperInserter: SweeperInserter;
 
-  options: Required<Pick<BoomBoxOptions<BoomBoxTrack, R>, 'noDuplicatedArtist' | 'duplicationSimilarity'>>;
+  options: Required<Pick<BoomBoxOptions<BoomBoxTrack, R>, 'artistBacklog' | 'duplicationSimilarity'>>;
 
   private decks = Array(3).fill(0).map<DeckInfo>(() => ({ playing: false, active: false })) as [DeckInfo, DeckInfo, DeckInfo];
 
@@ -159,7 +159,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     });
 
     this.options = {
-      noDuplicatedArtist: options.noDuplicatedArtist || 50,
+      artistBacklog: options.artistBacklog || 50,
       duplicationSimilarity: options.duplicationSimilarity || 0.8
     };
     //
@@ -521,13 +521,13 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
 
     this.emit('trackStarted', deck, trackPlay, lastTrack);
 
-    const { noDuplicatedArtist } = this.options;
+    const { artistBacklog } = this.options;
 
-    if (noDuplicatedArtist) {
+    if (artistBacklog) {
       const { extra } = trackPlay.track;
       if (extra) {
         this.artistHistory.push(getArtists(extra));
-        this.artistHistory = this.artistHistory.splice(-noDuplicatedArtist);
+        this.artistHistory = this.artistHistory.splice(-artistBacklog);
       }
     }
   }

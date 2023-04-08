@@ -9,7 +9,7 @@ import { breath, moveArrayElements, moveArrayIndexes } from '@seamless-medley/ut
 
 export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 
-export type TrackCreator<T extends Track<any>> = (path: string) => Promise<Omit<T, 'collection' | 'sequencing'> | undefined>;
+export type TrackCreator<T extends Track<any>> = (path: string) => Promise<Omit<T, 'id' | 'collection' | 'sequencing'> & { id?: string } | undefined>;
 
 export type TrackCollectionBasicOptions = {
   reshuffleEvery?: number;
