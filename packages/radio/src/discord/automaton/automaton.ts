@@ -48,12 +48,6 @@ export type MedleyAutomatonOptions = {
   owners?: Snowflake[];
 
   /**
-   * Initial audio gain, default to -12dBFS
-   * @default -12dBFS
-   */
-   initialGain?: number;
-
-  /**
    * @default 3
    */
   maxTrackMessages?: number;
@@ -105,7 +99,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.clientId = options.clientId;
     this.owners = options.owners || [];
     this.maxTrackMessages = options.maxTrackMessages ?? 3;
-    // this.initialGain = options.initialGain ?? decibelsToGain(-3);
     this.#baseCommand = options.baseCommand || 'medley';
 
     this.#audioDispatcher = new AudioDispatcher();
