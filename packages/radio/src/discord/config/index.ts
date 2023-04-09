@@ -11,14 +11,6 @@ async function parseYAML(s: string) {
   return parse(s);
 }
 
-function fetchEnvWithPrefix(env: object, prefix: string) {
-  const envs = pickBy(env, function(value, key) {
-    return startsWith(key, prefix);
-  });
-
-  return envs;
-}
-
 const Config = z.object({
   db: DbConfig,
   stations: z.record(StationConfig, { required_error: 'No stations' }),
@@ -31,21 +23,21 @@ export type Config = z.infer<typeof Config>;
 
 const catchError = (e: any) => e as Error;
 
-
-
 /**
  * Parse configurations from file
  */
-async function parseConfig(configFile: string): Promise<Config | Error> {
+async function loadConfig(configFile: string): Promise<Config | Error> {
   const fileData = await readFile(configFile).catch(catchError);
 
   if (fileData instanceof Error) {
     return fileData;
   }
 
-  const parsedString = phrase(fileData.toString(), fetchEnvWithPrefix(process.env, "MEDLEY_"));
-
-  const data = await parseYAML(parsedString).catch(catchError);
+  const data = await parseYAML(
+    phrase(fileData.toString(),
+    pickBy(process.env, (_, key) => /^MEDLEY_[A-Z0-9_]$+/.test(key))
+  ))
+  .catch(catchError);
 
   if (data instanceof Error) {
     return data;
@@ -54,13 +46,4 @@ async function parseConfig(configFile: string): Promise<Config | Error> {
   const parsed = await Config.safeParseAsync(data ?? undefined);
 
   return (parsed.success) ? parsed.data : parsed.error;
-}
-
-/**
- * Parse configurations from file and override some settings via environment variables
- */
-export async function loadConfig(configFile: string): Promise<Config | Error> {
-  const parsed = await parseConfig(configFile);
-  //
-  return parsed;
 }
