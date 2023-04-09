@@ -17,6 +17,7 @@ services:
     # restart: always
     environment:
       MUSIC_PATH: /musics
+      DROP_PATH: /drops
       MONGO_DB_HOST: mongo
       MONGO_DB_PORT: 27017
       MONGO_DB_USER: root
@@ -26,6 +27,7 @@ services:
       DISCORD_CLIENT_ID:
       DISCORD_BASE_COMMAND: medley
     volumes:
-      - "/musics:/musics"
+      - "./data/musics:/musics"
+      - "./data/drops:/drops"
     depends_on:
       - mongo

@@ -4,6 +4,7 @@ arch=$1
 repo="nexus.coke.fyi"
 name="medley/radio"
 tag="latest"
+git_branch=$(git branch --show-current)
 git_rev=$(git rev-parse HEAD | cut -c 1-8)
 
 full_image_name=${repo}/${name}:${tag}
@@ -23,7 +24,7 @@ fi
 
 echo "---------------------------------------------------------------"
 echo "Building on arch: ${arch}"
-echo "Build version: ${git_rev}"
+echo "Build version: ${git_branch}:${git_rev}"
 echo "Build date: $(date)"
 echo "Build image: ${full_image_name}"
 echo "---------------------------------------------------------------"
