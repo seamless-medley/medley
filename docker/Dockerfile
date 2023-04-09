@@ -45,4 +45,4 @@ WORKDIR /app/packages/radio
 # TODO:
 # - Remove this and use command for starting radio bot
 # - proper get application version (git short commit)
-CMD echo "$(cat /app/version)" && pnpm run dev:bot
+CMD echo "$(cat /app/version)" && pnpm run dev:bot default.yml

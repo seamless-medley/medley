@@ -210,6 +210,9 @@ importers:
       opusscript:
         specifier: ^0.0.8
         version: 0.0.8
+      paraphrase:
+        specifier: ^3.1.1
+        version: 3.1.1
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -5227,6 +5230,10 @@ packages:
     dependencies:
       aggregate-error: 3.1.0
     dev: true
+
+  /paraphrase@3.1.1:
+    resolution: {integrity: sha512-3vWTmqzNhEsFdYJO996Hmzofdp2yL+OaspIpVYs7DKTlxMi5nrDcRzNcbelsn91eI5pHQyqu3SI6Znxhq5LBtg==}
+    dev: false
 
   /parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}

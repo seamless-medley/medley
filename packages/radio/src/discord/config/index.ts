@@ -4,9 +4,19 @@ import { z } from 'zod';
 import { DbConfig } from './db';
 import { StationConfig } from './station';
 import { AutomatonConfig } from './automaton';
+import { pickBy, startsWith } from 'lodash';
+import { dollar as phrase } from "paraphrase";
 
 async function parseYAML(s: string) {
   return parse(s);
+}
+
+function fetchEnvWithPrefix(env: object, prefix: string) {
+  const envs = pickBy(env, function(value, key) {
+    return startsWith(key, prefix);
+  });
+
+  return envs;
 }
 
 const Config = z.object({
@@ -21,6 +31,8 @@ export type Config = z.infer<typeof Config>;
 
 const catchError = (e: any) => e as Error;
 
+
+
 /**
  * Parse configurations from file
  */
@@ -31,7 +43,10 @@ async function parseConfig(configFile: string): Promise<Config | Error> {
     return fileData;
   }
 
-  const data = await parseYAML(fileData.toString()).catch(catchError);
+  const parsedString = phrase(fileData.toString(), fetchEnvWithPrefix(process.env, "MEDLEY_"));
+
+  const data = await parseYAML(parsedString).catch(catchError);
+
   if (data instanceof Error) {
     return data;
   }
