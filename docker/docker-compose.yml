@@ -23,8 +23,8 @@ services:
       MEDLEY_MONGO_DB_USER: root
       MEDLEY_MONGO_DB_PASSWORD: example
       MEDLEY_MONGO_DB_DATABASE: medley
-      MEDLEY_DISCORD_BOT_TOKEN:
-      MEDLEY_DISCORD_CLIENT_ID:
+      MEDLEY_DISCORD_BOT_TOKEN: example
+      MEDLEY_DISCORD_CLIENT_ID: example
       MEDLEY_DISCORD_BASE_COMMAND: medley
     volumes:
       - "./data/musics:/musics"
