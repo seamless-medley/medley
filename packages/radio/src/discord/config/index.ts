@@ -35,7 +35,7 @@ export async function loadConfig(configFile: string): Promise<Config | Error> {
 
   const data = await parseYAML(
     phrase(fileData.toString(),
-    pickBy(process.env, (_, key) => /^MEDLEY_[A-Z0-9_]$+/.test(key))
+    pickBy(process.env, (_, key) => /^MEDLEY_[A-Z0-9_]+$/.test(key))
   ))
   .catch(catchError);
 
