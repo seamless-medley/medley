@@ -191,6 +191,12 @@
           "description": "Base command",
           "minLength": 1,
           "default": "medley"
+        },
+        "maxTrackMessages": {
+          "type": "integer",
+          "description": "Number of last messages to be kept in a guild",
+          "minimum": 0,
+          "default": 3
         }
       },
       "required": ["clientId", "botToken"],
