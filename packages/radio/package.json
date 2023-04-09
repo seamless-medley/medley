@@ -58,6 +58,7 @@
     "notepack.io": "^3.0.1",
     "opus-decoder": "^0.6.7",
     "opusscript": "^0.0.8",
+    "paraphrase": "^3.1.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "reflect-metadata": "^0.1.13",

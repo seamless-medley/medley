@@ -16,16 +16,18 @@ services:
       context: ../
     # restart: always
     environment:
-      MUSIC_PATH: /musics
-      MONGO_DB_HOST: mongo
-      MONGO_DB_PORT: 27017
-      MONGO_DB_USER: root
-      MONGO_DB_PASSWORD: example
-      MONGO_DB_DATABASE: medley
-      DISCORD_BOT_TOKEN:
-      DISCORD_CLIENT_ID:
-      DISCORD_BASE_COMMAND: medley
+      MEDLEY_MUSIC_PATH: /musics
+      MEDLEY_DROP_PATH: /drops
+      MEDLEY_MONGO_DB_HOST: localhost
+      MEDLEY_MONGO_DB_PORT: 27017
+      MEDLEY_MONGO_DB_USER: root
+      MEDLEY_MONGO_DB_PASSWORD: example
+      MEDLEY_MONGO_DB_DATABASE: medley
+      MEDLEY_DISCORD_BOT_TOKEN: example
+      MEDLEY_DISCORD_CLIENT_ID: example
+      MEDLEY_DISCORD_BASE_COMMAND: medley
     volumes:
-      - "/musics:/musics"
+      - "./data/musics:/musics"
+      - "./data/drops:/drops"
     depends_on:
       - mongo

@@ -68,7 +68,7 @@ async function main() {
     for (const [id, { botToken, clientId, baseCommand }] of Object.entries(config.automatons)) {
 
       const client = new Client({
-        intents: [ GatewayIntentBits.Guilds ]
+        intents: [GatewayIntentBits.Guilds]
       });
 
       client.login(botToken)

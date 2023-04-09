@@ -18,7 +18,7 @@ RUN pnpm install
 
 # TODO: proper generate application banner version (git short commit)
 RUN echo "---------------------------------------------------------" > version
-RUN echo "APP version: $(git rev-parse HEAD | cut -c 1-8)" >> version
+RUN echo "APP version: $(git branch --show-current):$(git rev-parse HEAD | cut -c 1-8)" >> version
 RUN echo "Build date: $(date)" >> version
 RUN echo "---------------------------------------------------------" >> version
 RUN echo "" >> version
@@ -45,4 +45,4 @@ WORKDIR /app/packages/radio
 # TODO:
 # - Remove this and use command for starting radio bot
 # - proper get application version (git short commit)
-CMD echo "$(cat /app/version)" && pnpm run dev:bot
+CMD echo "$(cat /app/version)" && pnpm run dev:bot config-docker.yml
