@@ -26,7 +26,7 @@ const catchError = (e: any) => e as Error;
 /**
  * Parse configurations from file
  */
-async function loadConfig(configFile: string): Promise<Config | Error> {
+export async function loadConfig(configFile: string): Promise<Config | Error> {
   const fileData = await readFile(configFile).catch(catchError);
 
   if (fileData instanceof Error) {
