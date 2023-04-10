@@ -80,7 +80,7 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     }
 
     const fresh = await this.metadata(track.path);
-    fresh.comments = fresh.comments?.filter(([key]) => /^[^:]+:(?!\/\/)/i.test(key)) ?? [];
+    fresh.comments = fresh.comments?.filter(([key]) => /^[^:]+:(?!\/\/)/i.test(key)) ?? []; //
 
     musicDb?.update(track.id, { ...fresh, path: track.path });
 
