@@ -62,11 +62,22 @@ jobs:
         run: |
           sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
 
+      - uses: actions/cache@v3
+        name: Cache brew deps
+        with:
+          path: |
+            /usr/local/Homebrew
+            /usr/local/Cellar
+            /usr/local/Frameworks
+            /usr/local/bin
+            /usr/local/opt
+            /usr/local/lib/python3.8
+          key: macos-build-cache-${{ hashFiles('./scripts/brew.sh') }}
+
       - name: Dependencies (macOS)
         if: contains(matrix.build-arch, 'darwin')
         run: |
-          brew install --build-from-source taglib
-          brew install libsamplerate
+          bash ./scripts/brew.sh
 
       - name: Checkout
         uses: actions/checkout@v3
