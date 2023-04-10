@@ -15,10 +15,10 @@ WORKDIR /app
 RUN git submodule update --init --force --recursive
 
 RUN pnpm config set -g virtual-store-dir "/node_modules"
-RUN pnpm config set -g hoist false
+# RUN pnpm config set -g hoist false
 RUN pnpm config list
 # TODO: Install without devDependencies
-RUN --mount=type=cache,target=/cache,id=cache cp -rv /cache/build /app/packages/node-medley/build
+RUN --mount=type=cache,target=/cache,id=cache mkdir -p /cache/build && cp -rv /cache/build /app/packages/node-medley/build
 RUN --mount=type=cache,target=/node_modules,id=node_modules pnpm install
 
 # store build cache
@@ -38,7 +38,9 @@ FROM node:18.13.0-slim as application
 
 ENV TZ="Asia/Bangkok"
 
-RUN apt update && apt install tzdata libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev -y && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install tzdata libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev watchman -y && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /cache
 COPY --from=builder /node_modules /node_modules
 COPY --from=builder /app /app
 
@@ -49,7 +51,7 @@ RUN rm -rfv /app/packages/radio/.env
 
 RUN npm i pnpm -g
 RUN pnpm config set -g virtual-store-dir "/node_modules"
-RUN pnpm config set -g hoist false
+# RUN pnpm config set -g hoist false
 RUN --mount=type=cache,target=/cache,id=node_modules cp -rv /cache/* /node_modules
 
 RUN echo "###"
