@@ -39,25 +39,51 @@ jobs:
           node-version: ${{ matrix.node_version }}
           architecture: ${{ matrix.node_arch }}
 
-      - uses: pnpm/action-setup@v2.2.4
+      - uses: pnpm/action-setup@v2
         with:
           version: latest
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Dependencies (Linux)
         if: contains(matrix.build-arch, 'linux')
         run: |
           sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
 
+      - uses: actions/cache@v3
+        if: contains(matrix.build-arch, 'darwin')
+        name: Cache brew deps
+        with:
+          path: |
+            /usr/local/Homebrew
+            /usr/local/Cellar
+            /usr/local/Frameworks
+            /usr/local/bin
+            /usr/local/opt
+            /usr/local/lib/python3.8
+          key: macos-build-cache-${{ hashFiles('./scripts/brew.sh') }}
+
       - name: Dependencies (macOS)
         if: contains(matrix.build-arch, 'darwin')
         run: |
-          brew install --build-from-source taglib
-          brew install libsamplerate
-
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
+          bash ./scripts/brew.sh
 
       - name: Prepare
         working-directory: ./packages/node-medley
