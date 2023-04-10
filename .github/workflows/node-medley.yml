@@ -67,11 +67,18 @@ jobs:
         run: |
           sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
 
+      - name: Get brew directory
+        id: brew-cache
+        if: contains(matrix.build-arch, 'darwin')
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(brew --prefix)" >> $GITHUB_OUTPUT
+
       - uses: actions/cache@v3
         if: contains(matrix.build-arch, 'darwin')
         name: Cache brew deps
         with:
-          path: $(brew --prefix)
+          path: ${{ steps.brew-cache.outputs.STORE_PATH }}
           key: macos-build-cache-${{ hashFiles('./scripts/brew.sh') }}
 
       - name: Dependencies (macOS)
