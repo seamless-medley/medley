@@ -7,6 +7,7 @@ on:
       - packages/node-medley/scripts/**
       - packages/node-medley/binding.gyp
       - packages/node-medley/package.json
+      - scripts/brew.sh
 jobs:
   build:
     strategy:
