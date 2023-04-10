@@ -24,12 +24,14 @@
     "string-similarity": "^4.0.4",
     "tiny-typed-emitter": "^2.1.0",
     "tslog": "^4.7.1",
+    "which": "^3.0.0",
     "workerpool": "^6.2.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.176",
     "@types/minimatch": "^5.1.2",
     "@types/normalize-path": "^3.0.0",
-    "@types/string-similarity": "^4.0.0"
+    "@types/string-similarity": "^4.0.0",
+    "@types/which": "^3.0.0"
   }
 }

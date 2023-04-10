@@ -1,9 +1,10 @@
 import { dirname } from 'path';
+import which from 'which';
 import { stat } from "fs/promises";
 
 import fg from 'fast-glob';
 import mm from 'minimatch';
-import { debounce, groupBy, shuffle, stubFalse, uniq } from "lodash";
+import { debounce, groupBy, shuffle, stubFalse, stubTrue, uniq } from "lodash";
 import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
 
@@ -254,12 +255,24 @@ const glob = (pattern: string) => fg(pattern, {
   suppressErrors: true,
 });
 
+let watchManAvailable: boolean | undefined;
+
+async function isWatchManAvailable() {
+  if (watchManAvailable !== undefined) {
+    return watchManAvailable;
+  }
+
+  const found = await which('watchman').then(stubTrue).catch(stubFalse);
+  watchManAvailable = found;
+  return found;
+}
+
 async function watch(path: string, callback: SubscribeCallback) {
-  const backends: (BackendType | undefined)[] = ['watchman', undefined];
+  const backends: (BackendType | undefined)[] = (await isWatchManAvailable()) ? ['watchman', undefined] : [undefined];
 
   for (const backend of backends) {
     try {
-      return await watcher.subscribe(path,callback, { backend });
+      return await watcher.subscribe(path, callback, { backend });
     }
     catch (e) {
       continue;
