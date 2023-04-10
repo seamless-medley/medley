@@ -7,6 +7,7 @@ on:
       - packages/node-medley/scripts/**
       - packages/node-medley/binding.gyp
       - packages/node-medley/package.json
+      - scripts/brew.sh
 jobs:
   build:
     strategy:
@@ -67,11 +68,21 @@ jobs:
         run: |
           sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
 
+      - name: Get brew directory
+        id: brew-cache
+        if: contains(matrix.build-arch, 'darwin')
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(brew --prefix)/Cellar" >> $GITHUB_OUTPUT
+
       - uses: actions/cache@v3
         if: contains(matrix.build-arch, 'darwin')
         name: Cache brew deps
         with:
-          path: $(brew --prefix)
+          path: |
+            ${{ steps.brew-cache.outputs.STORE_PATH }}/taglib
+            ${{ steps.brew-cache.outputs.STORE_PATH }}/libsamplerate
+
           key: macos-build-cache-${{ hashFiles('./scripts/brew.sh') }}
 
       - name: Dependencies (macOS)
