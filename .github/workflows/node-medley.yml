@@ -78,7 +78,10 @@ jobs:
         if: contains(matrix.build-arch, 'darwin')
         name: Cache brew deps
         with:
-          path: ${{ steps.brew-cache.outputs.STORE_PATH }}
+          path: |
+            ${{ steps.brew-cache.outputs.STORE_PATH }}/taglib
+            ${{ steps.brew-cache.outputs.STORE_PATH }}/libsamplerate
+
           key: macos-build-cache-${{ hashFiles('./scripts/brew.sh') }}
 
       - name: Dependencies (macOS)
