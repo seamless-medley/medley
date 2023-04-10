@@ -7,14 +7,22 @@ ENV TZ="Asia/Bangkok"
 RUN apt update && apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev -y && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm
 
-RUN mkdir /app /musics
+
+RUN mkdir /app /musics /node_modules
 COPY . ./app
 
 WORKDIR /app
 RUN git submodule update --init --force --recursive
 
+RUN pnpm config set -g virtual-store-dir "/node_modules"
+RUN pnpm config set -g hoist false
+RUN pnpm config list
 # TODO: Install without devDependencies
-RUN pnpm install
+RUN --mount=type=cache,target=/cache,id=cache cp -rv /cache/build /app/packages/node-medley/build
+RUN --mount=type=cache,target=/node_modules,id=node_modules pnpm install
+
+# store build cache
+RUN --mount=type=cache,target=/cache,id=cache cp -rv /app/packages/node-medley/build /cache
 
 # TODO: proper generate application banner version (git short commit)
 RUN echo "---------------------------------------------------------" > version
@@ -31,6 +39,7 @@ FROM node:18.13.0-slim as application
 ENV TZ="Asia/Bangkok"
 
 RUN apt update && apt install tzdata libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev -y && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /node_modules /node_modules
 COPY --from=builder /app /app
 
 WORKDIR /app
@@ -39,6 +48,11 @@ RUN rm -rfv .git .github .dockerignore .editorconfig .gitignore
 RUN rm -rfv /app/packages/radio/.env
 
 RUN npm i pnpm -g
+RUN pnpm config set -g virtual-store-dir "/node_modules"
+RUN pnpm config set -g hoist false
+RUN --mount=type=cache,target=/cache,id=node_modules cp -rv /cache/* /node_modules
+
+RUN echo "###"
 
 WORKDIR /app/packages/radio
 
