@@ -71,13 +71,7 @@ jobs:
         if: contains(matrix.build-arch, 'darwin')
         name: Cache brew deps
         with:
-          path: |
-            /usr/local/Homebrew
-            /usr/local/Cellar
-            /usr/local/Frameworks
-            /usr/local/bin
-            /usr/local/opt
-            /usr/local/lib/python3.8
+          path: $(brew --prefix)
           key: macos-build-cache-${{ hashFiles('./scripts/brew.sh') }}
 
       - name: Dependencies (macOS)
