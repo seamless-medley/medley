@@ -9,6 +9,16 @@ services:
     ports:
       - 27017:27017
 
+  mongo-express:
+    image: mongo-express:latest
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: true
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+    ports:
+      - 18081:8081
   radio:
     image: nexus.coke.fyi/medley/radio:latest
     build:
