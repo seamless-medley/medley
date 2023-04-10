@@ -57,12 +57,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
       - name: Dependencies (Linux)
         if: contains(matrix.build-arch, 'linux')
         run: |
           sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
 
       - uses: actions/cache@v3
+        if: contains(matrix.build-arch, 'darwin')
         name: Cache brew deps
         with:
           path: |
@@ -78,11 +84,6 @@ jobs:
         if: contains(matrix.build-arch, 'darwin')
         run: |
           bash ./scripts/brew.sh
-
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
 
       - name: Prepare
         working-directory: ./packages/node-medley
