@@ -40,10 +40,12 @@
     "pack:package": "tsx scripts/package.ts",
     "pack:readme": "copyfiles README.md dist",
     "bump-version": "tsx scripts/bump.ts",
-    "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts"
+    "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts",
+    "demo-electron": "cross-env MEDLEY_DEV=1 ELECTRON_RUN_AS_NODE=1 electron --require ts-node/register test/demo.ts"
   },
   "devDependencies": {
     "@types/semver": "^7.3.13",
+    "electron": "21.0.0",
     "node-addon-api": "6.0.0",
     "prebuildify": "^5.0.1",
     "semver": "^7.3.8"
