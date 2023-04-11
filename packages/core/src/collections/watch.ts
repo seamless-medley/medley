@@ -3,7 +3,7 @@ import which from 'which';
 import { stat } from "fs/promises";
 
 import fg from 'fast-glob';
-import mm from 'minimatch';
+import { minimatch } from 'minimatch';
 import { debounce, groupBy, shuffle, stubFalse, stubTrue, uniq } from "lodash";
 import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
@@ -123,7 +123,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     for (let { path } of events) {
       path = normalizePath(path);
 
-      const stats = await stat(path).catch(() => undefined);
+      const stats = await stat(path).catch(stubFalse);
 
       if (!stats) {
         continue;
@@ -209,7 +209,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     this.watchInfos.delete(dir);
 
     if (removeTracks) {
-      this.removeBy(({ path }) => mm(path, dir));
+      this.removeBy(({ path }) => minimatch(path, dir));
     }
   }
 
