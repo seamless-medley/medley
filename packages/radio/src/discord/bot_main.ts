@@ -24,6 +24,14 @@ type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicD
 
 ////////////////////////////////////////////////////////////////////////////////////
 
+function getVersionLine() {
+  const electronVersion = process.versions['electron'];
+  const runtime = electronVersion ? 'Electron' : 'NodeJS';
+  const version = electronVersion ? `v${electronVersion}` : process.version;
+
+  return `${runtime} version: ${version}; abi=${process.versions.modules}; uv=${process.versions.uv}; v8=${process.versions.v8}`;
+}
+
 async function main() {
   const logger = createLogger({ name: 'main' });
 
@@ -42,8 +50,9 @@ async function main() {
 
   const info = Medley.getInfo();
 
-  logger.info('NodeJS version', process.version);
-  logger.info(`node-medley version: ${info.version.major}.${info.version.minor}.${info.version.patch}`);
+  logger.info(getVersionLine());
+  logger.info('node-medley runtime:', Object.entries(info.runtime).map(([p, v]) => `${p}=${v}`).join('; '));
+  logger.info('node-medley version:', `${info.version.major}.${info.version.minor}.${info.version.patch}`);
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
 
   const config = await loadConfig(configFile);
