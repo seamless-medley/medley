@@ -4,7 +4,7 @@ import { Client, GatewayIntentBits } from "discord.js";
 import { Command } from '@commander-js/extra-typings';
 import { shuffle } from "lodash";
 import { MongoMusicDb } from "../musicdb/mongo";
-import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
+import { MedleyAutomaton } from "./automaton";
 import { loadConfig } from "./config";
 import { ZodError } from "zod";
 import normalizePath from "normalize-path";
@@ -20,11 +20,6 @@ process.on('unhandledRejection', (e) => {
 type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicDb'> & {
   intros?: string[];
   requestSweepers?: string[];
-};
-
-type StoredConfig = {
-  stations: StationConfig[];
-  automatons: MedleyAutomatonOptions[];
 };
 
 ////////////////////////////////////////////////////////////////////////////////////
