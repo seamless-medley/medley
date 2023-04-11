@@ -1,9 +1,10 @@
 import { createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
 import { breath } from "@seamless-medley/utils";
 import { Client, GatewayIntentBits } from "discord.js";
+import { Command } from '@commander-js/extra-typings';
 import { shuffle } from "lodash";
 import { MongoMusicDb } from "../musicdb/mongo";
-import { MedleyAutomaton, MedleyAutomatonOptions } from "./automaton";
+import { MedleyAutomaton } from "./automaton";
 import { loadConfig } from "./config";
 import { ZodError } from "zod";
 import normalizePath from "normalize-path";
@@ -21,17 +22,18 @@ type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicD
   requestSweepers?: string[];
 };
 
-type StoredConfig = {
-  stations: StationConfig[];
-  automatons: MedleyAutomatonOptions[];
-};
-
 ////////////////////////////////////////////////////////////////////////////////////
 
 async function main() {
   const logger = createLogger({ name: 'main' });
 
-  const configFile = (process.argv.at(2) || '').trim();
+  const program = new Command()
+    .name('medley-discord')
+    .argument('<config-file')
+    .option('-r, --register')
+    .parse();
+
+  const configFile = (program.args[0] || '').trim();
 
   if (!configFile) {
     logger.fatal('No configuration file specified');
@@ -62,7 +64,7 @@ async function main() {
     return;
   }
 
-  if (process.argv[2] === 'register') {
+  if (program.opts().register) {
     logger.info('Registering');
 
     for (const [id, { botToken, clientId, baseCommand }] of Object.entries(config.automatons)) {
@@ -76,13 +78,13 @@ async function main() {
       await MedleyAutomaton.registerGuildCommands({
         botToken,
         clientId,
-        logger,
+        logger: createLogger({ name: `automaton/${id}` }),
         baseCommand: baseCommand || 'medley',
         guilds: [...(await client.guilds.fetch()).values()]
       });
     }
 
-    return;
+    process.exit(0);
   }
 
   logger.info('Initializing');

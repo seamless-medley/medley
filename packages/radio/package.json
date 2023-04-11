@@ -29,6 +29,7 @@
     "vb": "vite build"
   },
   "dependencies": {
+    "@commander-js/extra-typings": "^10.0.3",
     "@discordjs/opus": "0.9.0",
     "@discordjs/rest": "1.5.0",
     "@emotion/react": "11.10.5",
@@ -42,6 +43,7 @@
     "@types/ffmpeg-static": "^3.0.1",
     "@types/normalize-path": "^3.0.0",
     "axios": "1.2.2",
+    "commander": "^10.0.0",
     "discord-api-types": "0.37.38",
     "discord.js": "^14.8.0",
     "electron": "^23.0.0",
