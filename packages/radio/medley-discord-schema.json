@@ -129,7 +129,7 @@
         "requestSweepers": {
           "title": "Request Sweepers",
           "type": "array",
-          "description": "List of files to play randomly before transition into a new request session",
+          "description": "List of files to play randomly before transiting into a new request session",
           "items": {
             "type": "string",
             "minLength": 1

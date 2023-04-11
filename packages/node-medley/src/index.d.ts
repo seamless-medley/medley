@@ -251,6 +251,12 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 }
 
 export type MedleyInfo = {
+  runtime: {
+    file: string;
+    specificity: number;
+    runtime?: 'node' | 'electron';
+    napi?: boolean;
+  },
   juce: {
     version: Record<'major' | 'minor' | 'build', number>;
     cpu: Record<'intel' | 'arm' | 'arm64', 'aarch64' | 'sse' | 'neon' | 'vdsp', true | undefined>;
