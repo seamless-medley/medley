@@ -3,7 +3,7 @@ import which from 'which';
 import { stat } from "fs/promises";
 
 import fg from 'fast-glob';
-import mm from 'minimatch';
+import { minimatch } from 'minimatch';
 import { debounce, groupBy, shuffle, stubFalse, stubTrue, uniq } from "lodash";
 import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
@@ -123,7 +123,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     for (let { path } of events) {
       path = normalizePath(path);
 
-      const stats = await stat(path).catch(() => undefined);
+      const stats = await stat(path).catch(stubFalse);
 
       if (!stats) {
         continue;
@@ -209,7 +209,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     this.watchInfos.delete(dir);
 
     if (removeTracks) {
-      this.removeBy(({ path }) => mm(path, dir));
+      this.removeBy(({ path }) => minimatch(path, dir));
     }
   }
 
@@ -267,12 +267,22 @@ async function isWatchManAvailable() {
   return found;
 }
 
-async function watch(path: string, callback: SubscribeCallback) {
+async function watch(dir: string, callback: SubscribeCallback) {
+  const stats = await stat(dir).catch(stubFalse);
+
+  if (!stats) {
+    return;
+  }
+
+  if (!stats.isDirectory()) {
+    return;
+  }
+
   const backends: (BackendType | undefined)[] = (await isWatchManAvailable()) ? ['watchman', undefined] : [undefined];
 
   for (const backend of backends) {
     try {
-      return await watcher.subscribe(path, callback, { backend });
+      return await watcher.subscribe(dir, callback, { backend });
     }
     catch (e) {
       continue;

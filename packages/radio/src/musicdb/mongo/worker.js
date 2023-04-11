@@ -231,10 +231,21 @@ const search_recentItems = async(stationId, key, $limit) => {
         count: 1,
         [key]: "$_id",
         timebin: {
-          $dateTrunc: {
-            date: "$timestamp",
-            unit: "minute",
-            binSize: 15
+          $function: {
+            args: ["$timestamp"],
+            lang: "js",
+
+            body: (function(/** @type {number} */ date) {
+              const binSizeMillis = 15 * 60000; // 15 minutes
+
+              let distance = date.valueOf() % binSizeMillis;
+
+              if (distance < 0) {
+                distance += binSizeMillis;
+              }
+
+              return new Date(date.valueOf() - distance);
+            }).toString()
           }
         },
         timestamp: 1
