@@ -267,12 +267,22 @@ async function isWatchManAvailable() {
   return found;
 }
 
-async function watch(path: string, callback: SubscribeCallback) {
+async function watch(dir: string, callback: SubscribeCallback) {
+  const stats = await stat(dir).catch(stubFalse);
+
+  if (!stats) {
+    return;
+  }
+
+  if (!stats.isDirectory()) {
+    return;
+  }
+
   const backends: (BackendType | undefined)[] = (await isWatchManAvailable()) ? ['watchman', undefined] : [undefined];
 
   for (const backend of backends) {
     try {
-      return await watcher.subscribe(path, callback, { backend });
+      return await watcher.subscribe(dir, callback, { backend });
     }
     catch (e) {
       continue;
