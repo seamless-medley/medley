@@ -19,6 +19,8 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: example
     ports:
       - 18081:8081
+    depends_on:
+      - mongo
   radio:
     image: nexus.coke.fyi/medley/radio:latest
     build:
@@ -26,18 +28,18 @@ services:
       context: ../
     # restart: always
     environment:
-      MEDLEY_MUSIC_PATH: /musics
-      MEDLEY_DROP_PATH: /drops
-      MEDLEY_MONGO_DB_HOST: localhost
+      MEDLEY_MUSIC_PATH: /data/musics
+      MEDLEY_DROP_PATH: /data/medley-drops
+      MEDLEY_MONGO_DB_HOST: mongo
       MEDLEY_MONGO_DB_PORT: 27017
       MEDLEY_MONGO_DB_USER: root
       MEDLEY_MONGO_DB_PASSWORD: example
       MEDLEY_MONGO_DB_DATABASE: medley
-      MEDLEY_DISCORD_BOT_TOKEN: example
-      MEDLEY_DISCORD_CLIENT_ID: example
+      MEDLEY_DISCORD_BOT_TOKEN: discord-bot-token
+      MEDLEY_DISCORD_CLIENT_ID: discord-client-id
       MEDLEY_DISCORD_BASE_COMMAND: medley
     volumes:
-      - "./data/musics:/musics"
-      - "./data/drops:/drops"
+      - /Music-Station/musics:/data/musics
+      - /Music-Station/medley-drops:/data/medley-drops
     depends_on:
       - mongo
