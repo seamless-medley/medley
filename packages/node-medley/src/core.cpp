@@ -873,8 +873,6 @@ Napi::Value Medley::static_getInfo(const Napi::CallbackInfo& info) {
         result.Set("version", version);
     }
 
-    // TODO: Other infos
-
     {
         auto juce = Object::New(env);
 
