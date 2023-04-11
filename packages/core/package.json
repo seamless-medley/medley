@@ -11,25 +11,24 @@
   "license": "ISC",
   "dependencies": {
     "@parcel/watcher": "^2.1.0",
-    "@seamless-medley/medley": "^0.2.1",
+    "@seamless-medley/medley": "^0.2.3",
     "@seamless-medley/utils": "workspace:../utils",
-    "@types/workerpool": "^6.1.0",
+    "@types/workerpool": "^6.4.0",
     "fast-glob": "^3.2.11",
     "lodash": "^4.17.21",
     "lyrics-searcher": "^1.0.58",
-    "minimatch": "6.1.6",
+    "minimatch": "9.0.0",
     "minisearch": "^6.0.0",
     "node-gyp-build": "4.6.0",
     "normalize-path": "^3.0.0",
     "string-similarity": "^4.0.4",
     "tiny-typed-emitter": "^2.1.0",
-    "tslog": "^4.7.1",
+    "tslog": "^4.8.2",
     "which": "^3.0.0",
-    "workerpool": "^6.2.0"
+    "workerpool": "^6.4.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.176",
-    "@types/minimatch": "^5.1.2",
     "@types/normalize-path": "^3.0.0",
     "@types/string-similarity": "^4.0.0",
     "@types/which": "^3.0.0"
