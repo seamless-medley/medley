@@ -16,7 +16,7 @@
     "gapless",
     "segue"
   ],
-  "homepage": "https://github.com/vittee/medley",
+  "homepage": "https://github.com/seamless-medley/medley",
   "main": "src/index.ts",
   "types": "src/index.d.ts",
   "dependencies": {
