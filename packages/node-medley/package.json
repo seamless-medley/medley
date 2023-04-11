@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@types/semver": "^7.3.13",
-    "node-addon-api": "3.0.2",
+    "node-addon-api": "6.0.0",
     "prebuildify": "^5.0.1",
     "semver": "^7.3.8"
   }
