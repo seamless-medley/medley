@@ -188,7 +188,7 @@ void Medley::Initialize(Object& exports) {
         StaticMethod<&Medley::static_getMetadata>("getMetadata"),
         StaticMethod<&Medley::static_getCoverAndLyrics>("getCoverAndLyrics"),
         StaticMethod<&Medley::static_isTrackLoadable>("isTrackLoadable"),
-        StaticMethod<&Medley::static_getInfo>("getInfo"),
+        StaticMethod<&Medley::static_getInfo>("$getInfo"),
     };
 
     auto env = exports.Env();
@@ -863,6 +863,12 @@ Napi::Value Medley::static_isTrackLoadable(const CallbackInfo& info) {
 Napi::Value Medley::static_getInfo(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     auto result = Object::New(env);
+
+    {
+        auto runtime = Object::New(env);
+        runtime.Set("napiVersion", Napi::Number::New(env, VersionManagement::GetNapiVersion(env)));
+        result.Set("runtime", runtime);
+    }
 
     {
         auto version = Object::New(env);

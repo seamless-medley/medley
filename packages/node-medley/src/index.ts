@@ -1,13 +1,29 @@
 import { EventEmitter } from 'node:events';
-import { dirname } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { Readable } from 'stream';
 import type { AudioFormat, RequestAudioCallbackOptions, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult } from './index.d';
-const medley = require('node-gyp-build')(process.env.MEDLEY_DEV ? dirname(__dirname) : __dirname);
+
+const nodeGypBuild = require('node-gyp-build');
+const module_id = process.env.MEDLEY_DEV ? dirname(__dirname) : __dirname;
+
+const medley = nodeGypBuild(module_id);
 
 Object.setPrototypeOf(medley.Medley.prototype, EventEmitter.prototype);
 
 export const Medley = medley.Medley;
 export const Queue = medley.Queue;
+
+Medley.getInfo = function() {
+  const { runtime = {}, ...rest } = Medley.$getInfo();
+
+  return {
+    runtime: {
+      ...nodeGypBuild.parseTags(basename(nodeGypBuild.resolve(module_id))),
+      ...runtime,
+    },
+    ...rest
+  }
+};
 
 export const audioFormats = ['Int16LE', 'Int16BE', 'FloatLE', 'FloatBE'] as const;
 
