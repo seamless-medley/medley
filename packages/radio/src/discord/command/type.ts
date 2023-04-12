@@ -98,6 +98,7 @@ export type CommandDescriptor = {
   createCommandHandler?: InteractionHandlerFactory<ChatInputCommandInteraction>;
   createButtonHandler?: InteractionHandlerFactory<ButtonInteraction>;
   createAutocompleteHandler?: InteractionHandlerFactory<AutocompleteInteraction>;
+  // TODO: guildCreation, guildDeletion handler
 }
 
 export class CommandError extends Error { };

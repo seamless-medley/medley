@@ -255,6 +255,8 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
       const peekings = peekRequestsForGuild(station, 0, 20, guildId);
 
+      // TODO: Check `AddReaction` for the bot to see if Vote button should be visible
+
       if (preview) {
         interaction.followUp({
           content: joinStrings(preview),

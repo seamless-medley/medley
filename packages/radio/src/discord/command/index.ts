@@ -49,6 +49,8 @@ type Handlers = {
 export const createInteractionHandler = (automaton: MedleyAutomaton) => {
   const baseCommand = automaton.baseCommand;
 
+  // TODO: Inform each command about guild creation and deletion
+
   const handlers = new Map<string, Handlers>(map(descriptors, (desc, name) => [name.toLowerCase(), {
     command: desc.createCommandHandler?.(automaton),
     button: desc.createButtonHandler?.(automaton),

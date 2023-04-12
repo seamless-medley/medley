@@ -9,7 +9,8 @@
   "license": "AGPL-3.0",
   "scripts": {
     "clean": "turbo run clean",
-    "build-radio": "turbo run build --filter=@seamless-medley/utils --filter=@seamless-medley/core --filter=@seamless-medley/radio"
+    "build:radio": "turbo run build --filter=@seamless-medley/radio",
+    "build:radio:graph": "turbo run build --dry --filter=@seamless-medley/radio"
   },
   "devDependencies": {
     "@types/mkdirp": "^1.0.2",

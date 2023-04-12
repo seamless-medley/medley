@@ -324,6 +324,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }));
 
     guild?.systemChannel?.send(`Greetings :notes:, use \`/${this.baseCommand} join\` command to invite me to a voice channel`);
+
+    // TODO: Emit event
   }
 
   private handleGuildDelete = async (guild: Guild) => {
@@ -331,6 +333,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#logger.info(`Removed from ${guild.name}`);
     this.#guildStates.get(guild.id)?.dispose();
     this.#guildStates.delete(guild.id);
+
+    // TODO: Emit event
   }
 
   private handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay, lastTrackPlay) => {
