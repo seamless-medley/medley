@@ -1,6 +1,9 @@
 name: node-medley native module
 on:
   push:
+    branches:
+      - main
+      - develop
     paths:
       - .github/workflows/node-medley.yml
       - packages/node-medley/src/**
