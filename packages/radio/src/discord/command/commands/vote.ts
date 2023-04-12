@@ -1,5 +1,5 @@
 import { Audience, AudienceType, createLogger, getTrackBanner, makeAudience, RequestTrackLockPredicate, StationRequestedTrack, TrackPeek } from "@seamless-medley/core";
-import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, } from "discord.js";
+import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, PermissionsBitField, } from "discord.js";
 import { chain, isEqual, keyBy, noop, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
 import * as emojis from "../../emojis";
@@ -32,6 +32,11 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = automa
 
 async function handleVoteCommand(automaton: MedleyAutomaton, interaction: CommandInteraction | MessageComponentInteraction) {
   const { guildId, station } = guildStationGuard(automaton, interaction);
+
+  if (!interaction.appPermissions?.any([PermissionsBitField.Flags.AddReactions])) {
+    warn(interaction, 'Voting requires `AddReactions` permission for the bot');
+    return;
+  }
 
   const existingVote = guildVoteMessage.get(guildId);
   if (existingVote) {
@@ -216,7 +221,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
       });
 
       for (const emoji of take(collectibleEmojis, peeking.length)) {
-        await msg.react(emoji!);
+        await msg.react(emoji!).catch(noop);
       }
 
       reactionCollector.on('collect', handleCollect);
