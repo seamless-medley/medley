@@ -220,6 +220,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
         time: ttl
       });
 
+      // TODO: Move below event registration
       for (const emoji of take(collectibleEmojis, peeking.length)) {
         await msg.react(emoji!).catch(noop);
       }
