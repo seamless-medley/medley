@@ -4,9 +4,8 @@ FROM node:18.13.0 as builder
 ENV TZ="Asia/Bangkok"
 
 # install build dependencies
-RUN apt update && apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev -y && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install git g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev -y && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm
-
 
 RUN mkdir /app /musics /node_modules
 COPY . ./app
@@ -53,8 +52,6 @@ RUN npm i pnpm -g
 RUN pnpm config set -g virtual-store-dir "/node_modules"
 # RUN pnpm config set -g hoist false
 RUN --mount=type=cache,target=/cache,id=node_modules cp -rv /cache/* /node_modules
-
-RUN echo "###"
 
 WORKDIR /app/packages/radio
 
