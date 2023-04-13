@@ -11,12 +11,14 @@
     - Getting available audio device
     - Selecting audio device
     - Null Audio device
+    - Dynamic queue
     - Getting PCM stream
     - Getting metadata
     - Getting cover art and lyrics
     - Getting audio level information
     - Check if track is loadable
     - Custom transition point
+    - Normalizing tracks audio level
 - [API](#api)
 
 # Features
@@ -97,6 +99,11 @@ Currently, the supported file formats are limited to: `wav`, `aiff`, `mp3`, `ogg
             - [finished](#finished)
         - [enqueueNext](#enqueuenext)
         - [audioDeviceChanged]()
+    - Static methods
+        - [getInfo](#getinfo)
+        - [isTrackLoadable](#istrackloadabletrack)
+        - [getMetadata](#getmetadatapath)
+        - [getCoverAndLyrics](#getcoverandlyricspath)
 
 - [Queue](#queue-class)
     - Methods
@@ -110,6 +117,8 @@ Currently, the supported file formats are limited to: `wav`, `aiff`, `mp3`, `ogg
         - [toArray](#toarray)
     - Properties
         - [length](#length-property)
+
+- [Metadata](#metadata)
 
 ## `Medley` class
 
@@ -358,7 +367,7 @@ Audio reduction occur during the internal audio processing
 
 - `trackPlay` - An object describing detail of the play session for the Deck.
     - `uuid` **(string)** - A unique string identifying the `trackPlay` itself
-    - `track` - Track, see TODO: TrackInfo
+    - `track` - Track, see [TrackInfo](#trackinfo)
     - `duration` **(nunber)** - Track duration
 
 ## `loaded`
@@ -396,7 +405,47 @@ TODO: Guide: Dynamic queue
 Emits when the audio device has changed, use [getAudioDevice](#getaudiodevice) method to get the audio device.
 
 
-# TODO: Static methods
+**Static methods**
+
+## `getInfo`
+
+Returns an `object` containing information about `node-medley`
+
+- `runtime`:
+    - `file` - Node native module file name
+    - `runtime` - Runtime name
+    - `napi` - `node-addon-api` version
+
+- `version` - `node-medley` version number
+
+- `juce` - Detail for the [JUCE](https://github.com/juce-framework/JUCE) framework library being linked into `node-medley`
+    - `version`
+    - `cpu`
+        - `intel` - Intel CPU
+        - `arm` - ARM CPU
+        - `arm64` - ARM64 CPU
+        - `aarch64` - ARM64 CPU
+        - `sse` - SIMD supports on x84_64 CPU
+        - `neon` - SIMD supports on ARM CPU
+        - `vdsp` - [vDSP](https://developer.apple.com/documentation/accelerate/vdsp) supports on macOS
+
+## `isTrackLoadable(track)`
+
+Returns `true` if the `track` can be loaded and played.
+
+## `getMetadata(path)`
+
+Returns [Metadata](#metadata) for `path`
+
+## `getCoverAndLyrics(path)`
+
+Returns an `object` with:
+
+- `cover` **(Buffer)** - Cover art data
+
+- `coverMimeType` **(string)** - Cover art mime type
+
+- `lyrics` **(string)** - Raw lyrics data
 
 ## `Queue` class
 
@@ -410,14 +459,12 @@ Create a new instance of the `Queue` class, an optional `tracks` is an array of 
 
 The `Queue` class is dead simple, if you need more control over your tracks list, you must manage the list by yourself and provide a track when the `Medley` object requires one, see [Medley enqueueNext event](#)
 
-# TODO: TrackInfo
-
 **Methods**
 
 ### `add(track)`
-Add a track to the queue.
+Add a track to the queue, see [TrackInfo](#trackinfo)
 ### `add(tracks)`
-Add list of tracks to the queue.
+Add list of tracks to the queue, see [TrackInfo](#trackinfo)
 
 ### `insert(index, track)`
 ### `insert(index, tracks)`
@@ -453,6 +500,20 @@ Returns a new shallow copy of all tracks.
 ### `length` property
 
 Returns total number of tracks in the queue.
+
+# TrackInfo
+
+A `TrackInfo` can be either a `string` to file path, or an `object` with:
+
+- `path` **(string)** - file path
+
+- `cueInPosition` **(number?)** - Start position of the track
+
+- `cueOutPosition` **(number?)** - Stop position of the track
+
+- `disableNextLeadIn` **(boolean?)**
+    - Disable lead-in of the next track, useful for transiting from jingle/sweeper
+    - The lead-in is the position where it is considered as the start singing point, usually presented in a track which has smooth/long beginning.
 
 # Metadata
   - `title` *(string?)*
