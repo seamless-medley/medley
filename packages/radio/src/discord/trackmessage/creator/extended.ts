@@ -11,7 +11,8 @@ export class Extended extends Normal {
     const durationFieldIndex = embed.data.fields?.findIndex(f => f.name === 'Duration') ?? -1;
     if (durationFieldIndex > -1) {
       embed.spliceFields(durationFieldIndex, 1);
-      embed.setFooter({ text: `🎧 Duration: ${formatDuration(playDuration) ?? 'N/A'}` });
+      // TODO: move powered by medley to single point for easy manage
+      embed.setFooter({ text: `🎧 Duration: ${formatDuration(playDuration) ?? 'N/A'} - [Powered By Medley]` });
     }
 
     const collectionFieldIndex = embed.data.fields?.findIndex(f => f.name === 'Collection') ?? -1;
