@@ -111,7 +111,7 @@ const result = await medley.requestAudioStream({
 // Pipe to another stream
 result.stream.pipe(/* destination */);
 
-// Or intercept data with `on` event
+// Or intercept data with `data` event
 result.stream.on('data', (buffer) => {
     // Do something with `buffer`
 });
