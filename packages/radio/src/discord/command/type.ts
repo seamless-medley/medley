@@ -7,7 +7,8 @@ import {
   AutocompleteInteraction,
   BaseInteraction,
   ButtonInteraction,
-  ChatInputCommandInteraction
+  ChatInputCommandInteraction,
+  Guild
 } from "discord.js";
 
 import { MedleyAutomaton } from "../automaton";
@@ -93,12 +94,17 @@ export type InteractionHandler<T extends BaseInteraction> = (interaction: T, ...
 
 export type InteractionHandlerFactory<T extends BaseInteraction> = (automaton: MedleyAutomaton) => InteractionHandler<T>;
 
+export type GuildHandler = (guild: Guild) => Promise<any>;
+
+export type GuildHandlerFactory = (automaton: MedleyAutomaton) => GuildHandler;
+
 export type CommandDescriptor = {
   declaration?: SubCommandLikeOption,
   createCommandHandler?: InteractionHandlerFactory<ChatInputCommandInteraction>;
   createButtonHandler?: InteractionHandlerFactory<ButtonInteraction>;
   createAutocompleteHandler?: InteractionHandlerFactory<AutocompleteInteraction>;
-  // TODO: guildCreation, guildDeletion handler
+  createOnGuildCreateHandler?: GuildHandlerFactory;
+  createOnGuildDeleteHandler?: GuildHandlerFactory;
 }
 
 export class CommandError extends Error { };

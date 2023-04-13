@@ -12,7 +12,7 @@ import history from './commands/history';
 import tune from './commands/tune';
 import latch from './commands/latch';
 
-import { Command, CommandError, CommandType, InteractionHandler, SubCommandLikeOption } from "./type";
+import { Command, CommandError, CommandType, GuildHandler, InteractionHandler, SubCommandLikeOption } from "./type";
 import { deny, isReplyable } from "./utils";
 import { MedleyAutomaton } from "../automaton";
 
@@ -44,20 +44,37 @@ type Handlers = {
   command?: InteractionHandler<ChatInputCommandInteraction>;
   button?: InteractionHandler<ButtonInteraction>;
   autocomplete?: InteractionHandler<AutocompleteInteraction>;
+  onGuildCreate?: GuildHandler;
+  onGuildDelete?: GuildHandler;
 }
 
 export const createInteractionHandler = (automaton: MedleyAutomaton) => {
   const baseCommand = automaton.baseCommand;
 
-  // TODO: Inform each command about guild creation and deletion
-
-  const handlers = new Map<string, Handlers>(map(descriptors, (desc, name) => [name.toLowerCase(), {
+  const commandHandlers = new Map<string, Handlers>(map(descriptors, (desc, name) => [name.toLowerCase(), {
     command: desc.createCommandHandler?.(automaton),
     button: desc.createButtonHandler?.(automaton),
-    autocomplete: desc.createAutocompleteHandler?.(automaton)
+    autocomplete: desc.createAutocompleteHandler?.(automaton),
+    onGuildCreate: desc.createOnGuildCreateHandler?.(automaton),
+    onGuildDelete: desc.createOnGuildDeleteHandler?.(automaton),
   }]));
 
   const logger = createLogger({ name: 'command' });
+
+  // Inform each command about guild creation and deletion
+  automaton.on('guildCreate', (guild) => {
+    for (const { onGuildCreate } of commandHandlers.values()) {
+      logger.debug('Calling onGuildCreate', onGuildCreate !== undefined, 'for', guild.name);
+      onGuildCreate?.(guild);
+    }
+  });
+
+  automaton.on('guildDelete', (guild) => {
+    for (const { onGuildDelete } of commandHandlers.values()) {
+      logger.debug('Calling onGuildCreate', onGuildDelete !== undefined, 'for', guild.name);
+      onGuildDelete?.(guild);
+    }
+  });
 
   return async (interaction: Interaction) => {
     if (interaction.user.bot) {
@@ -75,9 +92,9 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
 
         const groupOrCommand = (group || command).toLowerCase();
 
-        const handler = handlers.get(groupOrCommand);
+        const handlers = commandHandlers.get(groupOrCommand);
 
-        return await handler?.command?.(interaction);
+        return await handlers?.command?.(interaction);
       }
 
       if (interaction.isButton()) {
@@ -85,7 +102,7 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
 
         const [tag, ...params] = customId.split(':');
 
-        const handler = handlers.get(tag);
+        const handler = commandHandlers.get(tag);
 
         return await handler?.button?.(interaction, ...params);
       }
@@ -95,7 +112,7 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
           return;
         }
 
-        const handler = handlers.get(interaction.options.getSubcommand().toLowerCase());
+        const handler = commandHandlers.get(interaction.options.getSubcommand().toLowerCase());
 
         if (!handler) {
           interaction.respond([]);
