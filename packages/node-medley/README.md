@@ -7,12 +7,12 @@
 - [Installation](#installation)
 - [Getting started](#getting-started)
 - [Supported File Formats](#supported-file-formats)
-- TODO: Guide
-    - Getting available audio device
-    - Selecting audio device
-    - Null Audio device
-    - Dynamic queue
-    - Getting PCM stream
+- [Guide](#guide)
+    - [Getting available audio devices](#getting-available-audio-devices)
+    - [Selecting audio device](#selecting-audio-device)
+    - [Null Audio device](#null-audio-device)
+    - [Getting PCM data](#getting-pcm-data)
+    - [Dynamic queue](#dynamic-queue)
     - Getting metadata
     - Getting cover art and lyrics
     - Getting audio level information
@@ -64,6 +64,68 @@ medley.play();
 # Supported File Formats
 Currently, the supported file formats are limited to: `wav`, `aiff`, `mp3`, `ogg` and `flac`, but more formats might be added in the future.
 
+# Guide
+
+## Getting available audio devices
+
+Just use [getAvailableDevices](#getavailabledevices) method.
+
+## Selecting audio device
+
+Use data returned from [getAvailableDevices](#getavailabledevices) method with [setAudioDevice](#setaudiodevicedescriptor) method
+
+*Example:*
+```js
+// Use default device of the first type
+
+const allDevices = medley.getAvailableDevices();
+medley.setAudioDevice({
+    type: allDevices[0].type,
+    device: allDevices[0].defaultDevice
+});
+
+```
+
+## Null Audio device
+
+`node-medley` has a special audio device called `Null Device` which does not play sound to the actual audio device.
+
+This is useful when `node-medley` is being used in an environment without any audio devices installed.
+
+Or you simply because you just need to consume the PCM audio data without sending it to the actual audio device. see [requestAudioStream](#requestaudiostreamoptions) method.
+
+*Example:*
+```js
+medley.setAudioDevice({ type: 'Null', device: 'Null Device' });
+```
+
+## Getting PCM data
+
+```js
+// Request for signed 16 bit, little endian, 48000 sample rate audio stream
+const result = await medley.requestAudioStream({
+    format: 'Int16LE',
+    sampleRate: 48000
+});
+
+// Pipe to another stream
+result.stream.pipe(/* destination */);
+
+// Or intercept data with `on` event
+result.stream.on('data', (buffer) => {
+    // Do something with `buffer`
+});
+
+// When done, don't forget the delete the stream
+medley.deleteAudioStream(result.id);
+```
+
+## Dynamic queue
+
+Sometimes adding tracks to the queue upfront can cause [Musical Boredom](https://google.com/search?q=musical%20boredom), so let's make the queue dynamic.
+
+
+
 # API
 
 - [Medley](#medley-class)
@@ -97,7 +159,7 @@ Currently, the supported file formats are limited to: `wav`, `aiff`, `mp3`, `ogg
             - [unloaded](#unloaded)
             - [started](#started)
             - [finished](#finished)
-        - [enqueueNext](#enqueuenext)
+        - [enqueueNext](#enqueuenextdone)
         - [audioDeviceChanged]()
     - Static methods
         - [getInfo](#getinfo)
@@ -394,11 +456,23 @@ Emits when a Deck has finished playing.
 
 Emits when a Deck become the main playing Deck.
 
-## `enqueueNext`
+## `enqueueNext(done)`
 
 Emits when the playing queue is exhausted and need to be filled.
 
-TODO: Guide: Dynamic queue
+See [Dynamic quque](#dynamic-queue)
+
+*Parameter:*
+- `done` - Call this function in the event handler with `true` value to inform `node-medley` that at least a track has been added to the queue and should be loaded.
+
+*Example:*
+```js
+medley.on('enqueueNext', (done) => {
+    const newTrack = getNewFreshTrack(); // Your logic goes here
+    queue.add(newTrack);
+    done(true);
+});
+```
 
 ## `audioDeviceChanged`
 
@@ -457,7 +531,7 @@ The queue class provides tracks list to the [Medley](#medley-class) class.
 
 Create a new instance of the `Queue` class, an optional `tracks` is an array of tracks to initially fill the queue.
 
-The `Queue` class is dead simple, if you need more control over your tracks list, you must manage the list by yourself and provide a track when the `Medley` object requires one, see [Medley enqueueNext event](#)
+The `Queue` class is dead simple, if you need more control over your tracks list, you must manage the list by yourself and provide a track when the `Medley` object requires one, see [enqueueNext event](#enqueuenextdone)
 
 **Methods**
 
