@@ -1,0 +1,45 @@
+name: Build and publish a docker image
+
+on:
+  push:
+    branches:
+      - feature/dockerize
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Get image repository short commit
+        id: version
+        run: |
+          echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c 1-8)" >> $GITHUB_OUTPUT
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: true
+          tags: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.SHORT_SHA }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          labels: ${{ steps.meta.outputs.labels }}

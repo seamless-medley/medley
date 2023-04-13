@@ -25,7 +25,12 @@ export class Normal extends TrackMessageCreator {
     const cover = await createCoverImageAttachment(track);
 
     embed.setColor('Random');
-    embed.setAuthor({ name: station.name });
+    // TODO: move powered by medley to single point for easy manage
+    embed.setAuthor({
+      name: `${station.name} - [Powered by Medley]`,
+      url: "https://github.com/seamless-medley/medley",
+      iconURL: "https://cdn.discordapp.com/icons/1041934662425128990/6f7a1b9fb30a9722222ec8612eaf4f09.webp?size=96"
+    });
     embed.setDescription(`> ${data.description}`);
 
     for (const group of chunk(metadataFields, 2)) {
