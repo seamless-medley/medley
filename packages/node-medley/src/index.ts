@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { basename, dirname } from 'node:path';
 import { Readable } from 'stream';
-import type { AudioFormat, RequestAudioCallbackOptions, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult } from './index.d';
+import type { AudioFormat, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult } from './index.d';
 
 const nodeGypBuild = require('node-gyp-build');
 const module_id = process.env.MEDLEY_DEV ? dirname(__dirname) : __dirname;
@@ -105,21 +105,4 @@ Medley.prototype.deleteAudioStream = function(id: number) {
 
   result.stream.destroy();
   audioStreamResults.delete(id);
-}
-
-Medley.prototype.requestAudioCallback = function(options: RequestAudioCallbackOptions): RequestAudioResult {
-  const result = this['*$reqAudio'](options) as RequestAudioResult;
-  const streamId = result.id;
-  const bytesPerSample = formatToBytesPerSample(options.format);
-
-  const doConsume = async () => {
-    const consumingSize = (options.buffering || (options.sampleRate || 44100) * 0.01) * bytesPerSample * 2;
-    const buffer = await this['*$reqAudio$consume'](streamId, consumingSize) as Buffer;
-    await options.callback(buffer);
-    doConsume();
-  }
-
-  doConsume();
-
-  return result;
 }

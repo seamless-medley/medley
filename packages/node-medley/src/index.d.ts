@@ -59,12 +59,6 @@ export declare class Queue<T extends TrackInfo = TrackInfo> {
    */
   delete(from: number, count: number): void;
 
-  // /**
-  //  * Delete a track specified by `track`
-  //  * @param track
-  //  */
-  // delete(track: T): void;
-
   swap(index1: number, index2: number): void;
   move(currentIndex: number, newIndex: number): void;
 
@@ -180,8 +174,8 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
   set minimumLeadingToFade(value: number);
 
   /**
-   * Gain (in dB) to boost for tracks with ReplayGain, default to 9.0dB
-   * If the track has no ReplayGain metadata, this value is ignored.
+   * Gain (in dB) to boost for tracks having ReplayGain metadata embeded, default to 9.0dB
+   * If the a has no ReplayGain metadata, this value is ignored.
    *
    * @default 9.0
    */
@@ -235,8 +229,6 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   async requestAudioStream(options?: RequestAudioOptions): Promise<RequestAudioStreamResult>;
 
-  requestAudioCallback(options: RequestAudioCallbackOptions): RequestAudioResult;
-
   updateAudioStream(id: RequestAudioResult['id'], options: UpdateAudioStreamOptions): boolean;
 
   deleteAudioStream(id: number): void;
@@ -279,12 +271,12 @@ export type RequestAudioOptions = {
   bufferSize?: number;
 
   /**
-   * Number of frames to buffer before returning the buffered frames back to NodeJS stream
+   * Number of frames to buffer before returning the buffered frames back to Node.js stream
    *
    * Reducing this value will cause the stream to pump faster
    *
    * Setting this value to 0 may cause the underlying stream to return empty buffers
-   * which cause NodeJS to utilize more CPU cycles while waiting for data
+   * which cause Node.js to utilize more CPU cycles while waiting for data
    *
    * @default 10ms (sampleRate * 0.01)
    */
@@ -306,10 +298,6 @@ export type RequestAudioOptions = {
 }
 
 export type UpdateAudioStreamOptions = Partial<Pick<RequestAudioOptions, 'buffering' | 'gain'>>;
-
-export type RequestAudioCallbackOptions = RequestAudioOptions & {
-  callback: (buffer: Buffer) => Promise<any> | any;
-}
 
 export type RequestAudioResult = {
   readonly id: number;
