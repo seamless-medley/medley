@@ -353,7 +353,7 @@ Request for PCM audio data stream
 
 `options?` is an `object` with:
 
-- `sampleRate` **(number)** - Sample rate for the PCM data, if omitted, the default device's sample rate will be used
+- `sampleRate` *(number)* - Sample rate for the PCM data, if omitted, the default device's sample rate will be used
 
 - `format` - Audio sample format, possible values are:
     - `Int16LE` - 16 bit signed integer, little endian
@@ -361,33 +361,33 @@ Request for PCM audio data stream
     - `FloatLE` - 32 bit floating point, little endian
     - `FloatBE` - 32 bit floating point, big endian
 
-- `bufferSize` **(number)** - Maximun frames the internal buffer can hold, increase this value helps reduce stuttering in some situations
+- `bufferSize` *(number)* - Maximun frames the internal buffer can hold, increase this value helps reduce stuttering in some situations
     - Default value is 250ms (`sampleRate` * 0.25)
 
-- `buffering` **(number)**:
+- `buffering` *(number)*:
     - Number of frames to buffer before returning the buffered frames back to Node.js stream
     - Reducing this value will cause the stream to pump faster
     - Default value is 10ms  (`sampleRate` * 0.01)
 
-- `preFill` **(number)** - Optional number of frames to pre-fill into the stream right after requesting
+- `preFill` *(number)* - Optional number of frames to pre-fill into the stream right after requesting
 
-- `gain` **(number)** - utput gain, a floating point number ranging from 0 to 1
+- `gain` *(number)* - utput gain, a floating point number ranging from 0 to 1
 
 Returns a `Promise` of `object` with:
 
-- `id` **(number)** - The request id, use this value to update or delete the requested stream
+- `id` *(number)* - The request id, use this value to update or delete the requested stream
 
-- `channels` **(number)** - Number of audio channels, This is usuaully `2`
+- `channels` *(number)* - Number of audio channels, This is usuaully `2`
 
-- `originalSampleRate` **(number)** - Original sample rate in audio pipeline
+- `originalSampleRate` *(number)* - Original sample rate in audio pipeline
 
-- `sampleRate` **(number)** - Sample rate as requested
+- `sampleRate` *(number)* - Sample rate as requested
 
-- `bitPerSample` **(number)** - Bit per sample, depending on the `format`
+- `bitPerSample` *(number)* - Bit per sample, depending on the `format`
     - `16` - for `Int16LE` of `Int16BE`
     - `32` - for `FloatLE` of `FloatBE`
 
-- `stream` **(Readable)** - Readable stream, use this field to consume PCM data
+- `stream` *(Readable)* - Readable stream, use this field to consume PCM data
 
 ## `updateAudioStream(id, options)`
 
@@ -395,7 +395,7 @@ Update the requested audio stream specified by `id` returned from [requestAudioS
 
 `options` is an `object` with:
 
-- `gain` **(number)** - Output gain, a floating point number ranging from 0 to 1
+- `gain` *(number)* - Output gain, a floating point number ranging from 0 to 1
 
 - `buffering` - See [requestAudioStream](#requestaudiostreamoptions)
 
@@ -478,9 +478,9 @@ Returns an `object` with:
 
 With each channel having:
 
-- `magnitude` **(number)** - Audio level
+- `magnitude` *(number)* - Audio level
 
-- `peak` **(number)** - Holding peak
+- `peak` *(number)* - Holding peak
 
 ## reduction
 
@@ -496,12 +496,12 @@ Audio reduction occur during the internal audio processing
 
 *Parameters:*
 
-- `deckIndex` **(number)** - Deck index in which the event occur
+- `deckIndex` *(number)* - Deck index in which the event occur
 
 - `trackPlay` - An object describing detail of the play session for the Deck.
-    - `uuid` **(string)** - A unique string identifying the `trackPlay` itself
+    - `uuid` *(string)* - A unique string identifying the `trackPlay` itself
     - `track` - Track, see [TrackInfo](#trackinfo)
-    - `duration` **(nunber)** - Track duration
+    - `duration` *(number)* - Track duration
 
 ## `loaded`
 
@@ -577,11 +577,11 @@ Returns [Metadata](#metadata) for `path`
 
 Returns an `object` with:
 
-- `cover` **(Buffer)** - Cover art data
+- `cover` *(Buffer)* - Cover art data
 
-- `coverMimeType` **(string)** - Cover art mime type
+- `coverMimeType` *(string)* - Cover art mime type
 
-- `lyrics` **(string)** - Raw lyrics data
+- `lyrics` *(string)* - Raw lyrics data
 
 ## `Queue` class
 
@@ -641,13 +641,13 @@ Returns total number of tracks in the queue.
 
 A `TrackInfo` can be either a `string` to file path, or an `object` with:
 
-- `path` **(string)** - file path
+- `path` *(string)* - file path
 
-- `cueInPosition` **(number?)** - Start position of the track
+- `cueInPosition` *(number?)* - Start position of the track
 
-- `cueOutPosition` **(number?)** - Stop position of the track
+- `cueOutPosition` *(number?)* - Stop position of the track
 
-- `disableNextLeadIn` **(boolean?)**
+- `disableNextLeadIn` *(boolean?)*
     - Disable lead-in of the next track, useful for transiting from jingle/sweeper
     - The lead-in is the position where it is considered as the start singing point, usually presented in a track which has smooth/long beginning.
 
