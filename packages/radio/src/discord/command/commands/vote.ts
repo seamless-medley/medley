@@ -3,7 +3,7 @@ import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBu
 import { chain, isEqual, keyBy, noop, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
 import * as emojis from "../../emojis";
-import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { CommandDescriptor, GuildHandlerFactory, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { formatMention, guildStationGuard, joinStrings, makeRequestPreview, reply, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
@@ -29,6 +29,10 @@ const distinguishableEmojis = without(emojis.distinguishable, '🏁');
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = automaton => interaction => handleVoteCommand(automaton, interaction);
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = automaton => interaction => handleVoteCommand(automaton, interaction);
+
+const onGuildDelete: GuildHandlerFactory = () => async guild => {
+  guildVoteMessage.delete(guild.id);
+}
 
 async function handleVoteCommand(automaton: MedleyAutomaton, interaction: CommandInteraction | MessageComponentInteraction) {
   const { guildId, station } = guildStationGuard(automaton, interaction);
@@ -316,7 +320,8 @@ const previewTrack = ({ banner, emoji }: Nominatee) => `${emoji}   ${banner}`;
 const descriptor: CommandDescriptor = {
   declaration,
   createCommandHandler,
-  createButtonHandler
+  createButtonHandler,
+  createOnGuildDeleteHandler: onGuildDelete
 }
 
 export default descriptor;
