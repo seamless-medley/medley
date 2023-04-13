@@ -13,12 +13,12 @@
     - [Null Audio device](#null-audio-device)
     - [Getting PCM data](#getting-pcm-data)
     - [Dynamic queue](#dynamic-queue)
+    - [Check if a track is loadable](#check-if-a-track-is-loadable)
     - Getting metadata
     - Getting cover art and lyrics
     - Getting audio level information
-    - Check if track is loadable
-    - Custom transition point
     - Normalizing tracks audio level
+    - Custom transition point
 - [API](#api)
 
 # Features
@@ -122,9 +122,18 @@ medley.deleteAudioStream(result.id);
 
 ## Dynamic queue
 
-Sometimes adding tracks to the queue upfront can cause [Musical Boredom](https://google.com/search?q=musical%20boredom), so let's make the queue dynamic.
+Sometimes adding tracks to the queue upfront can cause [Musical Boredom](https://google.com/search?q=musical%20boredom), so let's make the queue dynamic by leveraging [enqueueNext event](#enqueuenextdone)
 
+*Example:*
+```js
+medley.on('enqueueNext', (done) => {
+    const newTrack = getNewFreshTrack(); // Your logic goes here
+    queue.add(newTrack);
+    done(true);
+});
+```
 
+## Check if a track is loadable
 
 # API
 
@@ -464,15 +473,6 @@ See [Dynamic quque](#dynamic-queue)
 
 *Parameter:*
 - `done` - Call this function in the event handler with `true` value to inform `node-medley` that at least a track has been added to the queue and should be loaded.
-
-*Example:*
-```js
-medley.on('enqueueNext', (done) => {
-    const newTrack = getNewFreshTrack(); // Your logic goes here
-    queue.add(newTrack);
-    done(true);
-});
-```
 
 ## `audioDeviceChanged`
 
