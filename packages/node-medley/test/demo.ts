@@ -1,8 +1,8 @@
 import { Medley, Queue } from '..';
 
 async function main() {
-  const q = new Queue();
-  let m = new Medley(q);
+  const queue = new Queue();
+  const medley = new Medley(queue);
 
   let index = 0;
 
@@ -13,31 +13,31 @@ async function main() {
     __dirname + '/bensound-dubstep.mp3'
   ];
 
-  m.on('enqueueNext', (done) => {
+  medley.on('enqueueNext', (done) => {
     const track = tracks[index];
     index = (index + 1) % tracks.length;
-    q.add(track);
+    queue.add(track);
 
     done(true);
   });
 
-  m.on('loaded', (deck) => {
-    console.log('Loaded', deck, m.getDeckMetadata(deck));
+  medley.on('loaded', (deck) => {
+    console.log('Loaded', deck, medley.getDeckMetadata(deck));
   });
 
-  m.on('unloaded', (deck) => {
+  medley.on('unloaded', (deck) => {
     console.log('Unloaded', deck);
   });
 
-  m.on('started', (deck) => {
+  medley.on('started', (deck) => {
     console.log('Started', deck);
   });
 
-  m.on('finished', (deck) => {
+  medley.on('finished', (deck) => {
     console.log('Finished', deck);
   });
 
-  m.play();
+  medley.play();
 }
 
 main();
