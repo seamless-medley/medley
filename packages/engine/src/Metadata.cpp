@@ -471,8 +471,6 @@ void medley::Metadata::CoverAndLyrics::readID3V2(const File& f, bool readCover, 
         if (readLyrics) {
             lyrics = readFirstUserTextIdentificationFrame(tag, L"LYRICS");
 
-            // TODO: UNSYNCED LYRICS
-
             if (lyrics.isEmpty()) {
                 const auto& usltFrames = tag.frameListMap()["USLT"];
                 if (!usltFrames.isEmpty()) {

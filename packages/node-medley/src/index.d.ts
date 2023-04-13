@@ -223,7 +223,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   getAudioDevice(): AudioDeviceDescriptor | undefined;
 
-  getDeckMetadata(index: DeckIndex): Metadata;
+  getDeckMetadata(index: DeckIndex): Metadata | undefined;
 
   getDeckPositions(index: DeckIndex): DeckPositions;
 

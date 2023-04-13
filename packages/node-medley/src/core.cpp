@@ -552,6 +552,10 @@ Napi::Value Medley::getDeckMetadata(const CallbackInfo& info) {
 
     auto& deck = (index == 0) ? engine->getDeck1() : (index == 1 ? engine->getDeck2() : engine->getDeck3());
 
+    if (!deck.isTrackLoaded()) {
+        return env.Undefined();
+    }
+
     auto metadata = deck.metadata();
     return createJSMetadata(env, metadata);
 }
