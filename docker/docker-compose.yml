@@ -22,7 +22,7 @@ services:
     depends_on:
       - mongo
   radio:
-    image: nexus.coke.fyi/medley/radio:latest
+    image: ghcr.io/seamless-medley/medley:latest
     build:
       dockerfile: docker/Dockerfile
       context: ../

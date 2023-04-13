@@ -51,7 +51,7 @@ RUN rm -rf /app/packages/radio/.env
 RUN npm i pnpm -g
 RUN pnpm config set -g virtual-store-dir "/node_modules"
 # RUN pnpm config set -g hoist false
-RUN --mount=type=cache,target=/cache,id=node_modules cp -rv /cache/* /node_modules
+RUN --mount=type=cache,target=/cache,id=node_modules cp -r /cache/* /node_modules
 
 WORKDIR /app/packages/radio
 
