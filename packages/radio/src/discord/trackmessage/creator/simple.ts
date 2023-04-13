@@ -24,7 +24,7 @@ export class Simple extends TrackMessageCreator {
     }
 
     if (playDuration > 0) {
-      // TODO: move powered by medley to single point for easy manage
+      // TODO: These could be configurable in station itself
       embed.setFooter({ text: `Duration: ${formatDuration(playDuration) ?? 'N/A'} - [Powered By Medley]` })
     }
 

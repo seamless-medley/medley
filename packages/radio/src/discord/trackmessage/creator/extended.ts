@@ -11,7 +11,7 @@ export class Extended extends Normal {
     const durationFieldIndex = embed.data.fields?.findIndex(f => f.name === 'Duration') ?? -1;
     if (durationFieldIndex > -1) {
       embed.spliceFields(durationFieldIndex, 1);
-      // TODO: move powered by medley to single point for easy manage
+      // TODO: These could be configurable in station itself
       embed.setFooter({ text: `🎧 Duration: ${formatDuration(playDuration) ?? 'N/A'} - [Powered By Medley]` });
     }
 
