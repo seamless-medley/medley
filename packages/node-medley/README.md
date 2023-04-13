@@ -65,35 +65,42 @@ Currently, the supported file formats are limited to: `wav`, `aiff`, `mp3`, `ogg
 # API
 
 - [Medley](#medley-class)
-    - [play](#playshouldfade--true)
-    - [stop](#stopshouldfade--true)
-    - [togglePause](#togglepauseshouldfade--true)
-    - [fadeOut](#fadeout)
-    - [seek](#seektime-deckindex)
-    - [seekFractional](#seekfractionalfraction-deckindex)
-    - [getDeckPositions](#getdeckpositionsdeckindex)
-    - [getDeckMetadata](#getdeckmetadatadeckindex)
-    - [getAvailableDevices](#getavailabledevices)
-    - [getAudioDevice](#getaudiodevice)
-    - [setAudioDevice](#setaudiodevicedescriptor)
-    - [playing](#playing)
-    - [paused](#paused)
-    - [volume](#volume)
-    - [fadingCurve](#fadingcurve)
-    - [maximumFadeOutDuration](#maximumfadeoutduration)
-    - [minimumLeadingToFade](#minimumleadingtofade)
-    - [replayGainBoost](#replaygainboost)
-    - [level](#level)
+    - Methods
+        - [play](#playshouldfade--true)
+        - [stop](#stopshouldfade--true)
+        - [togglePause](#togglepauseshouldfade--true)
+        - [fadeOut](#fadeout)
+        - [seek](#seektime-deckindex)
+        - [seekFractional](#seekfractionalfraction-deckindex)
+        - [getDeckPositions](#getdeckpositionsdeckindex)
+        - [getDeckMetadata](#getdeckmetadatadeckindex)
+        - [getAvailableDevices](#getavailabledevices)
+        - [getAudioDevice](#getaudiodevice)
+        - [setAudioDevice](#setaudiodevicedescriptor)
+        - [requestAudioStream](#requestaudiostreamoptions)
+        - [updateAudioStream](#updateaudiostreamid-options)
+        - [deleteAudioStream](#deleteaudiostreamid)
+    - Properties
+        - [playing](#playing)
+        - [paused](#paused)
+        - [volume](#volume)
+        - [fadingCurve](#fadingcurve)
+        - [maximumFadeOutDuration](#maximumfadeoutduration)
+        - [minimumLeadingToFade](#minimumleadingtofade)
+        - [replayGainBoost](#replaygainboost)
+        - [level](#level)
 - [Queue](#queue-class)
-    - [add](#addtrack)
-    - [insert](#insertindex-track)
-    - [delete](#deleteindex-count--1)
-    - [swap](#swapindex1-index2)
-    - [move](#movecurrentindex-newindex)
-    - [get](#getindex)
-    - [set](#setindex-track)
-    - [toArray](#toarray)
-    - [length](#length-property)
+    - Methods
+        - [add](#addtrack)
+        - [insert](#insertindex-track)
+        - [delete](#deleteindex-count--1)
+        - [swap](#swapindex1-index2)
+        - [move](#movecurrentindex-newindex)
+        - [get](#getindex)
+        - [set](#setindex-track)
+        - [toArray](#toarray)
+    - Properties
+        - [length](#length-property)
 
 ## `Medley` class
 
@@ -189,11 +196,67 @@ Returns `true` if some device is selected.
 
 > Use [getAudioDevice()](#getaudiodevice) to get the actual selected device.
 
-# TODO: requestAudioStream, requestAudioCallback, updateAudioStream, deleteAudioStream
+## `requestAudioStream(options?)`
+
+Request for PCM audio data stream
+
+`options?` is an `object` with:
+
+- `sampleRate` **(number)** - Sample rate for the PCM data, if omitted, the default device's sample rate will be used
+
+- `format` - Audio sample format, possible values are:
+    - `Int16LE` - 16 bit signed integer, little endian
+    - `Int16BE` - 16 bit signed integer, big endian
+    - `FloatLE` - 32 bit floating point, little endian
+    - `FloatBE` - 32 bit floating point, big endian
+
+- `bufferSize` **(number)** - Maximun frames the internal buffer can hold, increase this value helps reduce stuttering in some situations
+    - Default value is 250ms (`sampleRate` * 0.25)
+
+- `buffering` **(number)**:
+    - Number of frames to buffer before returning the buffered frames back to Node.js stream
+    - Reducing this value will cause the stream to pump faster
+    - Default value is 10ms  (`sampleRate` * 0.01)
+
+- `preFill` **(number)** - Optional number of frames to pre-fill into the stream right after requesting
+
+- `gain` **(number)** - utput gain, a floating point number ranging from 0 to 1
+
+Returns a `Promise` of `object` with:
+
+- `id` **(number)** - The request id, use this value to update or delete the requested stream
+
+- `channels` **(number)** - Number of audio channels, This is usuaully `2`
+
+- `originalSampleRate` **(number)** - Original sample rate in audio pipeline
+
+- `sampleRate` **(number)** - Sample rate as requested
+
+- `bitPerSample` **(number)** - Bit per sample, depending on the `format`
+    - `16` - for `Int16LE` of `Int16BE`
+    - `32` - for `FloatLE` of `FloatBE`
+
+- `stream` **(Readable)** - Readable stream, use this field to consume PCM data
+
+## `updateAudioStream(id, options)`
+
+Update the requested audio stream specified by `id` returned from [requestAudioStream](#requestaudiostreamoptions) method.
+
+`options` is an `object` with:
+
+- `gain` **(number)** - Output gain, a floating point number ranging from 0 to 1
+
+- `buffering` - See [requestAudioStream](#requestaudiostreamoptions)
+
+Returns `true` if succeeded.
+
+## `deleteAudioStream(id)`
+
+Delete the requested audio stream specified by `id` returned from [requestAudioStream](#requestaudiostreamoptions) method.
 
 **Properties**
 
-## playing
+## `playing`
 
 Type: `boolean`
 
@@ -201,7 +264,7 @@ Type: `boolean`
 
 Returns `true` if is playing, but not affected by the `paused` property.
 
-## paused
+## `paused`
 
 Type: `boolean`
 
@@ -209,7 +272,7 @@ Type: `boolean`
 
 Returns `true` if is playing but has been paused.
 
-## volume
+## `volume`
 
 Type: `number`
 
@@ -219,7 +282,7 @@ Audio volume in linear scale.
 
 `1` = 0dBFS
 
-## fadingCurve
+## `fadingCurve`
 
 Type: `number`
 
@@ -229,13 +292,13 @@ Maximum: `100`
 
 S-Curve value used for fading in/out.
 
-## maximumFadeOutDuration
+## `maximumFadeOutDuration`
 
 Type: `number`
 
 The maximum duration in seconds for the fade-out transition between tracks.
 
-## minimumLeadingToFade
+## `minimumLeadingToFade`
 
 Type: `number`
 
@@ -243,7 +306,7 @@ The duration in seconds at the beginning of a track to be considered as having a
 
 A track with a long intro will cause a fading-in to occur during transition.
 
-## replayGainBoost
+## `replayGainBoost`
 
 Type: `number`
 
@@ -253,7 +316,7 @@ Gain (in dB) to boost for tracks having ReplayGain metadata embeded, default to 
 
 If a track has no ReplayGain metadata, this value is ignored.
 
-## level
+## `level`
 
 **Read only**
 
@@ -345,7 +408,7 @@ Returns total number of tracks in the queue.
   - `originalArtist` *(string?)*
   - `bitrate` *(number?)* - in **Kbps**
   - `sampleRate` *(number?)* - in **Hz**
-  - `duration` *(number?)* - in **second**
+  - `duration` *(number?)* - in **seconds**
   - `trackGain` *(number?)* - [ReplayGain](https://en.wikipedia.org/wiki/ReplayGain) value in **dB (decibels)**, `0` means no `ReplayGain` value for this track
   - `bpm` *(number?)* - Beats Per Minute
   - `comments` *([string, string][])* - List of key/value pair for all user-defined comments
