@@ -89,6 +89,15 @@ Currently, the supported file formats are limited to: `wav`, `aiff`, `mp3`, `ogg
         - [minimumLeadingToFade](#minimumleadingtofade)
         - [replayGainBoost](#replaygainboost)
         - [level](#level)
+    - Events
+        - [Deck Events](#deck-events)
+            - [loaded](#loaded)
+            - [unloaded](#unloaded)
+            - [started](#started)
+            - [finished](#finished)
+        - [enqueueNext](#enqueuenext)
+        - [audioDeviceChanged]()
+
 - [Queue](#queue-class)
     - Methods
         - [add](#addtrack)
@@ -339,7 +348,53 @@ Returns audio reduction level in dB
 
 Audio reduction occur during the internal audio processing
 
-# TODO: Events
+**Events**
+
+## Deck events
+
+*Parameters:*
+
+- `deckIndex` **(number)** - Deck index in which the event occur
+
+- `trackPlay` - An object describing detail of the play session for the Deck.
+    - `uuid` **(string)** - A unique string identifying the `trackPlay` itself
+    - `track` - Track, see TODO: TrackInfo
+    - `duration` **(nunber)** - Track duration
+
+## `loaded`
+
+Emits when a track has been loaded into a Deck.
+
+## `loaded`
+
+Emits when a track has been loaded into a Deck.
+
+## `unloaded`
+
+Emits when a track has been unloaded from a Deck.
+
+## `started`
+
+Emits when a Deck has started playing.
+
+## `finished`
+
+Emits when a Deck has finished playing.
+
+## `mainDeckChanged`
+
+Emits when a Deck become the main playing Deck.
+
+## `enqueueNext`
+
+Emits when the playing queue is exhausted and need to be filled.
+
+TODO: Guide: Dynamic queue
+
+## `audioDeviceChanged`
+
+Emits when the audio device has changed, use [getAudioDevice](#getaudiodevice) method to get the audio device.
+
 
 # TODO: Static methods
 
