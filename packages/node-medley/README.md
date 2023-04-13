@@ -14,11 +14,11 @@
     - [Getting PCM data](#getting-pcm-data)
     - [Dynamic queue](#dynamic-queue)
     - [Check if a track is loadable](#check-if-a-track-is-loadable)
-    - Getting metadata
-    - Getting cover art and lyrics
-    - Getting audio level information
-    - Normalizing tracks audio level
-    - Custom transition point
+    - [Getting metadata](#getting-metadata)
+    - [Getting cover art and lyrics](#getting-cover-art-and-lyrics)
+    - [Reading audio level information](#reading-audio-level-information)
+    - [Normalizing tracks audio level](#normalizing-tracks-audio-level)
+    - [Custom transition point](#custom-transition-point)
 - [API](#api)
 
 # Features
@@ -134,6 +134,67 @@ medley.on('enqueueNext', (done) => {
 ```
 
 ## Check if a track is loadable
+
+Use [isTrackLoadable](#istrackloadabletrack) static method.
+
+## Getting metadata
+
+There are two ways of getting metada:
+
+1. From file path
+    - Use [getMetadata](#getmetadatapath) static method
+2. From a deck
+    - Use [getDeckMetadata](#getdeckmetadatadeckindex) method
+
+## Getting cover art and lyrics
+
+Use [getCoverAndLyrics](#getcoverandlyricspath) method.
+
+## Reading audio level information
+
+Real-time audio level information can be retrieved by using [level](#level) property.
+
+*Example:*
+```js
+// Reading audio level at 30 times per second rate
+setInterval(() => {
+    const audioLevel = medley.level;
+    // Use the returned value
+}, 1000 / 30);
+
+```
+
+## Normalizing tracks audio level
+
+[ReplayGain](https://en.wikipedia.org/wiki/ReplayGain) can be use to analyze for the adjustment to the perceived loudness of audio tracks.
+
+`node-medley` supports reading ReplayGain `Track-gain` metadata embeded in audio files.
+
+To embed it, you can use one of these [scanners](https://en.wikipedia.org/wiki/ReplayGain#Scanners).
+
+Usually, ReplayGain attenuates the played back audio, a `make-up` gain should be applied to boost the audio level back to the normalized level, you can change this `make-up` gain by changing the [replayGainBoost](#replaygainboost) property.
+
+The `make-up` gain will not cause clipping, because there is an audio limiter preventing that from happening in the audio pipline.
+
+## Custom transition point
+
+`node-medley` automatically analyze tracks to find audio positions in which it should start/stop playing and also the positions/durations the transition between track should occur.
+
+but, sometimes this may not be as intended, you can customize that by giving `node-medley` some hints.
+
+The hints can come from the metadata embed in the track itself using user-defined tag, here are the supported tags:
+
+- `CUE-IN` or `CUE_IN` - Start position of the track, in seconds
+    > This correspond to the [TrackInfo](#trackinfo) `cueInPosition` property.
+
+- `CUE-OUT` or `CUE_OUT` - Stop position of the track, in seconds
+    > This correspond to the [TrackInfo](#trackinfo) `cueOutPosition` property.
+
+Alternatively, you can provide that values when adding a track into the queue.
+
+See also:
+- [TrackInfo](#trackinfo)
+- [Queue::add](#addtrack)
 
 # API
 
