@@ -17,11 +17,11 @@ RUN pnpm config set -g virtual-store-dir "/node_modules"
 # RUN pnpm config set -g hoist false
 RUN pnpm config list
 # TODO: Install without devDependencies
-RUN --mount=type=cache,target=/cache,id=cache mkdir -p /cache/build && cp -rv /cache/build /app/packages/node-medley/build
+RUN --mount=type=cache,target=/cache,id=cache mkdir -p /cache/build && cp -r /cache/build /app/packages/node-medley/build
 RUN --mount=type=cache,target=/node_modules,id=node_modules pnpm install
 
 # store build cache
-RUN --mount=type=cache,target=/cache,id=cache cp -rv /app/packages/node-medley/build /cache
+RUN --mount=type=cache,target=/cache,id=cache cp -r /app/packages/node-medley/build /cache
 
 # TODO: proper generate application banner version (git short commit)
 RUN echo "---------------------------------------------------------" > version
@@ -45,8 +45,8 @@ COPY --from=builder /app /app
 
 WORKDIR /app
 # cleanup unnecessary files/folders
-RUN rm -rfv .git .github .dockerignore .editorconfig .gitignore
-RUN rm -rfv /app/packages/radio/.env
+RUN rm -rf .git .github .dockerignore .editorconfig .gitignore
+RUN rm -rf /app/packages/radio/.env
 
 RUN npm i pnpm -g
 RUN pnpm config set -g virtual-store-dir "/node_modules"
