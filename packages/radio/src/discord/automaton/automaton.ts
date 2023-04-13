@@ -640,6 +640,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       .filter((guildId): guildId is string => !!guildId);
   }
 
+
+  // TODO: Configurable
   #trackMessageCreator = makeCreator('extended');
   /**
    * Send to all guilds for a station
