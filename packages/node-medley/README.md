@@ -250,6 +250,7 @@ See also:
     - Properties
         - [length](#length-property)
 
+- [TrackInfo](#trackinfo)
 - [Metadata](#metadata)
 
 ## `Medley` class
