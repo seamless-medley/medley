@@ -92,7 +92,7 @@ medley.setAudioDevice({
 
 This is useful when `node-medley` is being used in an environment without any audio devices installed.
 
-Or you simply because you just need to consume the PCM audio data without sending it to the actual audio device. see [requestAudioStream](#requestaudiostreamoptions) method.
+Or simply because you just need to consume the PCM audio data without sending it to the actual audio device. see [requestAudioStream](#requestaudiostreamoptions) method.
 
 *Example:*
 ```js
