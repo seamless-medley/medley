@@ -101,7 +101,7 @@ jobs:
       - name: Build native
         working-directory: ./packages/node-medley
         run: |
-          pnpm run prebuild-$BUILD_ARCH
+          pnpm run prebuild
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
