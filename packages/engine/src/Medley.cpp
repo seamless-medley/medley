@@ -25,7 +25,7 @@ Medley::Medley(IQueue& queue)
     auto error = deviceMgr.initialiseWithDefaultDevices(0, 2);
 
     deviceMgr.addAudioDeviceType(std::make_unique<NullAudioDeviceType>());
-    
+
     if (error.isNotEmpty() || getCurrentAudioDevice() == nullptr) {
         setCurrentAudioDeviceType("Null");
         setAudioDeviceByIndex(0);
@@ -772,7 +772,9 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
 
     if (!outputStarted) {
         outputStarted = true;
+#ifdef DEBUG
         Logger::writeToLog("Output started");
+#endif
     }
 
     if (!stalled) {
