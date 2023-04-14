@@ -19,17 +19,6 @@
 - [Getting started](#getting-started)
 - [Supported File Formats](#supported-file-formats)
 - [Guide](#guide)
-    - [Getting available audio devices](#getting-available-audio-devices)
-    - [Selecting audio device](#selecting-audio-device)
-    - [Null Audio device](#null-audio-device)
-    - [Getting PCM data](#getting-pcm-data)
-    - [Dynamic queue](#dynamic-queue)
-    - [Check if a track is loadable](#check-if-a-track-is-loadable)
-    - [Getting metadata](#getting-metadata)
-    - [Getting cover art and lyrics](#getting-cover-art-and-lyrics)
-    - [Reading audio level information](#reading-audio-level-information)
-    - [Normalizing tracks audio level](#normalizing-tracks-audio-level)
-    - [Custom transition point](#custom-transition-point)
 - [API](#api)
 
 # Installation
@@ -64,6 +53,18 @@ medley.play();
 Currently, the supported file formats are limited to: `wav`, `aiff`, `mp3`, `ogg` and `flac`, but more formats might be added in the future.
 
 # Guide
+
+- [Getting available audio devices](#getting-available-audio-devices)
+- [Selecting audio device](#selecting-audio-device)
+- [Null Audio device](#null-audio-device)
+- [Getting PCM data](#getting-pcm-data)
+- [Dynamic queue](#dynamic-queue)
+- [Check if a track is loadable](#check-if-a-track-is-loadable)
+- [Getting metadata](#getting-metadata)
+- [Getting cover art and lyrics](#getting-cover-art-and-lyrics)
+- [Reading audio level information](#reading-audio-level-information)
+- [Normalizing tracks audio level](#normalizing-tracks-audio-level)
+- [Custom transition point](#custom-transition-point)
 
 ## Getting available audio devices
 
