@@ -10,7 +10,7 @@
   "scripts": {
     "clean": "turbo run clean",
     "build:radio": "turbo run build --filter=@seamless-medley/radio",
-    "build:radio:graph": "turbo run build --dry --filter=@seamless-medley/radio"
+    "combine-discord": "turbo run combine-discord --filter=@seamless-medley/radio"
   },
   "devDependencies": {
     "@types/copyfiles": "^2.4.1",
