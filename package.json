@@ -13,6 +13,7 @@
     "build:radio:graph": "turbo run build --dry --filter=@seamless-medley/radio"
   },
   "devDependencies": {
+    "@types/copyfiles": "^2.4.1",
     "@types/lodash": "^4.14.194",
     "@types/node": "^18.15.11",
     "copyfiles": "^2.4.1",
