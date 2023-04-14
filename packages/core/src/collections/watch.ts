@@ -191,7 +191,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       return;
     }
 
-    this.logger.debug('Watching', normalized);
+    this.logger.info('Watching', normalized);
 
     await this.scan(normalized);
     await this.subscribeToPath(normalized);

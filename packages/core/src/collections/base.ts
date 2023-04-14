@@ -127,7 +127,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
       ++this.shiftCounter;
 
       if (this.shiftCounter >= this.options.reshuffleEvery) {
-        this.logger.debug('Re-shuffle', this.options.reshuffleEvery);
+        this.logger.info('Re-shuffle', this.options.reshuffleEvery);
 
         this.shiftCounter = 0;
         this.shuffle();
@@ -217,7 +217,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     }
 
     const indexes = mapped.map(t => this.indexOf(t));
-    this.logger.debug('New tracks added', mapped.length);
+    this.logger.info('New tracks added', mapped.length);
     this.emit('tracksAdd', mapped, indexes);
   }
 

@@ -196,12 +196,10 @@ export class Station extends TypedEmitter<StationEvents> {
     this.noRequestSweeperOnIdenticalCollection = options.noRequestSweeperOnIdenticalCollection ?? true;
 
     this.logger = createLogger({ name: `station/${this.id}`});
-    this.logger.debug('Creating station');
+    this.logger.info('Creating station');
 
     this.queue = new Queue();
-    this.logger.debug('Queue created');
     this.medley = new Medley(this.queue);
-    this.logger.debug('Medley engine created');
 
     if (options.useNullAudioDevice ?? true) {
       const dev = this.getCurrentAudioDevice();
