@@ -15,8 +15,7 @@
   "license": "AGPL-3.0",
   "main": "src/server/main.ts",
   "scripts": {
-    "clean": "rimraf .turbo dist",
-    "copy-native": "copyfiles --up 4 ../node-medley/build/Release/medley.node build/Release/ || true",
+    "clean": "rimraf .turbo dist combine",
     "rebuild-opus-electron": "tsx scripts/rebuild-opus-electron",
     "dev:react": "vite --port 9586 --host",
     "dev:server-electron": "cross-env DEBUG=1 ELECTRON_RUN_AS_NODE=1 electron --require ts-node/register -- src/server/main.ts",

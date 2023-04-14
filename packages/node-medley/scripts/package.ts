@@ -1,6 +1,7 @@
 import { PackageJson } from 'type-fest';
-import mkdirp from 'mkdirp';
 import fs from 'fs';
+import { mkdirp } from 'mkdirp';
+// TODO: Use fs-extra
 
 async function transform() {
   const p = require('../package.json') as Required<PackageJson>;
