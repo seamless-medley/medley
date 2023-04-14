@@ -24,7 +24,7 @@
   },
   "gypfile": true,
   "scripts": {
-    "install": "cross-env JOBS=max node-gyp-build",
+    "install": "node-gyp-build",
     "clean": "rimraf .turbo build out dist",
     "compile": "node-gyp configure && node-gyp build",
     "build": "npm-run-all clean --parallel build:*",
