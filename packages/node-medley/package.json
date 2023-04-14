@@ -25,7 +25,6 @@
   "main": "src/index.ts",
   "types": "src/index.d.ts",
   "scripts": {
-    "install": "node-gyp-build",
     "clean": "rimraf .turbo build out dist",
     "build": "tsc",
     "prebuild": "cross-env JOBS=max prebuildify -t 16.0.0 --napi --strip",

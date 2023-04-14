@@ -9,7 +9,7 @@ async function transform() {
   p.types = 'index.d.ts';
 
   p.scripts = {
-    install: p.scripts.install
+    install: 'node-gyp-build'
   }
 
   delete p.gypfile;
