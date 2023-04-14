@@ -1,5 +1,4 @@
-import { CoverAndLyrics, getTrackBanner, lyricsToText, parseLyrics, StationTrack } from "@seamless-medley/core";
-import { MetadataHelper } from "@seamless-medley/core/src/metadata";
+import { CoverAndLyrics, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics, StationTrack } from "@seamless-medley/core";
 import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";

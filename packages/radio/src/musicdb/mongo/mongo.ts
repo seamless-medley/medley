@@ -1,5 +1,4 @@
-import { MusicDb, MusicDbTrack, SearchHistory, TrackHistory } from "@seamless-medley/core";
-import { WorkerPoolAdapter } from "@seamless-medley/core/src/worker_pool_adapter";
+import { MusicDb, MusicDbTrack, SearchHistory, TrackHistory, WorkerPoolAdapter } from "@seamless-medley/core";
 import { MongoClientOptions } from "mongodb";
 
 export type Options = {
