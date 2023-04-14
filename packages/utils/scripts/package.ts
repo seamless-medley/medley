@@ -1,6 +1,6 @@
 import { PackageJson } from 'type-fest';
 import { mapValues, omit } from 'lodash';
-import mkdirp from 'mkdirp';
+import { mkdirp } from 'mkdirp';
 import fs from 'fs';
 
 async function transform() {
