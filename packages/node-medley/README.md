@@ -2,8 +2,19 @@
 
 `node-medley` is a Node.js native module built on top of [JUCE](https://github.com/juce-framework/JUCE) framework to provide audio playback to either an audio output device or [Node.js stream](https://nodejs.org/api/stream.html)
 
+# Features
+- Cross-platform
+- Seamless playback
+- Nice transition between tracks, with customizable transition point
+- Track metadata reading, including cover art and lyrics
+- ReplayGain support
+- Audio level normalization (in conjunction with ReplayGain)
+- Built-in audio limiter
+- Audio level measurement
+- Play directly to audio device
+- Consume PCM data directly from audio pipeline via Node.js stream
+
 # Table of contents
-- [Features](#features)
 - [Installation](#installation)
 - [Getting started](#getting-started)
 - [Supported File Formats](#supported-file-formats)
@@ -20,18 +31,6 @@
     - [Normalizing tracks audio level](#normalizing-tracks-audio-level)
     - [Custom transition point](#custom-transition-point)
 - [API](#api)
-
-# Features
-- Cross-platform
-- Seamless playback
-- Nice transition between tracks, with customizable transition point
-- Track metadata reading, including cover art and lyrics
-- ReplayGain support
-- Audio level normalization (in conjunction with ReplayGain)
-- Built-in audio limiter
-- Audio level measurement
-- Play directly to audio device
-- Consume PCM data directly from audio pipeline via Node.js stream
 
 # Installation
 
