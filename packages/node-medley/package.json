@@ -4,7 +4,8 @@
   "version": "0.2.4",
   "author": {
     "name": "Wittawas Nakkasem",
-    "email": "vittee@hotmail.com"
+    "email": "vittee@hotmail.com",
+    "url": "https://github.com/vittee"
   },
   "license": "GPL-3.0",
   "keywords": [
@@ -16,13 +17,13 @@
     "gapless",
     "segue"
   ],
-  "homepage": "https://github.com/seamless-medley/medley",
+  "homepage": "https://github.com/seamless-medley/medley/tree/main/packages/node-medley",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seamless-medley/medley.git"
+  },
   "main": "src/index.ts",
   "types": "src/index.d.ts",
-  "dependencies": {
-    "node-gyp-build": "^4.6.0"
-  },
-  "gypfile": true,
   "scripts": {
     "install": "node-gyp-build",
     "clean": "rimraf .turbo build out dist",
@@ -37,6 +38,10 @@
     "bump-version": "tsx scripts/bump.ts",
     "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts",
     "demo-electron": "cross-env MEDLEY_DEV=1 ELECTRON_RUN_AS_NODE=1 electron --require ts-node/register test/demo.ts"
+  },
+  "gypfile": true,
+  "dependencies": {
+    "node-gyp-build": "^4.6.0"
   },
   "devDependencies": {
     "@types/semver": "^7.3.13",
