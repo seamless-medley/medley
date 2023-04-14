@@ -12,7 +12,7 @@
   "dependencies": {
     "@parcel/watcher": "^2.1.0",
     "@seamless-medley/medley": "0.3.0",
-    "@seamless-medley/utils": "workspace:../utils",
+    "@seamless-medley/utils": "../utils",
     "@types/workerpool": "^6.4.0",
     "fast-glob": "^3.2.11",
     "lodash": "^4.17.21",
@@ -28,7 +28,6 @@
     "workerpool": "^6.4.0"
   },
   "devDependencies": {
-    "@types/lodash": "^4.14.176",
     "@types/normalize-path": "^3.0.0",
     "@types/string-similarity": "^4.0.0",
     "@types/which": "^3.0.0"
