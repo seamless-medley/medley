@@ -25,6 +25,7 @@
     "debug:bot": "cross-env DEBUG=1 tsx --inspect --trace-warnings src/discord/bot_main.ts",
     "poc:icy": "cross-env tsx watch src/poc-icy.ts",
     "poc:shout": "cross-env tsx watch src/poc-shout.ts",
+    "combine-discord": "tsx scripts/combine-discord.ts",
     "build": "tsc --build",
     "vb": "vite build"
   },

@@ -2,7 +2,12 @@
   "extends": ["//"],
   "pipeline": {
     "build": {
-      "dependsOn": ["@seamless-medley/core#build"]
+      "dependsOn": ["@seamless-medley/core#build"],
+      "outputs": ["dist/**"]
+    },
+    "combine-discord": {
+      "dependsOn": ["build"],
+      "outputs": ["combine/discord/**"]
     }
   }
 }
