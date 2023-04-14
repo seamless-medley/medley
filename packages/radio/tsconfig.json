@@ -3,7 +3,7 @@
     "target": "es2021",
     "module": "commonjs",
     "jsx": "react-jsx",
-    "allowJs": false,
+    "allowJs": true,
     "strict": true,
     "experimentalDecorators": true,
     "esModuleInterop": true,
