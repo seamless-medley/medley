@@ -9,6 +9,8 @@ import { loadConfig } from "./config";
 import { ZodError } from "zod";
 import normalizePath from "normalize-path";
 
+// TODO: Catch signals
+
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);
 });
