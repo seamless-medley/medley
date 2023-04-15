@@ -1,9 +1,38 @@
 import { PackageJson } from 'type-fest';
-import fs from 'fs';
-import { mkdirp } from 'mkdirp';
-// TODO: Use fs-extra
+import { emptyDir, copy, outputJson, existsSync, exists } from 'fs-extra';
+import { stubFalse } from 'lodash';
 
-async function transform() {
+async function main() {
+  if (!existsSync('out')) {
+    console.error('Invoke `pnpm run build` first');
+    return;
+  };
+
+  const prebuildStatus = await Promise.all(
+    ['win32-x64', 'linux-x64', 'darwin-x64', 'darwin-arm64']
+      .map(async p => [p, await exists(`prebuilds/${p}`).catch(stubFalse)] as [string, boolean])
+  );
+
+  const missingPrebuilds = prebuildStatus
+    .filter(([name, found]) => !found)
+    .map(([name]) => name);
+
+  if (missingPrebuilds.length) {
+    console.error('Missing prebuilds:', missingPrebuilds);
+    return;
+  }
+
+  await emptyDir('dist');
+
+  const copyTasks = [
+    copy('out', 'dist/'),
+    copy('src/index.d.ts', 'dist/index.d.ts'),
+    copy('prebuilds', 'dist/prebuilds'),
+    copy('README.md', 'dist/README.md')
+  ];
+
+  await Promise.all(copyTasks);
+
   const p = require('../package.json') as Required<PackageJson>;
 
   p.main = 'index.js';
@@ -14,9 +43,7 @@ async function transform() {
   delete p.gypfile;
   delete (p as any).devDependencies;
 
-  await mkdirp('dist');
-
-  return JSON.stringify(p, null, 2);
+  await outputJson('dist/package.json', p, { spaces: 2 });
 }
 
-transform().then(s => fs.createWriteStream('dist/package.json').write(s));
+main();
