@@ -51,8 +51,8 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
       '@seamless-medley/medley':
-        specifier: 0.3.0
-        version: 0.3.0
+        specifier: 0.3.1
+        version: 0.3.1
       '@seamless-medley/utils':
         specifier: ../utils
         version: link:../utils
@@ -103,7 +103,7 @@ importers:
         specifier: ^6.4.0
         version: 6.4.0
       node-gyp-build:
-        specifier: 4.6.0
+        specifier: ^4.6.0
         version: 4.6.0
 
   packages/node-medley:
@@ -2590,9 +2590,8 @@ packages:
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
     dev: false
 
-  /@seamless-medley/medley@0.3.0:
-    resolution: {integrity: sha512-n9oxxRBs+v3zKhH5Q/d1zDOOQalgdlmsSvqrFhXSLd9wQfERUmmdMela0UzKsKwrREu0IKDHAAn75zLLCPKu3Q==}
-    requiresBuild: true
+  /@seamless-medley/medley@0.3.1:
+    resolution: {integrity: sha512-VfkW79O5EAZ9X/O8WfDaVvNuJdr3cXOlh/VoL6vBdcdaDsoImXKJbtWycUVbkLKAi3cLSLeGG396xrqCoOIJGQ==}
     dependencies:
       node-gyp-build: 4.6.0
     dev: false
