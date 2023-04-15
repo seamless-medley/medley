@@ -1,7 +1,7 @@
 {
   "name": "@seamless-medley/medley",
   "description": "Audio engine for Node.js, with built-in \"radio like\" gapless/seamless playback",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "Wittawas Nakkasem",
     "email": "vittee@hotmail.com",
@@ -18,10 +18,7 @@
     "segue"
   ],
   "homepage": "https://github.com/seamless-medley/medley/tree/main/packages/node-medley",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/seamless-medley/medley.git"
-  },
+  "repository": "https://github.com/seamless-medley/medley",
   "main": "src/index.ts",
   "types": "src/index.d.ts",
   "scripts": {
