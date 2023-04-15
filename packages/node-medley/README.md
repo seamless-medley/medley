@@ -32,6 +32,24 @@ npm i @seamless-medley/medley
 ```sh
 pnpm add @seamless-medley/medley
 ```
+
+### **Linux**:
+
+The following libraries are required for `node-medley` to load:
+
+- [TagLib](https://taglib.org/)
+- [libsamplerate](https://github.com/libsndfile/libsamplerate)
+- libasound
+- freetype
+- curl
+
+Make sure those libraries are installed on user's machine before using `node-medley`.
+
+> **On Ubuntu**
+```bash
+apt install libtag1v5 libsamplerate0 libasound2 libfreetype6 libcurl4
+```
+
 # Getting started
 
 ```ts
