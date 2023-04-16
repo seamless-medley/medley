@@ -44,8 +44,5 @@
       "@floating-ui/react-dom-interactions": "*",
       "@npmcli/move-file": "*"
     }
-  },
-  "dependencies": {
-    "npm-run-all2": "^6.0.5"
   }
 }
