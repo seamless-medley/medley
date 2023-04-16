@@ -69,7 +69,8 @@ jobs:
       - name: Dependencies (Linux)
         if: contains(matrix.build-arch, 'linux')
         run: |
-          sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
+          sudo apt -y update
+          sudo apt -y install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
 
       - name: Get brew directory
         id: brew-cache
