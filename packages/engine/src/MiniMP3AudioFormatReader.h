@@ -20,6 +20,8 @@ private:
     static size_t ioRead(void* buf, size_t size, void* user_data);
     static int ioSeek(uint64_t position, void* user_data);
 
+    bool opened = false;
+
     mp3dec_ex_t dec{};
     mp3dec_io_t io{};
 

@@ -16,8 +16,13 @@ MiniMP3AudioFormatReader::MiniMP3AudioFormatReader(InputStream* const in)
     io.seek = &ioSeek;
     io.seek_data = this;
 
-    mp3dec_ex_open_cb(&dec, &io, MP3D_SEEK_TO_SAMPLE);
+    auto ret = mp3dec_ex_open_cb(&dec, &io, MP3D_SEEK_TO_SAMPLE);
 
+    if (ret != 0) {
+        return;
+    }
+
+    opened = true;
     bitsPerSample = 32;
     usesFloatingPointData = true;
     sampleRate = dec.info.hz;
@@ -34,23 +39,27 @@ MiniMP3AudioFormatReader::MiniMP3AudioFormatReader(InputStream* const in)
 
 bool MiniMP3AudioFormatReader::readSamples(int** destSamples, int numDestChannels, int startOffsetInDestBuffer, int64 startFrameInFile, int numFrames)
 {
+    if (!opened) {
+        return false;
+    }
+
     if (numFrames > frameBufferSize) {
         frameBufferSize = numFrames;
         reallocBuffer();
     }
-    
+
 
     if (currentPosition != startFrameInFile) {
         if (mp3dec_ex_seek(&dec, startFrameInFile * numChannels) == 0) {
             currentPosition = dec.cur_sample / numChannels;
         }
     }
-    
+
     auto framesRead = mp3dec_ex_read(&dec, buffer, numFrames * numChannels) / numChannels;
 
     auto dst = (float**)destSamples;
 
-    if (framesRead > 0) {        
+    if (framesRead > 0) {
         AudioDataConverters::deinterleaveSamples(buffer, dst, framesRead, numChannels);
     }
 
