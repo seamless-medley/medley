@@ -17,6 +17,18 @@
         "infra",
         "platform"
       ]
+    },
+    {
+      "login": "visualizeq",
+      "name": "Coke",
+      "avatar_url": "https://avatars.githubusercontent.com/u/396689?v=4",
+      "profile": "https://github.com/visualizeq",
+      "contributions": [
+        "code",
+        "ideas",
+        "infra",
+        "platform"
+      ]
     }
   ],
   "contributorsPerLine": 7,
