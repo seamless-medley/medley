@@ -13,7 +13,7 @@
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/vittee"><img src="https://avatars.githubusercontent.com/u/403872?v=4?s=100" width="100px;" alt="Wittawas Nakkasem"/><br /><sub><b>Wittawas Nakkasem</b></sub></a><br /><a href="https://github.com/seamless-medley/medley/commits?author=vittee" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/vittee"><img src="https://avatars.githubusercontent.com/u/403872?v=4?s=100" width="100px;" alt="Wittawas Nakkasem"/><br /><sub><b>Wittawas Nakkasem</b></sub></a><br /><a href="https://github.com/seamless-medley/medley/commits?author=vittee" title="Code">💻</a> <a href="#ideas-vittee" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-vittee" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#platform-vittee" title="Packaging/porting to new platform">📦</a></td>
     </tr>
   </tbody>
 </table>
