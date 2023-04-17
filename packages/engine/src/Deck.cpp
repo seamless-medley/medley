@@ -197,7 +197,6 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
             leadingDuration = firstAudibleSamplePosition / reader->sampleRate;
         }
 
-        leadingDuration = ((leadingSamplePosition > -1) ? leadingSamplePosition - firstAudibleSamplePosition : firstAudibleSamplePosition) / reader->sampleRate;
         if (leadingDuration < 0) {
             leadingDuration = 0;
         }
