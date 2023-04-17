@@ -24,7 +24,7 @@
   "scripts": {
     "clean": "rimraf build out dist",
     "build": "tsc",
-    "prebuild": "cross-env JOBS=max prebuildify -t 16.0.0 --napi --strip",
+    "prebuild": "cross-env JOBS=max prebuildify -t 16.0.0 --tag-libc --napi --strip",
     "package": "tsx scripts/package.ts",
     "pack:readme": "copyfiles README.md dist",
     "bump-version": "tsx scripts/bump.ts",
