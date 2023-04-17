@@ -148,7 +148,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     trailingSamplePosition = -1;
     trailingDuration = 0;
 
-    auto playDuration = getEndPosition() - firstAudibleSamplePosition;
+    auto playDuration = (totalSourceSamplesToPlay - firstAudibleSamplePosition) / newReader->sampleRate;
 
     // If no cue in provided
     if (providedCueIn < 0)
