@@ -2,7 +2,7 @@ import { MetadataFields } from "@seamless-medley/core";
 import { APIEmbedField } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
 import { formatDuration, formatMention } from "../../command/utils";
-import { formatSpotifyField, metadataFields } from "../spotify";
+import { formatSpotifyField, metadataFields } from "../fields";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
 const emptyField = { name: '\u200B', value: '\u200B', inline: true };
