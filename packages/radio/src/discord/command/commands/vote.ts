@@ -224,11 +224,6 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
         time: ttl
       });
 
-      // TODO: Move below event registration
-      for (const emoji of take(collectibleEmojis, peeking.length)) {
-        await msg.react(emoji!).catch(noop);
-      }
-
       reactionCollector.on('collect', handleCollect);
       reactionCollector.on('remove', handleCollect);
       reactionCollector.on('end', async (collected, reason) => {
@@ -307,6 +302,10 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
           station.unlockRequests(requestLock);
         }
       });
+
+      for (const emoji of take(collectibleEmojis, peeking.length)) {
+        await msg.react(emoji!).catch(noop);
+      }
     }
   }
   catch(e) {
