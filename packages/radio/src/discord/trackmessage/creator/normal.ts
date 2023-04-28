@@ -2,15 +2,11 @@ import { MetadataFields } from "@seamless-medley/core";
 import { APIEmbedField } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
 import { formatDuration, formatMention } from "../../command/utils";
+import { formatSpotifyField, metadataFields } from "../spotify";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
 const emptyField = { name: '\u200B', value: '\u200B', inline: true };
 const emptyRows = Array(3).fill(0).map<APIEmbedField>(_ => emptyField);
-
-const spotifyMarkdownLink = (q: string) => `[${q}](https://open.spotify.com/search/${encodeURIComponent(q)})`;
-
-const spotifySearchFields: MetadataFields[] = ['artist', 'album', 'albumArtist', 'originalArtist'];
-const metadataFields: MetadataFields[] = spotifySearchFields;
 
 const fieldCaptionFuncs: Partial<Record<MetadataFields, () => any>> = {
   bpm: upperCase,
@@ -39,7 +35,7 @@ export class Normal extends TrackMessageCreator {
           return val && !isEmpty(val)
             ? ({
               name: (fieldCaptionFuncs[field] ?? startCase)(field),
-              value: `> ${spotifySearchFields.includes(field) ? spotifyMarkdownLink(val) : val}`,
+              value: `> ${formatSpotifyField(field, val)}`,
               inline: true
             })
             : undefined

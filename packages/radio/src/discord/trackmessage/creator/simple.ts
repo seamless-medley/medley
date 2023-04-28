@@ -1,5 +1,4 @@
 import { getTrackBanner } from "@seamless-medley/core";
-import { formatDuration } from "../../command/utils";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
 export class Simple extends TrackMessageCreator {
