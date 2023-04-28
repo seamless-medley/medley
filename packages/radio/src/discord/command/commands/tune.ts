@@ -9,7 +9,8 @@ import {
   ComponentType,
   MessageActionRowComponentBuilder,
   StringSelectMenuBuilder,
-  StringSelectMenuInteraction
+  StringSelectMenuInteraction,
+  SelectMenuComponentOptionData
 } from "discord.js";
 import { stubTrue } from "lodash";
 
@@ -49,15 +50,22 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
     const ok = await automaton.ensureGuildState(guildId).tune(station);
 
     if (ok) {
+      const embed = new EmbedBuilder()
+        .setColor('Random')
+        .setTitle('Tuned In')
+        .addFields({
+          name: 'Station',
+          value: station.url ? `[${station.name}](${station.url})` : station.name
+        });
+
+      if (station.iconURL) {
+        embed.setThumbnail(station.iconURL);
+      }
+
       await reply(interaction, {
         content: null,
         components: [],
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Random')
-            .setTitle('Tuned In')
-            .addFields({ name: 'Station', value: ok.name })
-        ]
+        embeds: [embed]
       });
 
       return true;
@@ -84,7 +92,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
 
   const issuer = interaction.user.id;
 
-  const listing = stations.map(station => ({
+  const listing = stations.map<SelectMenuComponentOptionData>(station => ({
     label: station.name,
     value: station.id,
     description: station.description,

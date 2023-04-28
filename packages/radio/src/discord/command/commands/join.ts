@@ -63,15 +63,22 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   }
 
   const createEmbed = () => {
-    const stationName = state.tunedStation?.name;
-
     const embed = new EmbedBuilder()
       .setColor('Random')
       .setTitle('Joined')
       .addFields({ name: 'Channel', value: channel?.toString() });
 
-    if (stationName) {
-      embed.addFields({ name: 'Station', value: stationName });
+    const { tunedStation } = state;
+
+    if (tunedStation?.iconURL) {
+      embed.setThumbnail(tunedStation.iconURL);
+    }
+
+    if (tunedStation?.name) {
+      embed.addFields({
+        name: 'Station',
+        value: tunedStation?.url ? `[${tunedStation.name}](${tunedStation.url})` : tunedStation.name
+      });
     }
 
     return embed;
