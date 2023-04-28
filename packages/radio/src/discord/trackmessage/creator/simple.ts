@@ -4,7 +4,7 @@ import { createCoverImageAttachment, CreateTrackMessageOptionsEx, getEmbedDataFo
 
 export class Simple extends TrackMessageCreator {
   protected async doCreate(options: CreateTrackMessageOptionsEx) {
-    const { station, embed, track, playDuration } = options;
+    const { station, embed, track } = options;
 
     embed.setAuthor({ name: station.name });
 
@@ -21,11 +21,6 @@ export class Simple extends TrackMessageCreator {
 
     if (cover) {
       embed.setThumbnail(cover?.url);
-    }
-
-    if (playDuration > 0) {
-      // TODO: These could be configurable in station itself
-      embed.setFooter({ text: `Duration: ${formatDuration(playDuration) ?? 'N/A'} - [Powered By Medley]` })
     }
 
     return {

@@ -26,10 +26,9 @@ export class Normal extends TrackMessageCreator {
 
     embed.setColor('Random');
     embed.setAuthor({
-      // TODO: These could be configurable in station itself
-      name: `${station.name} - [Powered by Medley]`,
-      url: "https://github.com/seamless-medley/medley",
-      iconURL: "https://cdn.discordapp.com/icons/1041934662425128990/6f7a1b9fb30a9722222ec8612eaf4f09.webp?size=96"
+      name: station.name,
+      url: station.url,
+      iconURL: station.iconURL
     });
     embed.setDescription(`> ${data.description}`);
 
@@ -54,10 +53,21 @@ export class Normal extends TrackMessageCreator {
       }
     }
 
-    embed.addFields(
-      { name: 'Duration', value: `**\`${formatDuration(playDuration) ?? 'N/A'}\`**`, inline: true },
-      { name: 'Collection', value: data.collection, inline: true, }
-    );
+    const durationText = formatDuration(playDuration);
+
+    if (durationText) {
+      embed.addFields({
+        name: 'Duration 🎧',
+        value: `**\`${durationText}\`**`,
+        inline: true
+      })
+    }
+
+    embed.addFields({
+      name: 'Collection',
+      value: data.collection,
+      inline: true,
+    });
 
     if (data.latch) {
       const { order, session } = data.latch;
@@ -74,6 +84,11 @@ export class Normal extends TrackMessageCreator {
     if (cover) {
       embed.setThumbnail(cover.url);
     }
+
+    embed.setFooter({
+      text: 'Powered by Medley',
+      iconURL: 'https://cdn.discordapp.com/emojis/1101521522830618624?size=96'
+    });
 
     return {
       ...options,

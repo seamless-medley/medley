@@ -72,6 +72,9 @@ export const StationConfig = z.object({
   name: z.string().nonempty(),
   description: z.string(),
 
+  url: z.string().nonempty().optional(),
+  iconURL: z.string().nonempty().optional(),
+
   maxTrackHistory: z.number().optional(),
   artistBacklog: z.union([
     z.number(),

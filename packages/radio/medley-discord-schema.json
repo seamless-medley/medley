@@ -80,6 +80,14 @@
           "type": "string",
           "description": "Station description"
         },
+        "url": {
+          "type": "string",
+          "description": "Station URL"
+        },
+        "iconURL": {
+          "type": "string",
+          "description": "Station URL for icon"
+        },
         "maxTrackHistory": {
           "type": "integer",
           "description": "Number of tracks to keep in history",
