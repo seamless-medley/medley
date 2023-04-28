@@ -53,20 +53,9 @@ export class Normal extends TrackMessageCreator {
       }
     }
 
-    const durationText = formatDuration(playDuration);
-
-    if (durationText) {
-      embed.addFields({
-        name: 'Duration 🎧',
-        value: `**\`${durationText}\`**`,
-        inline: true
-      })
-    }
-
     embed.addFields({
       name: 'Collection',
-      value: data.collection,
-      inline: true,
+      value: data.collection
     });
 
     if (data.latch) {
@@ -85,10 +74,20 @@ export class Normal extends TrackMessageCreator {
       embed.setThumbnail(cover.url);
     }
 
-    embed.setFooter({
-      text: 'Powered by Medley',
-      iconURL: 'https://cdn.discordapp.com/emojis/1101521522830618624?size=96'
+    embed.addFields({
+      name: 'Powered by',
+      value: '> <:medley:1101521522830618624> [**Medley**](https://github.com/seamless-medley/medley)'
     });
+
+    const durationText = formatDuration(playDuration);
+
+    if (durationText) {
+      embed.setFooter({
+        text: `🎧 Duration: ${durationText}`
+      })
+    }
+
+    embed.setTimestamp(new Date());
 
     return {
       ...options,
