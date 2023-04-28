@@ -6,7 +6,11 @@ export class Simple extends TrackMessageCreator {
   protected async doCreate(options: CreateTrackMessageOptionsEx) {
     const { station, embed, track } = options;
 
-    embed.setAuthor({ name: station.name });
+    embed.setAuthor({
+      name: station.name,
+      url: station.url,
+      iconURL: station.iconURL
+    });
 
     const data = getEmbedDataForTrack(track, ['artist']);
     const banner = getTrackBanner(track);

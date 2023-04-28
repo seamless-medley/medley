@@ -24,13 +24,13 @@ export class Normal extends TrackMessageCreator {
     const data = getEmbedDataForTrack(track, metadataFields);
     const cover = await createCoverImageAttachment(track);
 
-    embed.setColor('Random');
-    embed.setAuthor({
-      name: station.name,
-      url: station.url,
-      iconURL: station.iconURL
-    });
-    embed.setDescription(`> ${data.description}`);
+    (embed)
+      .setAuthor({
+        name: station.name,
+        url: station.url,
+        iconURL: station.iconURL
+      })
+      .setDescription(`> ${data.description}`);
 
     for (const group of chunk(metadataFields, 2)) {
       const fields = group.map<APIEmbedField | undefined>(field => {

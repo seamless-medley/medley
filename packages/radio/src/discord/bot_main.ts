@@ -181,12 +181,13 @@ async function main() {
   const stationRepo = new StationRegistry(...stations);
 
   const automatons = await Promise.all(Object.entries(configs.automatons).map(
-    ([id, { botToken, clientId, baseCommand }]) => new Promise<MedleyAutomaton>(async (resolve) => {
+    ([id, { botToken, clientId, baseCommand, ...config }]) => new Promise<MedleyAutomaton>(async (resolve) => {
       const automaton = new MedleyAutomaton(stationRepo, {
         id,
         botToken,
         clientId,
-        baseCommand
+        baseCommand,
+        trackMessage: config.trackMessage
       });
 
       logger.info('OAUthURL', automaton.oAuth2Url.toString());

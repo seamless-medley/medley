@@ -33,7 +33,8 @@ import { TrackMessage, TrackMessageStatus } from "../trackmessage/types";
 import { trackMessageToMessageOptions } from "../trackmessage";
 import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
 import { AudioDispatcher } from "../../audio/exciter";
-import { makeCreator } from "../trackmessage/creator";
+import { CreatorNames, makeCreator } from "../trackmessage/creator";
+import { TrackMessageCreator } from "../trackmessage/creator/base";
 
 export type MedleyAutomatonOptions = {
   id: string;
@@ -47,10 +48,18 @@ export type MedleyAutomatonOptions = {
   botToken: string;
   owners?: Snowflake[];
 
-  /**
-   * @default 3
-   */
-  maxTrackMessages?: number;
+
+  trackMessage?: {
+    /**
+     * @default extended
+     */
+    type?: CreatorNames;
+
+    /**
+     * @default 3
+     */
+    max?: number;
+  }
 }
 
 export type UpdateTrackMessageOptions = {
@@ -100,6 +109,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #audioDispatcher: AudioDispatcher;
 
+  #trackMessageCreator: TrackMessageCreator;
+
   constructor(readonly stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
     super();
 
@@ -109,7 +120,9 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.botToken = options.botToken;
     this.clientId = options.clientId;
     this.owners = options.owners || [];
-    this.maxTrackMessages = options.maxTrackMessages ?? 3;
+    this.maxTrackMessages = options.trackMessage?.max ?? 3;
+    this.#trackMessageCreator = makeCreator(options.trackMessage?.type ?? 'extended');
+
     this.#baseCommand = options.baseCommand || 'medley';
 
     this.#audioDispatcher = new AudioDispatcher();
@@ -643,9 +656,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       .filter((guildId): guildId is string => !!guildId);
   }
 
-
-  // TODO: Configurable
-  #trackMessageCreator = makeCreator('extended');
   /**
    * Send to all guilds for a station
    */
