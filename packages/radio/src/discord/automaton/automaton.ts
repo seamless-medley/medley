@@ -181,6 +181,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       station.on('trackFinished', this.handleTrackFinished);
       station.on('collectionChange', this.handleCollectionChange(station));
     }
+
+    this.#logger.info('OAUthURL', this.oAuth2Url.toString());
   }
 
   get client() {

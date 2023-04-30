@@ -192,8 +192,6 @@ async function main() {
         trackMessage: config.trackMessage
       });
 
-      logger.info('OAUthURL', automaton.oAuth2Url.toString());
-
       automaton.once('ready', () => resolve(automaton));
 
       await automaton.login();
