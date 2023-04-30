@@ -26,6 +26,8 @@ export type TrackCollectionBasicOptions = {
   noFollowOnRequest?: boolean;
 
   auxiliary?: boolean;
+
+  logPrefix?: string;
 }
 
 export type TrackCollectionOptions<T extends Track<any>> = TrackCollectionBasicOptions & {
@@ -65,7 +67,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
   extra: Extra;
 
   protected logger = createLogger({
-    name: `collection/${this.id}`
+    name: ['collection', this.options.logPrefix, this.id].filter(s => !!s).join('/'),
   });
 
   constructor(readonly id: string, extra: Extra, public options: TrackCollectionOptions<T> = {}) {

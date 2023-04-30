@@ -111,25 +111,25 @@ async function main() {
   });
 
   const stations = await Promise.all(
-    Object.entries(configs.stations).map(([id, stationConfig]) => new Promise<Station>(async (resolve) => {
+    Object.entries(configs.stations).map(([stationId, stationConfig]) => new Promise<Station>(async (resolve) => {
       const { intros, requestSweepers, musicCollections, sequences, sweeperRules, ...config } = stationConfig;
 
-      logger.info('Constructing station:', id);
+      logger.info('Constructing station:', stationId);
 
       const introCollection = intros ? (() => {
-        const collection = new TrackCollection('$_intros', undefined);
+        const collection = new TrackCollection('$_intros', undefined, { logPrefix: stationId });
         collection.add(shuffle(intros));
         return collection;
       })() : undefined;
 
       const requestSweeperCollection = requestSweepers ? (() => {
-        const collection = new TrackCollection('$_req_sweepers', undefined);
+        const collection = new TrackCollection('$_req_sweepers', undefined, { logPrefix: stationId });
         collection.add(shuffle(requestSweepers));
         return collection;
       })() : undefined;
 
       const station = new Station({
-        id,
+        id: stationId,
         ...config,
         intros: introCollection,
         requestSweepers: requestSweeperCollection,
@@ -140,13 +140,14 @@ async function main() {
         if (!desc.auxiliary) {
           await station.addCollection({
             id,
-            ...desc
+            ...desc,
+            logPrefix: stationId
           });
         }
       }
 
       station.updateSequence(sequences.map((s, index) => ({
-        crateId: `${index}`,
+        crateId: `${stationId}/${index}`,
         ...s
       })));
 
@@ -154,7 +155,7 @@ async function main() {
         from: rule.from,
         to: rule.to,
         collection: (() => {
-          const c = new WatchTrackCollection(rule.path, undefined);
+          const c = new WatchTrackCollection(rule.path, undefined, { logPrefix: stationId });
           c.watch(normalizePath(rule.path));
 
           return c;
@@ -167,7 +168,8 @@ async function main() {
         if (desc.auxiliary) {
           await station.addCollection({
             id,
-            ...desc
+            ...desc,
+            logPrefix: stationId
           });
 
           await breath();
