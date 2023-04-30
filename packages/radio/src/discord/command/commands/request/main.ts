@@ -175,7 +175,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
   const ttl = 90_000;
 
-  const getTimeout = () => `Request Timeout: ${formatTime(Date.now() + ttl, 'R')}`;
+  const getTimeout = () => `Request Timeout: ${formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')}`;
 
   const buildSearchResultMenu = (page: number): InteractionReplyOptions => {
     const components: MessageActionRowComponentBuilder[] = [cancelButtonBuilder];
@@ -254,7 +254,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       });
 
       await interaction.update({
-        content: `Request accepted: ${inlineCode(bold(getTrackBanner(ok.track)))}`,
+        content: `Request accepted: ${bold(inlineCode(getTrackBanner(ok.track)))}`,
         components: []
       });
 

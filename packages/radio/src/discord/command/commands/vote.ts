@@ -82,7 +82,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
 
     const ttl = 90_000;
 
-    const getTimeout = () => `Vote Timeout: ${formatTime(Date.now() + ttl, 'R')}`;
+    const getTimeout = () => `Vote Timeout: ${formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')}`;
 
     const createMessageContent = () => chain(nominatees)
       .sortBy(
