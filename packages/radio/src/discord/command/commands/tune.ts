@@ -15,7 +15,7 @@ import {
 import { stubTrue } from "lodash";
 
 import { MedleyAutomaton } from "../../automaton";
-import { formatMention } from "../../format/format";
+import { formatMarkdownLink, formatMention } from "../../format/format";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { reply, deny, guildIdGuard, permissionGuard, makeColoredMessage } from "../utils";
 
@@ -56,7 +56,7 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
         .setTitle('Tuned In')
         .addFields({
           name: 'Station',
-          value: station.url ? `[${station.name}](${station.url})` : station.name
+          value: station.url ? formatMarkdownLink(station.name, station.url) : station.name
         });
 
       if (station.iconURL) {

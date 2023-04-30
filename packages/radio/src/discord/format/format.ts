@@ -18,3 +18,5 @@ export const formatDuration = (seconds: number) => seconds > 0
     .join(':')
   : undefined
 
+export const formatMarkdownLink = (caption: string, href: string) => `[${caption}](${href})`;
+

@@ -1,7 +1,7 @@
 import { MetadataFields } from "@seamless-medley/core";
 import { APIEmbedField } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
-import { formatDuration, formatMention } from "../../format/format";
+import { formatDuration, formatMarkdownLink, formatMention } from "../../format/format";
 import { formatSpotifyField, metadataFields } from "../fields";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
@@ -72,7 +72,7 @@ export class Normal extends TrackMessageCreator {
 
     embed.addFields({
       name: 'Powered by',
-      value: '> <:medley:1101521522830618624> [**Medley**](https://github.com/seamless-medley/medley)'
+      value: `> <:medley:1101521522830618624> ${formatMarkdownLink('**Medley**', 'https://github.com/seamless-medley/medley')}`
     });
 
     const durationText = formatDuration(playDuration);

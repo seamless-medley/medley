@@ -1,6 +1,7 @@
 import { BoomBoxCoverAnyLyrics, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics, StationTrack } from "@seamless-medley/core";
 import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder } from "discord.js";
 import { findLast } from "lodash";
+import { formatMarkdownLink } from "../../format/format";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
 import { deny, guildStationGuard, joinStrings, reply, warn } from "../utils";
 
@@ -94,7 +95,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
           { name: 'Requested by', value: `${interaction.member}`, inline: true },
           {
             name: 'Source',
-            value: lyricsSource.href ? `[${lyricsSource.text}](${lyricsSource.href})` : lyricsSource.text,
+            value: lyricsSource.href ? formatMarkdownLink(lyricsSource.text, lyricsSource.href) : lyricsSource.text,
             inline: true
           }
         )
