@@ -1,5 +1,5 @@
 import { BoomBoxCoverAnyLyrics, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics, StationTrack } from "@seamless-medley/core";
-import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder, hyperlink } from "discord.js";
+import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder, hyperlink, messageLink, inlineCode } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
 import { deny, guildStationGuard, joinStrings, reply, warn } from "../utils";
@@ -25,14 +25,9 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   const banner = getTrackBanner(track);
 
   if (trackMsg?.lyricMessage) {
-    const referringMessage = await trackMsg.lyricMessage.reply({
-      content: `${interaction.member} Lyrics for \`${banner}\` is right here ↖`,
-    });
+    const { id: messageId, channelId } = trackMsg.lyricMessage;
 
-    setTimeout(() => referringMessage.delete(), 10_000);
-
-    await interaction.reply('.');
-    await interaction.deleteReply();
+    await interaction.reply(`${interaction.member} Lyrics for ${inlineCode(banner)} is right here: ${messageLink(channelId, messageId, guildId)}`)
     return;
   }
 
