@@ -78,7 +78,7 @@ export class Normal extends TrackMessageCreator {
 
     embed.addFields({
       name: 'Powered by',
-      value: quote(`${formatEmoji('1101521522830618624')} ${hyperlink(bold('Medley'), 'https://github.com/seamless-medley/medley')}`)
+      value: quote(`${formatEmoji('1101521522830618624')} ${hyperlink(bold('Medley'), 'https://github.com/seamless-medley/medley', "GitHub project")}`)
     });
 
     const durationText = formatDuration(playDuration);
