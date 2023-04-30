@@ -200,11 +200,34 @@
           "minLength": 1,
           "default": "medley"
         },
-        "maxTrackMessages": {
-          "type": "integer",
-          "description": "Number of last messages to be kept in a guild",
-          "minimum": 0,
-          "default": 3
+        "trackMessage": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "default": "extended",
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "normal"
+                },
+                {
+                  "type": "string",
+                  "const": "extended"
+                },
+                {
+                  "type": "string",
+                  "const": "simple"
+                }
+              ]
+            },
+            "max": {
+              "type": "integer",
+              "description": "Number of last messages to be kept in a guild",
+              "minimum": 0,
+              "default": 3
+            }
+          },
+          "additionalProperties": false
         }
       },
       "required": ["clientId", "botToken"],
