@@ -9,8 +9,6 @@ import { loadConfig } from "./config";
 import { ZodError } from "zod";
 import normalizePath from "normalize-path";
 
-// TODO: Catch signals
-
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);
 });
@@ -18,11 +16,6 @@ process.on('uncaughtException', (e) => {
 process.on('unhandledRejection', (e) => {
   console.error('Rejection', e);
 });
-
-type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicDb'> & {
-  intros?: string[];
-  requestSweepers?: string[];
-};
 
 ////////////////////////////////////////////////////////////////////////////////////
 
@@ -206,6 +199,10 @@ async function main() {
   }
 
   logger.info('Started');
+
+  process.on('SIGINT', () => {
+    process.exit(0);
+  });
 }
 
 main();
