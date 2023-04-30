@@ -196,6 +196,3 @@ export const lyricsToText = (lyrics: Lyrics, removeEmptyLine: boolean = true) =>
   const texts = lyrics.timeline.map(({ text }) => text);
   return removeEmptyLine ? texts.filter(text => !!text) : texts;
 }
-
-// TODO: Implement a new function searchLyrics with the same functionality as https://github.com/alias-rahil/lyrics-searcher/blob/main/src/lib/index.ts
-// but with `iconv-lite` in place of `iconv`, `zod` in plcce of `joi`

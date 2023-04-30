@@ -1,4 +1,4 @@
-import { CoverAndLyrics, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics, StationTrack } from "@seamless-medley/core";
+import { BoomBoxCoverAnyLyrics, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics, StationTrack } from "@seamless-medley/core";
 import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
@@ -38,43 +38,46 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
 
   const trackExtra = track.extra;
 
-  let lyricsText: string | undefined = undefined;
-  let source = 'N/A';
+  const { lyrics: lyricsText, lyricsSource } = await new Promise<BoomBoxCoverAnyLyrics>(async (resolve) => {
+    const bbCoverAndLyrics = await (trackExtra?.maybeCoverAndLyrics ?? MetadataHelper.coverAndLyrics(track.path));
 
-  const { lyrics, cover, coverMimeType } = await (trackExtra?.maybeCoverAndLyrics ?? MetadataHelper.coverAndLyrics(track.path));
+    if (bbCoverAndLyrics?.lyrics) {
+      const parsed = parseLyrics(bbCoverAndLyrics.lyrics);
 
-  if (lyrics) {
-    const parsed = parseLyrics(lyrics);
-
-    lyricsText = parsed.timeline.length > 0
-      ? joinStrings(lyricsToText(parsed, false))
-      : lyrics.trim();
-
-    source = 'metadata';
-
-  } else if (trackExtra?.tags) {
-    const artist = trackExtra.tags.artist;
-    const title = trackExtra.tags.title;
-
-    if (artist && title) {
-      await interaction.deferReply();
-
-      trackExtra.maybeCoverAndLyrics = new Promise<CoverAndLyrics>(async (resolve) => {
-        const lyrics = await MetadataHelper.searchLyrics(artist, title).catch(() => undefined);
-
-        resolve({
-          cover: cover ?? Buffer.alloc(0),
-          coverMimeType: coverMimeType ?? '',
-          lyrics: lyrics ?? ''
-        });
+      resolve({
+        ...bbCoverAndLyrics,
+        lyrics: parsed.timeline.length > 0
+          ? joinStrings(lyricsToText(parsed, false))
+          : bbCoverAndLyrics.lyrics.trim()
       });
 
-      lyricsText = (await trackExtra.maybeCoverAndLyrics).lyrics;
-      if (lyricsText) {
-        source = 'Google';
+      return;
+    }
+
+    if (trackExtra?.tags) {
+      const artist = trackExtra.tags.artist;
+      const title = trackExtra.tags.title;
+
+      if (artist && title) {
+        await interaction.deferReply();
+
+        const lyrics = await MetadataHelper.searchLyrics(artist, title).catch(() => undefined);
+
+        const searchedCoverAndLyrics: BoomBoxCoverAnyLyrics = {
+          cover: bbCoverAndLyrics?.cover ?? Buffer.alloc(0),
+          coverMimeType: bbCoverAndLyrics?.coverMimeType ?? '',
+          lyrics: lyrics?.lyrics?.join('\n') ?? '',
+          lyricsSource: lyrics?.source ?? { text: 'N/A' }
+        };
+
+        trackExtra.maybeCoverAndLyrics = Promise.resolve(searchedCoverAndLyrics);
+        resolve(searchedCoverAndLyrics);
+        return;
       }
     }
-  }
+
+    resolve(bbCoverAndLyrics);
+  })
 
   if (!lyricsText) {
     warn(interaction, 'No lyrics');
@@ -89,7 +92,11 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
         .setDescription(banner)
         .addFields(
           { name: 'Requested by', value: `${interaction.member}`, inline: true },
-          { name: 'Source', value: source, inline: true }
+          {
+            name: 'Source',
+            value: lyricsSource.href ? `[${lyricsSource.text}](${lyricsSource.href})` : lyricsSource.text,
+            inline: true
+          }
         )
     ],
     files: [

@@ -4,6 +4,7 @@ import { Track } from '../track';
 import { WorkerPoolAdapter } from '../worker_pool_adapter';
 import { MusicDb } from '../library/music_db';
 import { omitBy, negate } from 'lodash/fp';
+import { BoomBoxCoverAnyLyrics } from '../playout';
 
 let instance: MetadataHelper;
 
@@ -23,9 +24,9 @@ export type FetchResult = {
 
 interface Methods {
   metadata(path: string): Metadata | undefined;
-  coverAndLyrics(path: string): WorkerCoverAndLyrics | CoverAndLyrics;
+  coverAndLyrics(path: string): WorkerCoverAndLyrics | BoomBoxCoverAnyLyrics;
   isTrackLoadable(path: string): boolean;
-  searchLyrics(artist: string, title: string): string;
+  searchLyrics(artist: string, title: string): { lyrics: string[], source: BoomBoxCoverAnyLyrics['lyricsSource'] } | undefined;
 }
 
 export class MetadataHelper extends WorkerPoolAdapter<Methods> {
@@ -58,16 +59,22 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
 
   async coverAndLyrics(path: string) {
     return this.runIfNeeded(`coverAndLyrics:${path}`, async () => {
+      const lyricsSource = { text: 'Metadata' };
+
       const result = await this.exec('coverAndLyrics', path);
 
       if (Buffer.isBuffer(result.cover)) {
-        return result as CoverAndLyrics;
+        return {
+          ...result,
+          lyricsSource
+        } as BoomBoxCoverAnyLyrics
       }
 
       return {
         ...result,
+        lyricsSource,
         cover: Buffer.from(isUint8Array(result.cover) ? result.cover : result.cover.data)
-      }
+      } as BoomBoxCoverAnyLyrics
     })
   }
 

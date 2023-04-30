@@ -24,9 +24,16 @@ export enum TrackKind {
   Insertion
 }
 
+export type BoomBoxCoverAnyLyrics = CoverAndLyrics & {
+  lyricsSource: {
+    text: string;
+    href?: string
+  }
+}
+
 export type BoomBoxTrackExtra = TrackExtra & {
   tags?: Metadata;
-  maybeCoverAndLyrics?: Promise<CoverAndLyrics>;
+  maybeCoverAndLyrics?: Promise<BoomBoxCoverAnyLyrics>;
   kind: TrackKind;
 }
 
