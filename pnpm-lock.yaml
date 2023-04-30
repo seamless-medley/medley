@@ -53,8 +53,8 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
       '@seamless-medley/medley':
-        specifier: 0.3.1
-        version: 0.3.1
+        specifier: 0.3.3
+        version: 0.3.3
       '@seamless-medley/utils':
         specifier: ../utils
         version: link:../utils
@@ -321,7 +321,7 @@ importers:
         version: 23.0.0
       vite:
         specifier: 4.0.3
-        version: 4.0.3
+        version: 4.0.3(@types/node@18.15.11)
 
   packages/utils:
     dependencies:
@@ -2585,8 +2585,8 @@ packages:
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
     dev: false
 
-  /@seamless-medley/medley@0.3.1:
-    resolution: {integrity: sha512-VfkW79O5EAZ9X/O8WfDaVvNuJdr3cXOlh/VoL6vBdcdaDsoImXKJbtWycUVbkLKAi3cLSLeGG396xrqCoOIJGQ==}
+  /@seamless-medley/medley@0.3.3:
+    resolution: {integrity: sha512-JMeBobX0bHhyqP2JsDyfDB8ZqfFkQ7RaDubwhKzKKTgUXVigvF65GaWEUDlMlFdZjp8rSNQRqdqOdIsfiNq7bQ==}
     dependencies:
       node-gyp-build: 4.6.0
     dev: false
@@ -2846,7 +2846,7 @@ packages:
       '@babel/plugin-transform-react-jsx-source': 7.19.6(@babel/core@7.21.4)
       magic-string: 0.27.0
       react-refresh: 0.14.0
-      vite: 4.0.3
+      vite: 4.0.3(@types/node@18.15.11)
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -5971,7 +5971,7 @@ packages:
     engines: {node: '>= 0.8'}
     dev: false
 
-  /vite@4.0.3:
+  /vite@4.0.3(@types/node@18.15.11):
     resolution: {integrity: sha512-HvuNv1RdE7deIfQb8mPk51UKjqptO/4RXZ5yXSAvurd5xOckwS/gg8h9Tky3uSbnjYTgUm0hVCet1cyhKd73ZA==}
     engines: {node: ^14.18.0 || >=16.0.0}
     hasBin: true
@@ -5996,6 +5996,7 @@ packages:
       terser:
         optional: true
     dependencies:
+      '@types/node': 18.15.11
       esbuild: 0.16.17
       postcss: 8.4.21
       resolve: 1.22.2
