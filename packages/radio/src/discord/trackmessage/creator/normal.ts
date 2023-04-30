@@ -2,7 +2,7 @@ import { MetadataFields } from "@seamless-medley/core";
 import { APIEmbedField, bold, formatEmoji, hyperlink, quote, userMention } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
 import { formatDuration } from "../../format/format";
-import { formatSpotifyField, metadataFields } from "../fields";
+import { extractSpotifyMetadata, formatSpotifyField, metadataFields, spotifyURI } from "../fields";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
 const emptyField = { name: '\u200B', value: '\u200B', inline: true };
@@ -18,6 +18,7 @@ export class Normal extends TrackMessageCreator {
     const { station, embed, guildId, track, playDuration, requestedBy } = options;
 
     const data = getEmbedDataForTrack(track, metadataFields);
+    const spotifyMetadata = extractSpotifyMetadata(track);
     const cover = await createCoverImageAttachment(track);
 
     (embed)
@@ -26,7 +27,11 @@ export class Normal extends TrackMessageCreator {
         url: station.url,
         iconURL: station.iconURL
       })
-      .setDescription(quote(data.description));
+      .setDescription(quote(
+        spotifyMetadata.track
+          ? spotifyURI(data.description, 'track', spotifyMetadata.track, "More about this track on Spotify")
+          : data.description
+      ));
 
     for (const group of chunk(metadataFields, 2)) {
       const fields = group.map<APIEmbedField | undefined>(field => {
@@ -35,7 +40,7 @@ export class Normal extends TrackMessageCreator {
           return val && !isEmpty(val)
             ? ({
               name: (fieldCaptionFuncs[field] ?? startCase)(field),
-              value: quote(formatSpotifyField(field, val)),
+              value: quote(formatSpotifyField(field, val, spotifyMetadata[field])),
               inline: true
             })
             : undefined
@@ -53,6 +58,7 @@ export class Normal extends TrackMessageCreator {
       name: 'Collection',
       value: data.collection
     });
+
 
     if (data.latch) {
       const { order, session } = data.latch;
