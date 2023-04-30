@@ -1,5 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder, PermissionsBitField } from "discord.js";
-import { formatMarkdownLink } from "../../format/format";
+import { ChatInputCommandInteraction, EmbedBuilder, hyperlink, PermissionsBitField } from "discord.js";
 import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deny, guildIdGuard, permissionGuard, reply } from "../utils";
 import { createStationSelector } from "./tune";
@@ -78,7 +77,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     if (tunedStation?.name) {
       embed.addFields({
         name: 'Station',
-        value: tunedStation?.url ? formatMarkdownLink(tunedStation.name, tunedStation.url) : tunedStation.name
+        value: tunedStation?.url ? hyperlink(tunedStation.name, tunedStation.url) : tunedStation.name
       });
     }
 

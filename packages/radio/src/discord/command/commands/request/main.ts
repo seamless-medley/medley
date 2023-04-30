@@ -17,7 +17,11 @@ import {
   InteractionReplyOptions,
   StringSelectMenuBuilder,
   StringSelectMenuInteraction,
-  PermissionsBitField
+  PermissionsBitField,
+  bold,
+  inlineCode,
+  userMention,
+  time as formatTime
 } from "discord.js";
 
 import { chain, chunk, clamp, Dictionary, groupBy, identity, isNull, noop, sample, sortBy, truncate, zip } from "lodash";
@@ -25,7 +29,7 @@ import { parse as parsePath, extname } from 'path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
-import { formatMention, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
+import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
 import { ansi } from "../../../format/ansi";
 import { getVoteMessage } from "../vote";
 
@@ -171,7 +175,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
   const ttl = 90_000;
 
-  const getTimeout = () => `Request Timeout: <t:${Math.trunc((Date.now() + ttl) / 1000)}:R>`;
+  const getTimeout = () => `Request Timeout: ${formatTime(Date.now() + ttl, 'R')}`;
 
   const buildSearchResultMenu = (page: number): InteractionReplyOptions => {
     const components: MessageActionRowComponentBuilder[] = [cancelButtonBuilder];
@@ -250,7 +254,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       });
 
       await interaction.update({
-        content: `Request accepted: **\`${getTrackBanner(ok.track)}\`**`,
+        content: `Request accepted: ${inlineCode(bold(getTrackBanner(ok.track)))}`,
         components: []
       });
 
@@ -286,7 +290,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
       if (user.id !== issuer) {
         collected.reply({
-          content: `Sorry, this selection is for ${formatMention('user', issuer)} only`,
+          content: `Sorry, this selection is for ${userMention(issuer)} only`,
           ephemeral: true
         });
         return;

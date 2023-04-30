@@ -1,4 +1,5 @@
 import { getTrackBanner } from "@seamless-medley/core";
+import { bold, quote } from "discord.js";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
 export class Simple extends TrackMessageCreator {
@@ -16,8 +17,8 @@ export class Simple extends TrackMessageCreator {
     const cover = await createCoverImageAttachment(track);
 
     const desc = [
-      `> ${banner}`,
-      `> **Collection**: ${data.collection}`
+      quote(banner),
+      quote(`${bold('Collection')}: ${data.collection}`)
     ].join('\n');
 
     embed.setDescription(desc);

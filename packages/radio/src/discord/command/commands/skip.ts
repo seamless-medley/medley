@@ -1,10 +1,10 @@
-import { AudienceType, extractAudienceGroupFromId, isRequestTrack, Audience, StationTrack } from "@seamless-medley/core";
-import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "discord.js";
+import { isRequestTrack, Audience, StationTrack } from "@seamless-medley/core";
+import { ButtonInteraction, CommandInteraction, PermissionsBitField, userMention } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { extractRequestersForGuild } from "../../trackmessage/creator/base";
 import { ansi } from "../../format/ansi";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { declare, deny, formatMention, guildStationGuard, makeAnsiCodeBlock, reply, warn } from "../utils";
+import { declare, deny, guildStationGuard, makeAnsiCodeBlock, reply, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -43,8 +43,8 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
 
       if (!canSkip) {
         const requesters = extractRequestersForGuild(guildId, requestedBy);
-        const mentions = requesters.length > 0 ? requesters.map(id => formatMention('user', id)).join(' ') : '`Someone else`';
-        await reply(interaction, `${formatMention('user', interaction.user.id)} Could not skip this track, it was requested by ${mentions}`);
+        const mentions = requesters.length > 0 ? requesters.map(id => userMention(id)).join(' ') : '`Someone else`';
+        await reply(interaction, `${userMention(interaction.user.id)} Could not skip this track, it was requested by ${mentions}`);
         return;
       }
     }

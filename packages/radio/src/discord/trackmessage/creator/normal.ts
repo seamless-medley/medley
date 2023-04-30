@@ -1,7 +1,7 @@
 import { MetadataFields } from "@seamless-medley/core";
-import { APIEmbedField } from "discord.js";
+import { APIEmbedField, bold, formatEmoji, hyperlink, quote, userMention } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
-import { formatDuration, formatMarkdownLink, formatMention } from "../../format/format";
+import { formatDuration } from "../../format/format";
 import { formatSpotifyField, metadataFields } from "../fields";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
@@ -26,7 +26,7 @@ export class Normal extends TrackMessageCreator {
         url: station.url,
         iconURL: station.iconURL
       })
-      .setDescription(`> ${data.description}`);
+      .setDescription(quote(data.description));
 
     for (const group of chunk(metadataFields, 2)) {
       const fields = group.map<APIEmbedField | undefined>(field => {
@@ -35,7 +35,7 @@ export class Normal extends TrackMessageCreator {
           return val && !isEmpty(val)
             ? ({
               name: (fieldCaptionFuncs[field] ?? startCase)(field),
-              value: `> ${formatSpotifyField(field, val)}`,
+              value: quote(formatSpotifyField(field, val)),
               inline: true
             })
             : undefined
@@ -62,7 +62,7 @@ export class Normal extends TrackMessageCreator {
     const requesters = extractRequestersForGuild(guildId, requestedBy || []);
 
     if (requestedBy?.length) {
-      const mentions =  requesters.length > 0 ? requesters.map(id => formatMention('user', id)).join(' ') : '> `Someone else`';
+      const mentions =  requesters.length > 0 ? requesters.map(userMention).join(' ') : quote('Someone else');
       embed.addFields({ name: 'Requested by', value: mentions });
     }
 
@@ -72,7 +72,7 @@ export class Normal extends TrackMessageCreator {
 
     embed.addFields({
       name: 'Powered by',
-      value: `> <:medley:1101521522830618624> ${formatMarkdownLink('**Medley**', 'https://github.com/seamless-medley/medley')}`
+      value: quote(`${formatEmoji('1101521522830618624')} ${hyperlink(bold('Medley'), 'https://github.com/seamless-medley/medley')}`)
     });
 
     const durationText = formatDuration(playDuration);

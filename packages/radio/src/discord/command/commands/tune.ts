@@ -10,12 +10,13 @@ import {
   MessageActionRowComponentBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuInteraction,
-  SelectMenuComponentOptionData
+  SelectMenuComponentOptionData,
+  userMention,
+  hyperlink
 } from "discord.js";
 import { stubTrue } from "lodash";
 
 import { MedleyAutomaton } from "../../automaton";
-import { formatMarkdownLink, formatMention } from "../../format/format";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { reply, deny, guildIdGuard, permissionGuard, makeColoredMessage } from "../utils";
 
@@ -56,7 +57,7 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
         .setTitle('Tuned In')
         .addFields({
           name: 'Station',
-          value: station.url ? formatMarkdownLink(station.name, station.url) : station.name
+          value: station.url ? hyperlink(station.name, station.url) : station.name
         });
 
       if (station.iconURL) {
@@ -130,7 +131,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     collector.on('collect', async i => {
       if (i.user.id !== issuer) {
         reply(i, {
-          content: `Sorry, this selection is for ${formatMention('user', issuer)} only`,
+          content: `Sorry, this selection is for ${userMention(issuer)} only`,
           ephemeral: true
         })
         return;

@@ -1,8 +1,10 @@
+import { channelMention, roleMention, userMention } from "discord.js";
+
 export type MentionType = 'user' | 'channel' | 'role';
 
 export const formatMention = (type: MentionType, id: string) => {
-  const p = ({user: '@', channel: '#', role: '@#'})[type];
-  return `<${p}${id}>`;
+  const p = ({ user: userMention, channel: channelMention, role: roleMention })[type];
+  return p(id);
 }
 
 export const formatDuration = (seconds: number) => seconds > 0
@@ -17,6 +19,4 @@ export const formatDuration = (seconds: number) => seconds > 0
     .filter(v => v !== undefined)
     .join(':')
   : undefined
-
-export const formatMarkdownLink = (caption: string, href: string) => `[${caption}](${href})`;
 
