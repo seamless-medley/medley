@@ -16,7 +16,8 @@ import {
   MessageActionRowComponentBuilder,
   InteractionReplyOptions,
   StringSelectMenuBuilder,
-  StringSelectMenuInteraction
+  StringSelectMenuInteraction,
+  PermissionsBitField
 } from "discord.js";
 
 import { chain, chunk, clamp, Dictionary, groupBy, identity, isNull, noop, sample, sortBy, truncate, zip } from "lodash";
@@ -255,12 +256,12 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
       const peekings = peekRequestsForGuild(station, 0, 20, guildId);
 
-      // TODO: Check `AddReaction` for the bot to see if Vote button should be visible
+      const canVote = interaction.appPermissions?.any([PermissionsBitField.Flags.AddReactions]);
 
       if (preview) {
         interaction.followUp({
           content: joinStrings(preview),
-          components: (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
+          components: canVote && (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
             ? [
               new ActionRowBuilder<MessageActionRowComponentBuilder>()
                 .addComponents(
