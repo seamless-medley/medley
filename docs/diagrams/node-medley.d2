@@ -1,0 +1,91 @@
+node-medley: {
+  napi: N-API {
+    md: |md
+      ## Provides classes to Node runtime
+    |
+  }
+
+  engine: Medley Engine {
+    decks: {
+      shape: "parallelogram"
+
+      deck1: Deck 1
+      deck2: Deck 2
+      deck3: Deck 3
+
+      playQueue: Play Queue
+
+      playQueue -> deck1
+      playQueue -> deck2
+      playQueue -> deck3
+
+    }
+
+    mixer: Audio Mixer {
+      icon: https://icons.terrastruct.com/essentials%2F073-add.svg
+    }
+
+    deviceMgr: Device Manager {
+      icon: https://icons.terrastruct.com/essentials%2F327-switch.svg
+    }
+
+    decks.deck1 -> mixer
+    decks.deck2 -> mixer
+    decks.deck3 -> mixer
+
+    audioProcessor: Audio Processor {
+      style: {
+        double-border: true
+      }
+
+      limiter: Look ahead limiter
+    }
+
+    mixer -> audioProcessor -> deviceMgr
+
+    level meter: Level Meter
+
+    audioProcessor -- level meter: Measure
+
+    nullAudioDevice: Virtual Audio Device {
+      style: {
+        font-color: red
+        bold: true
+        fill: "#02F073"
+        fill-pattern: lines
+      }
+    }
+
+    deviceMgr -> nullAudioDevice
+  }
+
+  juce: JUCE {
+    icon: https://camo.githubusercontent.com/e8f9c1258f9412229ee8a525d6fdb5c2a80bc6ee371cd6daf8c977e23c693823/68747470733a2f2f6173736574732e6a7563652e636f6d2f6a7563652f4a5543455f62616e6e65725f6769746875622e706e67
+
+    style {
+      fill: "#ec8821"
+      fill-pattern: grain
+    }
+
+    audioDevice: Host Audio Device {
+      style.opacity: 0.88
+    }
+
+    Low Level C++ Classes: {
+      style.opacity: 0.88
+    }
+  }
+
+  napi <-> engine: API
+
+  engine -- juce: Uses {
+    style.animated: true
+  }
+
+  engine.deviceMgr -> juce.audioDevice: Native API
+
+  engine.nullAudioDevice -> napi: PCM data via Node Stream
+  engine.decks.playQueue <-> napi
+  engine.level meter -> napi
+}
+
