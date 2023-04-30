@@ -1,7 +1,7 @@
 import { decibelsToGain, gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { ChatInputCommandInteraction } from "discord.js";
 import { range, round } from "lodash";
-import { ansi } from "../ansi";
+import { ansi } from "../../format/ansi";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { declare, deny, guildIdGuard, makeAnsiCodeBlock, warn } from "../utils";
 

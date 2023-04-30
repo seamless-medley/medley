@@ -15,8 +15,9 @@ import {
 import { stubTrue } from "lodash";
 
 import { MedleyAutomaton } from "../../automaton";
+import { formatMention } from "../../format/format";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { reply, deny, guildIdGuard, permissionGuard, makeColoredMessage, formatMention } from "../utils";
+import { reply, deny, guildIdGuard, permissionGuard, makeColoredMessage } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,

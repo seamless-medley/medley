@@ -26,7 +26,7 @@ import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
 import { formatMention, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
-import { ansi } from "../../ansi";
+import { ansi } from "../../../format/ansi";
 import { getVoteMessage } from "../vote";
 
 export type Selection = {

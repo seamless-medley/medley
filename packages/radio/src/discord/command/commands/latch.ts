@@ -1,5 +1,5 @@
 import { ButtonInteraction, ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
-import { ansi } from "../ansi";
+import { ansi } from "../../format/ansi";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { declare, deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, permissionGuard, reply } from "../utils";
 

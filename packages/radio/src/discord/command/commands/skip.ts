@@ -2,7 +2,7 @@ import { AudienceType, extractAudienceGroupFromId, isRequestTrack, Audience, Sta
 import { ButtonInteraction, CommandInteraction, PermissionsBitField } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { extractRequestersForGuild } from "../../trackmessage/creator/base";
-import { ansi } from "../ansi";
+import { ansi } from "../../format/ansi";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { declare, deny, formatMention, guildStationGuard, makeAnsiCodeBlock, reply, warn } from "../utils";
 

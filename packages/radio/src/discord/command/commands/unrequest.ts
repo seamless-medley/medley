@@ -4,7 +4,7 @@ import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, reply, makeColoredMessage, formatMention, makeAnsiCodeBlock, joinStrings } from "../utils";
 import { AudienceType, isRequestTrack, makeAudience } from '@seamless-medley/core';
-import { ansi } from '../ansi';
+import { ansi } from '../../format/ansi';
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,

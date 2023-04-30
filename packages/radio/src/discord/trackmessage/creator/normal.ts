@@ -1,7 +1,7 @@
 import { MetadataFields } from "@seamless-medley/core";
 import { APIEmbedField } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
-import { formatDuration, formatMention } from "../../command/utils";
+import { formatDuration, formatMention } from "../../format/format";
 import { formatSpotifyField, metadataFields } from "../fields";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
