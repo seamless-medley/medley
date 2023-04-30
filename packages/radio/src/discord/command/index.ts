@@ -64,16 +64,12 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
   // Inform each command about guild creation and deletion
   automaton.on('guildCreate', (guild) => {
     for (const { onGuildCreate } of commandHandlers.values()) {
-      // TODO: Test this
-      logger.debug('Calling onGuildCreate', onGuildCreate !== undefined, 'for', guild.name);
       onGuildCreate?.(guild);
     }
   });
 
   automaton.on('guildDelete', (guild) => {
     for (const { onGuildDelete } of commandHandlers.values()) {
-      // TODO: Test this
-      logger.debug('Calling onGuildDelete', onGuildDelete !== undefined, 'for', guild.name);
       onGuildDelete?.(guild);
     }
   });
