@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04
+          - runs-on: ubuntu-20.04
             node_version: 18
             node_arch: x64
             build-arch: linux-x64
@@ -26,14 +26,18 @@ jobs:
           #   node_arch: x64
           #   build-arch: win32-x64
 
-          # Github Actions only supports x86_64 arch for now.
-          - os: macos-12
+          - runs-on: macos-12
             node_version: 18
             node_arch: x64
             build-arch: darwin-x64
 
+          - runs-on: [self-hosted, macOS, ARM64]
+            node_version: 18
+            node_arch: arm64
+            build-arch: darwin-arm64
+
     name: Build ${{ matrix.build-arch }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runs-on }}
     env:
       BUILD_ARCH: ${{ matrix.build-arch }}
     steps:
