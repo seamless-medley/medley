@@ -51,14 +51,16 @@ jobs:
         with:
           version: latest
 
+      - name: Make sure pnpm fetch Node
+        shell: bash
+        run: |
+          pnpm
+
       - name: Get pnpm store directory
         id: pnpm-cache
         shell: bash
         run: |
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "STORE_PATH=<<$EOF" >> "$GITHUB_OUTPUT"
-          pnpm store path >> "$GITHUB_OUTPUT"
-          echo "$EOF" >> "$GITHUB_OUTPUT"
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - uses: actions/cache@v3
         name: Setup pnpm cache
