@@ -2,8 +2,9 @@ name: node-medley native module
 on:
   push:
     branches:
-      - main
-      - develop
+      # - main
+      # - develop
+      - feature/gh-workflow-windows
     paths:
       - .github/workflows/node-medley.yml
       - packages/node-medley/src/**
@@ -16,102 +17,108 @@ jobs:
     strategy:
       matrix:
         include:
-          - runs-on: ubuntu-20.04
-            node_version: 18
-            node_arch: x64
-            build-arch: linux-x64
-
-          # - os: windows-latest
+          # - runs-on: ubuntu-20.04
           #   node_version: 18
           #   node_arch: x64
-          #   build-arch: win32-x64
+          #   build-arch: linux-x64
 
-          - runs-on: macos-12
+          - runs-on: windows-latest
             node_version: 18
             node_arch: x64
-            build-arch: darwin-x64
+            build-arch: win32-x64
 
-          - runs-on: [self-hosted, macOS, ARM64]
-            node_version: 18
-            node_arch: arm64
-            build-arch: darwin-arm64
+          # - runs-on: macos-12
+          #   node_version: 18
+          #   node_arch: x64
+          #   build-arch: darwin-x64
+
+          # - runs-on: [self-hosted, macOS, ARM64]
+          #   node_version: 18
+          #   node_arch: arm64
+          #   build-arch: darwin-arm64
 
     name: Build ${{ matrix.build-arch }}
     runs-on: ${{ matrix.runs-on }}
     env:
       BUILD_ARCH: ${{ matrix.build-arch }}
     steps:
-      - name: Install Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node_version }}
-          architecture: ${{ matrix.node_arch }}
+      # - name: Install Node
+      #   uses: actions/setup-node@v3
+      #   with:
+      #     node-version: ${{ matrix.node_version }}
+      #     architecture: ${{ matrix.node_arch }}
 
-      - uses: pnpm/action-setup@v2
-        with:
-          version: latest
+      # - uses: pnpm/action-setup@v2
+      #   with:
+      #     version: latest
 
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
+      # - name: Get pnpm store directory
+      #   id: pnpm-cache
+      #   shell: bash
+      #   run: |
+      #     echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      # - uses: actions/cache@v3
+      #   name: Setup pnpm cache
+      #   with:
+      #     path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+      #     key: ${{ runner.os }}-pnpm-store-native-build
+      #     restore-keys: |
+      #       ${{ runner.os }}-pnpm-store-native-build
+
+      # - name: Checkout
+      #   uses: actions/checkout@v3
+      #   with:
+      #     submodules: recursive
+
+      # - name: Dependencies (Linux)
+      #   if: contains(matrix.build-arch, 'linux')
+      #   run: |
+      #     sudo apt -y update
+      #     sudo apt -y install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
+
+      # - name: Get brew directory
+      #   id: brew-cache
+      #   if: contains(matrix.build-arch, 'darwin')
+      #   shell: bash
+      #   run: |
+      #     echo "STORE_PATH=$(brew --prefix)/Cellar" >> $GITHUB_OUTPUT
+
+      # - uses: actions/cache@v3
+      #   if: contains(matrix.build-arch, 'darwin')
+      #   name: Cache brew deps
+      #   with:
+      #     path: |
+      #       ${{ steps.brew-cache.outputs.STORE_PATH }}/taglib
+      #       ${{ steps.brew-cache.outputs.STORE_PATH }}/libsamplerate
+
+      #     key: macos-build-cache-${{ hashFiles('./scripts/brew.sh') }}
+
+      # - name: Dependencies (macOS)
+      #   if: contains(matrix.build-arch, 'darwin')
+      #   run: |
+      #     bash ./scripts/brew.sh
+
+      - name: Dependencies (Windows)
+        if: contains(matrix.build-arch, 'win32')
         run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+          vcpkg integrate install
+          vcpkg install libsamplerate:x64-windows-static taglib:x64-windows-static zlib:x64-windows-static
 
-      - uses: actions/cache@v3
-        name: Setup pnpm cache
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-native-build
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-native-build
+      # - name: Prepare
+      #   working-directory: ./packages/node-medley
+      #   run: |
+      #     pnpm install --no-frozen-lockfile --ignore-scripts
 
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
+      # - name: Build native
+      #   working-directory: ./packages/node-medley
+      #   run: |
+      #     pnpm run prebuild
 
-      - name: Dependencies (Linux)
-        if: contains(matrix.build-arch, 'linux')
-        run: |
-          sudo apt -y update
-          sudo apt -y install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
-
-      - name: Get brew directory
-        id: brew-cache
-        if: contains(matrix.build-arch, 'darwin')
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(brew --prefix)/Cellar" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache@v3
-        if: contains(matrix.build-arch, 'darwin')
-        name: Cache brew deps
-        with:
-          path: |
-            ${{ steps.brew-cache.outputs.STORE_PATH }}/taglib
-            ${{ steps.brew-cache.outputs.STORE_PATH }}/libsamplerate
-
-          key: macos-build-cache-${{ hashFiles('./scripts/brew.sh') }}
-
-      - name: Dependencies (macOS)
-        if: contains(matrix.build-arch, 'darwin')
-        run: |
-          bash ./scripts/brew.sh
-
-      - name: Prepare
-        working-directory: ./packages/node-medley
-        run: |
-          pnpm install --no-frozen-lockfile --ignore-scripts
-
-      - name: Build native
-        working-directory: ./packages/node-medley
-        run: |
-          pnpm run prebuild
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ matrix.build-arch }}
-          path: ./packages/node-medley/prebuilds
+      # - name: Upload artifacts
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: ${{ matrix.build-arch }}
+      #     path: ./packages/node-medley/prebuilds
 
 
