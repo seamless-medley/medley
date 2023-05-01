@@ -42,34 +42,34 @@ jobs:
     env:
       BUILD_ARCH: ${{ matrix.build-arch }}
     steps:
-      # - name: Install Node
-      #   uses: actions/setup-node@v3
-      #   with:
-      #     node-version: ${{ matrix.node_version }}
-      #     architecture: ${{ matrix.node_arch }}
+      - name: Install Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node_version }}
+          architecture: ${{ matrix.node_arch }}
 
-      # - uses: pnpm/action-setup@v2
-      #   with:
-      #     version: latest
+      - uses: pnpm/action-setup@v2
+        with:
+          version: latest
 
-      # - name: Get pnpm store directory
-      #   id: pnpm-cache
-      #   shell: bash
-      #   run: |
-      #     echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      # - uses: actions/cache@v3
-      #   name: Setup pnpm cache
-      #   with:
-      #     path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-      #     key: ${{ runner.os }}-pnpm-store-native-build
-      #     restore-keys: |
-      #       ${{ runner.os }}-pnpm-store-native-build
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-native-build
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-native-build
 
-      # - name: Checkout
-      #   uses: actions/checkout@v3
-      #   with:
-      #     submodules: recursive
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       # - name: Dependencies (Linux)
       #   if: contains(matrix.build-arch, 'linux')
@@ -114,20 +114,20 @@ jobs:
           vcpkg integrate install
           vcpkg install libsamplerate:x64-windows-static taglib:x64-windows-static zlib:x64-windows-static
 
-      # - name: Prepare
-      #   working-directory: ./packages/node-medley
-      #   run: |
-      #     pnpm install --no-frozen-lockfile --ignore-scripts
+      - name: Prepare
+        working-directory: ./packages/node-medley
+        run: |
+          pnpm install --no-frozen-lockfile --ignore-scripts
 
-      # - name: Build native
-      #   working-directory: ./packages/node-medley
-      #   run: |
-      #     pnpm run prebuild
+      - name: Build native
+        working-directory: ./packages/node-medley
+        run: |
+          pnpm run prebuild
 
-      # - name: Upload artifacts
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: ${{ matrix.build-arch }}
-      #     path: ./packages/node-medley/prebuilds
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.build-arch }}
+          path: ./packages/node-medley/prebuilds
 
 
