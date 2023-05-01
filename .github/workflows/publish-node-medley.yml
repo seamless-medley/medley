@@ -1,0 +1,78 @@
+name: pack and publish node-medley
+on:
+  workflow_run:
+    workflows:
+      - node-medley native module
+    types:
+      - completed
+env:
+  NODE_MEDLEY_DIR: ./packages/node-medley
+  PREBUILDS_DIR: ./packages/node-medley/prebuilds
+jobs:
+  pack-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          architecture: x64
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
+      - name: Make sure pnpm fetch Node
+        shell: bash
+        run: |
+          pnpm &>/dev/null || true
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        if: ${{ !github.event.act }}
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        if: ${{ !github.event.act }}
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-native-build
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-pnpm-store-native-build
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Download
+        id: download
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          run_id: ${{ github.event.workflow_run.id }}
+          name_is_regexp: true
+          name: ^(win32|linux|darwin)-(x64|arm64)$
+          path: ${{ env.PREBUILDS_DIR }}
+          skip_unpack: true
+
+      - name: Unzip
+        working-directory: ${{ env.PREBUILDS_DIR }}
+        run: |
+          find . -name "*.zip" -exec unzip -o {} \;
+          rm -rf *.zip
+
+      - name: Package
+        working-directory: ${{ env.NODE_MEDLEY_DIR }}
+        run: |
+          pnpm install --no-frozen-lockfile --ignore-scripts
+          pnpm run build
+          pnpm run package
+
+      - name: Display dist
+        working-directory: ${{ env.NODE_MEDLEY_DIR }}/dist
+        run: |
+          ls -Ral
+          pwd
