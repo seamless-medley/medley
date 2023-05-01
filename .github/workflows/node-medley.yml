@@ -66,9 +66,9 @@ jobs:
         name: Setup pnpm cache
         with:
           path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-native-build
+          key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-native-build
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-native-build
+            ${{ runner.os }}-${{ runner.arch }}-pnpm-store-native-build
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -96,7 +96,7 @@ jobs:
             ${{ steps.brew-cache.outputs.STORE_PATH }}/taglib
             ${{ steps.brew-cache.outputs.STORE_PATH }}/libsamplerate
 
-          key: macos-build-cache-${{ hashFiles('./scripts/brew.sh') }}
+          key: macos-build-cache-${{ runner.arch }}-${{ hashFiles('./scripts/brew.sh') }}
 
       - name: Dependencies (macOS)
         if: contains(matrix.build-arch, 'darwin')
