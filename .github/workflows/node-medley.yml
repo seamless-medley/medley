@@ -21,10 +21,10 @@ jobs:
             node_arch: x64
             build-arch: linux-x64
 
-          # - os: windows-latest
-          #   node_version: 18
-          #   node_arch: x64
-          #   build-arch: win32-x64
+          - runs-on: windows-latest
+            node_version: 18
+            node_arch: x64
+            build-arch: win32-x64
 
           - runs-on: macos-12
             node_version: 18
@@ -83,9 +83,9 @@ jobs:
         run: |
           echo "STORE_PATH=$(brew --prefix)/Cellar" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
+      - name: Cache brew deps
         if: contains(matrix.build-arch, 'darwin')
-        name: Cache brew deps
+        uses: actions/cache@v3
         with:
           path: |
             ${{ steps.brew-cache.outputs.STORE_PATH }}/taglib
@@ -97,6 +97,21 @@ jobs:
         if: contains(matrix.build-arch, 'darwin')
         run: |
           bash ./scripts/brew.sh
+
+      - name: Cache vcpkg
+        if: contains(matrix.build-arch, 'win32')
+        uses: actions/cache@v3
+        with:
+          path: |
+            C:\vcpkg\packages
+            C:\vcpkg\installed
+          key: windows-build-vcpkg-cache
+
+      - name: Dependencies (Windows)
+        if: contains(matrix.build-arch, 'win32')
+        run: |
+          vcpkg integrate install
+          vcpkg install libsamplerate:x64-windows-static taglib:x64-windows-static zlib:x64-windows-static
 
       - name: Prepare
         working-directory: ./packages/node-medley
