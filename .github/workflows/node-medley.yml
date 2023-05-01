@@ -99,6 +99,14 @@ jobs:
       #   run: |
       #     bash ./scripts/brew.sh
 
+      - name: Cache vcpkg
+        if: contains(matrix.build-arch, 'win32')
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ github.workspace }}/vcpkg
+          key: windows-build-vcpkg-cache
+
       - name: Dependencies (Windows)
         if: contains(matrix.build-arch, 'win32')
         run: |
