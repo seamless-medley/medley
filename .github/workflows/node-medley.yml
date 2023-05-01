@@ -54,7 +54,7 @@ jobs:
       - name: Make sure pnpm fetch Node
         shell: bash
         run: |
-          pnpm
+          pnpm &>/dev/null || true
 
       - name: Get pnpm store directory
         id: pnpm-cache
