@@ -5,7 +5,7 @@ import { stubFalse } from 'lodash';
 async function main() {
   if (!existsSync('out')) {
     console.error('Invoke `pnpm run build` first');
-    return;
+    process.exit(1);
   };
 
   const prebuildStatus = await Promise.all(
@@ -19,7 +19,7 @@ async function main() {
 
   if (missingPrebuilds.length) {
     console.error('Missing prebuilds:', missingPrebuilds);
-    return;
+    process.exit(1);
   }
 
   await emptyDir('dist');
