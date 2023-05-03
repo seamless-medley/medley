@@ -16,3 +16,5 @@ package-lock.json
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+
+.secrets
