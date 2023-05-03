@@ -3,6 +3,8 @@ on:
   workflow_run:
     workflows:
       - node-medley native module
+    branches:
+      - main
     types:
       - completed
 env:
@@ -29,14 +31,14 @@ jobs:
 
       - name: Get pnpm store directory
         id: pnpm-cache
-        if: ${{ !github.event.act }}
+        # if: ${{ !github.event.act }}
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - uses: actions/cache@v3
         name: Setup pnpm cache
-        if: ${{ !github.event.act }}
+        # if: ${{ !github.event.act }}
         with:
           path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
           key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-native-build
@@ -71,8 +73,9 @@ jobs:
           pnpm run build
           pnpm run package
 
-      - name: Display dist
-        working-directory: ${{ env.NODE_MEDLEY_DIR }}/dist
+      - name: Publish
+        working-directory: ${{ env.NODE_MEDLEY_DIR }}
         run: |
-          ls -Ral
-          pwd
+          pnpm publish ./dist --no-git-checks --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
