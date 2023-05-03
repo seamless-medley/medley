@@ -26,7 +26,6 @@
     "build": "tsc",
     "prebuild": "cross-env JOBS=max prebuildify -t 16.0.0 --tag-libc --napi --strip",
     "package": "tsx scripts/package.ts",
-    "pack:readme": "copyfiles README.md dist",
     "bump-version": "tsx scripts/bump.ts",
     "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts",
     "demo-electron": "cross-env MEDLEY_DEV=1 ELECTRON_RUN_AS_NODE=1 electron --require ts-node/register test/demo.ts"
