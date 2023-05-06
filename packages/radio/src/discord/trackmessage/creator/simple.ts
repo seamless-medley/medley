@@ -1,31 +1,30 @@
 import { getTrackBanner } from "@seamless-medley/core";
-import { formatDuration } from "../../command/utils";
+import { bold, quote } from "discord.js";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
 export class Simple extends TrackMessageCreator {
   protected async doCreate(options: CreateTrackMessageOptionsEx) {
-    const { station, embed, track, playDuration } = options;
+    const { station, embed, track } = options;
 
-    embed.setAuthor({ name: station.name });
+    embed.setAuthor({
+      name: station.name,
+      url: station.url,
+      iconURL: station.iconURL
+    });
 
     const data = getEmbedDataForTrack(track, ['artist']);
     const banner = getTrackBanner(track);
     const cover = await createCoverImageAttachment(track);
 
     const desc = [
-      `> ${banner}`,
-      `> **Collection**: ${data.collection}`
+      quote(banner),
+      quote(`${bold('Collection')}: ${data.collection}`)
     ].join('\n');
 
     embed.setDescription(desc);
 
     if (cover) {
       embed.setThumbnail(cover?.url);
-    }
-
-    if (playDuration > 0) {
-      // TODO: These could be configurable in station itself
-      embed.setFooter({ text: `Duration: ${formatDuration(playDuration) ?? 'N/A'} - [Powered By Medley]` })
     }
 
     return {

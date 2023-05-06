@@ -15,17 +15,11 @@ import {
 
 import { castArray, isString, maxBy, padStart } from "lodash";
 import { MedleyAutomaton } from "../automaton";
-import { ansi, Colors, ColorsAndFormat, Formats, simpleFormat } from "./ansi";
+import { ansi, Colors, ColorsAndFormat, Formats, simpleFormat } from "../format/ansi";
+import { formatMention, MentionType } from "../format/format";
 import { CommandError } from "./type";
 
 export const maxSelectMenuOptions = 25;
-
-export type MentionType = 'user' | 'channel' | 'role';
-
-export const formatMention = (type: MentionType, id: string) => {
-  const p = ({user: '@', channel: '#', role: '@#'})[type];
-  return `<${p}${id}>`;
-}
 
 type ReplyableInteraction = CommandInteraction | MessageComponentInteraction;
 
@@ -199,16 +193,3 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
 
   return lines.length ? makeAnsiCodeBlock(lines) : undefined;
 }
-
-export const formatDuration = (seconds: number) => seconds > 0
-  ? ([[1, 60], [60, 60], [60 * 60, 24, true]] as [number, number, boolean | undefined][])
-    .reverse()
-    .map(([d, m, optional]) => {
-      const v = Math.trunc(seconds / d) % m;
-      return (v !== 0 || !optional)
-        ? `${v}`.padStart(2, '0')
-        : undefined
-    })
-    .filter(v => v !== undefined)
-    .join(':')
-  : undefined

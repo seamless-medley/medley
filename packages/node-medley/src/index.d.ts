@@ -248,9 +248,10 @@ export type MedleyInfo = {
     specificity: number;
     runtime?: 'node' | 'electron';
     napi?: boolean;
+    libc?: string;
   },
   juce: {
-    version: Record<'major' | 'minor' | 'build', number>;
+    version: Record<'major' | 'minor' | 'build', number> & { prerelease?:  string };
     cpu: Record<'intel' | 'arm' | 'arm64', 'aarch64' | 'sse' | 'neon' | 'vdsp', true | undefined>;
   };
 

@@ -9,8 +9,6 @@ import { loadConfig } from "./config";
 import { ZodError } from "zod";
 import normalizePath from "normalize-path";
 
-// TODO: Catch signals
-
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);
 });
@@ -18,11 +16,6 @@ process.on('uncaughtException', (e) => {
 process.on('unhandledRejection', (e) => {
   console.error('Rejection', e);
 });
-
-type StationConfig = Omit<StationOptions, 'intros' | 'requestSweepers' | 'musicDb'> & {
-  intros?: string[];
-  requestSweepers?: string[];
-};
 
 ////////////////////////////////////////////////////////////////////////////////////
 
@@ -57,13 +50,13 @@ async function main() {
   logger.info('node-medley version:', `${info.version.major}.${info.version.minor}.${info.version.patch}`);
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
 
-  const config = await loadConfig(configFile);
+  const configs = await loadConfig(configFile);
 
-  if (config instanceof Error) {
+  if (configs instanceof Error) {
     logger.fatal('Error loading configurations:');
 
-    if (config instanceof ZodError) {
-      for (const issue of config.issues) {
+    if (configs instanceof ZodError) {
+      for (const issue of configs.issues) {
         const path = issue.path.join('.') || 'root';
         logger.fatal(`Issue: ${path} - ${issue.message}`)
       }
@@ -71,14 +64,14 @@ async function main() {
       return;
     }
 
-    logger.fatal(config.message);
+    logger.fatal(configs.message);
     return;
   }
 
   if (program.opts().register) {
     logger.info('Registering');
 
-    for (const [id, { botToken, clientId, baseCommand }] of Object.entries(config.automatons)) {
+    for (const [id, { botToken, clientId, baseCommand }] of Object.entries(configs.automatons)) {
 
       const client = new Client({
         intents: [GatewayIntentBits.Guilds]
@@ -101,35 +94,35 @@ async function main() {
   logger.info('Initializing');
 
   const musicDb = await new MongoMusicDb().init({
-    url: config.db.url,
-    database: config.db.database,
-    connectionOptions: config.db.connectionOptions,
+    url: configs.db.url,
+    database: configs.db.database,
+    connectionOptions: configs.db.connectionOptions,
     ttls: [
-      config.db.metadataTTL?.min ?? 60 * 60 * 24 * 7,
-      config.db.metadataTTL?.max ?? 60 * 60 * 24 * 12,
+      configs.db.metadataTTL?.min ?? 60 * 60 * 24 * 7,
+      configs.db.metadataTTL?.max ?? 60 * 60 * 24 * 12,
     ]
   });
 
   const stations = await Promise.all(
-    Object.entries(config.stations).map(([id, allConfigs]) => new Promise<Station>(async (resolve) => {
-      const { intros, requestSweepers, musicCollections, sequences, sweeperRules, ...config } = allConfigs;
+    Object.entries(configs.stations).map(([stationId, stationConfig]) => new Promise<Station>(async (resolve) => {
+      const { intros, requestSweepers, musicCollections, sequences, sweeperRules, ...config } = stationConfig;
 
-      logger.info('Constructing station:', id);
+      logger.info('Constructing station:', stationId);
 
       const introCollection = intros ? (() => {
-        const collection = new TrackCollection('$_intros', undefined);
+        const collection = new TrackCollection('$_intros', undefined, { logPrefix: stationId });
         collection.add(shuffle(intros));
         return collection;
       })() : undefined;
 
       const requestSweeperCollection = requestSweepers ? (() => {
-        const collection = new TrackCollection('$_req_sweepers', undefined);
+        const collection = new TrackCollection('$_req_sweepers', undefined, { logPrefix: stationId });
         collection.add(shuffle(requestSweepers));
         return collection;
       })() : undefined;
 
       const station = new Station({
-        id,
+        id: stationId,
         ...config,
         intros: introCollection,
         requestSweepers: requestSweeperCollection,
@@ -140,13 +133,14 @@ async function main() {
         if (!desc.auxiliary) {
           await station.addCollection({
             id,
-            ...desc
+            ...desc,
+            logPrefix: stationId
           });
         }
       }
 
       station.updateSequence(sequences.map((s, index) => ({
-        crateId: `${index}`,
+        crateId: `${stationId}/${index}`,
         ...s
       })));
 
@@ -154,7 +148,7 @@ async function main() {
         from: rule.from,
         to: rule.to,
         collection: (() => {
-          const c = new WatchTrackCollection(rule.path, undefined);
+          const c = new WatchTrackCollection(rule.path, undefined, { logPrefix: stationId });
           c.watch(normalizePath(rule.path));
 
           return c;
@@ -167,7 +161,8 @@ async function main() {
         if (desc.auxiliary) {
           await station.addCollection({
             id,
-            ...desc
+            ...desc,
+            logPrefix: stationId
           });
 
           await breath();
@@ -180,16 +175,15 @@ async function main() {
 
   const stationRepo = new StationRegistry(...stations);
 
-  const automatons = await Promise.all(Object.entries(config.automatons).map(
-    ([id, { botToken, clientId, baseCommand }]) => new Promise<MedleyAutomaton>(async (resolve) => {
+  const automatons = await Promise.all(Object.entries(configs.automatons).map(
+    ([id, { botToken, clientId, baseCommand, ...config }]) => new Promise<MedleyAutomaton>(async (resolve) => {
       const automaton = new MedleyAutomaton(stationRepo, {
         id,
         botToken,
         clientId,
-        baseCommand
+        baseCommand,
+        trackMessage: config.trackMessage
       });
-
-      logger.info('OAUthURL', automaton.oAuth2Url.toString());
 
       automaton.once('ready', () => resolve(automaton));
 
@@ -205,6 +199,10 @@ async function main() {
   }
 
   logger.info('Started');
+
+  process.on('SIGINT', () => {
+    process.exit(0);
+  });
 }
 
 main();

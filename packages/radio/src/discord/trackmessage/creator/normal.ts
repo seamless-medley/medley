@@ -1,16 +1,12 @@
 import { MetadataFields } from "@seamless-medley/core";
-import { APIEmbedField } from "discord.js";
+import { APIEmbedField, bold, formatEmoji, hyperlink, quote, userMention } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
-import { formatDuration, formatMention } from "../../command/utils";
+import { formatDuration } from "../../format/format";
+import { extractSpotifyMetadata, formatSpotifyField, metadataFields, spotifyURI } from "../fields";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
 const emptyField = { name: '\u200B', value: '\u200B', inline: true };
 const emptyRows = Array(3).fill(0).map<APIEmbedField>(_ => emptyField);
-
-const spotifyMarkdownLink = (q: string) => `[${q}](https://open.spotify.com/search/${encodeURIComponent(q)})`;
-
-const spotifySearchFields: MetadataFields[] = ['artist', 'album', 'albumArtist', 'originalArtist'];
-const metadataFields: MetadataFields[] = spotifySearchFields;
 
 const fieldCaptionFuncs: Partial<Record<MetadataFields, () => any>> = {
   bpm: upperCase,
@@ -22,16 +18,20 @@ export class Normal extends TrackMessageCreator {
     const { station, embed, guildId, track, playDuration, requestedBy } = options;
 
     const data = getEmbedDataForTrack(track, metadataFields);
+    const spotifyMetadata = extractSpotifyMetadata(track);
     const cover = await createCoverImageAttachment(track);
 
-    embed.setColor('Random');
-    embed.setAuthor({
-      // TODO: These could be configurable in station itself
-      name: `${station.name} - [Powered by Medley]`,
-      url: "https://github.com/seamless-medley/medley",
-      iconURL: "https://cdn.discordapp.com/icons/1041934662425128990/6f7a1b9fb30a9722222ec8612eaf4f09.webp?size=96"
-    });
-    embed.setDescription(`> ${data.description}`);
+    (embed)
+      .setAuthor({
+        name: station.name,
+        url: station.url,
+        iconURL: station.iconURL
+      })
+      .setDescription(quote(
+        spotifyMetadata.track
+          ? spotifyURI(data.description, 'track', spotifyMetadata.track, "More about this track on Spotify")
+          : data.description
+      ));
 
     for (const group of chunk(metadataFields, 2)) {
       const fields = group.map<APIEmbedField | undefined>(field => {
@@ -40,7 +40,7 @@ export class Normal extends TrackMessageCreator {
           return val && !isEmpty(val)
             ? ({
               name: (fieldCaptionFuncs[field] ?? startCase)(field),
-              value: `> ${spotifySearchFields.includes(field) ? spotifyMarkdownLink(val) : val}`,
+              value: quote(formatSpotifyField(field, val, spotifyMetadata[field])),
               inline: true
             })
             : undefined
@@ -54,10 +54,11 @@ export class Normal extends TrackMessageCreator {
       }
     }
 
-    embed.addFields(
-      { name: 'Duration', value: `**\`${formatDuration(playDuration) ?? 'N/A'}\`**`, inline: true },
-      { name: 'Collection', value: data.collection, inline: true, }
-    );
+    embed.addFields({
+      name: 'Collection',
+      value: data.collection
+    });
+
 
     if (data.latch) {
       const { order, session } = data.latch;
@@ -67,13 +68,28 @@ export class Normal extends TrackMessageCreator {
     const requesters = extractRequestersForGuild(guildId, requestedBy || []);
 
     if (requestedBy?.length) {
-      const mentions =  requesters.length > 0 ? requesters.map(id => formatMention('user', id)).join(' ') : '> `Someone else`';
+      const mentions =  requesters.length > 0 ? requesters.map(userMention).join(' ') : quote('Someone else');
       embed.addFields({ name: 'Requested by', value: mentions });
     }
 
     if (cover) {
       embed.setThumbnail(cover.url);
     }
+
+    embed.addFields({
+      name: 'Powered by',
+      value: quote(`${formatEmoji('1101521522830618624')} ${hyperlink(bold('Medley'), 'https://github.com/seamless-medley/medley', "GitHub project")}`)
+    });
+
+    const durationText = formatDuration(playDuration);
+
+    if (durationText) {
+      embed.setFooter({
+        text: `🎧 Duration: ${durationText}`
+      })
+    }
+
+    embed.setTimestamp(new Date());
 
     return {
       ...options,

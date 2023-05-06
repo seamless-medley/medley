@@ -147,8 +147,9 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     leadingSamplePosition = -1;
     trailingSamplePosition = -1;
     trailingDuration = 0;
+    leadingDuration = 0;
 
-    auto playDuration = getEndPosition() - firstAudibleSamplePosition;
+    auto playDuration = (totalSourceSamplesToPlay - firstAudibleSamplePosition) / newReader->sampleRate;
 
     // If no cue in provided
     if (providedCueIn < 0)
@@ -188,11 +189,17 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
                 leadingSamplePosition = lead2;
             }
         }
-    }
 
-    leadingDuration = ((leadingSamplePosition > -1) ? leadingSamplePosition - firstAudibleSamplePosition : firstAudibleSamplePosition) / reader->sampleRate;
-    if (leadingDuration < 0) {
-        leadingDuration = 0;
+        if (leadingSamplePosition > -1) {
+            leadingDuration = (leadingSamplePosition - firstAudibleSamplePosition) / reader->sampleRate;
+        }
+        else {
+            leadingDuration = firstAudibleSamplePosition / reader->sampleRate;
+        }
+
+        if (leadingDuration < 0) {
+            leadingDuration = 0;
+        }
     }
 
     setSource(new AudioFormatReaderSource(reader, false));

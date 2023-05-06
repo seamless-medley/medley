@@ -1,5 +1,5 @@
 import { formatSongBanner } from "@seamless-medley/core";
-import { CommandInteraction } from "discord.js";
+import { bold, CommandInteraction, quote, time as formatTime } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, joinStrings } from "../utils";
 
@@ -26,7 +26,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   for (const { playedTime, ...record } of history) {
     const banner = formatSongBanner(record.artists, record.title);
 
-    const line = `> **[**<t:${Math.trunc(playedTime.valueOf() / 1000)}:T>**]**: ${banner}`;
+    const line = quote(`${bold('[')}${formatTime(playedTime, 'T')}${bold(']')}: ${banner}`);
 
     if (length + line.length >= 1000) {
       break;
@@ -37,7 +37,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   }
 
   interaction.reply(joinStrings([
-    `**Tracks History**`,
+    bold('Tracks History'),
     '',
     ...lines
   ]));

@@ -1,7 +1,7 @@
 {
   "name": "@seamless-medley/medley",
   "description": "Audio engine for Node.js, with built-in \"radio like\" gapless/seamless playback",
-  "version": "0.3.3",
+  "version": "0.3.4-alpha.1",
   "author": {
     "name": "Wittawas Nakkasem",
     "email": "vittee@hotmail.com",
@@ -22,14 +22,10 @@
   "main": "src/index.ts",
   "types": "src/index.d.ts",
   "scripts": {
-    "clean": "rimraf .turbo build out dist",
+    "clean": "rimraf build out dist",
     "build": "tsc",
-    "prebuild": "cross-env JOBS=max prebuildify -t 16.0.0 --napi --strip",
-    "pack": "npm-run-all pack:prepare --parallel pack:js pack:prebuilds pack:package pack:readme",
-    "pack:prepare": "rimraf dist && mkdirp dist",
-    "pack:js": "copyfiles -u 1 out/*.js src/index.d.ts dist",
-    "pack:prebuilds": "copyfiles prebuilds/**/* dist",
-    "pack:package": "tsx scripts/package.ts",
+    "prebuild": "cross-env JOBS=max prebuildify -t 16.0.0 --tag-libc --napi --strip",
+    "package": "tsx scripts/package.ts",
     "pack:readme": "copyfiles README.md dist",
     "bump-version": "tsx scripts/bump.ts",
     "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts",

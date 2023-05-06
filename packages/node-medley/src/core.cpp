@@ -880,6 +880,10 @@ Napi::Value Medley::static_getInfo(const Napi::CallbackInfo& info) {
         version.Set("minor", Napi::Number::New(env, MEDLEY_VERSION_MINOR));
         version.Set("patch", Napi::Number::New(env, MEDLEY_VERSION_PATCH));
 
+#ifdef MEDLEY_VERSION_PRE_RELEASE
+        version.Set("prerelease", Napi::String::New(env, MEDLEY_VERSION_PRE_RELEASE));
+#endif
+
         result.Set("version", version);
     }
 

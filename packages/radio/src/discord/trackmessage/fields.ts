@@ -1,0 +1,36 @@
+import { BoomBoxTrack, MetadataFields } from "@seamless-medley/core";
+import { hyperlink } from "discord.js";
+
+export const metadataFields: MetadataFields[] = ['artist', 'album', 'albumArtist', 'originalArtist'];
+
+export const extractSpotifyMetadata = (track: BoomBoxTrack) => (track.extra?.tags?.comments
+  .filter(([key]) => key.startsWith('spotify:'))
+  .map(([key, value]) => [key.substring(8), value])
+  .reduce<Record<string, string>>((o, [key, value]) => {
+    o[key] = value;
+    return o;
+  }, {})
+  ?? {}) as Partial<Record<string, string>>;
+
+export const spotifyBaseURL = 'https://open.spotify.com';
+
+export const spotifyMetadataFields = ['track', 'artist', 'album'];
+
+export const spotifyURI = (text: string, type: string, id: string, tooltip?: string) => {
+  const url = `${spotifyBaseURL}/${type}/${id}`
+  return tooltip ? hyperlink(text, url, tooltip) : hyperlink(text, url);
+}
+
+const spotifySearchLink = (q: string) => hyperlink(q, `${spotifyBaseURL}/search/${encodeURIComponent(q)}`, 'Search on Spotify');
+
+export const formatSpotifyField = (field: MetadataFields, value: string, id: string | undefined) => {
+  if (!spotifyMetadataFields.includes(field)) {
+    return value;
+  }
+
+  if (id) {
+    return spotifyURI(value, field, id, `More about this ${field} on Spotify`);
+  }
+
+  return spotifySearchLink(value);
+}

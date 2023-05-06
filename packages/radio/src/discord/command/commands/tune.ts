@@ -9,13 +9,16 @@ import {
   ComponentType,
   MessageActionRowComponentBuilder,
   StringSelectMenuBuilder,
-  StringSelectMenuInteraction
+  StringSelectMenuInteraction,
+  SelectMenuComponentOptionData,
+  userMention,
+  hyperlink
 } from "discord.js";
 import { stubTrue } from "lodash";
 
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { reply, deny, guildIdGuard, permissionGuard, makeColoredMessage, formatMention } from "../utils";
+import { reply, deny, guildIdGuard, permissionGuard, makeColoredMessage } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -49,15 +52,22 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
     const ok = await automaton.ensureGuildState(guildId).tune(station);
 
     if (ok) {
+      const embed = new EmbedBuilder()
+        .setColor('Random')
+        .setTitle('Tuned In')
+        .addFields({
+          name: 'Station',
+          value: station.url ? hyperlink(station.name, station.url) : station.name
+        });
+
+      if (station.iconURL) {
+        embed.setThumbnail(station.iconURL);
+      }
+
       await reply(interaction, {
         content: null,
         components: [],
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Random')
-            .setTitle('Tuned In')
-            .addFields({ name: 'Station', value: ok.name })
-        ]
+        embeds: [embed]
       });
 
       return true;
@@ -84,7 +94,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
 
   const issuer = interaction.user.id;
 
-  const listing = stations.map(station => ({
+  const listing = stations.map<SelectMenuComponentOptionData>(station => ({
     label: station.name,
     value: station.id,
     description: station.description,
@@ -121,7 +131,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     collector.on('collect', async i => {
       if (i.user.id !== issuer) {
         reply(i, {
-          content: `Sorry, this selection is for ${formatMention('user', issuer)} only`,
+          content: `Sorry, this selection is for ${userMention(issuer)} only`,
           ephemeral: true
         })
         return;

@@ -66,6 +66,9 @@ export type StationOptions = {
 
   description?: string;
 
+  url?: string;
+  iconURL?: string;
+
   useNullAudioDevice?: boolean;
 
   intros?: BoomBoxTrackCollection;
@@ -161,6 +164,9 @@ export class Station extends TypedEmitter<StationEvents> {
   name: string;
   description?: string;
 
+  url?: string;
+  iconURL?: string;
+
   readonly queue: Queue<StationTrack>;
   readonly medley: Medley<StationTrack>;
 
@@ -189,6 +195,8 @@ export class Station extends TypedEmitter<StationEvents> {
     this.id = options.id;
     this.name = options.name;
     this.description = options.description;
+    this.url = options.url;
+    this.iconURL = options.iconURL;
     this.intros = options.intros;
     this.requestSweepers = options.requestSweepers;
     this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? true;

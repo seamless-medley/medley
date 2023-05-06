@@ -16,7 +16,12 @@ import {
   MessageActionRowComponentBuilder,
   InteractionReplyOptions,
   StringSelectMenuBuilder,
-  StringSelectMenuInteraction
+  StringSelectMenuInteraction,
+  PermissionsBitField,
+  bold,
+  inlineCode,
+  userMention,
+  time as formatTime
 } from "discord.js";
 
 import { chain, chunk, clamp, Dictionary, groupBy, identity, isNull, noop, sample, sortBy, truncate, zip } from "lodash";
@@ -24,8 +29,8 @@ import { parse as parsePath, extname } from 'path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";
-import { formatMention, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
-import { ansi } from "../../ansi";
+import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
+import { ansi } from "../../../format/ansi";
 import { getVoteMessage } from "../vote";
 
 export type Selection = {
@@ -170,7 +175,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
   const ttl = 90_000;
 
-  const getTimeout = () => `Request Timeout: <t:${Math.trunc((Date.now() + ttl) / 1000)}:R>`;
+  const getTimeout = () => `Request Timeout: ${formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')}`;
 
   const buildSearchResultMenu = (page: number): InteractionReplyOptions => {
     const components: MessageActionRowComponentBuilder[] = [cancelButtonBuilder];
@@ -249,18 +254,18 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       });
 
       await interaction.update({
-        content: `Request accepted: **\`${getTrackBanner(ok.track)}\`**`,
+        content: `Request accepted: ${bold(inlineCode(getTrackBanner(ok.track)))}`,
         components: []
       });
 
       const peekings = peekRequestsForGuild(station, 0, 20, guildId);
 
-      // TODO: Check `AddReaction` for the bot to see if Vote button should be visible
+      const canVote = interaction.appPermissions?.any([PermissionsBitField.Flags.AddReactions]);
 
       if (preview) {
         interaction.followUp({
           content: joinStrings(preview),
-          components: (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
+          components: canVote && (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
             ? [
               new ActionRowBuilder<MessageActionRowComponentBuilder>()
                 .addComponents(
@@ -285,7 +290,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
       if (user.id !== issuer) {
         collected.reply({
-          content: `Sorry, this selection is for ${formatMention('user', issuer)} only`,
+          content: `Sorry, this selection is for ${userMention(issuer)} only`,
           ephemeral: true
         });
         return;

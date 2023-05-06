@@ -1,10 +1,10 @@
 import { parse as parsePath } from 'path';
-import { CommandInteraction, Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageActionRowComponentBuilder, StringSelectMenuBuilder } from "discord.js";
+import { CommandInteraction, Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageActionRowComponentBuilder, StringSelectMenuBuilder, userMention } from "discord.js";
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, reply, makeColoredMessage, formatMention, makeAnsiCodeBlock, joinStrings } from "../utils";
+import { guildStationGuard, reply, makeColoredMessage, makeAnsiCodeBlock, joinStrings } from "../utils";
 import { AudienceType, isRequestTrack, makeAudience } from '@seamless-medley/core';
-import { ansi } from '../ansi';
+import { ansi } from '../../format/ansi';
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -83,7 +83,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     collector.on('collect', async i => {
       if (i.user.id !== issuer) {
         i.reply({
-          content: `Sorry, this selection is for${formatMention('user', issuer)} only`,
+          content: `Sorry, this selection is for${userMention(issuer)} only`,
           ephemeral: true
         })
         return;

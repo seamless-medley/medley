@@ -16,24 +16,28 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04
+          - runs-on: ubuntu-20.04
             node_version: 18
             node_arch: x64
             build-arch: linux-x64
 
-          # - os: windows-latest
-          #   node_version: 18
-          #   node_arch: x64
-          #   build-arch: win32-x64
+          - runs-on: windows-latest
+            node_version: 18
+            node_arch: x64
+            build-arch: win32-x64
 
-          # Github Actions only supports x86_64 arch for now.
-          - os: macos-12
+          - runs-on: macos-12
             node_version: 18
             node_arch: x64
             build-arch: darwin-x64
 
+          - runs-on: [self-hosted, macOS, ARM64]
+            node_version: 18
+            node_arch: arm64
+            build-arch: darwin-arm64
+
     name: Build ${{ matrix.build-arch }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runs-on }}
     env:
       BUILD_ARCH: ${{ matrix.build-arch }}
     steps:
@@ -47,6 +51,11 @@ jobs:
         with:
           version: latest
 
+      - name: Make sure pnpm fetch Node
+        shell: bash
+        run: |
+          pnpm &>/dev/null || true
+
       - name: Get pnpm store directory
         id: pnpm-cache
         shell: bash
@@ -57,9 +66,9 @@ jobs:
         name: Setup pnpm cache
         with:
           path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-native-build
+          key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-native-build
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-native-build
+            ${{ runner.os }}-${{ runner.arch }}-pnpm-store-native-build
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -69,7 +78,8 @@ jobs:
       - name: Dependencies (Linux)
         if: contains(matrix.build-arch, 'linux')
         run: |
-          sudo apt install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
+          sudo apt -y update
+          sudo apt -y install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
 
       - name: Get brew directory
         id: brew-cache
@@ -78,20 +88,35 @@ jobs:
         run: |
           echo "STORE_PATH=$(brew --prefix)/Cellar" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
+      - name: Cache brew deps
         if: contains(matrix.build-arch, 'darwin')
-        name: Cache brew deps
+        uses: actions/cache@v3
         with:
           path: |
             ${{ steps.brew-cache.outputs.STORE_PATH }}/taglib
             ${{ steps.brew-cache.outputs.STORE_PATH }}/libsamplerate
 
-          key: macos-build-cache-${{ hashFiles('./scripts/brew.sh') }}
+          key: macos-build-cache-${{ runner.arch }}-${{ hashFiles('./scripts/brew.sh') }}
 
       - name: Dependencies (macOS)
         if: contains(matrix.build-arch, 'darwin')
         run: |
           bash ./scripts/brew.sh
+
+      - name: Cache vcpkg
+        if: contains(matrix.build-arch, 'win32')
+        uses: actions/cache@v3
+        with:
+          path: |
+            C:\vcpkg\packages
+            C:\vcpkg\installed
+          key: windows-build-vcpkg-cache
+
+      - name: Dependencies (Windows)
+        if: contains(matrix.build-arch, 'win32')
+        run: |
+          vcpkg integrate install
+          vcpkg install libsamplerate:x64-windows-static taglib:x64-windows-static zlib:x64-windows-static
 
       - name: Prepare
         working-directory: ./packages/node-medley

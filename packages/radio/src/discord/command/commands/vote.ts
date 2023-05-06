@@ -1,10 +1,10 @@
 import { Audience, AudienceType, createLogger, getTrackBanner, makeAudience, RequestTrackLockPredicate, StationRequestedTrack, TrackPeek } from "@seamless-medley/core";
-import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, PermissionsBitField, } from "discord.js";
+import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, PermissionsBitField, userMention, time as formatTime, quote, } from "discord.js";
 import { chain, isEqual, keyBy, noop, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
 import * as emojis from "../../emojis";
 import { CommandDescriptor, GuildHandlerFactory, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { formatMention, guildStationGuard, joinStrings, makeRequestPreview, reply, warn } from "../utils";
+import { guildStationGuard, joinStrings, makeRequestPreview, reply, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -82,14 +82,14 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
 
     const ttl = 90_000;
 
-    const getTimeout = () => `Vote Timeout: <t:${Math.trunc((Date.now() + ttl) / 1000)}:R>`;
+    const getTimeout = () => `Vote Timeout: ${formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')}`;
 
     const createMessageContent = () => chain(nominatees)
       .sortBy(
         ({ votes, track: { priority = 0 }}) => -(votes + priority),
         b => (b.track.firstRequestTime || 0)
       )
-      .map(peek => '> ' + previewTrack(peek))
+      .map(peek => quote(previewTrack(peek)))
       .join('\n')
       .value();
 
@@ -206,7 +206,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
 
         if (user.id !== issuer) {
           collected.reply({
-            content: `Sorry, Only ${formatMention('user', issuer)} can end this vote`,
+            content: `Sorry, Only ${userMention(issuer)} can end this vote`,
             ephemeral: true
           });
           return;
@@ -223,11 +223,6 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
         dispose: true,
         time: ttl
       });
-
-      // TODO: Move below event registration
-      for (const emoji of take(collectibleEmojis, peeking.length)) {
-        await msg.react(emoji!).catch(noop);
-      }
 
       reactionCollector.on('collect', handleCollect);
       reactionCollector.on('remove', handleCollect);
@@ -279,7 +274,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
           const contributorMentions = chain(contributors)
             .uniq()
             .without(automaton.client.user!.id)
-            .map(id => formatMention('user', id))
+            .map(userMention)
             .value();
 
           const embed = new EmbedBuilder()
@@ -307,6 +302,10 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
           station.unlockRequests(requestLock);
         }
       });
+
+      for (const emoji of take(collectibleEmojis, peeking.length)) {
+        await msg.react(emoji!).catch(noop);
+      }
     }
   }
   catch(e) {
