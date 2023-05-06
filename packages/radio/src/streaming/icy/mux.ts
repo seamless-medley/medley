@@ -12,7 +12,7 @@ export type IcyMetadata = {
 
 export class MetadataMux extends Transform {
 
-  constructor(private interval: number) {
+  constructor(private interval: number = 0) {
     super();
   }
 

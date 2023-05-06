@@ -11,9 +11,9 @@ import {
 import { RequestHandler } from "express";
 import { OutgoingHttpHeaders } from "http";
 import { noop, isUndefined, omitBy, } from "lodash";
-import { PassThrough, Readable, Transform, pipeline } from "stream";
-import { createFFmpegOverseer } from "../ffmpeg";
-import { Adapter, AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
+import { PassThrough, Transform, pipeline } from "stream";
+import { FFmpegChildProcess } from "../ffmpeg";
+import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
 import { IcyMetadata, MetadataMux } from "./mux";
 
 export const mimeTypes = {
@@ -26,177 +26,179 @@ const outputFormats = ['mp3', 'adts'] as const;
 type OutputFormats = typeof outputFormats[number];
 
 export type IcyAdapterOptions = AdapterOptions<OutputFormats> & {
+  ffmpegPath?: string;
   metadataInterval?: number;
 }
 
-export type IcyAdapter = Adapter & {
-  readonly outlet: Readable;
-  handler: RequestHandler;
-}
+export class IcyAdapter extends FFMpegAdapter {
+  constructor(station: Station, options?: IcyAdapterOptions) {
+    super(station, options?.ffmpegPath);
 
-export async function createIcyAdapter(station: Station, options?: IcyAdapterOptions): Promise<IcyAdapter | undefined> {
-  const {
-    sampleFormat = 'Int16LE',
-    sampleRate = 44100,
-    bitrate = 128,
-    outputFormat = 'mp3',
-    metadataInterval = 16000
-  } = options ?? {};
+    this.#options = {
+      sampleFormat: 'FloatLE',
+      sampleRate: 44100,
+      bitrate: 128,
+      outputFormat: 'mp3',
+      metadataInterval: 16000,
+      ...options ?? {}
+    }
 
-  const audioType = audioFormatToAudioType(sampleFormat);
-
-  if (!audioType) {
-    return;
+    station.on('trackActive', this.#handleTrackActive);
   }
 
-  let audioRequest!: RequestAudioStreamResult;
+  #options: Required<AdapterOptions<OutputFormats>> & Pick<IcyAdapterOptions, 'metadataInterval'>;
 
-  const outlet = new PassThrough();
+  #currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
 
-  const overseer = await createFFmpegOverseer({
-    args: [
+  #multiplexers = new Set<MetadataMux>();
+
+  #outlet = new PassThrough();
+
+  protected override async getArgs() {
+    const audioType = audioFormatToAudioType(this.#options.sampleFormat);
+
+    return [
       '-f', audioType!,
       '-vn',
-      '-ar', `${sampleRate}`,
+      '-ar', `${this.#options.sampleRate}`,
       '-ac', '2',
       '-channel_layout', 'stereo',
       '-i', '-',
-      '-f', outputFormat,
-      '-b:a', `${bitrate}k`,
+      '-f', this.#options.outputFormat,
+      '-b:a', `${this.#options.bitrate}k`,
       'pipe:1'
-    ],
+    ]
+  }
 
-    afterSpawn: async (process) => {
-      if (audioRequest?.id) {
-        station.deleteAudioStream(audioRequest.id);
-      }
-
-      audioRequest = await station.requestAudioStream({
-        sampleRate,
-        format: sampleFormat
-      });
-
-      pipeline(audioRequest.stream, process.stdin, noop);
-
-      process.stdout.on('data', buffer => outlet.write(buffer));
-    }
-  });
-
-  let currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
-  const multiplexers = new Set<MetadataMux>();
-
-  function getIcyMetadata(): IcyMetadata | undefined {
+  #getIcyMetadata(): IcyMetadata | undefined {
     return {
-      StreamTitle: currentTrackPlay ? getTrackBanner(currentTrackPlay.track) : station.name
+      StreamTitle: this.#currentTrackPlay
+        ? getTrackBanner(this.#currentTrackPlay.track)
+        : this.station.name
     }
   }
 
-  const handleTrackActive: BoomBoxEvents['trackActive'] = (deckIndex, trackPlay) => {
-    currentTrackPlay = trackPlay;
+  #handleTrackActive: BoomBoxEvents['trackActive'] = (deckIndex, trackPlay) => {
+    this.#currentTrackPlay = trackPlay;
 
-    const metadata = getIcyMetadata();
+    const metadata = this.#getIcyMetadata();
 
     if (!metadata) {
       return;
     }
 
-    for (const mux of multiplexers) {
+    for (const mux of this.#multiplexers) {
       mux.metadata = metadata;
     }
   }
 
-  station.on('trackActive', handleTrackActive);
+  #handler: RequestHandler = (req, res) => {
+    const needMetadata = req.headers['icy-metadata'] === '1';
 
-  return {
-    audioRequest,
-    outlet,
+    const url = new URL(req.url, `http://${req.headers.host ?? '0.0.0.0'}`);
 
-    handler(req, res) {
-      const needMetadata = req.headers['icy-metadata'] === '1';
+    const audienceGroup = makeAudienceGroupId(AudienceType.Icy, `${url.host}${url.pathname}`);
+    const audienceId = `${req.ip}:${req.socket.remotePort}`;
 
-      const url = new URL(req.url, `http://${req.headers.host ?? '0.0.0.0'}`);
+    this.station.addAudience(audienceGroup, audienceId);
 
-      const audienceGroup = makeAudienceGroupId(AudienceType.Icy, `${url.host}${url.pathname}`);
-      const audienceId = `${req.ip}:${req.socket.remotePort}`;
+    if (!this.overseer.running) {
+      this.overseer.respawn();
+    }
 
-      station.addAudience(audienceGroup, audienceId);
+    const transformers: Transform[] = [];
+    const mux = new MetadataMux(needMetadata ? this.#options.metadataInterval : 0 ?? 0);
+    this.#multiplexers.add(mux);
 
-      if (!overseer.running) {
-        overseer.respawn();
-      }
+    transformers.push(mux);
 
-      const transformers: Transform[] = [];
-      const mux = new MetadataMux(needMetadata ? metadataInterval : 0);
-      multiplexers.add(mux);
+    for (let i = 0; i < transformers.length - 1; i++) {
+      transformers[i].pipe(transformers[i + 1]);
+    }
 
-      transformers.push(mux);
+    const transport = (buffer: Buffer) => res.write(buffer);
+
+    const valve = {
+      in: transformers.at(0)!,
+      out: transformers.at(-1)!
+    }
+
+    valve.out.on('data', transport);
+    this.#outlet.pipe(valve.in);
+
+    req.socket.on('close', () => {
+      this.#multiplexers.delete(mux);
+
+      this.#outlet.unpipe(valve.in);
+
+      valve.out.off('data', transport);
 
       for (let i = 0; i < transformers.length - 1; i++) {
-        transformers[i].pipe(transformers[i + 1]);
+        transformers[i].unpipe(transformers[i + 1]);
       }
 
-      const valve = {
-        in: transformers.at(0)!,
-        out: transformers.at(-1)!
+      const paused = this.station.removeAudience(audienceGroup, audienceId);
+      if (paused) {
+        this.overseer.stop();
       }
+    });
 
-      const transport = (buffer: Buffer) => res.write(buffer);
+    const resHeaders: OutgoingHttpHeaders = {
+      'Connection': 'close',
+      'Content-Type': mimeTypes[this.#options.outputFormat],
+      'Cache-Control': 'no-cache, no-store',
+      'Server': 'Medley',
+      'X-Powered-By': 'Medley',
+      'icy-name': this.station.name,
+      'icy-description': this.station.description,
+      'icy-sr': this.#options.sampleRate,
+      'icy-br': this.#options.bitrate,
+      'transfer-encoding': '',
+    };
 
-      valve.out.on('data', transport);
-      outlet.pipe(valve.in);
-
-      req.socket.on('close', () => {
-        multiplexers.delete(mux);
-
-        outlet.unpipe(valve.in);
-
-        valve.out.off('data', transport);
-
-        for (let i = 0; i < transformers.length - 1; i++) {
-          transformers[i].unpipe(transformers[i + 1]);
-        }
-
-        const paused = station.removeAudience(audienceGroup, audienceId);
-        if (paused) {
-          overseer.stop();
-        }
-      });
-
-      const resHeaders: OutgoingHttpHeaders = {
-        'Connection': 'close',
-        'Content-Type': mimeTypes[outputFormat],
-        'Cache-Control': 'no-cache, no-store',
-        'Server': 'Medley',
-        'X-Powered-By': 'Medley',
-        'icy-name': station.name,
-        'icy-description': station.description,
-        'icy-sr': sampleRate,
-        'icy-br': bitrate,
-        'transfer-encoding': '',
-      };
-
-      if (needMetadata) {
-        resHeaders['icy-metaint'] = metadataInterval;
-      }
-
-      res.writeHead(200, omitBy(resHeaders, isUndefined));
-
-      setTimeout(() => {
-        mux.metadata = getIcyMetadata();
-      }, 2000);
-    },
-
-    stop() {
-      station.deleteAudioStream(audioRequest.id);
-      overseer.stop();
-      outlet.end();
-
-      station.off('trackActive', handleTrackActive);
+    if (needMetadata) {
+      resHeaders['icy-metaint'] = this.#options.metadataInterval;
     }
+
+    res.writeHead(200, omitBy(resHeaders, isUndefined));
+
+    setTimeout(() => {
+      mux.metadata = this.#getIcyMetadata();
+    }, 2000);
   }
-}
 
-export class _IcyAdapter extends FFMpegAdapter {
+  get handler(): RequestHandler {
+    return this.#handler;
+  }
 
+  #audioRequest?: RequestAudioStreamResult;
+
+  protected override async afterSpawn(process: FFmpegChildProcess) {
+    if (this.#audioRequest?.id) {
+      this.station.deleteAudioStream(this.#audioRequest.id);
+    }
+
+    this.#audioRequest = await this.station.requestAudioStream({
+      format: this.#options.sampleFormat,
+      sampleRate: this.#options.sampleRate,
+      bufferSize: this.#options.sampleRate * 2.0,
+      buffering: this.#options.sampleRate * 0.25
+    });
+
+    pipeline(this.#audioRequest.stream, process.stdin, noop);
+
+    process.stdout.on('data', buffer => this.#outlet.write(buffer));
+  }
+
+  override stop() {
+    if (this.#audioRequest?.id) {
+      this.station.deleteAudioStream(this.#audioRequest.id);
+    }
+
+    this.overseer.stop();
+    this.#outlet.end();
+
+    this.station.off('trackActive', this.#handleTrackActive);
+  }
 }
 

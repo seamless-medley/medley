@@ -1,7 +1,7 @@
 import { Station } from "@seamless-medley/core";
 import http from 'http';
 import express from 'express';
-import { createIcyAdapter } from "./streaming";
+import { IcyAdapter } from "./streaming";
 import { MongoMusicDb } from "./musicdb/mongo";
 import { musicCollections, sequences, sweeperRules } from "./fixtures";
 
@@ -29,19 +29,22 @@ async function main() {
   });
 
   for (const desc of musicCollections) {
-    await station.addCollection(desc);
+    if (!desc.auxiliary) {
+      await station.addCollection(desc);
+    }
   }
 
   station.updateSequence(sequences);
   station.sweeperInsertionRules = sweeperRules;
 
-  const source = await createIcyAdapter(station, {
+  const source = new IcyAdapter(station, {
     outputFormat: 'mp3',
     bitrate: 128,
     sampleRate: 48000
   });
 
   if (source) {
+    await source.init();
     app.get('/test', source.handler);
 
     server.listen(port, () => {

@@ -1,9 +1,9 @@
-import { BoomBoxTrackPlay, getTrackBanner, RequestAudioStreamResult, Station } from "@seamless-medley/core";
-import axios from "axios";
+import { BoomBoxEvents, BoomBoxTrackPlay, getTrackBanner, RequestAudioStreamResult, Station } from "@seamless-medley/core";
+import axios, { AxiosError } from "axios";
 import { chain, noop } from "lodash";
 import { pipeline } from "stream";
-import { createFFmpegOverseer, InfoLine } from "../ffmpeg";
-import { Adapter, AdapterOptions, audioFormatToAudioType } from "../types";
+import { FFmpegChildProcess, FFMpegLine, FFMpegOverseerStartupError, getFFmpegCaps, InfoLine } from "../ffmpeg";
+import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
 
 const outputFormats = ['mp3', 'aac', 'he-aac', 'vorbis', 'opus', 'flac'] as const;
 
@@ -27,97 +27,67 @@ export type ShoutAdapterOptions = AdapterOptions<OutputFormats> & {
   }
 }
 
-export type ShoutAdapter = Adapter & {
+export class ShoutAdapter extends FFMpegAdapter {
+  constructor(station: Station, options: ShoutAdapterOptions) {
+    super(station, options.ffmpegPath);
 
-}
+    const {
+      sampleFormat = 'FloatLE',
+      sampleRate = 44100,
+      bitrate = 128,
+      outputFormat = 'mp3',
+      icecast,
+    } = options;
 
 
-// TODO: Return ShoutAdapter
-export async function createShoutAdapter(station: Station, options: ShoutAdapterOptions): Promise<void> {
-  const {
-    sampleFormat = 'FloatLE',
-    sampleRate = 44100,
-    bitrate = 128,
-    outputFormat = 'mp3',
-    icecast
-  } = options ?? {};
+    this.#options = {
+      sampleFormat,
+      sampleRate,
+      bitrate,
+      outputFormat,
+      icecast: {
+        port: '8000',
+        tls: false,
+        userAgent: 'Medley',
+        ...icecast
+      }
+    }
 
-  const audioType = audioFormatToAudioType(sampleFormat);
-
-  if (!audioType) {
-    return;
+    station.on('trackActive', this.#handleTrackActive);
   }
 
-  const {
-    host,
-    port = '8000',
-    tls = false,
-    username,
-    password,
-    userAgent = 'Medley'
-  } = icecast;
+  override async init(): Promise<void> {
+    await super.init();
+    await this.overseer.respawn();
+  }
 
-  const mountpoint = (({ mountpoint }) => !mountpoint.startsWith('/') ? `/${mountpoint}` : mountpoint)(icecast);
+  #options: Omit<Required<ShoutAdapterOptions>, 'ffmpegPath'>;
 
-  let audioRequest!: RequestAudioStreamResult;
-  let currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
-  let lastInfo: InfoLine;
+  #currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
 
-  const codecArgs = ((): string[] => {
-    switch (outputFormat) {
-      case 'mp3':
-        return [
-          '-f', 'mp3',
-          '-content_type', 'audio/mpeg'
-        ];
+  protected override async getArgs() {
+    const audioType = audioFormatToAudioType(this.#options.sampleFormat);
 
-      case 'aac':
-        return [
-          '-f', 'adts',
-          '-content_type', 'audio/aac'
-        ];
+    const { sampleRate, bitrate, icecast } = this.#options;
+    const { username, password, host, port, tls, userAgent } = icecast;
 
-      case 'he-aac':
-        return [
-          '-f', 'adts',
-          '-c:a', 'libfdk_aac',
-          '-profile:a', 'aac_he_v2',
-          '-content_type', 'audio/aac'
-        ]
-
-      case 'vorbis':
-        return [
-          '-f', 'ogg',
-          '-c:a', 'libvorbis',
-          '-content_type', 'audio/ogg'
-        ];
-
-      case 'opus':
-        return [
-          '-f', 'ogg',
-          '-c:a', 'libopus',
-          '-content_type', 'audio/ogg'
-        ];
-
-      case 'flac':
-        return [
-          '-f', 'ogg',
-          '-c:a', 'flac',
-          '-content_type', 'application/ogg'
-        ]
+    let { outputFormat } = this.#options;
+    if (outputFormat === 'he-aac') {
+      const encoders = await getFFmpegCaps('encoders', this.binPath);
+      if (!encoders.libfdk_aac?.caps.audio) {
+        // fallback to AAC
+        outputFormat = 'aac';
+      }
     }
-  })();
 
-  const overseer = await createFFmpegOverseer({
-    exePath: options?.ffmpegPath,
-    args: [
+    return [
       '-f', audioType,
       '-vn',
       '-ar', `${sampleRate}`,
       '-ac', '2',
       '-channel_layout', 'stereo',
       '-i', '-',
-      ...codecArgs,
+      ...await getCodecArgs(outputFormat),
       '-b:a', `${bitrate}k`,
       '-password', password,
       ...chain(['name', 'description', 'genre', 'url', 'public'])
@@ -126,52 +96,78 @@ export async function createShoutAdapter(station: Station, options: ShoutAdapter
         .value(),
       ...(userAgent ? ['-user_agent', userAgent] : []),
       ...(tls ? ['-tls'] : []),
-      `icecast://${username}@${host}:${port}${mountpoint}`
-    ],
+      `icecast://${username}@${host}:${port}${this.#getMountPoint()}`
+    ]
+  }
 
-    respawnDelay: {
+  protected override getRespawnDelay() {
+    return {
       min: 1000,
       max: 15000
-    },
-
-    async afterSpawn(process) {
-      audioRequest = await station.requestAudioStream({
-        sampleRate,
-        format: sampleFormat
-      });
-
-      pipeline(audioRequest.stream, process.stdin, noop);
-    },
-
-    started(error) {
-      if (error) {
-        console.log('Error starting up', error);
-        return;
-      }
-
-      setTimeout(postMetadata, 2000);
-    },
-
-    log(line) {
-      if (line.type === 'info') {
-        lastInfo = line;
-        return;
-      }
-
-      if (line.type === 'error') {
-        console.log('Error', line, lastInfo);
-
-        return;
-      }
     }
-  });
+  }
 
-  await overseer.respawn();
+  #audioRequest?: RequestAudioStreamResult;
 
-  function postMetadata() {
-    if (!currentTrackPlay) {
+  protected override async afterSpawn(process: FFmpegChildProcess) {
+    if (this.#audioRequest?.id) {
+      this.station.deleteAudioStream(this.#audioRequest.id);
+    }
+
+    this.#audioRequest = await this.station.requestAudioStream({
+      format: this.#options.sampleFormat,
+      sampleRate: this.#options.sampleRate
+    });
+
+    pipeline(this.#audioRequest.stream, process.stdin, noop);
+  }
+
+  protected override started(error?: FFMpegOverseerStartupError) {
+    if (error) {
+      console.log('Error starting up', error);
       return;
     }
+
+    setTimeout(this.#postMetadata, 2000);
+  }
+
+  #lastInfo?: InfoLine;
+
+  protected override log(line: FFMpegLine) {
+    if (line.type === 'info') {
+      this.#lastInfo = line;
+      return;
+    }
+
+    if (line.type === 'error') {
+      console.log('Error', line, this.#lastInfo);
+
+      return;
+    }
+  }
+
+  #handleTrackActive: BoomBoxEvents['trackActive'] = (deckIndex, trackPlay) => {
+    this.#currentTrackPlay = trackPlay;
+    this.#postMetadata();
+  }
+
+  #getMountPoint() {
+    const { mountpoint } = this.#options.icecast;
+    return !mountpoint.startsWith('/') ? `/${mountpoint}` : mountpoint;
+  }
+
+  #postMetadata = () => {
+    if (!this.#currentTrackPlay) {
+      return;
+    }
+
+    const { username, password, host, port, tls, userAgent } = this.#options.icecast;
+
+    console.log({
+      username, password, host, port, tls, userAgent,
+      mount: this.#getMountPoint(),
+      song: getTrackBanner(this.#currentTrackPlay.track)
+    })
 
     axios.get(`${tls ? 'https' : 'http'}://${host}:${port}/admin/metadata`, {
       auth: {
@@ -180,18 +176,72 @@ export async function createShoutAdapter(station: Station, options: ShoutAdapter
       },
       params: {
         mode: 'updinfo',
-        mount: mountpoint,
-        song: getTrackBanner(currentTrackPlay.track)
+        mount: this.#getMountPoint(),
+        song: getTrackBanner(this.#currentTrackPlay.track)
       },
       headers: {
         'User-Agent': userAgent
       }
     })
-    .catch(noop);
+    .catch((e: AxiosError) => {
+      if (e.code === 'ERR_BAD_REQUEST') {
+        console.error('Error updating metadata, mount point might not support metadata');
+      }
+    });
   }
 
-  station.on('trackActive', (deckIndex, trackPlay) => {
-    currentTrackPlay = trackPlay;
-    postMetadata();
-  });
+  override stop() {
+    if (this.#audioRequest?.id) {
+      this.station.deleteAudioStream(this.#audioRequest.id);
+    }
+
+    this.overseer.stop();
+
+    this.station.off('trackActive', this.#handleTrackActive);
+  }
+}
+
+async function getCodecArgs(format: OutputFormats) {
+  switch (format) {
+    case 'mp3':
+      return [
+        '-f', 'mp3',
+        '-content_type', 'audio/mpeg'
+      ];
+
+    case 'aac':
+      return [
+        '-f', 'adts',
+        '-content_type', 'audio/aac'
+      ];
+
+    case 'he-aac':
+      return [
+        '-f', 'adts',
+        '-c:a', 'libfdk_aac',
+        '-profile:a', 'aac_he_v2',
+        '-content_type', 'audio/aac'
+      ]
+
+    case 'vorbis':
+      return [
+        '-f', 'ogg',
+        '-c:a', 'libvorbis',
+        '-content_type', 'audio/ogg'
+      ];
+
+    case 'opus':
+      return [
+        '-f', 'ogg',
+        '-c:a', 'libopus',
+        '-content_type', 'audio/ogg'
+      ];
+
+    case 'flac':
+      return [
+        '-f', 'ogg',
+        '-c:a', 'flac',
+        '-content_type', 'application/ogg'
+      ]
+  }
 }

@@ -1,9 +1,6 @@
-import { MusicCollectionDescriptor, SequenceConfig, Station, SweeperInsertionRule, WatchTrackCollection } from "@seamless-medley/core";
-import normalizePath from "normalize-path";
+import { Station } from "@seamless-medley/core";
 import { MongoMusicDb } from "./musicdb/mongo";
-import { basename } from "path";
-import { createShoutAdapter } from "./streaming/shout/adapter";
-import { getFFmpegCaps } from "./streaming/ffmpeg";
+import { ShoutAdapter } from "./streaming/shout/adapter";
 import { musicCollections, sequences, sweeperRules } from "./fixtures";
 
 process.on('uncaughtException', (e) => {
@@ -33,9 +30,10 @@ async function main() {
   station.updateSequence(sequences);
   station.sweeperInsertionRules = sweeperRules;
 
-  await createShoutAdapter(station, {
-    ffmpegPath: 'D:\\Tools\\ffmpeg\\bin\\ffmpeg',
+  const source = new ShoutAdapter(station, {
+    // ffmpegPath: 'D:\\Tools\\ffmpeg\\bin\\ffmpeg',
     outputFormat: 'he-aac',
+    bitrate: 256,
     icecast: {
       host: 'localhost',
       mountpoint: '/test',
@@ -49,12 +47,9 @@ async function main() {
     }
   });
 
-  station.start();
-}
+  await source.init();
 
-async function ff() {
-  const ok = await getFFmpegCaps('codecs', 'D:\\Tools\\ffmpeg\\bin\\ffmpeg');
-  console.log('RESULT => ', ok);
+  station.start();
 }
 
 main();
