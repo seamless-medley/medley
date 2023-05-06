@@ -37,7 +37,7 @@ async function combine() {
 
   const deps = chain({})
     .extend(utilsDeps, coreDeps, mainPackage.dependencies)
-    .omitBy((_, name) => /^(@emotion|socket\.io|react|express|valtio|@mantine|framer-motion|ffmpeg|jotai|reflect-metadata|axios|notepack.io|opus-decoder)/.test(name ?? ''))
+    .omitBy((_, name) => /^(@emotion|socket\.io|react|express|valtio|@mantine|framer-motion|ffmpeg|jotai|reflect-metadata|notepack.io|opus-decoder)/.test(name ?? ''))
     .transform((o, value, key) => {
       if (key.startsWith('@seamless-medley/') && value?.startsWith('..')) {
         o[key] = value.substring(1);
