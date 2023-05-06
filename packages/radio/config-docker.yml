@@ -13,7 +13,8 @@ stations:
   default:
     name: Today FM
     description: Various genres
-    artistBacklog: false
+    # url: https://test.com
+    # iconURL: https://cdn.discordapp.com/emojis/742256196295065661
     duplicationSimilarity: 0.5
     followCrateAfterRequestTrack: true
     intros:
@@ -65,7 +66,7 @@ stations:
         path: M:\Repository\inter
 
     sequences:
-      # Randomly select this crate to play tracks from new-released, limited by one of [1, 1, 1, 2]
+      # Randomly select this crate to play tracks from `new-released`, limited by one of [1, 1, 1, 2]
       - chance: random
         collections:
           - id: new-released
@@ -73,7 +74,7 @@ stations:
           by: one-of
           list: [1, 1, 1, 2]
 
-      # This crate has 1/3 chance of being selected, play up to 2 tracks from bright
+      # This crate has 1/3 chance of being selected, play up to 2 tracks from `bright`
       - chance:
           yes: 1
           no: 2
@@ -83,14 +84,14 @@ stations:
           by: upto
           upto: 2
 
-      # This crate always play up to 2 tracks from joyful
+      # This crate always play up to 2 tracks from `joyful`
       - collections:
           - id: joyful
         limit:
           by: upto
           upto: 2
 
-       # This crate has 2/6 chance of being selected, play 1-2 tracks from upbeat
+       # This crate has 2/6 chance of being selected, play 1-2 tracks from `upbeat`
       - chance:
           yes: 2
           no: 4
@@ -102,7 +103,7 @@ stations:
             min: 1
             max: 2
 
-      # This crate has 1/4 chance of being selected, play exactly 1 track from groovy
+      # This crate has 1/4 chance of being selected, play exactly 1 track from `groovy`
       - chance:
           yes: 1
           no: 3
@@ -110,7 +111,7 @@ stations:
           - id: groovy
         limit: 1
 
-      # This crate always play 2-3 tracks from chill
+      # This crate always play 2-3 tracks from `chill`
       - collections:
           - id: chill
         limit:
@@ -119,7 +120,7 @@ stations:
             min: 2
             max: 3
 
-      # This crate always play up to 2 tracks from lovesong
+      # This crate always play up to 2 tracks from `lovesong`
       - collections:
          - id: lovesong
         limit:
@@ -136,7 +137,7 @@ stations:
           by: upto
           upto: 1
 
-      # This crate always play 1-2 tracks from brokenhearted
+      # This crate always play 1-2 tracks from `brokenhearted`
       - collections:
           - id: brokenhearted
         limit:
@@ -145,7 +146,7 @@ stations:
             min: 1
             max: 2
 
-      # This crate has 1/3 chance of being selected, play 0 or 1 track from hurt
+      # This crate has 1/3 chance of being selected, play 0 or 1 track from `hurt`
       - chance:
           yes: 1
           no: 2
@@ -155,7 +156,7 @@ stations:
           by: upto
           upto: 1
 
-      # This crate always play 1-2 tracks from lonely
+      # This crate always play 1-2 tracks from `lonely`
       - collections:
           - id: lonely
         limit:
@@ -164,14 +165,14 @@ stations:
             min: 1
             max: 2
 
-      # This crate always play upto 2 tracks from lovesong
+      # This crate always play upto 2 tracks from `lovesong`
       - collections:
           - id: lovesong
         limit:
           by: upto
           upto: 2
 
-      # This crate has 1/2 chance of being selected, play upto 2 tracks from chill
+      # This crate has 1/2 chance of being selected, play upto 2 tracks from `chill`
       - chance:
           yes: 1
           no: 1
