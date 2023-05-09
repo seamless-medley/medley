@@ -2,7 +2,7 @@ import { BoomBoxEvents, BoomBoxTrackPlay, getTrackBanner, RequestAudioStreamResu
 import axios, { AxiosError } from "axios";
 import { chain, noop } from "lodash";
 import { pipeline } from "stream";
-import { FFmpegChildProcess, FFMpegLine, FFMpegOverseerStartupError, getFFmpegCaps, InfoLine } from "../ffmpeg";
+import { FFMpegCapabilities, FFmpegChildProcess, FFMpegLine, FFMpegOverseerStartupError, getFFmpegCaps, InfoLine } from "../ffmpeg";
 import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
 
 const outputFormats = ['mp3', 'aac', 'he-aac', 'vorbis', 'opus', 'flac'] as const;
@@ -68,17 +68,8 @@ export class ShoutAdapter extends FFMpegAdapter {
   protected override async getArgs() {
     const audioType = audioFormatToAudioType(this.#options.sampleFormat);
 
-    const { sampleRate, bitrate, icecast } = this.#options;
+    const { sampleRate, bitrate, icecast, outputFormat } = this.#options;
     const { username, password, host, port, tls, userAgent } = icecast;
-
-    let { outputFormat } = this.#options;
-    if (outputFormat === 'he-aac') {
-      const encoders = await getFFmpegCaps('encoders', this.binPath);
-      if (!encoders.libfdk_aac?.caps.audio) {
-        // fallback to AAC
-        outputFormat = 'aac';
-      }
-    }
 
     return [
       '-f', audioType,
@@ -87,7 +78,7 @@ export class ShoutAdapter extends FFMpegAdapter {
       '-ac', '2',
       '-channel_layout', 'stereo',
       '-i', '-',
-      ...await getCodecArgs(outputFormat),
+      ...await getCodecArgs(outputFormat, await getFFmpegCaps('encoders', this.binPath)),
       '-b:a', `${bitrate}k`,
       '-password', password,
       ...chain(['name', 'description', 'genre', 'url', 'public'])
@@ -163,12 +154,6 @@ export class ShoutAdapter extends FFMpegAdapter {
 
     const { username, password, host, port, tls, userAgent } = this.#options.icecast;
 
-    console.log({
-      username, password, host, port, tls, userAgent,
-      mount: this.#getMountPoint(),
-      song: getTrackBanner(this.#currentTrackPlay.track)
-    })
-
     axios.get(`${tls ? 'https' : 'http'}://${host}:${port}/admin/metadata`, {
       auth: {
         username,
@@ -201,7 +186,14 @@ export class ShoutAdapter extends FFMpegAdapter {
   }
 }
 
-async function getCodecArgs(format: OutputFormats) {
+async function getCodecArgs(format: OutputFormats, caps?: FFMpegCapabilities<'encoders'>) {
+  if (caps && format === 'he-aac') {
+    if (!caps.libfdk_aac?.caps?.audio) {
+      // fallback to AAC
+      format = 'aac';
+    }
+  }
+
   switch (format) {
     case 'mp3':
       return [
