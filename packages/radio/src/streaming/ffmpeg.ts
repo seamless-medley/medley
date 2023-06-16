@@ -280,7 +280,7 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
   }
 }
 
-type FFMpegCapabilities<C extends keyof CapabilityFlags> = {
+export type FFMpegCapabilities<C extends keyof CapabilityFlags> = {
   [name: string]: CapablityInfo<C>;
 }
 

@@ -1,6 +1,7 @@
-import { dirname } from 'path';
+import os from 'node:os';
+import { dirname } from 'node:path';
+import { stat } from "node:fs/promises";
 import which from 'which';
-import { stat } from "fs/promises";
 
 import fg from 'fast-glob';
 import { minimatch } from 'minimatch';
@@ -267,6 +268,28 @@ async function isWatchManAvailable() {
   return found;
 }
 
+function getPlatformBackend(platform: NodeJS.Platform = os.platform()): BackendType {
+  switch (platform) {
+    case 'win32':
+      return 'windows';
+
+    case 'darwin':
+      return 'fs-events';
+
+    case 'linux':
+      return 'inotify';
+
+    default:
+      return 'brute-force';
+  }
+}
+
+async function getBackends(): Promise<BackendType[]> {
+  const defaultBackend = getPlatformBackend();
+  const hasWatchman = await isWatchManAvailable();
+  return hasWatchman ? ['watchman', defaultBackend] : [defaultBackend];
+}
+
 async function watch(dir: string, callback: SubscribeCallback) {
   const stats = await stat(dir).catch(stubFalse);
 
@@ -278,7 +301,7 @@ async function watch(dir: string, callback: SubscribeCallback) {
     return;
   }
 
-  const backends: (BackendType | undefined)[] = (await isWatchManAvailable()) ? ['watchman', undefined] : [undefined];
+  const backends = await getBackends();
 
   for (const backend of backends) {
     try {
