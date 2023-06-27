@@ -34,14 +34,14 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
   const { trackPlay } = station;
 
   if (trackPlay && isRequestTrack<StationTrack, Audience>(trackPlay.track)) {
-    let canSkip = automaton.owners.includes(interaction.user.id);
+    const canSkip = automaton.owners.includes(interaction.user.id);
 
     if (!canSkip) {
       const { requestedBy } = trackPlay.track;
 
-      canSkip = requestedBy.some(r => r.id === interaction.user.id);
+      const isRequester = requestedBy.some(r => r.id === interaction.user.id);
 
-      if (!canSkip) {
+      if (!isRequester) {
         const requesters = extractRequestersForGuild(guildId, requestedBy);
         const mentions = requesters.length > 0 ? requesters.map(id => userMention(id)).join(' ') : '`Someone else`';
         await reply(interaction, `${userMention(interaction.user.id)} Could not skip this track, it was requested by ${mentions}`);
