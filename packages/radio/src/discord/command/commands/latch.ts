@@ -89,12 +89,16 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, collectionId: string) => {
   const { station } = guildStationGuard(automaton, interaction);
 
-  permissionGuard(interaction.memberPermissions, [
-    PermissionsBitField.Flags.ManageChannels,
-    PermissionsBitField.Flags.ManageGuild,
-    PermissionsBitField.Flags.MuteMembers,
-    PermissionsBitField.Flags.MoveMembers
-  ]);
+  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+
+  if (!isOwnerOverride) {
+    permissionGuard(interaction.memberPermissions, [
+      PermissionsBitField.Flags.ManageChannels,
+      PermissionsBitField.Flags.ManageGuild,
+      PermissionsBitField.Flags.MuteMembers,
+      PermissionsBitField.Flags.MoveMembers
+    ]);
+  }
 
   const collection = station.trackPlay?.track?.collection;
 
