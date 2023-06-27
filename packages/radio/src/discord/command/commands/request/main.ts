@@ -144,10 +144,11 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
         const title = (sel.title.length + f.length > 100) ? truncate(sel.title, { length: 100 - f.length }) : sel.title;
         const artist = sel.artist !== undefined ? truncate(sel.artist, { length: 100 }) : 'Unknown Artist';
+        const originalArtist = sel.track.extra?.tags?.originalArtist;
 
         return {
           label: `${title}${f}`,
-          description: artist,
+          description: `${artist}${originalArtist ? ` (Original by ${originalArtist})` : ''}`,
           value: key
         }
       })

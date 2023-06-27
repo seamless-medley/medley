@@ -1,6 +1,6 @@
 import { castArray, chain, isString, noop } from 'lodash';
 import normalizePath from 'normalize-path';
-import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollection, TrackCollectionEvents } from '../collections';
+import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents } from '../collections';
 import { createLogger } from '../logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
@@ -8,6 +8,7 @@ import { SearchEngine, Query, TrackDocumentFields } from './search';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from './music_db';
 import { TrackWithCollectionExtra } from '../track';
+import { SearchOptions } from 'minisearch';
 
 export type MusicCollectionDescriptor = {
   id: string;
@@ -230,38 +231,52 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
   async search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): Promise<MusicTrack<O>[]> {
     const { artist, title, query } = q;
 
-    const queries: Query[] = [];
+    const mainQueries: Query[] = [];
+
+    let boost: SearchOptions['boost'] = undefined;
 
     if (artist || title) {
-      const fields: TrackDocumentFields[] = [];
-      const values: string[] = [];
+      const titleAndArtistFields: TrackDocumentFields[] = [];
+      const titleAndArtistValues: Query[] = [];
 
       if (artist) {
-        fields.push('artist');
-        values.push(artist);
+        titleAndArtistValues.push({
+          queries: ['artist', 'originalArtist', 'albumArtist'].map(artistField => ({
+            fields: [artistField], queries: [artist]
+          })),
+          combineWith: 'OR',
+          boost: {
+            originalArtist: 0.85,
+            albumArtist: 0.8
+          }
+        });
       }
 
       if (title) {
-        fields.push('title');
-        values.push(title);
+        titleAndArtistFields.push('title');
+        titleAndArtistValues.push(title);
       }
 
-      queries.push({
-        fields,
-        queries: values,
+      mainQueries.push({
+        fields: titleAndArtistFields,
+        queries: titleAndArtistValues,
+        boost,
         combineWith: 'AND'
-      })
+      });
     }
 
     if (query) {
-      queries.push(query)
+      mainQueries.push(query)
     }
 
-    const result = await this.searchEngine.search({ queries, combineWith: 'OR' }, { prefix: true, fuzzy: 0.2 });
+    const result = await this.searchEngine.search(
+      { queries: mainQueries, combineWith: 'OR' },
+      { prefix: true, fuzzy: 0.2 }
+    );
 
     const chained = chain(result)
       .sortBy([s => -s.score, 'title'])
-      .map(s => this.findTrackById(s.id))
+      .map(s => this.findTrackById(s.trackId))
       .filter((t): t is MusicTrack<O> => t !== undefined)
       .uniqBy(t => t.path)
 
