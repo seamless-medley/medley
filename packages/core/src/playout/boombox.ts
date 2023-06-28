@@ -6,7 +6,7 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track, TrackExtra } from "../track";
-import { TrackCollection, TrackPeek } from "../collections";
+import { TrackCollection, TrackIndex, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
 import { createLogger, Logger, type ILogObj } from '../logging';
 import { MetadataHelper } from '../metadata';
@@ -280,7 +280,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
 
   private _lastRequestId = 0;
 
-  request(track: BoomBoxTrack, requestedBy?: R): TrackPeek<TrackWithRequester<BoomBoxTrack, R>> {
+  request(track: BoomBoxTrack, requestedBy?: R): TrackIndex<TrackWithRequester<BoomBoxTrack, R>> {
     const existing = this.requests.fromId(track.id);
 
     if (existing) {
@@ -382,8 +382,12 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     return undefined;
   }
 
-  peekRequests(from: number, n: number, filterFn: (track: TrackWithRequester<BoomBoxTrack, R>) => boolean) {
-    return this.requests.peek(from, n, filterFn);
+  get allRequests() {
+    return this.requests;
+  }
+
+  peekRequests(bottomIndex: number, n: number, filterFn: (track: TrackWithRequester<BoomBoxTrack, R>) => boolean) {
+    return this.requests.peek(bottomIndex, n, filterFn);
   }
 
   getRequestsOf(requester: R) {

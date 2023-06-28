@@ -136,9 +136,9 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
   }
 }
 
-const previewTrack = ({ index, track }: TrackPeek<StationRequestedTrack>, padding: number, focus: number | undefined) => {
+const previewTrack = ({ index, localIndex, track }: TrackPeek<StationRequestedTrack>, padding: number, focus: number | undefined) => {
   const isFocusing = focus === index;
-  const label = padStart(`${index + 1}`, padding);
+  const label = padStart(`${localIndex + 1}`, padding);
   return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)} {{red|b}}[${track.priority || 0}]`;
 }
 
@@ -146,49 +146,58 @@ export function isTrackRequestedFromGuild(track: TrackWithRequester<BoomBoxTrack
   return track.requestedBy.some(({ type, group }) => (type === AudienceType.Discord) && (group.guildId === guildId));
 }
 
-export function peekRequestsForGuild(station: Station, from: number, count: number, guildId?: string) {
+export function peekRequestsForGuild(station: Station, bottomIndex: number, count: number, guildId?: string) {
   return station.peekRequests(
-    from, count,
+    bottomIndex, count,
     guildId
       ? track => isTrackRequestedFromGuild(track, guildId)
       : undefined
   );
 }
 
-export type MakeRequestPreviewOptions = {
+export type MakePeekPreviewOptions = {
   /**
    * @default 0
    */
-  index?: number;
+  bottomIndex?: number;
 
-  focus?: number;
+  focusIndex?: number;
 
   /**
    * @default 5
    */
   count?: number;
+}
 
+export type MakeRequestPreviewOptions = MakePeekPreviewOptions & {
   guildId?: string;
 }
 
 export async function makeRequestPreview(station: Station, options: MakeRequestPreviewOptions = {}) {
-  const { index = 0, focus, count = 5, guildId } = options;
-  const peekings = peekRequestsForGuild(station, index, count, guildId);
+  const { bottomIndex = 0, focusIndex, count = 5, guildId } = options;
+  const peekings = peekRequestsForGuild(station, bottomIndex, count, guildId);
 
   if (peekings.length <= 0) {
     return;
   }
 
-  const padding = 2 + (maxBy(peekings, 'index')?.index.toString().length || 0);
-
   const lines: string[] = [];
 
-  if (peekings[0].index > 1) {
+  const topItem = peekings.at(0)!;
+
+  const padding = 2 + (maxBy(peekings, 'index')?.index.toString().length || 0);
+
+  const topMost = (topItem.localIndex > 0) ? peekRequestsForGuild(station, 0, 1, guildId)[0] : undefined;
+
+  if (topMost) {
+    peekings.splice(0, 1);
+
+    lines.push(previewTrack(topMost, padding, undefined));
     lines.push(padStart('...', padding));
   }
 
   for (const peek of peekings) {
-    lines.push(previewTrack(peek, padding, focus));
+    lines.push(previewTrack(peek, padding, focusIndex));
   }
 
   return lines.length ? makeAnsiCodeBlock(lines) : undefined;

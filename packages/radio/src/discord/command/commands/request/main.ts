@@ -249,8 +249,8 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       }
 
       const preview = await makeRequestPreview(station, {
-        index: ok.index,
-        focus: ok.index,
+        bottomIndex: ok.index,
+        focusIndex: ok.index,
         guildId
       });
 

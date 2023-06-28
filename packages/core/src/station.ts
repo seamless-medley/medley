@@ -1,7 +1,7 @@
 import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions, TrackPlay, UpdateAudioStreamOptions } from "@seamless-medley/medley";
 import { isFunction, random, sample, shuffle, sortBy } from "lodash";
 import { TypedEmitter } from 'tiny-typed-emitter';
-import { TrackCollectionBasicOptions, TrackPeek } from "./collections";
+import { TrackCollectionBasicOptions, TrackIndex } from "./collections";
 import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
 import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "./library";
 import { createLogger, Logger, type ILogObj } from "./logging";
@@ -150,7 +150,7 @@ export type StationEvents = {
   collectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, transitingFromRequestTrack: boolean) => void;
   crateChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
 
-  requestTrackAdded: (track: TrackPeek<StationRequestedTrack>) => void;
+  requestTrackAdded: (track: TrackIndex<StationRequestedTrack>) => void;
   requestTracksRemoved: (tracks: StationRequestedTrack[]) => void;
   //
   collectionAdded: (collection: StationTrackCollection) => void;
@@ -638,8 +638,12 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.boombox.requestsCount;
   }
 
-  peekRequests(from: number, n: number, filterFn?: (track: TrackWithRequester<BoomBoxTrack, Audience>) => boolean) {
-    return this.boombox.peekRequests(from, n, filterFn ?? (() => true));
+  get allRequests() {
+    return this.boombox.allRequests;
+  }
+
+  peekRequests(bottomIndex: number, n: number, filterFn?: (track: TrackWithRequester<BoomBoxTrack, Audience>) => boolean) {
+    return this.boombox.peekRequests(bottomIndex, n, filterFn ?? (() => true));
   }
 
   lockRequests(by: RequestTrackLockPredicate<Audience>) {
