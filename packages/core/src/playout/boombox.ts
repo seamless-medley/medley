@@ -386,13 +386,9 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     return this.requests;
   }
 
-  peekRequests(bottomIndex: number, n: number, filterFn: (track: TrackWithRequester<BoomBoxTrack, R>) => boolean) {
-    return this.requests.peek(bottomIndex, n, filterFn);
-  }
-
   getRequestsOf(requester: R) {
     const matchRequester = matches(requester);
-    return this.requests.all().filter(r => r.requestedBy.some(matchRequester));
+    return this.requests.filter(r => r.requestedBy.some(matchRequester));
   }
 
   unrequest(requestIds: number[]) {

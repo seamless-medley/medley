@@ -136,7 +136,7 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
   }
 }
 
-const previewTrack = ({ index, localIndex, track }: TrackPeek<StationRequestedTrack>, padding: number, focus: number | undefined) => {
+const previewTrackPeek = ({ index, localIndex, track }: TrackPeek<StationRequestedTrack>, padding: number, focus: number | undefined) => {
   const isFocusing = focus === index;
   const label = padStart(`${localIndex + 1}`, padding);
   return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)} {{red|b}}[${track.priority || 0}]`;
@@ -146,19 +146,14 @@ export function isTrackRequestedFromGuild(track: TrackWithRequester<BoomBoxTrack
   return track.requestedBy.some(({ type, group }) => (type === AudienceType.Discord) && (group.guildId === guildId));
 }
 
-export function peekRequestsForGuild(station: Station, bottomIndex: number, count: number, guildId?: string) {
-  return station.peekRequests(
+export function peekRequestsForGuild(station: Station, bottomIndex: number, count: number, guildId: string) {
+  return station.allRequests.peek(
     bottomIndex, count,
-    guildId
-      ? track => isTrackRequestedFromGuild(track, guildId)
-      : undefined
+    track => isTrackRequestedFromGuild(track, guildId)
   );
 }
 
 export type MakePeekPreviewOptions = {
-  /**
-   * @default 0
-   */
   bottomIndex?: number;
 
   focusIndex?: number;
@@ -170,10 +165,10 @@ export type MakePeekPreviewOptions = {
 }
 
 export type MakeRequestPreviewOptions = MakePeekPreviewOptions & {
-  guildId?: string;
+  guildId: string;
 }
 
-export async function makeRequestPreview(station: Station, options: MakeRequestPreviewOptions = {}) {
+export async function makeRequestPreview(station: Station, options: MakeRequestPreviewOptions) {
   const { bottomIndex = 0, focusIndex, count = 5, guildId } = options;
   const peekings = peekRequestsForGuild(station, bottomIndex, count, guildId);
 
@@ -181,23 +176,25 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
     return;
   }
 
+  const padding = 2 + (maxBy(peekings, 'index')?.index.toString().length || 0);
+
   const lines: string[] = [];
 
   const topItem = peekings.at(0)!;
 
-  const padding = 2 + (maxBy(peekings, 'index')?.index.toString().length || 0);
+  const topMostIndex = (topItem.localIndex > 0) ? station.allRequests.findIndex(track => isTrackRequestedFromGuild(track, guildId)) : -1;
 
-  const topMost = (topItem.localIndex > 0) ? peekRequestsForGuild(station, 0, 1, guildId)[0] : undefined;
-
-  if (topMost) {
+  if (topMostIndex > -1) {
     peekings.splice(0, 1);
 
-    lines.push(previewTrack(topMost, padding, undefined));
+    const topMost = station.allRequests.at(topMostIndex)!;
+
+    lines.push(previewTrackPeek({ index: topMostIndex, localIndex: 0, track: topMost }, padding, undefined));
     lines.push(padStart('...', padding));
   }
 
   for (const peek of peekings) {
-    lines.push(previewTrack(peek, padding, focusIndex));
+    lines.push(previewTrackPeek(peek, padding, focusIndex));
   }
 
   return lines.length ? makeAnsiCodeBlock(lines) : undefined;

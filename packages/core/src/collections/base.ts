@@ -1,7 +1,7 @@
 import os from 'node:os';
 import { createHash } from 'crypto';
 import { TypedEmitter } from "tiny-typed-emitter";
-import { castArray, chain, chunk, clamp, find, findIndex, findLastIndex, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
+import { castArray, chain, chunk, clamp, findLastIndex, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
@@ -281,7 +281,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
   }
 
   moveByPath(newPosition: number, paths: string | string[]) {
-    const toMove = castArray(paths).map(path => this.find(path));
+    const toMove = castArray(paths).map(path => this.fromPath(path));
     moveArrayElements(this.tracks, newPosition, ...toMove);
   }
 
@@ -335,7 +335,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
   }
 
   indexOf(track: T): number {
-    return findIndex(this.tracks, t => t.id === track.id);
+    return this.findIndex(t => t.id === track.id);
   }
 
   at(index: number): T | undefined {
@@ -352,8 +352,16 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     return deleted.length > 0;
   }
 
-  find(path: string) {
-    return find(this.tracks, track => track.path === path);
+  fromPath(path: string) {
+    return this.tracks.find(track => track.path === path);
+  }
+
+  find(predicate: (track: T, index: number) => boolean) {
+    return this.tracks.find((track, index) => predicate(track, index));
+  }
+
+  findIndex(predicate: (track: T, index: number) => boolean) {
+    return this.tracks.findIndex(predicate);
   }
 
   fromId(id: string): T | undefined {

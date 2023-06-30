@@ -643,7 +643,7 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 
   peekRequests(bottomIndex: number, n: number, filterFn?: (track: TrackWithRequester<BoomBoxTrack, Audience>) => boolean) {
-    return this.boombox.peekRequests(bottomIndex, n, filterFn ?? (() => true));
+    return this.boombox.allRequests.peek(bottomIndex, n, filterFn ?? (() => true));
   }
 
   lockRequests(by: RequestTrackLockPredicate<Audience>) {
