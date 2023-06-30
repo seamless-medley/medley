@@ -23,23 +23,7 @@ export const maxSelectMenuOptions = 25;
 
 type ReplyableInteraction = CommandInteraction | MessageComponentInteraction;
 
-// /** @deprecated */
-// export enum HighlightTextType {
-//   Cyan = 'yaml',
-//   Yellow = 'fix',
-//   Red = 'diff'
-// }
-
 type Strings = (string | undefined)[];
-
-// /** @deprecated */
-// export function makeHighlightedMessage(s: Strings, type: HighlightTextType) {
-//   const isRed = type === HighlightTextType.Red;
-//   return '```' + type + '\n' +
-//     castArray(s).filter(isString).map(line => (isRed ? '-' : '') + line).join('\n') + '\n' +
-//     '```'
-//     ;
-// }
 
 export function makeCodeBlockMessage(s: string | Strings, lang: string): Strings {
   return [
