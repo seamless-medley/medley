@@ -10,13 +10,28 @@ export type AudioPipelineEvents = {
   audioExtra(extra: AudioTransportExtra): void;
 }
 
+/**
+ * This is where the whole audio pipeline happens
+ */
 export class AudioPipeline extends EventEmitter<AudioPipelineEvents> {
+  /**
+   * Web Audio API context, needed for sending audio data to the output device
+   */
   #ctx?: AudioContext;
 
+  /**
+   * Web Audio API Worklet node which attach a stream-processor used for reading decoded PCM data and feed it into Web Audio API context
+   */
   #node!: AudioWorkletNode;
 
+  /**
+   * A RingBuffer for holding 25ms of stereo PCM data
+   */
   #pcmBuffer = new RingBuffer(960 * 25, 2);
 
+  /**
+   * For audio socket connection and Opus decoding
+   */
   #clientWorker = new AudioClientWorker() as unknown as AudioClientIntf;
 
   constructor() {

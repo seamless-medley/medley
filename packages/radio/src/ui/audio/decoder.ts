@@ -1,3 +1,9 @@
+/**
+ * A backgrond Web Worker for decoding Opus Packet
+ *
+ * It also passes an extra data along with the decoded packet
+ */
+
 import { OpusDecodedAudio, OpusDecoder } from 'opus-decoder';
 
 export type InputMessage<T> = {
@@ -30,10 +36,12 @@ async function run() {
 
   await decoder.ready;
 
+  // When an Opus Packet has arrived
   self.addEventListener('message', (e: MessageEvent<InputMessage<any>>) => {
     const { opus, extra } = e.data;
     const decoded = decoder.decodeFrame(opus);
 
+    // Post the dacoded data out, for other threads to read
     self.postMessage({
       decoded,
       extra
