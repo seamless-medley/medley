@@ -322,10 +322,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
       }
 
       if (index !== t.index) {
-        console.log('Splicing', index, t.track.path);
         this.tracks.splice(index, 1, t.track);
-      } else {
-        console.log('Skipping', t.track.path)
       }
     }
 

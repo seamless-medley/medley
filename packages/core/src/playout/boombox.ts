@@ -332,8 +332,6 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
 
     const scopes = uniq(this.requests.all().flatMap(scopedBy));
     for (const [index, scope] of scopes.entries()) {
-      console.group('Sorting scope', scope);
-
       this.requests.sort(
         functions,
         t => scopedBy(t).includes(scope),
