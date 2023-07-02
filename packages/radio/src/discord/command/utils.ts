@@ -120,7 +120,7 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
   }
 }
 
-const previewTrackPeek = ({ index, localIndex, track }: TrackPeek<StationRequestedTrack>, padding: number, focus: number | undefined) => {
+const previewTrackPeek = ({ index, localIndex, track }: TrackPeek<StationRequestedTrack>, padding: number, focus?: number) => {
   const isFocusing = focus === index;
   const label = padStart(`${localIndex + 1}`, padding);
   return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)} {{red|b}}[${track.priority || 0}]`;
@@ -166,14 +166,12 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
 
   const topItem = peekings.at(0)!;
 
-  const topMostIndex = (topItem.localIndex > 0) ? station.allRequests.findIndex(track => isTrackRequestedFromGuild(track, guildId)) : -1;
+  const topMost = (topItem.localIndex > 0) ? station.allRequests.find(track => isTrackRequestedFromGuild(track, guildId)) : undefined;
 
-  if (topMostIndex > -1) {
+  if (topMost) {
     peekings.splice(0, 1);
 
-    const topMost = station.allRequests.at(topMostIndex)!;
-
-    lines.push(previewTrackPeek({ index: topMostIndex, localIndex: 0, track: topMost }, padding, undefined));
+    lines.push(previewTrackPeek({ index: -1, localIndex: 0, track: topMost }, padding, undefined));
     lines.push(padStart('...', padding));
   }
 
