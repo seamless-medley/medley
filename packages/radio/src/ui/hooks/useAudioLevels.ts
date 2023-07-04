@@ -60,7 +60,8 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, opti
     });
   }
 
-  const handleAudioExtra = ([,, left, right, reduction]: AudioTransportExtra) => {
+  const handleAudioExtra = (extra: AudioTransportExtra) => {
+    const [,, left, right, reduction] = extra;
     update({
       left: {
         magnitude: left[0],

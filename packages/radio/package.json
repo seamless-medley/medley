@@ -41,6 +41,7 @@
     "@sapphire/snowflake": "^3.4.0",
     "@seamless-medley/core": "../core",
     "@seamless-medley/utils": "../utils",
+    "@tanstack/router": "0.0.1-beta.86",
     "axios": "1.4.0",
     "commander": "^10.0.0",
     "discord-api-types": "0.37.38",
@@ -90,9 +91,9 @@
     "@types/sodium-native": "^2.3.5",
     "@types/workerpool": "^6.4.0",
     "@types/ws": "^8.5.4",
-    "@vitejs/plugin-react": "3.0.0",
+    "@vitejs/plugin-react": "4.0.1",
     "electron": "^23.0.0",
-    "vite": "4.0.3"
+    "vite": "4.3.9"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.7",

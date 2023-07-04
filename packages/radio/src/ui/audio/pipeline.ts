@@ -1,10 +1,10 @@
 import { EventEmitter } from "eventemitter3";
-import worklet from "./worklet.js?worker&url";
+import worklet from "./worklets/stream-consumer-module.js?worker&url";
 import AudioClientWorker from './client?worker';
 import type { AudioClientIntf } from "./client";
 import { RingBuffer } from "./ringbuffer";
 import type { AudioTransportExtra } from "../../audio/types";
-import type { MedleyStreamProcessorNodeOptions } from "./stream-processor";
+import type { MedleyStreamProcessorNodeOptions } from "./worklets/stream-consumer";
 
 export type AudioPipelineEvents = {
   audioExtra(extra: AudioTransportExtra): void;
@@ -22,10 +22,10 @@ export class AudioPipeline extends EventEmitter<AudioPipelineEvents> {
   /**
    * Web Audio API Worklet node which attach a stream-processor used for reading decoded PCM data and feed it into Web Audio API context
    */
-  #node!: AudioWorkletNode;
+  #consumerNode!: AudioWorkletNode;
 
   /**
-   * A RingBuffer for holding 25ms of stereo PCM data
+   * A RingBuffer for holding 500ms of stereo PCM data
    */
   #pcmBuffer = new RingBuffer(960 * 25, 2);
 
@@ -76,22 +76,29 @@ export class AudioPipeline extends EventEmitter<AudioPipelineEvents> {
       numberOfOutputs: 1,
       outputChannelCount: [2],
       processorOptions: {
+        minBufferSize: 960,
         pcmBuffer: this.#pcmBuffer,
       }
     }
 
-    this.#node = new AudioWorkletNode(this.#ctx, 'medley-stream-processor', options);
-    this.#node.onprocessorerror = this.#handleProcessorError;
-    this.#node.port.onmessage = this.#handleWorkletNodeMessage;
+    this.#consumerNode = new AudioWorkletNode(this.#ctx, 'medley-stream-consumer', options);
+    this.#consumerNode.onprocessorerror = this.#handleProcessorError;
+    this.#consumerNode.port.onmessage = this.#handleWorkletNodeMessage;
 
-    this.#node.connect(this.#ctx.destination);
+    this.#consumerNode.connect(this.#ctx.destination);
   }
 
   #handleProcessorError = (e: Event) => {
     console.log('Processor error', e);
   }
 
-  #handleWorkletNodeMessage = (e: MessageEvent<AudioTransportExtra>) => {
-    this.emit('audioExtra', e.data);
+  #delayedAudioExtra: AudioTransportExtra[] = [];
+
+  #handleWorkletNodeMessage = ({ data: extra }: MessageEvent<AudioTransportExtra>) => {
+    this.#delayedAudioExtra.push(extra);
+
+    while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx!.outputLatency * this.#ctx!.sampleRate / 960) + 1) {
+      this.emit('audioExtra', this.#delayedAudioExtra.shift()!);
+    }
   }
 }

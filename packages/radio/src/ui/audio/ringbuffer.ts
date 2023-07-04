@@ -14,6 +14,7 @@ function createTypedSharedArrayBuffer<T extends TypedArray>(Ctor: new (buffer: S
 export class RingBuffer {
   readonly bufferLength: number;
   private channelData: Float32Array[];
+
   private deckData: Int8Array;
   private positionData: Float32Array;
   private magnitudeData: Float32Array[];

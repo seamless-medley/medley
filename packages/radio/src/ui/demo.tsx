@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { initRoot } from './init';
-import { Button, Group, MantineProvider } from '@mantine/core';
+import { Button, Group } from '@mantine/core';
 import { useClient } from './hooks/useClient';
 import { useStation } from './hooks/useStation';
 import { useRemotableProps } from './hooks/remotable';
@@ -11,6 +10,23 @@ import { Track } from '../socket/po/track';
 import { Station } from '../socket/remote';
 import { PlayDeck } from './components';
 import { usePlayHead } from './hooks/usePlayHead';
+
+const PlayHead: React.FC = () => {
+  const [deck, setDeck] = useState<number | undefined>();
+  const [position, setPosition] = useState(0);
+
+  usePlayHead((update) => {
+    setDeck(update.deck);
+    setPosition(update.position);
+  })
+
+  return (
+    <>
+      <h4>Deck: {deck !== undefined ? deck + 1 : 'None'}</h4>
+      <h4>Position: {position.toFixed(2)}</h4>
+    </>
+  )
+}
 
 const CollectionList: React.FC<{ id: string }> = ({ id }) => {
   const collection = useCollection(id);
@@ -54,26 +70,7 @@ const CollectionList: React.FC<{ id: string }> = ({ id }) => {
   )
 }
 
-const PlayHead: React.FC = () => {
-  const [deck, setDeck] = useState<number | undefined>();
-  const [position, setPosition] = useState(0);
-
-  usePlayHead((update) => {
-    setDeck(update.deck);
-    setPosition(update.position);
-  })
-
-  return (
-    <>
-      <h4>Deck: {deck !== undefined ? deck + 1 : 'None'}</h4>
-      <h4>Position: {position.toFixed(2)}</h4>
-    </>
-  )
-}
-
-const App: React.FC = () => {
-  console.log('App');
-
+export const Demo: React.FC = () => {
   const client = useClient();
   const station = useStation('demo');
   const stationProps = useRemotableProps(station);
@@ -149,11 +146,3 @@ const App: React.FC = () => {
     </>
   );
 }
-
-initRoot().render(
-  // <React.StrictMode>
-    <MantineProvider withGlobalStyles withNormalizeCSS withCSSVariables>
-      <App />
-    </MantineProvider>
-  // </React.StrictMode>
-);

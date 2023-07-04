@@ -56,7 +56,11 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
       coverMimeType
     } = newInfo?.trackPlay?.track?.extra?.coverAndLyrics ?? {};
 
-    updateCover(cover && coverMimeType ? URL.createObjectURL(new Blob([cover])) : undefined);
+    updateCover(
+      cover && coverMimeType
+        ? URL.createObjectURL(new Blob([cover], { type: coverMimeType }))
+        : undefined
+    );
 
     return newInfo;
   }

@@ -5,7 +5,13 @@ import { RemoteTypes } from "../socket/remote";
 import { Config } from "../socket/remote/config";
 import { ExposedConfig, ExposedConfigCallback } from "./expose/config";
 import { ExposedStation } from "./expose/station";
-import { musicCollections, sequences, sweeperRules } from "../fixtures";
+
+import {
+  musicCollections,
+  sequences,
+  sweeperRules
+} from "../fixtures";
+
 import { ExposedColection } from "./expose/collection";
 import { Unpacked } from "../types";
 import { AudioServer } from "./audio/transport";
@@ -88,7 +94,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     }
   }
 
-  private get musicDb() {
+  get musicDb() {
     return this._musicDb;
   }
 
