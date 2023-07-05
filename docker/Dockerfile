@@ -19,7 +19,8 @@ RUN --mount=type=cache,target=/node_modules,id=node_modules pnpm install
 RUN --mount=type=cache,target=/node_modules,id=node_modules pnpm combine-discord
 
 WORKDIR /app/packages/radio/combine/discord
-RUN npm install --omit=optional
+RUN npm install
+# --omit=optional
 
 # TODO: proper generate application banner version (git short commit)
 RUN echo "---------------------------------------------------------" > version
