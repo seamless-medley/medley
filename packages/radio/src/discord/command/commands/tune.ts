@@ -27,12 +27,16 @@ const declaration: SubCommandLikeOption = {
 }
 
 const handleStationSelection = async (automaton: MedleyAutomaton, interaction: StringSelectMenuInteraction) => {
-  permissionGuard(interaction.memberPermissions, [
-    PermissionsBitField.Flags.ManageChannels,
-    PermissionsBitField.Flags.ManageGuild,
-    PermissionsBitField.Flags.MuteMembers,
-    PermissionsBitField.Flags.MoveMembers
-  ]);
+  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+
+  if (!isOwnerOverride) {
+    permissionGuard(interaction.memberPermissions, [
+      PermissionsBitField.Flags.ManageChannels,
+      PermissionsBitField.Flags.ManageGuild,
+      PermissionsBitField.Flags.MuteMembers,
+      PermissionsBitField.Flags.MoveMembers
+    ]);
+  }
 
   const guildId = guildIdGuard(interaction);
 
@@ -167,12 +171,16 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
 }
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => (interaction) => {
-  permissionGuard(interaction.memberPermissions, [
-    PermissionsBitField.Flags.ManageChannels,
-    PermissionsBitField.Flags.ManageGuild,
-    PermissionsBitField.Flags.MuteMembers,
-    PermissionsBitField.Flags.MoveMembers
-  ]);
+  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+
+  if (!isOwnerOverride) {
+    permissionGuard(interaction.memberPermissions, [
+      PermissionsBitField.Flags.ManageChannels,
+      PermissionsBitField.Flags.ManageGuild,
+      PermissionsBitField.Flags.MuteMembers,
+      PermissionsBitField.Flags.MoveMembers
+    ]);
+  }
 
   return createStationSelector(automaton, interaction);
 }

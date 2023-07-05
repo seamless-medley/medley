@@ -23,23 +23,7 @@ export const maxSelectMenuOptions = 25;
 
 type ReplyableInteraction = CommandInteraction | MessageComponentInteraction;
 
-// /** @deprecated */
-// export enum HighlightTextType {
-//   Cyan = 'yaml',
-//   Yellow = 'fix',
-//   Red = 'diff'
-// }
-
 type Strings = (string | undefined)[];
-
-// /** @deprecated */
-// export function makeHighlightedMessage(s: Strings, type: HighlightTextType) {
-//   const isRed = type === HighlightTextType.Red;
-//   return '```' + type + '\n' +
-//     castArray(s).filter(isString).map(line => (isRed ? '-' : '') + line).join('\n') + '\n' +
-//     '```'
-//     ;
-// }
 
 export function makeCodeBlockMessage(s: string | Strings, lang: string): Strings {
   return [
@@ -136,9 +120,9 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
   }
 }
 
-const previewTrack = ({ index, track }: TrackPeek<StationRequestedTrack>, padding: number, focus: number | undefined) => {
+const previewTrackPeek = ({ index, localIndex, track }: TrackPeek<StationRequestedTrack>, padding: number, focus: number | undefined) => {
   const isFocusing = focus === index;
-  const label = padStart(`${index + 1}`, padding);
+  const label = padStart(`${localIndex + 1}`, padding);
   return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)} {{red|b}}[${track.priority || 0}]`;
 }
 
@@ -146,34 +130,31 @@ export function isTrackRequestedFromGuild(track: TrackWithRequester<BoomBoxTrack
   return track.requestedBy.some(({ type, group }) => (type === AudienceType.Discord) && (group.guildId === guildId));
 }
 
-export function peekRequestsForGuild(station: Station, from: number, count: number, guildId?: string) {
-  return station.peekRequests(
-    from, count,
-    guildId
-      ? track => isTrackRequestedFromGuild(track, guildId)
-      : undefined
+export function peekRequestsForGuild(station: Station, bottomIndex: number, count: number, guildId: string) {
+  return station.allRequests.peek(
+    bottomIndex, count,
+    track => isTrackRequestedFromGuild(track, guildId)
   );
 }
 
-export type MakeRequestPreviewOptions = {
-  /**
-   * @default 0
-   */
-  index?: number;
+export type MakePeekPreviewOptions = {
+  bottomIndex?: number;
 
-  focus?: number;
+  focusIndex?: number;
 
   /**
    * @default 5
    */
   count?: number;
-
-  guildId?: string;
 }
 
-export async function makeRequestPreview(station: Station, options: MakeRequestPreviewOptions = {}) {
-  const { index = 0, focus, count = 5, guildId } = options;
-  const peekings = peekRequestsForGuild(station, index, count, guildId);
+export type MakeRequestPreviewOptions = MakePeekPreviewOptions & {
+  guildId: string;
+}
+
+export async function makeRequestPreview(station: Station, options: MakeRequestPreviewOptions) {
+  const { bottomIndex = 0, focusIndex, count = 5, guildId } = options;
+  const peekings = peekRequestsForGuild(station, bottomIndex, count, guildId);
 
   if (peekings.length <= 0) {
     return;
@@ -183,12 +164,21 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
 
   const lines: string[] = [];
 
-  if (peekings[0].index > 1) {
+  const topItem = peekings.at(0)!;
+
+  const topMostIndex = (topItem.localIndex > 0) ? station.allRequests.findIndex(track => isTrackRequestedFromGuild(track, guildId)) : -1;
+
+  if (topMostIndex > -1) {
+    peekings.splice(0, 1);
+
+    const topMost = station.allRequests.at(topMostIndex)!;
+
+    lines.push(previewTrackPeek({ index: topMostIndex, localIndex: 0, track: topMost }, padding, undefined));
     lines.push(padStart('...', padding));
   }
 
   for (const peek of peekings) {
-    lines.push(previewTrack(peek, padding, focus));
+    lines.push(previewTrackPeek(peek, padding, focusIndex));
   }
 
   return lines.length ? makeAnsiCodeBlock(lines) : undefined;

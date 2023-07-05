@@ -1,11 +1,12 @@
 import { parse as parsePath } from 'path';
-import { castArray, flatten, matches, some, toLower, trim, uniq, without } from "lodash";
+import { castArray, chain, flatten, mapValues, matches, some, toLower, trim, uniq, without } from "lodash";
+import { isString } from 'lodash/fp';
 import { compareTwoStrings } from "string-similarity";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track, TrackExtra } from "../track";
-import { TrackCollection, TrackPeek } from "../collections";
+import { TrackCollection, TrackIndex, TrackPeek } from "../collections";
 import { SweeperInserter } from "./sweeper";
 import { createLogger, Logger, type ILogObj } from '../logging';
 import { MetadataHelper } from '../metadata';
@@ -259,7 +260,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
       }
 
       const playedArtists = flatten(this.artistHistory).map(toLower);
-      const currentArtists = getArtists(boomboxExtra).map(toLower);
+      const currentArtists = getArtistStrings(boomboxExtra).map(toLower);
       const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));
 
       return {
@@ -279,7 +280,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
 
   private _lastRequestId = 0;
 
-  request(track: BoomBoxTrack, requestedBy?: R): TrackPeek<TrackWithRequester<BoomBoxTrack, R>> {
+  request(track: BoomBoxTrack, requestedBy?: R): TrackIndex<TrackWithRequester<BoomBoxTrack, R>> {
     const existing = this.requests.fromId(track.id);
 
     if (existing) {
@@ -381,13 +382,13 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     return undefined;
   }
 
-  peekRequests(from: number, n: number, filterFn: (track: TrackWithRequester<BoomBoxTrack, R>) => boolean) {
-    return this.requests.peek(from, n, filterFn);
+  get allRequests() {
+    return this.requests;
   }
 
   getRequestsOf(requester: R) {
     const matchRequester = matches(requester);
-    return this.requests.all().filter(r => r.requestedBy.some(matchRequester));
+    return this.requests.filter(r => r.requestedBy.some(matchRequester));
   }
 
   unrequest(requestIds: number[]) {
@@ -533,7 +534,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     if (artistBacklog) {
       const { extra } = trackPlay.track;
       if (extra) {
-        this.artistHistory.push(getArtists(extra));
+        this.artistHistory.push(getArtistStrings(extra));
         this.artistHistory = this.artistHistory.splice(-artistBacklog);
       }
     }
@@ -617,18 +618,48 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   }
 }
 
-const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).map(trim);
+export const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).map(trim);
 
-export function getArtists(extra?: BoomBoxTrackExtra): string[] {
+export type GetArtistsOptions = {
+  excludes: {
+    originalArtist?: boolean;
+    albumArtist?: boolean;
+  }
+}
+
+export type GetArtistsResult = Partial<Record<'artist' | 'originalArtist' | 'albumArtist', string>>;
+
+export function getArtists(extra: BoomBoxTrackExtra, options?: GetArtistsOptions): GetArtistsResult | undefined {
   if (!extra?.tags) {
+    return;
+  }
+
+  const { excludes } = options ?? {};
+
+  const artist = extra.tags.artist;
+  const originalArtist = !excludes?.originalArtist ? extra.tags.originalArtist : undefined;
+  const albumArtist = !excludes?.albumArtist ? extra.tags.albumArtist : undefined;
+
+  return mapValues({
+    artist,
+    originalArtist,
+    albumArtist
+  });
+}
+
+export function getArtistStrings(extra: BoomBoxTrackExtra, options?: GetArtistsOptions): string[] {
+  const group = getArtists(extra, options);
+
+  if (!group) {
     return [];
   }
 
-  const { artist, originalArtist, albumArtist } = extra.tags;
+  const { artist, originalArtist, albumArtist } = group;
 
-  return [artist, originalArtist, albumArtist]
-    .filter((v: any): v is string => !!v)
+  return chain([artist, originalArtist, albumArtist])
+    .filter(isString)
     .flatMap(extractArtists)
+    .value()
 }
 
 export function getTrackBanner(track: BoomBoxTrack) {
@@ -657,7 +688,7 @@ export function trackRecordOf(track: BoomBoxTrack): TrackRecord {
   return {
     trackId: track.id,
     title: extra?.tags?.title,
-    artists: extra ? getArtists(extra) : [],
+    artists: extra ? getArtistStrings(extra) : [],
     isrc: extra?.tags?.isrc
   }
 }

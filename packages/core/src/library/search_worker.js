@@ -1,6 +1,6 @@
 // @ts-check
 
-const { noop, omit } = require('lodash');
+const { noop, omit, chain } = require('lodash');
 const workerpool = require('workerpool');
 const MiniSearch = require('minisearch');
 
@@ -10,6 +10,7 @@ const MiniSearch = require('minisearch');
 /** @typedef {import('minisearch').SearchResult} SearchResult */
 /** @typedef {import('./search').SearchOptions} SearchOptions */
 /** @typedef {import('./search').TrackDocument} TrackDocument */
+/** @typedef {import('./search').TrackDocumentResult} TrackDocumentResult */
 
 /** @type {Search} */
 let miniSearch;
@@ -19,7 +20,7 @@ let miniSearch;
  */
 function acquire() {
   if (!miniSearch) {
-    const fields = ['artist', 'title'];
+    const fields = ['title', 'artist', 'originalArtist', 'albumArtist'];
 
     // @ts-expect-error
     miniSearch = new MiniSearch({
@@ -32,11 +33,11 @@ function acquire() {
 }
 
 /**
- * @param {TrackDocument} track
+ * @param {TrackDocument[]} tracks
  */
-function add(track) {
+function add(tracks) {
   try {
-    acquire().add(track);
+    acquire().addAll(tracks);
   }
   catch (e) {
 
@@ -45,11 +46,11 @@ function add(track) {
 
 /**
  *
- * @param {TrackDocument['id'][]} trackIds
+ * @param {TrackDocument[]} tracks
  */
-function removeAll(trackIds) {
+function removeAll(tracks) {
   const m = acquire();
-  for (const id of trackIds) {
+  for (const { id } of tracks) {
     try {
       m.discard(id);
     }
@@ -63,10 +64,19 @@ function removeAll(trackIds) {
  *
  * @param {Query} query
  * @param {SearchOptions | undefined} searchOptions
- * @returns {SearchResult[]}
+ * @returns {TrackDocumentResult[]}
  */
 function search(query, searchOptions) {
-  return acquire().search(query, searchOptions)
+  const results = acquire().search(query, searchOptions);
+
+  return chain(results)
+    .map(r => ({
+      ...r,
+      trackId: r.id.match(/([^:]+)(:.+)*/)?.at(1) ?? ''
+    }))
+    .filter(r => !!r.trackId)
+    .uniqBy('trackId')
+  .value();
 }
 
 /**

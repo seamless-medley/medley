@@ -1,7 +1,7 @@
 import os from 'node:os';
 import { createHash } from 'crypto';
 import { TypedEmitter } from "tiny-typed-emitter";
-import { castArray, chain, chunk, clamp, find, findIndex, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
+import { castArray, chain, chunk, clamp, findLastIndex, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
 import normalizePath from 'normalize-path';
 import { createLogger } from '../logging';
 import { Track } from "../track";
@@ -39,9 +39,13 @@ export type TrackCollectionOptions<T extends Track<any>> = TrackCollectionBasicO
   tracksMapper?: (tracks: T[]) => Promise<T[]>;
 }
 
-export type TrackPeek<T extends Track<any>> = {
+export type TrackIndex<T extends Track<any>> = {
   index: number;
   track: T;
+}
+
+export type TrackPeek<T extends Track<any>> = TrackIndex<T> & {
+  localIndex: number;
 }
 
 export type TrackCollectionEvents<T extends Track<any>> = {
@@ -277,7 +281,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
   }
 
   moveByPath(newPosition: number, paths: string | string[]) {
-    const toMove = castArray(paths).map(path => this.find(path));
+    const toMove = castArray(paths).map(path => this.fromPath(path));
     moveArrayElements(this.tracks, newPosition, ...toMove);
   }
 
@@ -305,12 +309,12 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     }
 
     const scoped = this.tracks
-      .map<TrackPeek<T>>((track, index) => ({ track, index }))
+      .map<TrackIndex<T>>((track, index) => ({ track, index }))
       .filter(t => filter(t.track));
 
     const indexes = scoped.map(p => p.index);
 
-    const sorted = sortBy(scoped, ...sortFn.map(fn => (peek: TrackPeek<T>) => fn(peek.track)));
+    const sorted = sortBy(scoped, ...sortFn.map(fn => (item: TrackIndex<T>) => fn(item.track)));
 
     for (const [index, t] of zip(indexes, sorted)) {
       if (index === undefined || t === undefined) {
@@ -331,7 +335,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
   }
 
   indexOf(track: T): number {
-    return findIndex(this.tracks, t => t.id === track.id);
+    return this.findIndex(t => t.id === track.id);
   }
 
   at(index: number): T | undefined {
@@ -348,48 +352,47 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     return deleted.length > 0;
   }
 
-  find(path: string) {
-    return find(this.tracks, track => track.path === path);
+  fromPath(path: string) {
+    return this.tracks.find(track => track.path === path);
+  }
+
+  find(predicate: (track: T, index: number) => boolean) {
+    return this.tracks.find((track, index) => predicate(track, index));
+  }
+
+  findIndex(predicate: (track: T, index: number) => boolean) {
+    return this.tracks.findIndex(predicate);
   }
 
   fromId(id: string): T | undefined {
     return this.trackIdMap.get(id);
   }
 
+  filter(fn: (track: T) => boolean) {
+    return this.tracks.filter(fn);
+  }
+
   sample(): T | undefined {
     return sample(this.tracks);
   }
 
-  peek(from: number = 0, n: number, filterFn: (track: T) => boolean): TrackPeek<T>[] {
-    const sib = Math.round((n - 1) / 2);
+  peek(bottomIndex: number = 0, n: number, filterFn: (track: T) => boolean): TrackPeek<T>[] {
+    const items = this.tracks.map((track, index) => ({ index, track }));
 
-    let left = from - sib;
-    let right = from + sib;
+    const filtered = items.filter(({ track }) => filterFn(track));
 
-    if (right - left + 1 < n) {
-      right = left + n - 1;
+    const itemIndex = findLastIndex(filtered, ({ index }) => index >= bottomIndex);
+    if (itemIndex < 0) {
+      return [];
     }
 
-    const peeking = this.tracks
-      .map((track, i) => ({
-        index: i,
-        track
-      }));
+    const top = clamp(itemIndex - n + 1, 0, filtered.length - 1);
+    const view = filtered.slice(top, top + n);
 
-    const max = peeking.length - 1;
-
-    if (left <= 0) {
-      left = 0;
-      right = Math.max(0, Math.min(max, n - 1));
-    } else if (right >= max) {
-      right = max;
-      left = Math.max(0, right - n + 1);
-    }
-
-
-    return peeking
-      .slice(left, right + 1)
-      .filter(({ track }) => filterFn(track));
+    return view.map((item, index) => ({
+      ...item,
+      localIndex: top + index
+    }));
   }
 
   [Symbol.iterator](): Iterator<T, any, undefined> {

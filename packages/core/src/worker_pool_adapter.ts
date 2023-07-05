@@ -55,6 +55,9 @@ export abstract class WorkerPoolAdapter<Methods extends { [name: string]: any }>
               if (worker.terminated) {
                 return p._removeWorker(worker);
               }
+            })
+            .then(() => {
+              p._next();
             });
 
           if (typeof task.timeout === 'number') {

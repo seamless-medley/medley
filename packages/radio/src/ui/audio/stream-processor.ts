@@ -13,6 +13,11 @@ export type MedleyStreamProcessorNodeOptions = Omit<AudioWorkletNodeOptions, 'pr
   }
 }
 
+/**
+ * A simple AudioWorkletProcessor to be attached with a Web Audio API's AudioWorkletNode instance
+ *
+ * It simply reads PCM data out of a shared memory produced by the audio client worker
+ */
 export class MedleyStreamProcessor extends AudioWorkletProcessor {
   #minBufferSize: number;
   #pcmBuffer: RingBuffer;

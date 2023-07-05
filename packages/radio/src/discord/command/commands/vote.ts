@@ -1,10 +1,10 @@
-import { Audience, AudienceType, createLogger, getTrackBanner, makeAudience, RequestTrackLockPredicate, StationRequestedTrack, TrackPeek } from "@seamless-medley/core";
+import { Audience, AudienceType, createLogger, getTrackBanner, makeAudience, RequestTrackLockPredicate, StationRequestedTrack, TrackIndex, TrackPeek } from "@seamless-medley/core";
 import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, PermissionsBitField, userMention, time as formatTime, quote, } from "discord.js";
 import { chain, isEqual, keyBy, noop, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
 import * as emojis from "../../emojis";
 import { CommandDescriptor, GuildHandlerFactory, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, joinStrings, makeRequestPreview, reply, warn } from "../utils";
+import { guildStationGuard, isTrackRequestedFromGuild, joinStrings, makeRequestPreview, reply, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -12,7 +12,7 @@ const declaration: SubCommandLikeOption = {
   description: 'Vote for songs'
 }
 
-type Nominatee = TrackPeek<StationRequestedTrack> & {
+type Nominatee = StationRequestedTrack & {
   banner: string;
   votes: number;
   emoji: string;
@@ -48,13 +48,12 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
     return;
   }
 
-  const peeking = take(station
-    .peekRequests(0, Math.min(distinguishableEmojis.length, station.requestsCount))
-    .filter(({ track }) => track.requestedBy.some(({ type, group }) => (type === AudienceType.Discord) && (group.guildId === guildId))),
+  const requests = take(
+    station.allRequests.filter(track => isTrackRequestedFromGuild(track, guildId)),
     20
   );
 
-  if (peeking.length <= 1) {
+  if (requests.length <= 1) {
     warn(interaction, 'Nothing to vote')
     return;
   }
@@ -63,9 +62,9 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
 
   const collectibleEmojis = sampleSize(distinguishableEmojis, distinguishableEmojis.length);
 
-  const nominatees = peeking.map<Nominatee>((p, i) => ({
-    ...p,
-    banner: getTrackBanner(p.track),
+  const nominatees = requests.map<Nominatee>((track, i) => ({
+    ...track,
+    banner: getTrackBanner(track),
     votes: 0,
     voters: [],
     emoji: collectibleEmojis[i]
@@ -75,7 +74,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
     nominatees.map(n => [n.emoji, n])
   );
 
-  const requestLock: RequestTrackLockPredicate<Audience> = (t) => nominatees.some(n => n.track.rid === t.rid);
+  const requestLock: RequestTrackLockPredicate<Audience> = (t) => nominatees.some(track => track.rid === t.rid);
 
   station.lockRequests(requestLock);
   try {
@@ -86,8 +85,8 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
 
     const createMessageContent = () => chain(nominatees)
       .sortBy(
-        ({ votes, track: { priority = 0 }}) => -(votes + priority),
-        b => (b.track.firstRequestTime || 0)
+        ({ votes, priority = 0 }) => -(votes + priority),
+        track => (track.firstRequestTime || 0)
       )
       .map(peek => quote(previewTrack(peek)))
       .join('\n')
@@ -149,7 +148,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
         }
       }
 
-      const handleNewRequest = async (peek: TrackPeek<StationRequestedTrack>) => {
+      const handleNewRequest = async (peek: TrackIndex<StationRequestedTrack>) => {
         if (nominatees.length >= 20) {
           // Discord allows 20 reactions per message
           return;
@@ -157,7 +156,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
 
         const emoji = collectibleEmojis[nominatees.length];
         const nominatee: Nominatee = {
-          ...peek,
+          ...peek.track,
           banner: getTrackBanner(peek.track),
           votes: 0,
           emoji
@@ -174,7 +173,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
         let updated = false;
 
         for (const t of tracks) {
-          const index = nominatees.findIndex(n => n.track.rid === t.rid);
+          const index = nominatees.findIndex(track => track.rid === t.rid);
 
           if (index > -1) {
             const n = nominatees[index];
@@ -241,16 +240,17 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
             return;
           }
 
-          const peeks = station.peekRequests(0, nominatees.length);
-          const requestsKeyed = keyBy(peeks, n => n.track.rid);
+          const requests = station.allRequests.filter(track => isTrackRequestedFromGuild(track, guildId));
+
+          const requestsKeyed = keyBy(requests, track => track.rid);
 
           let contributors: string[] = [];
 
           for (const nom of nominatees) {
-            const request = requestsKeyed[nom.track.rid];
+            const request = requestsKeyed[nom.rid];
             if (request) {
-              const { priority = 0 } = request.track;
-              request.track.priority = priority + nom.votes;
+              const { priority = 0 } = request;
+              request.priority = priority + nom.votes;
               //
               const reaction = collected.get(nom.emoji);
               if (reaction) {
@@ -259,7 +259,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
 
                 contributors = contributors.concat(userIds);
 
-                request.track.requestedBy = chain(request.track.requestedBy)
+                request.requestedBy = chain(request.requestedBy)
                   .concat(userIds.map(id => makeAudience(AudienceType.Discord, { automatonId: automaton.id, guildId }, id)))
                   .uniqWith(isEqual)
                   .reject(audience => audience.id === automaton.client.user!.id)
@@ -268,7 +268,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
             }
           }
 
-          station.sortRequests();
+          station.sortRequests(true);
 
           const preview = await makeRequestPreview(station, { count: nominatees.length, guildId }) || [];
           const contributorMentions = chain(contributors)
@@ -303,7 +303,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
         }
       });
 
-      for (const emoji of take(collectibleEmojis, peeking.length)) {
+      for (const emoji of take(collectibleEmojis, requests.length)) {
         await msg.react(emoji!).catch(noop);
       }
     }

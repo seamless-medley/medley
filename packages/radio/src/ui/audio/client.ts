@@ -1,3 +1,10 @@
+/**
+ * This is the audio client code running in a background as a Web Worker
+ *
+ * The client connects to a WebSocket endpoint for audio transportation and playback control
+ *
+ */
+
 import { decode, encode } from "notepack.io";
 import { AudioSocketCommand, AudioSocketCommandMap, AudioSocketReply } from "../../socket/audio";
 import Decoder from "./decoder?worker";
@@ -47,13 +54,27 @@ export interface AudioClientIntf extends Worker {
   removeEventListener<K extends keyof AudioClientEventMap>(type: K, listener: (this: AudioClientIntf, ev: AudioClientEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
 }
 
+/**
+ * The WebSocket connection for audio data transportation
+ */
 let ws: WebSocket | undefined;
 
+/**
+ * The id of Socket.IO connection
+ */
 let _socketId: string | undefined;
 
-const decoder = new Decoder() as unknown as DecoderInft<AudioTransportExtra>;
-
+/**
+ * Circular buffer for temporarily storing PCM data before passing it to the Web Audio API
+ * An instance of it is passed from AudioPipeline, the RingBuffer internally holds a shared memory region using SharedArrayBuffer
+ * This shared memory can then be accessed from multiple threads/workers
+ */
 let pcmBuffer: RingBuffer | undefined;
+
+/**
+ * Another Web Worker for docoding Opus Packets
+ */
+const decoder = new Decoder() as unknown as DecoderInft<AudioTransportExtra>;
 
 decoder.addEventListener('message', (e) => {
   const { decoded: { channelData, samplesDecoded }, extra } = e.data;
@@ -62,8 +83,39 @@ decoder.addEventListener('message', (e) => {
     return;
   }
 
+  // Write PCM data to the RingBuffer, to be comsumed by the stream-processor
   pcmBuffer.push(channelData.slice(0, 2), samplesDecoded, extra);
 });
+
+/**
+ * Handle data stream from audio WebSocket
+ */
+function handleStream(ev: MessageEvent<ArrayBuffer>) {
+  const view = new DataView(ev.data);
+  const op = view.getUint8(0);
+
+  const data = new Uint8Array(ev.data, 1);
+
+  if (op === AudioSocketReply.Opus) {
+    handleOpus(data);
+    return;
+  }
+}
+
+/**
+ * Unpack an Opus Packet and send it to the Decoder
+ * A new `message` event will be fired once the packet decoding is done
+ */
+function handleOpus(data: Uint8Array) {
+  const infoLength = new DataView(data.buffer, data.byteOffset).getUint16(0, true);
+  const extra = decode(data.subarray(2, 2 + infoLength));
+  const opus = data.subarray(2 + infoLength);
+
+  decoder.postMessage({
+    opus,
+    extra
+  });
+}
 
 async function connect(socketId: string): Promise<void> {
   const isConnectingOrOpen = ws && [WebSocket.CONNECTING, WebSocket.OPEN].includes(ws.readyState);
@@ -108,34 +160,11 @@ function play(stationId: string) {
   sendCommand(AudioSocketCommand.Tune, stationId);
 }
 
-function handleStream(ev: MessageEvent<ArrayBuffer>) {
-  const view = new DataView(ev.data);
-  const op = view.getUint8(0);
-
-  const data = new Uint8Array(ev.data, 1);
-
-  if (op === AudioSocketReply.Opus) {
-    handleOpus(data);
-    return;
-  }
-}
-
-function handleOpus(data: Uint8Array) {
-  const infoLength = new DataView(data.buffer, data.byteOffset).getUint16(0, true);
-  const extra = decode(data.subarray(2, 2 + infoLength));
-  const opus = data.subarray(2 + infoLength);
-
-  decoder.postMessage({
-    opus,
-    extra
-  });
-}
-
 self.addEventListener('message', (e: MessageEvent<InputMessage>) => {
   const { type } = e.data;
 
   switch (type) {
-    case 'init':
+    case 'init': // This message was sent from AudioPipeline
       pcmBuffer = e.data.pcmBuffer;
       Object.setPrototypeOf(pcmBuffer, RingBuffer.prototype);
       return;
