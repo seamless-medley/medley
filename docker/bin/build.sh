@@ -1,8 +1,8 @@
 #!/bin/bash
 
 arch=$1
-repo="nexus.coke.fyi"
-name="medley/radio"
+repo="ghcr.io"
+name="seamless-medley/medley"
 tag="latest"
 git_branch=$(git branch --show-current)
 git_rev=$(git rev-parse HEAD | cut -c 1-8)
