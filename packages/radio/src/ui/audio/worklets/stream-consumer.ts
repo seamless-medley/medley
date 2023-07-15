@@ -1,14 +1,9 @@
-import { RingBuffer } from "./ringbuffer";
-import type { AudioTransportExtra } from "../../audio/types";
-
-export type ExtraTemporal = {
-  remainingSamples: number;
-  data: AudioTransportExtra;
-}
+import { RingBuffer } from "../ringbuffer";
+import type { AudioTransportExtra } from "../../../audio/types";
 
 export type MedleyStreamProcessorNodeOptions = Omit<AudioWorkletNodeOptions, 'processorOptions'> & {
   processorOptions: {
-    minBufferSize?: number;
+    minBufferSize: number;
     pcmBuffer: RingBuffer;
   }
 }
@@ -18,7 +13,7 @@ export type MedleyStreamProcessorNodeOptions = Omit<AudioWorkletNodeOptions, 'pr
  *
  * It simply reads PCM data out of a shared memory produced by the audio client worker
  */
-export class MedleyStreamProcessor extends AudioWorkletProcessor {
+export class MedleyStreamConsumer extends AudioWorkletProcessor {
   #minBufferSize: number;
   #pcmBuffer: RingBuffer;
   #currentExtra?: AudioTransportExtra;
@@ -26,7 +21,7 @@ export class MedleyStreamProcessor extends AudioWorkletProcessor {
   constructor(options: MedleyStreamProcessorNodeOptions) {
     super();
 
-    this.#minBufferSize = options.processorOptions.minBufferSize ?? 960;
+    this.#minBufferSize = options.processorOptions.minBufferSize;
     this.#pcmBuffer = options.processorOptions.pcmBuffer;
 
     Object.setPrototypeOf(this.#pcmBuffer, RingBuffer.prototype);

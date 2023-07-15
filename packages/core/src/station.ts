@@ -299,6 +299,7 @@ export class Station extends TypedEmitter<StationEvents> {
 
   private handleDeckActive: BoomBoxEvents['deckActive'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckActive', deck, trackPlay);
+    this.activeDeck = deck;
   }
 
   private handleDeckFinished: BoomBoxEvents['deckFinished'] = (deck, trackPlay: StationTrackPlay) => {
@@ -418,8 +419,14 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.boombox.getDeckInfo(index);
   }
 
-  get activeDeck() {
-    return this.boombox.activeDeck;
+  private _activeDeck: DeckIndex | undefined;
+
+  get activeDeck(): DeckIndex | undefined {
+    return this._activeDeck;
+  }
+
+  private set activeDeck(value) {
+    this._activeDeck = value;
   }
 
   get trackPlay(): StationTrackPlay | undefined {
@@ -568,7 +575,7 @@ export class Station extends TypedEmitter<StationEvents> {
       sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.library.get(id)!, weight })),
       chance: createChanceable(chance),
       limit: crateLimitFromSequenceLimit(limit),
-      max: existing?.max
+      max: (existing as any)?._max
     });
   }
 

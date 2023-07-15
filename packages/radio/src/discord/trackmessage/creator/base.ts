@@ -1,4 +1,19 @@
-import { Audience, AudienceType, DeckPositions, isRequestTrack, Metadata, MetadataFields, MetadataHelper, Station, StationTrack, StationTrackCollection, StationTrackPlay, TrackSequencingLatch, TrackWithRequester } from "@seamless-medley/core";
+import {
+  Audience,
+  AudienceType,
+  DeckPositions,
+  isRequestTrack,
+  Metadata,
+  MetadataFields,
+  MetadataHelper,
+  Station,
+  StationTrack,
+  StationTrackCollection,
+  StationTrackPlay,
+  TrackSequencingLatch,
+  TrackWithRequester
+} from "@seamless-medley/core";
+
 import { AttachmentBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import { chain, get, isEmpty, sample } from "lodash";
 import mime from 'mime-types';
@@ -35,7 +50,7 @@ export abstract class TrackMessageCreator {
         .find((t): t is StationTrack => t?.extra?.maybeCoverAndLyrics !== undefined)
         ?? requested?.original ?? trackPlay.track;
 
-    const playDuration = positions.last - positions.first;
+    const playDuration = positions.last! - positions.first!;
 
     const embed = new EmbedBuilder();
     embed.setTitle(requestedBy?.length ? 'Playing your request' : 'Playing');
@@ -61,7 +76,9 @@ export abstract class TrackMessageCreator {
       .setStyle(ButtonStyle.Danger)
       .setCustomId(`skip:${trackPlay.uuid}`);
 
-    const moreButton = station.isCollectionLatchable(trackPlay.track.collection as StationTrackCollection)
+    const showMoreLikeThis = station.collections.length > 1 && station.isCollectionLatchable(trackPlay.track.collection as StationTrackCollection);
+
+    const moreButton = showMoreLikeThis
       ? new ButtonBuilder()
         .setLabel('More Like This')
         .setEmoji(sample(['❤️', '🧡', '💛', '💕', '💓', '💗', '💖', '💘', '💝'])!)

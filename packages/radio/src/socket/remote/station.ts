@@ -10,6 +10,7 @@ export interface Station {
   readonly playing: boolean;
   readonly paused: boolean;
   readonly playState: PlayState;
+  readonly activeDeck: DeckIndex | undefined;
 
   start(): void;
   pause(): void;

@@ -349,17 +349,36 @@ export type CoverAndLyrics = {
 }
 
 export type DeckPositions = {
-  current: number;
+  current?: number;
 
-  duration: number;
+  duration?: number;
 
   /**
    * First audible position
    */
-  first: number;
+  first?: number;
 
   /**
    * Last audible position
    */
-  last: number;
+  last?: number;
+
+  /**
+   * Leading duration
+   */
+  leading?: number;
+
+  /**
+   * Leading duration
+   */
+  trailing?: number;
+
+  /**
+   * The cue point/position for the next deck
+   */
+  cuePoint?: number;
+
+  transitionStart?: number;
+
+  transitionEnd?: number;
 }

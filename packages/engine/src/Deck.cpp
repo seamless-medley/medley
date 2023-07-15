@@ -507,6 +507,9 @@ void Deck::calculateTransition()
 
     if (transitionEnqueuePosition == transitionCuePosition) {
         transitionCuePosition = jmin(transitionEnqueuePosition + 1, transitionEndPosition);
+        if (transitionCuePosition > transitionEndPosition) {
+            transitionCuePosition = transitionEndPosition;
+        }
     }
 }
 

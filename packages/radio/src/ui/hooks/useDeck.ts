@@ -1,39 +1,36 @@
 import { DeckIndex } from "@seamless-medley/core";
-import { useEffect, useState } from "react";
-import { DeckInfoWithPositions } from "../../socket/po/deck";
-import { Station } from "../../socket/remote";
-import { Remotable } from "../../socket/types";
-import { useClient } from "../hooks/useClient";
+import { useCallback, useEffect, useState } from "react";
+import { Deck } from "../../socket/remote";
+import { $AnyProp } from "../../socket/types";
+import { useSurrogate } from "./surrogate";
+import { StubDeck } from "../stubs/deck";
+import { useSetState } from "@mantine/hooks";
+import { TrackPlay } from "../../socket/po/track";
 
-type DeckCache = Partial<Record<DeckIndex, Promise<DeckInfoWithPositions | undefined>>>;
-
-const cache = new WeakMap<Remotable<Station>, DeckCache>();
-
-const ensureCache = (station: Remotable<Station>) => {
-  if (!cache.has(station)) {
-    cache.set(station, {});
-  }
+export function useDeck(stationId: string | undefined, index: DeckIndex | undefined) {
+  return useSurrogate(StubDeck, 'deck', stationId ? `${stationId}/${index}` : undefined);
 }
 
-const storeCache = (station: Remotable<Station>, index: DeckIndex, info?: Promise<DeckInfoWithPositions | undefined>) => {
-  ensureCache(station);
-  cache.get(station)![index] = info;
-}
+export function useDeckInfo(stationId: string | undefined, index: DeckIndex, ...args: (Exclude<keyof Deck, 'trackPlay'>)[]) {
+  type PV = Deck[keyof Deck];
 
-const deteleCache = (station: Remotable<Station>, index: DeckIndex) => {
-  if (cache.has(station)) {
-    cache.get(station)![index] = undefined;
-  }
-}
+  const [deck] = useDeck(stationId, index);
 
-const getCache = (station: Remotable<Station>, index: DeckIndex) => {
-  return cache.get(station)?.[index];
-}
+  const [info, setInfo] = useSetState<Deck>({
+    active: false,
+    playing: false,
+    cp: 0,
+    duration: 0,
+    first: 0,
+    last: 0,
+    cuePoint: 0,
+    leading: 0,
+    trailing: 0,
+    transitionStart: 0,
+    transitionEnd: 0,
+    trackPlay: undefined
+  });
 
-export function useDeck(station: Remotable<Station> | undefined, index: DeckIndex) {
-  const client = useClient();
-
-  const [info, setInfo] = useState<DeckInfoWithPositions | undefined>();
   const [cover, setCover] = useState<string | undefined>();
 
   const updateCover = (newURL?: string) => setCover((oldCover) => {
@@ -42,163 +39,55 @@ export function useDeck(station: Remotable<Station> | undefined, index: DeckInde
     }
 
     return newURL;
-  })
+  });
 
-  const update = (deckIndex: number, newInfo: DeckInfoWithPositions) => {
-    if (deckIndex !== index) {
-      return;
-    }
-
-    setInfo(newInfo);
-
+  const handleTrackPlay = (trackPlay?: TrackPlay) => {
     const {
       cover,
       coverMimeType
-    } = newInfo?.trackPlay?.track?.extra?.coverAndLyrics ?? {};
+    } = trackPlay?.track?.extra?.coverAndLyrics ?? {};
 
-    updateCover(cover && coverMimeType ? URL.createObjectURL(new Blob([cover])) : undefined);
-
-    return newInfo;
+    updateCover(
+      cover && coverMimeType
+        ? URL.createObjectURL(new Blob([cover], { type: coverMimeType }))
+        : undefined
+    );
   }
 
-  const refreshDeckInfo = () => {
-    if (!station) {
-      return Promise.resolve(undefined);
-    }
-
-    const promise = station.getDeckInfo(index).then(newInfo => update(index, newInfo));
-    storeCache(station, index, promise);
-    return promise;
-  }
-
-  const invalidateDeckInfo = () => {
-    if (station) {
-      deteleCache(station, index);
-    }
-  }
-
-  const onLoaded: Station['ϟdeckLoaded'] = async (deckIndex, newInfo) => {
-    if (!station) {
+  const handleChange = useCallback((newValue: PV, oldValue: PV, prop: keyof Deck) => {
+    if (args.length && !args.includes(prop as any)) {
       return;
     }
 
-    if (deckIndex !== index) {
-      return;
+    if (prop === 'trackPlay') {
+      handleTrackPlay(newValue as TrackPlay);
     }
 
-    storeCache(station, deckIndex, Promise.resolve(update(deckIndex, newInfo)));
-  }
-
-  const onStarted: Station['ϟdeckStarted'] = async (deckIndex, positions) => {
-    if (!station) {
-      return;
-    }
-
-    if (deckIndex !== index) {
-      return;
-    }
-
-    const cached = await getCache(station, deckIndex);
-
-    if (!cached) {
-      return;
-    }
-
-    const newInfo = {
-      ...cached,
-      playing: true,
-      positions
-    }
-
-    setInfo(newInfo);
-    storeCache(station, index, Promise.resolve(newInfo));
-  }
-
-  const onActive: Station['ϟdeckActive'] = async (deckIndex, positions) => {
-    if (!station) {
-      return;
-    }
-
-    if (deckIndex !== index) {
-      return;
-    }
-
-    const cached = await getCache(station, deckIndex);
-
-    if (!cached) {
-      return;
-    }
-
-    const newInfo = {
-      ...cached,
-      playing: true,
-      active: true,
-      positions
-    }
-
-    setInfo(newInfo);
-    storeCache(station, deckIndex, Promise.resolve(newInfo));
-  }
-
-  const onUnloaded: Station['ϟdeckUnloaded'] = async (deckIndex) => {
-    if (deckIndex !== index) {
-      return;
-    }
-
-    setInfo(undefined);
-    updateCover(undefined);
-
-    if (!station) {
-      return;
-    }
-
-    const cached = await getCache(station, deckIndex);
-
-    if (!cached) {
-      return;
-    }
-
-    deteleCache(station, deckIndex);
-  }
+    setInfo({
+      [prop]: newValue
+    });
+  }, [deck]);
 
   useEffect(() => {
-    client.on('connect', refreshDeckInfo);
-    client.on('disconnect', invalidateDeckInfo)
+    if (!deck) {
+      return;
+    }
 
+    const info = deck.getProperties();
+    setInfo(info);
+    handleTrackPlay(info.trackPlay);
+
+    return deck.addPropertyChangeListener($AnyProp, handleChange);
+  }, [deck]);
+
+  useEffect(() => {
     return () => {
-      client.off('connect', refreshDeckInfo);
-      client.off('disconnect', invalidateDeckInfo);
 
       if (cover) {
         URL.revokeObjectURL(cover);
       }
     }
-  }, [])
-
-  useEffect(() => {
-    if (!station) {
-      return;
-    }
-
-    (getCache(station, index) ?? refreshDeckInfo()).then(info => {
-      if (info) {
-        update(index, info);
-      }
-    });
-
-    station.on('deckLoaded', onLoaded);
-    station.on('deckUnloaded', onUnloaded);
-    station.on('deckStarted', onStarted);
-    station.on('deckActive', onActive);
-
-    return () => {
-      station.off('deckLoaded', onLoaded);
-      station.off('deckUnloaded', onUnloaded);
-      station.off('deckStarted', onStarted);
-      station.off('deckActive', onActive);
-    }
-
-  }, [station, index]);
+  }, [stationId, index]);
 
   return {
     info,

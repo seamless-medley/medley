@@ -1,8 +1,6 @@
 import styled from "@emotion/styled";
 import React from "react";
 import { useRef } from "react";
-import { Station } from "../../socket/remote";
-import { Remotable } from "../../socket/types";
 import { useAudioLevels } from "../hooks/useAudioLevels";
 
 const Box = styled.div`

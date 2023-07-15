@@ -2,7 +2,7 @@ import { isFunction, mapValues, noop, pickBy, uniqueId, } from "lodash";
 import { EventEmitter } from "eventemitter3";
 import { io, Socket } from "socket.io-client";
 import msgpackParser from 'socket.io-msgpack-parser';
-import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents } from '../socket/events';
+import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents, RemoteObserveOptions } from '../socket/events';
 import { isProperty } from "../socket/remote/utils";
 import { Stub } from "../socket/stub";
 import { $AnyProp, AnyProp, ObservedPropertyChange, PickMethod, PickProp, Remotable } from "../socket/types";
@@ -24,6 +24,10 @@ class ObservingStore<T extends object> {
   })
 
   readonly handlers = new Set<ObserverHandler<any>>();
+
+  constructor(readonly options?: RemoteObserveOptions) {
+
+  }
 
   get observed() {
     return this._observed;
@@ -62,7 +66,8 @@ export enum DisconnectReason {
   ByClient,
   ByServer,
   Timeout,
-  Transport
+  Transport,
+  ParseError
 }
 
 function rejectAfter(ms: number, reject: (reason?: any) => any, reason: string = 'Timeout') {
@@ -87,8 +92,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     this.socket = io({ transports: ['websocket'], parser: msgpackParser });
 
-    this.socket.on('remote:event', this.handleRemoteEvent);
-    this.socket.on('remote:update', this.handleRemoteUpdate);
+    this.socket.on('r:e', this.handleRemoteEvent);
+    this.socket.on('r:u', this.handleRemoteUpdate);
     this.socket.io.on('reconnect', this.handleSocketReconnect);
 
     this.socket.on('connect', this.handleSocketConnect);
@@ -98,7 +103,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       .on('audioExtra', e => this.emit('audioExtra', e));
   }
 
-  private handleRemoteEvent: ServerEvents['remote:event'] = (kind, id, event, ...args) => {
+  private handleRemoteEvent: ServerEvents['r:e'] = (kind, id, event, ...args) => {
     const delegates = this.getDelegateFor(kind, id, event);
 
     if (delegates) {
@@ -108,10 +113,10 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     }
   }
 
-  private handleRemoteUpdate: ServerEvents['remote:update'] = (kind, id, changes) => {
+  private handleRemoteUpdate: ServerEvents['r:u'] = (kind, id, changes) => {
     const store = this.observingStores.get(`${kind}:${id}`);
     if (store) {
-      for (const { prop, oldValue, newValue } of changes) {
+      for (const { p: prop, o: oldValue, n: newValue } of changes) {
         store.observed[prop] = newValue;
       }
 
@@ -142,7 +147,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     for (const [key, store] of [...this.observingStores]) {
       const [kind, id] = this.extractId(key);
 
-      this.socket.emit('remote:observe', kind, id, async (response) => {
+      this.socket.emit('remote:observe', kind, id, store.options, async (response) => {
         if (response.status !== undefined) {
           // Error reobserving
           return;
@@ -151,9 +156,9 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         store.observed = response.result;
 
         const changes = Object.entries(response.result).map<ObservedPropertyChange>(([prop, value]) => ({
-          prop,
-          oldValue: value,
-          newValue: value
+          p: prop,
+          o: value,
+          n: value
         }));
 
         for (const handler of store.handlers) {
@@ -174,7 +179,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       'io server disconnect': DisconnectReason.ByServer,
       'ping timeout': DisconnectReason.Timeout,
       'transport close': DisconnectReason.Transport,
-      'transport error': DisconnectReason.Transport
+      'transport error': DisconnectReason.Transport,
+      'parse error': DisconnectReason.ParseError
     };
 
     this.emit('disconnect', reasonMap[reason]);
@@ -228,9 +234,17 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     return this.audioClient.connect(this.socket.id);
   }
 
+  #playingStationId?: string
+
   async playAudio(stationId: string) {
     await this.connectAudioSocket();
     this.audioClient.play(stationId);
+
+    this.#playingStationId = stationId;
+  }
+
+  get playingStationId() {
+    return this.#playingStationId;
   }
 
   private getDelegateEvents(ns: string, id: string) {
@@ -394,7 +408,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     });
   }
 
-  private remoteObserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, handler: ObserverHandler<Kind>) {
+  remoteObserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, options: RemoteObserveOptions | undefined, handler: ObserverHandler<Kind>) {
     return new Promise<Types[Kind]>(async (resolve, reject) => {
       const key = `${kind}:${id}` as const;
 
@@ -408,12 +422,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         return;
       }
 
-      const store = new ObservingStore<Types[Kind]>();
+      const store = new ObservingStore<Types[Kind]>(options);
       this.observingStores.set(key, store);
 
       rejectAfter(5_000, reject);
 
-      this.socket.emit('remote:observe', kind, id, async (response: RemoteResponse<any>) => {
+      this.socket.emit('remote:observe', kind, id, options, async (response: RemoteResponse<any>) => {
         if (response.status !== undefined) {
           reject(new RemoteObservationError(response, kind, id));
           return;
@@ -427,7 +441,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     });
   }
 
-  private remoteUnobserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, handler: ObserverHandler<Kind>) {
+  remoteUnobserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, handler: ObserverHandler<Kind>) {
     return new Promise<void>((resolve, reject) => {
       const key = `${kind}:${id}` as const;
 
@@ -478,7 +492,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   >(
     StubClass: Stub<Types[Kind]>,
     kind: Kind,
-    id: string
+    id: string,
+    observeOptions?: Omit<RemoteObserveOptions, 'excludes'>
   ) {
     const objectId = `${kind}:${id}` as const;
 
@@ -499,12 +514,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     const propertyDescs = pickBy(mergedDescs, isProperty);
     const methodDescs = pickBy(mergedDescs, desc => isFunction(desc.value));
 
-    const propertyChangeHandlers = new Map<string | AnyProp, Set<(newValue: any, oldValue: any) => Promise<any>>>();
+    const propertyChangeHandlers = new Map<string | AnyProp, Set<(newValue: any, oldValue: any, prop: string) => Promise<any>>>();
 
     const propertyObserver: ObserverHandler<Kind> = async (kind, id, changes) => {
       const anyPropHandlers = propertyChangeHandlers.get($AnyProp);
 
-      for (const { prop, oldValue, newValue } of changes) {
+      for (const { p: prop, o: oldValue, n: newValue } of changes) {
         const propHandlers = propertyChangeHandlers.get(prop);
 
         const allHandlers = [];
@@ -522,12 +537,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         }
 
         for (const handler of allHandlers) {
-          handler(newValue, oldValue);
+          handler(newValue, oldValue, prop);
         }
       }
     }
 
-    const addPropertyChangeHandler = (propKey: string | AnyProp, handler: (oldValue: any, newValue: any) => any) => {
+    const addPropertyChangeListener = (propKey: string | AnyProp, handler: (newValue: any, oldValue: any, prop: string) => any) => {
       if (!propertyChangeHandlers.has(propKey)) {
         propertyChangeHandlers.set(propKey, new Set());
       }
@@ -540,11 +555,11 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     const onDisposeHandlers = new Set<() => Promise<any>>();
 
-    const addDisposeHandler = (handler: () => Promise<any>) => {
+    const addDisposeListener = (handler: () => Promise<any>) => {
       onDisposeHandlers.add(handler);
     }
 
-    await this.remoteObserve(kind, id, propertyObserver);
+    await this.remoteObserve(kind, id, observeOptions, propertyObserver);
 
     const getObservedFromStore = () => {
       const store = this.observingStores.get(objectId);
@@ -594,8 +609,14 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     });
 
     const methods = mapValues(methodDescs, (desc, name) => (...args: any[]) => {
+      if (desc.value !== noop) {
+        // The method is implemented at client-side, no need to remotely invoke it on the server
+        (desc.value as Function).apply(surrogate, args);
+        return;
+      }
+
       const timeout = Math.max(0, getRemoteTimeout(StubClass.StubbedFrom, name) ?? 60_000);
-      return this.remoteInvoke(kind, id, timeout, name as any, ...args as any)
+      return this.remoteInvoke(kind, id, timeout, name as any, ...args as any);
     });
 
     const dispose = async () => {
@@ -629,8 +650,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     const specialMethods: Record<string | symbol, any> = {
       dispose,
       getProperties,
-      onPropertyChange: addPropertyChangeHandler,
-      onDispose: addDisposeHandler,
+      addPropertyChangeListener,
+      addDisposeListener
     }
 
     const surrogate = new Proxy({ uuid } as {}, {

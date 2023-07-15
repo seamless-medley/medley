@@ -9,7 +9,7 @@ import { decode, encode } from "notepack.io";
 import { AudioSocketCommand, AudioSocketCommandMap, AudioSocketReply } from "../../socket/audio";
 import Decoder from "./decoder?worker";
 import type { Decoder as DecoderInft } from "./decoder";
-import type { AudioTransportExtra } from "../../audio/types";
+import type { AudioTransportExtraPayload } from "../../audio/types";
 import { RingBuffer } from "./ringbuffer";
 
 export type InitMessage = {
@@ -74,7 +74,7 @@ let pcmBuffer: RingBuffer | undefined;
 /**
  * Another Web Worker for docoding Opus Packets
  */
-const decoder = new Decoder() as unknown as DecoderInft<AudioTransportExtra>;
+const decoder = new Decoder() as unknown as DecoderInft<AudioTransportExtraPayload>;
 
 decoder.addEventListener('message', (e) => {
   const { decoded: { channelData, samplesDecoded }, extra } = e.data;
@@ -118,7 +118,7 @@ function handleOpus(data: Uint8Array) {
 }
 
 async function connect(socketId: string): Promise<void> {
-  const isConnectingOrOpen = ws && [WebSocket.CONNECTING, WebSocket.OPEN].includes(ws.readyState);
+  const isConnectingOrOpen = ws && [WebSocket.CONNECTING as number, WebSocket.OPEN as number].includes(ws.readyState);
 
   if (isConnectingOrOpen && socketId === socketId) {
     return;

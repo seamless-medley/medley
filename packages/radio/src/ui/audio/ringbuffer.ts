@@ -1,6 +1,6 @@
-import type { DeckIndex } from "@seamless-medley/core";
+import type { AudioLevel } from "@seamless-medley/core";
 import type { TypedArray } from "type-fest";
-import type { AudioTransportExtra, Level } from "../../audio/types";
+import type { AudioTransportExtra, AudioTransportExtraPayload } from "../../audio/types";
 
 enum State {
   Read,
@@ -14,14 +14,12 @@ function createTypedSharedArrayBuffer<T extends TypedArray>(Ctor: new (buffer: S
 export class RingBuffer {
   readonly bufferLength: number;
   private channelData: Float32Array[];
-  private deckData: Int8Array;
-  private positionData: Float32Array;
+
   private magnitudeData: Float32Array[];
   private peakData: Float32Array[];
   private reductionData: Float32Array;
 
   // For storing read/write position
-  // private states = new Uint32Array(new SharedArrayBuffer(Object.values(State).length * Uint32Array.BYTES_PER_ELEMENT))
   private states = createTypedSharedArrayBuffer(Uint32Array, Object.values(State).length);
 
   constructor(readonly size: number, readonly channels: number = 2) {
@@ -33,8 +31,6 @@ export class RingBuffer {
       new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
     ));
 
-    this.deckData = new Int8Array(new SharedArrayBuffer(this.bufferLength * Uint8Array.BYTES_PER_ELEMENT));
-    this.positionData = new Float32Array(new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT));
     this.magnitudeData = chanelList.map<Float32Array>(() => new Float32Array(
       new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
     ));
@@ -44,15 +40,23 @@ export class RingBuffer {
     this.reductionData = new Float32Array(new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT));
   }
 
-  push(inputs: Float32Array[], blockLength: number, extra: AudioTransportExtra) {
+  push(inputs: Float32Array[], blockLength: number, extra: AudioTransportExtraPayload) {
     const [currentRead, currentWrite] = this.getCurrentReadWrite();
 
     if (this.getAvailableWrite(currentRead, currentWrite) < blockLength) {
       return false;
     }
 
-    const [deck, position, levelL, levelR, reduction] = extra;
-    const levels = [levelL, levelR];
+    const [
+      left_mag, left_peak,
+      right_mag, right_peak,
+      reduction
+    ] = extra;
+
+    const levels: AudioLevel[] = [
+      { magnitude: left_mag, peak: left_peak },
+      { magnitude: right_mag, peak: right_peak },
+    ];
 
     let nextWrite = currentWrite + blockLength;
 
@@ -69,37 +73,21 @@ export class RingBuffer {
         blockB.set(input.subarray(blockA.length));
       }
 
-      {
-        const blockA = this.deckData.subarray(currentWrite);
-        const blockB = this.deckData.subarray(0, nextWrite);
-
-        const d = deck !== undefined ? deck : -1;
-        blockA.fill(d);
-        blockB.fill(d);
-      }
-
-      {
-        const blockA = this.positionData.subarray(currentWrite);
-        const blockB = this.positionData.subarray(0, nextWrite);
-
-        blockA.fill(position);
-        blockB.fill(position);
-      }
 
       for (const [channel, data] of this.magnitudeData.entries()) {
         const blockA = data.subarray(currentWrite);
         const blockB = data.subarray(0, nextWrite);
 
-        blockA.fill(levels[channel][0]);
-        blockB.fill(levels[channel][0]);
+        blockA.fill(levels[channel].magnitude);
+        blockB.fill(levels[channel].magnitude);
       }
 
       for (const [channel, data] of this.peakData.entries()) {
         const blockA = data.subarray(currentWrite);
         const blockB = data.subarray(0, nextWrite);
 
-        blockA.fill(levels[channel][1]);
-        blockB.fill(levels[channel][1]);
+        blockA.fill(levels[channel].peak);
+        blockB.fill(levels[channel].peak);
       }
 
       {
@@ -116,24 +104,14 @@ export class RingBuffer {
         block.set(inputs[channel].subarray(0, blockLength));
       }
 
-      {
-        const block = this.deckData.subarray(currentWrite, nextWrite);
-        block.fill(deck !== undefined ? deck : -1);
-      }
-
-      {
-        const block = this.positionData.subarray(currentWrite, nextWrite);
-        block.fill(position);
-      }
-
       for (const [channel, data] of this.magnitudeData.entries()) {
         const block = data.subarray(currentWrite, nextWrite);
-        block.fill(levels[channel][0]);
+        block.fill(levels[channel].magnitude);
       }
 
       for (const [channel, data] of this.peakData.entries()) {
         const block = data.subarray(currentWrite, nextWrite);
-        block.fill(levels[channel][1]);
+        block.fill(levels[channel].peak);
       }
 
       {
@@ -157,10 +135,8 @@ export class RingBuffer {
       return;
     }
 
-    let deck: DeckIndex | undefined = undefined;
-    let position = 0;
-    const levelL: Level = [0, 0];
-    const levelR: Level = [0, 0];
+    const levelL: AudioLevel = { magnitude: 0, peak: 0 };
+    const levelR: AudioLevel = { magnitude: 0, peak: 0 };
     let reduction = 0;
 
     let nextRead = currentRead + blockLength;
@@ -179,22 +155,13 @@ export class RingBuffer {
       }
 
       {
-        const d = this.deckData[nextRead-1];
-        deck = d !== -1 ? d : undefined;
+        levelL.magnitude = this.magnitudeData[0][nextRead-1];
+        levelR.magnitude = this.magnitudeData[1][nextRead-1];
       }
 
       {
-        position = this.positionData[nextRead-1];
-      }
-
-      {
-        levelL[0] = this.magnitudeData[0][nextRead-1];
-        levelR[0] = this.magnitudeData[1][nextRead-1];
-      }
-
-      {
-        levelL[1] = this.peakData[0][nextRead-1];
-        levelR[1] = this.peakData[1][nextRead-1];
+        levelL.peak = this.peakData[0][nextRead-1];
+        levelR.peak = this.peakData[1][nextRead-1];
       }
 
       {
@@ -207,22 +174,13 @@ export class RingBuffer {
       }
 
       {
-        const d = this.deckData[nextRead-1];
-        deck = d !== -1 ? d : undefined;
+        levelL.magnitude = this.magnitudeData[0][nextRead-1];
+        levelR.magnitude = this.magnitudeData[1][nextRead-1];
       }
 
       {
-        position = this.positionData[nextRead-1];
-      }
-
-      {
-        levelL[0] = this.magnitudeData[0][nextRead-1];
-        levelR[0] = this.magnitudeData[1][nextRead-1];
-      }
-
-      {
-        levelL[1] = this.peakData[0][nextRead-1];
-        levelR[1] = this.peakData[1][nextRead-1];
+        levelL.peak = this.peakData[0][nextRead-1];
+        levelR.peak = this.peakData[1][nextRead-1];
       }
 
       {
@@ -235,7 +193,13 @@ export class RingBuffer {
     }
 
     Atomics.store(this.states, State.Read, nextRead);
-    return [deck, position, levelL, levelR, reduction];
+    return {
+      audioLevels: {
+        left: levelL,
+        right: levelR,
+        reduction
+      }
+    }
   }
 
   private getCurrentReadWrite() {

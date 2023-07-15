@@ -1,7 +1,7 @@
 import { Station } from "@seamless-medley/core";
 import { encode } from 'notepack.io';
 import { IExciter, Exciter, ICarrier } from "../../audio/exciter";
-import { AudioTransportExtra } from "../../audio/types";
+import { AudioTransportExtraPayload } from "../../audio/types";
 
 interface AudioStreamPlayerEvents {
   packet(packet: Buffer): void;
@@ -26,20 +26,17 @@ export class WebStreamExciter extends Exciter<AudioStreamPlayerEvents> implement
       return;
     }
 
-    const activeDeck = this.station.activeDeck;
+    const { audioLevels  } = this.station;
 
-    const position = activeDeck !== undefined ? this.station.getDeckPositions(activeDeck).current : 0;
-    const { audioLevels: { left, right, reduction } } = this.station;
+    const extra: AudioTransportExtraPayload = [
+      audioLevels.left.magnitude,
+      audioLevels.left.peak,
+      audioLevels.right.magnitude,
+      audioLevels.right.peak,
+      audioLevels.reduction
+    ]
 
-    const extras: AudioTransportExtra = [
-      activeDeck,
-      position,
-      [left.magnitude, left.peak],
-      [right.magnitude, right.peak],
-      reduction
-    ];
-
-    const infoBuffer = encode(extras) as Buffer;
+    const infoBuffer = encode(extra) as Buffer;
 
     const resultPacket = Buffer.alloc(2 + infoBuffer.byteLength + opus.byteLength); // sizeof(info) + info + opus
     resultPacket.writeUInt16LE(infoBuffer.byteLength, 0);

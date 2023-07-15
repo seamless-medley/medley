@@ -10,39 +10,26 @@ export function useRemotableProp<
 ): T[P] | undefined {
   const [value, set] = useState<T[P]>();
 
-  useEffect(
-    () => {
-      const update = (value?: T[P]) => {
-        if (r) {
-          set(value ?? r.getProperties()[prop]);
-        }
-      }
+  const update = (newValue?: T[P]) => r && set(newValue ?? r.getProperties()[prop]);
 
-      update();
-      return r?.onPropertyChange(prop as any, (_, newValue) => update(newValue))
-    },
-    [r]
-  );
+  useEffect(() => {
+    update();
+
+    return r?.addPropertyChangeListener(prop, update);
+  }, [r]);
 
   return value;
 }
 
-export function useRemotableProps<T>(r: Remotable<T> | undefined) {
+export function useRemotableProps<T extends { [key: string]: any }>(r: Remotable<T> | undefined) {
   const [values, setValues] = useState(r?.getProperties());
 
-  useEffect(
-    () => {
-      const update = () => {
-        if (r) {
-          setValues({ ...r.getProperties() })
-        }
-      }
+  const update = () => r && setValues({ ...r?.getProperties() });
 
-      update();
-      return r?.onPropertyChange($AnyProp, () => update())
-    },
-    [r]
-  );
+  useEffect(() => {
+    update();
+    return r?.addPropertyChangeListener($AnyProp, update);
+  }, [r]);
 
   return values;
 }

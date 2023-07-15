@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import http from "http";
-import { capitalize, isFunction, isObject, mapValues, noop, pickBy } from "lodash";
+import { capitalize, isEqual, isFunction, isObject, mapValues, noop, omit, pickBy } from "lodash";
 import { Server as IOServer, Socket as IOSocket } from "socket.io";
 import msgpackParser from 'socket.io-msgpack-parser';
 import { ConditionalKeys } from "type-fest";
@@ -191,7 +191,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     /**
      * Client requests to observe for changes of a remote object
      */
-    'remote:observe': async (socket, kind, id, callback) => {
+    'remote:observe': async (socket, kind, id, options, callback) => {
       this.interact(
         kind, id, undefined,
         (value, object) => !!object,
@@ -205,8 +205,12 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
 
           if (!observation.has(key)) {
             const observer: ObservedPropertyHandler<any> = async (stub, changes) => {
+              if (options?.ignoreOldValue) {
+                changes = changes.map(c => omit(c, 'o'));
+              }
+
               // Inform clients whenever a property of an observing object changed
-              socket.emit('remote:update', kind, id, changes);
+              socket.emit('r:u', kind, id, changes);
             }
 
             observation.set(key, observer);
@@ -253,7 +257,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
         isEvented,
         async (object: EventEmitter) => {
           const handler = (...args: any[]) => {
-            socket.emit('remote:event', kind, id, event, ...args);
+            socket.emit('r:e', kind, id, event, ...args);
           };
 
           if (!this.socketSubscriptions.has(socket)) {
@@ -444,14 +448,14 @@ export class ObjectObserver<T extends object> {
             desc.value = v;
           }
 
-          if (typeof prop === 'string' && this.isPublishedProperty(prop) && old !== v) {
-            changes.push({ prop, oldValue: old, newValue: v });
+          if (typeof prop === 'string' && this.isPublishedProperty(prop) && !isEqual(old, v)) {
+            changes.push({ p: prop, o: old, n: v });
 
-            for (const dep of dependents) {
+            for (const [dep, oldValue] of dependents) {
               changes.push({
-                prop: dep[0].name,
-                oldValue: dep[1],
-                newValue: dep[0].get ? dep[0].get.call(dep[0].instance) : dep[0].value
+                p: dep.name,
+                o: oldValue,
+                n: dep.get ? dep.get.call(dep.instance) : dep.value
               })
             }
 

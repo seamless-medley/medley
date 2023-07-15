@@ -4,7 +4,7 @@ import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
 
 export default defineConfig({
-  root: './src/ui',
+  root: './src/ui/app',
   plugins: [
     {
       name: "configure-response-headers",

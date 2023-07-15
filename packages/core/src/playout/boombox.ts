@@ -6,7 +6,7 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track, TrackExtra } from "../track";
-import { TrackCollection, TrackIndex, TrackPeek } from "../collections";
+import { TrackCollection, TrackIndex } from "../collections";
 import { SweeperInserter } from "./sweeper";
 import { createLogger, Logger, type ILogObj } from '../logging';
 import { MetadataHelper } from '../metadata';
@@ -228,11 +228,15 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   }
 
   getDeckPositions(index: DeckIndex): DeckPositions {
+    if (!this.decks[index].trackPlay) {
+      return {};
+    }
+
     return this.medley.getDeckPositions(index);
   }
 
   getDeckInfo(index: DeckIndex): Readonly<DeckInfoWithPositions> {
-    const positions = this.medley.getDeckPositions(index);
+    const positions = this.getDeckPositions(index);
 
     return {
       ...this.decks[index],
@@ -240,7 +244,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     }
   }
 
-  get activeDeck() {
+  get activeDeck(): DeckIndex | undefined {
     const index = this.decks.findIndex(d => d.active);
     return index !== -1 ? index : undefined;
   }
