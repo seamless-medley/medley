@@ -2,7 +2,7 @@ import { StationAudioLevels } from "@seamless-medley/core";
 import { gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { mapValues } from "lodash";
 import { compose } from "lodash/fp";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { AudioTransportExtra } from "../../audio/types";
 import { useClient } from "./useClient";
 
@@ -35,15 +35,15 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, opti
   const process = compose(normalize, gainToDecibels);
 
   const client = useClient();
-
-  let raf = 0;
+  const callbackRef = useRef<typeof callback>();
+  const raf = useRef(0);
 
   const update = (levels: StationAudioLevels) => {
     const left = mapValues({ ...levels.left }, process);
     const right = mapValues({ ...levels.right }, process);
     const reduction = normalize(levels.reduction + max);
 
-    raf = requestAnimationFrame(() => {
+    raf.current = requestAnimationFrame(() => {
       callback({
         left: {
           level: left.magnitude,
@@ -56,33 +56,19 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, opti
         reduction
       });
 
-      raf = 0;
+      raf.current = 0;
     });
   }
 
-  const handleAudioExtra = (extra: AudioTransportExtra) => {
-    const [,, left, right, reduction] = extra;
-    update({
-      left: {
-        magnitude: left[0],
-        peak: left[1]
-      },
-      right: {
-        magnitude: right[0],
-        peak: right[1]
-      },
-      reduction
-    })
-  }
-
-  const handleDisconnect = () => update(emptyLevel);
+  const handleAudioExtra = useCallback((extra: AudioTransportExtra) => update(extra.audioLevels), []);
+  const handleDisconnect = useCallback(() => update(emptyLevel), []);
 
   useEffect(() => {
     client.on('audioExtra', handleAudioExtra);
     client.on('disconnect', handleDisconnect);
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(raf.current);
       client.off('audioExtra', handleAudioExtra);
       client.off('disconnect', handleDisconnect);
     }
