@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import http from "http";
-import { capitalize, isFunction, isObject, mapValues, noop, pickBy } from "lodash";
+import { capitalize, isEqual, isFunction, isObject, mapValues, noop, omit, pickBy } from "lodash";
 import { Server as IOServer, Socket as IOSocket } from "socket.io";
 import msgpackParser from 'socket.io-msgpack-parser';
 import { ConditionalKeys } from "type-fest";
@@ -448,7 +448,7 @@ export class ObjectObserver<T extends object> {
             desc.value = v;
           }
 
-          if (typeof prop === 'string' && this.isPublishedProperty(prop) && old !== v) {
+          if (typeof prop === 'string' && this.isPublishedProperty(prop) && !isEqual(old, v)) {
             changes.push({ p: prop, o: old, n: v });
 
             for (const [dep, oldValue] of dependents) {
