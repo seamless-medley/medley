@@ -581,12 +581,31 @@ Napi::Value Medley::getDeckPositions(const CallbackInfo& info) {
     }
 
     auto& deck = (index == 0) ? engine->getDeck1() : (index == 1 ? engine->getDeck2() : engine->getDeck3());
+    auto nextDeck = engine->getNextDeck(&deck);
+
+    auto sr = deck.getSourceSampleRate();
+    auto first = deck.getFirstAudiblePosition();
+    auto last = deck.getEndPosition();
+
+    auto leading = deck.getLeadingSamplePosition() / sr;
+    auto trailing = deck.getTrailingSamplePosition() / sr;
+
+    auto nextLeading = (float)((nextDeck != nullptr && nextDeck->isTrackLoaded() && !nextDeck->isMain()) ? nextDeck->getLeadingDuration() : 0);
+    auto cuePoint = deck.getTransitionCuePosition();
+    auto transitionStart = (float)deck.getTransitionStartPosition() - nextLeading;
+    auto transitionEnd = (float)deck.getTransitionEndPosition();
 
     auto result = Object::New(env);
     result.Set("current", deck.getPosition());
     result.Set("duration", deck.getDuration());
-    result.Set("first", deck.getFirstAudiblePosition());
-    result.Set("last", deck.getLastAudiblePosition());
+    result.Set("first", first);
+    result.Set("last", last);
+    result.Set("leading", leading);
+    result.Set("trailing", trailing);
+    result.Set("cuePoint", cuePoint);
+    result.Set("transitionStart", transitionStart);
+    result.Set("transitionEnd", transitionEnd);
+
     return result;
 }
 
