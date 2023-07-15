@@ -1,2 +1,3 @@
-node_modules
-docker
+node_modules/
+docker/
+packages/node-medley/
