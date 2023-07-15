@@ -244,7 +244,7 @@ private:
             juce::Rectangle inaudibleArea((float)(transitionEnd / duration * w), 0.0f, (float)(last / duration * w), h);
             juce::Rectangle lastArea((float)(last / duration * w), 0.0f, w, h);
 
-            g.fillCheckerBoard(firstArea,4, 4, Colours::darkgrey.brighter(), Colours::darkgrey);
+            g.fillCheckerBoard(firstArea, 4, 4, Colours::darkgrey.brighter(), Colours::darkgrey);
             g.fillCheckerBoard(inaudibleArea, 4, 4, Colours::darkorchid.brighter(), Colours::darkorchid);
             g.fillCheckerBoard(lastArea, 4, 4, Colours::darkgrey.brighter(), Colours::darkgrey);
 
