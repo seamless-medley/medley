@@ -1,5 +1,4 @@
 import { isFunction, sumBy } from "lodash";
-import { TrackCollection } from "../collections/base";
 import { Track } from "../track";
 import { createLogger, Logger, type ILogObj } from '../logging';
 import { weightedSample } from "@seamless-medley/utils";
@@ -25,7 +24,7 @@ export type CrateOptions<T extends Track<any>> = {
   chance?: Chanceable;
 
   limit: CrateLimit;
-  max?: number;
+  max?: number | (() => number);
 }
 
 export class Crate<T extends Track<any>> {
@@ -37,7 +36,7 @@ export class Crate<T extends Track<any>> {
   limit: CrateLimit;
   chance?: Chanceable;
 
-  private _max: number;
+  private _max: number | (() => number);
 
   protected logger: Logger<ILogObj>;
 
@@ -65,8 +64,8 @@ export class Crate<T extends Track<any>> {
     this.sourceWeights = newSources.map(s => s.weight);
   }
 
-  get max() {
-    return this._max;
+  get max(): number {
+    return isFunction(this._max) ? this._max() : this._max;
   }
 
   async select(force?: boolean): Promise<boolean> {

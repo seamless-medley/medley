@@ -568,7 +568,7 @@ export class Station extends TypedEmitter<StationEvents> {
       sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.library.get(id)!, weight })),
       chance: createChanceable(chance),
       limit: crateLimitFromSequenceLimit(limit),
-      max: existing?.max
+      max: (existing as any)?._max
     });
   }
 
