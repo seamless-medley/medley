@@ -1,5 +1,14 @@
-import type { DeckIndex } from "@seamless-medley/core";
+import type { DeckIndex, StationAudioLevels } from "@seamless-medley/core";
 
-export type Level = [mag: number, peak: number];
+export type AudioTransportExtraPayload = [
+  left_mag: number,
+  left_peak: number,
+  right_mag: number,
+  right_peak: number,
+  reduction: number
+];
 
-export type AudioTransportExtra = [deck: DeckIndex | undefined, position: number, left: Level, right: Level, reduction: number];
+export type AudioTransportExtra = {
+  audioLevels: StationAudioLevels;
+}
+
