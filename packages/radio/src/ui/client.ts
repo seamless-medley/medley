@@ -87,8 +87,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     this.socket = io({ transports: ['websocket'], parser: msgpackParser });
 
-    this.socket.on('remote:event', this.handleRemoteEvent);
-    this.socket.on('remote:update', this.handleRemoteUpdate);
+    this.socket.on('r:e', this.handleRemoteEvent);
+    this.socket.on('r:u', this.handleRemoteUpdate);
     this.socket.io.on('reconnect', this.handleSocketReconnect);
 
     this.socket.on('connect', this.handleSocketConnect);
@@ -98,7 +98,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       .on('audioExtra', e => this.emit('audioExtra', e));
   }
 
-  private handleRemoteEvent: ServerEvents['remote:event'] = (kind, id, event, ...args) => {
+  private handleRemoteEvent: ServerEvents['r:e'] = (kind, id, event, ...args) => {
     const delegates = this.getDelegateFor(kind, id, event);
 
     if (delegates) {
@@ -108,7 +108,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     }
   }
 
-  private handleRemoteUpdate: ServerEvents['remote:update'] = (kind, id, changes) => {
+  private handleRemoteUpdate: ServerEvents['r:u'] = (kind, id, changes) => {
     const store = this.observingStores.get(`${kind}:${id}`);
     if (store) {
       for (const { prop, oldValue, newValue } of changes) {

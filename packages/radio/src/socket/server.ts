@@ -206,7 +206,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
           if (!observation.has(key)) {
             const observer: ObservedPropertyHandler<any> = async (stub, changes) => {
               // Inform clients whenever a property of an observing object changed
-              socket.emit('remote:update', kind, id, changes);
+              socket.emit('r:u', kind, id, changes);
             }
 
             observation.set(key, observer);
@@ -253,7 +253,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
         isEvented,
         async (object: EventEmitter) => {
           const handler = (...args: any[]) => {
-            socket.emit('remote:event', kind, id, event, ...args);
+            socket.emit('r:e', kind, id, event, ...args);
           };
 
           if (!this.socketSubscriptions.has(socket)) {
