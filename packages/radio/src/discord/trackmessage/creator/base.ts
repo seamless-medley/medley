@@ -35,7 +35,7 @@ export abstract class TrackMessageCreator {
         .find((t): t is StationTrack => t?.extra?.maybeCoverAndLyrics !== undefined)
         ?? requested?.original ?? trackPlay.track;
 
-    const playDuration = positions.last - positions.first;
+    const playDuration = positions.last! - positions.first!;
 
     const embed = new EmbedBuilder();
     embed.setTitle(requestedBy?.length ? 'Playing your request' : 'Playing');
