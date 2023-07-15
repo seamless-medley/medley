@@ -499,7 +499,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     const propertyDescs = pickBy(mergedDescs, isProperty);
     const methodDescs = pickBy(mergedDescs, desc => isFunction(desc.value));
 
-    const propertyChangeHandlers = new Map<string | AnyProp, Set<(newValue: any, oldValue: any) => Promise<any>>>();
+    const propertyChangeHandlers = new Map<string | AnyProp, Set<(newValue: any, oldValue: any, prop: string) => Promise<any>>>();
 
     const propertyObserver: ObserverHandler<Kind> = async (kind, id, changes) => {
       const anyPropHandlers = propertyChangeHandlers.get($AnyProp);
@@ -522,12 +522,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         }
 
         for (const handler of allHandlers) {
-          handler(newValue, oldValue);
+          handler(newValue, oldValue, prop);
         }
       }
     }
 
-    const addPropertyChangeHandler = (propKey: string | AnyProp, handler: (oldValue: any, newValue: any) => any) => {
+    const addPropertyChangeListener = (propKey: string | AnyProp, handler: (newValue: any, oldValue: any, prop: string) => any) => {
       if (!propertyChangeHandlers.has(propKey)) {
         propertyChangeHandlers.set(propKey, new Set());
       }
@@ -540,7 +540,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     const onDisposeHandlers = new Set<() => Promise<any>>();
 
-    const addDisposeHandler = (handler: () => Promise<any>) => {
+    const addDisposeListener = (handler: () => Promise<any>) => {
       onDisposeHandlers.add(handler);
     }
 
@@ -629,8 +629,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     const specialMethods: Record<string | symbol, any> = {
       dispose,
       getProperties,
-      onPropertyChange: addPropertyChangeHandler,
-      onDispose: addDisposeHandler,
+      addPropertyChangeListener,
+      addDisposeListener
     }
 
     const surrogate = new Proxy({ uuid } as {}, {

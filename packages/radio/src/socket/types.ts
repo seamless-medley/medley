@@ -50,8 +50,8 @@ export type Remotable<T, Props = PickProp<T>> =
 {
   getProperties(): Props;
   //
-  onPropertyChange<P extends keyof Props>(props: P | AnyProp, listener: (oldValue: Props[P], newValue: Props[P]) => any): () => void;
-  onDispose(listener: () => Promise<any>): ThisType<T>;
+  addPropertyChangeListener<P extends keyof Props>(props: P | AnyProp, listener: (newValue: Props[P], oldValue: Props[P], prop: P) => any): () => void;
+  addDisposeListener(listener: () => Promise<any>): ThisType<T>;
   //
   dispose(): Promise<void>;
 };
