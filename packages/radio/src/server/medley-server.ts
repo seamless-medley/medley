@@ -15,6 +15,7 @@ import {
 import { ExposedColection } from "./expose/collection";
 import { Unpacked } from "../types";
 import { AudioServer } from "./audio/transport";
+import { ExposedDeck } from "./expose/deck";
 
 export class MedleyServer extends SocketServerController<RemoteTypes> {
   private config: Config;
@@ -103,6 +104,10 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     station.on('collectionRemoved', this.handleStationCollectionRemoved);
 
     this.register('station', station.id, new ExposedStation(station));
+
+    for (const index of [0, 1, 2]) {
+      this.register('deck', `${station.id}/${index}`, new ExposedDeck(station, index));
+    }
 
     for (const col of station.collections) {
       this.registerCollection(col);
