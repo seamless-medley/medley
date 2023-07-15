@@ -12,6 +12,7 @@ class StubbingStation {
   paused = undefined as any;
 
   playState = undefined as any;
+  activeDeck = undefined as any;
 
   start = noop as any;
   pause = noop as any;

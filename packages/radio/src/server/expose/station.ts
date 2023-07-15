@@ -1,6 +1,4 @@
 import { DeckIndex, DeckPositions, PlayState, Station, StationEvents } from "@seamless-medley/core";
-import { every } from "lodash";
-import { equals } from "lodash/fp";
 import { $Exposing, Exposable } from "../../socket/expose";
 import { DeckInfoWithPositions, fromDeckInfoWithPositions } from "../../socket/po/deck";
 import { Station as RemoteStation } from "../../socket/remote";
@@ -99,6 +97,10 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   get playState(): PlayState {
     return this.#station.playState;
+  }
+
+  get activeDeck() {
+    return this.#station.activeDeck;
   }
 
   async start() {
