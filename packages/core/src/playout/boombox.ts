@@ -244,7 +244,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     }
   }
 
-  get activeDeck() {
+  get activeDeck(): DeckIndex | undefined {
     const index = this.decks.findIndex(d => d.active);
     return index !== -1 ? index : undefined;
   }
