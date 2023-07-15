@@ -16,6 +16,8 @@ export function useSurrogate<
 ) {
   const client = useClient();
   const [remote, setRemote] = useState<Remotable<T>>();
+  const [error, setError] = useState<Error>();
+  const ref = useRef<typeof remote>();
 
   const update = useForceUpdate();
 
@@ -23,31 +25,28 @@ export function useSurrogate<
   const onDisconnect = () => setRemote(undefined);
 
   useEffect(() => {
-    let _s: typeof remote;
 
     if (id && client.ready) {
       client.surrogateOf<Kind>(StubClass as any, kind, id)
         .then(s => {
-          _s = s as any;
+          ref.current = s as any;
           setRemote(s as any);
         })
-        .catch((e) => {
-          console.error('Could not get surrogate', e);
-        });
+        .catch(setError);
     }
 
     client.on('connect', onConnect);
     client.on('disconnect', onDisconnect);
 
     return () => {
-      _s?.dispose();
+      ref.current?.dispose();
 
       client.off('connect', onConnect);
       client.off('disconnect', onDisconnect)
     }
   }, [id, client.ready]);
 
-  return remote;
+  return [remote, error];
 }
 
 export function useSurrogateWithRemotable<
@@ -58,8 +57,8 @@ export function useSurrogateWithRemotable<
   kind: Kind,
   id: string
 ) {
-  const remote = useSurrogate(StubClass, kind, id);
+  const [remote, error] = useSurrogate(StubClass, kind, id);
   const values = useRemotableProps(remote);
 
-  return [remote, values] as const;
+  return [remote, values, error] as const;
 }
