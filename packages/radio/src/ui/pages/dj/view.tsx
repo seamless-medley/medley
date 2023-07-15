@@ -1,35 +1,37 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { Button, Group } from '@mantine/core';
-import { useClient } from './hooks/useClient';
-import { useStation } from './hooks/useStation';
-import { useRemotableProps } from './hooks/remotable';
-import { VUMeter } from './components/VUMeter';
-import { useCollection } from './hooks/useCollection';
-import { Track } from '../socket/po/track';
-import { Station } from '../socket/remote';
-import { PlayDeck } from './components';
-import { usePlayHead } from './hooks/usePlayHead';
+import { Box, Button, Center, Grid, Group, Stack } from '@mantine/core';
+import { useParams } from '@tanstack/router';
 
-const PlayHead: React.FC = () => {
-  const [deck, setDeck] = useState<number | undefined>();
-  const [position, setPosition] = useState(0);
+import { useClient } from '../../hooks/useClient';
+import { useStation } from '../../hooks/useStation';
+import { useRemotableProps } from '../../hooks/remotable';
+import { VUMeter } from '../../components/VUMeter';
+import { useCollection } from '../../hooks/useCollection';
+import { Track } from '../../../socket/po/track';
+import { Station } from '../../../socket/remote';
+import { PlayDeck } from '../../components';
+import { route } from './route';
+import { times } from 'lodash';
+import { useDeckInfo } from '../../hooks/useDeck';
 
-  usePlayHead((update) => {
-    setDeck(update.deck);
-    setPosition(update.position);
-  })
+const PlayHead: React.FC<{ stationId: string }> = ({ stationId }) => {
+  const [station] = useStation(stationId);
+
+  const activeDeck = station?.activeDeck() ?? 0;
+
+  const { info } = useDeckInfo(stationId, station?.activeDeck() ?? 0);
 
   return (
     <>
-      <h4>Deck: {deck !== undefined ? deck + 1 : 'None'}</h4>
-      <h4>Position: {position.toFixed(2)}</h4>
+      <h4>Deck: {activeDeck !== undefined ? activeDeck + 1 : 'None'}</h4>
+      <h4>Position: {info.cp.toFixed(2)}</h4>
     </>
   )
 }
 
 const CollectionList: React.FC<{ id: string }> = ({ id }) => {
-  const collection = useCollection(id);
+  const [collection] = useCollection(id);
   const [items, setItems] = useState<Track[]>([]);
 
   const refresh = () => {
@@ -70,14 +72,17 @@ const CollectionList: React.FC<{ id: string }> = ({ id }) => {
   )
 }
 
-export const Demo: React.FC = () => {
+export const DJ: React.FC = () => {
+  const params = useParams({ from: route.id });
+  const stationId = params.station;
+
   const client = useClient();
-  const station = useStation('demo');
+  const [station, stationError] = useStation(stationId);
   const stationProps = useRemotableProps(station);
 
   const [collections, setCollections] = useState<string[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<string>();
-  const collection = useCollection(selectedCollection);
+  const [collection] = useCollection(selectedCollection);
 
   const handleCollectionChange: Station['ϟcollectionChange'] = (oldId, newId) => {
     setSelectedCollection(newId);
@@ -104,8 +109,14 @@ export const Demo: React.FC = () => {
     }
   }, [selectedCollection]);
 
+  if (stationError) {
+    return <h1>No Such Station {params.station}</h1>
+  }
+
+
   return (
     <>
+      <h1>{stationId}</h1>
       <div>
         Left: <VUMeter channel="left" />
       </div>
@@ -118,7 +129,7 @@ export const Demo: React.FC = () => {
         <Button disabled={!station} onClick={() => {
           if (station) {
             station.start();
-            client.playAudio(station.id());
+            client.playAudio(stationId);
           }
         }}>
           Start
@@ -129,20 +140,43 @@ export const Demo: React.FC = () => {
       </Group>
       <h4>Play State: { stationProps?.playState }</h4>
 
-      <PlayHead />
 
-      <h2>Deck1</h2>
-      <PlayDeck station={station} index={0} />
+      <PlayHead stationId={stationId} />
 
-      <h2>Deck2</h2>
-      <PlayDeck station={station} index={1} />
+      {/* <Grid>
 
-      <h2>Deck3</h2>
-      <PlayDeck station={station} index={2} />
+        {times(3).map(index => (
 
-      {collections.map(c => <h4 key={c} onClick={() => setSelectedCollection(c)}>{c}</h4>)}
+        <Grid.Col span={4} key={index} sx={{ height: 950, border: '1px solid red' }}>
+          <Center sx={{ display: 'block' }}>
+            <h2>Deck{index+1}</h2>
+            <PlayDeck {...{ station, index }}/>
+          </Center>
+        </Grid.Col>
+        ))}
+      </Grid> */}
+
+      <Grid>
+        <Grid.Col span={4}>
+          <Stack>
+            {times(3).map(index => (
+              <Center key={index} sx={{ display: 'block' }}>
+                { <PlayDeck {...{ stationId, index }}/> }
+              </Center>
+            ))}
+          </Stack>
+        </Grid.Col>
+        <Grid.Col span='auto'>
+          <Box sx={{ border: '1px solid red', height: '100%' }}>
+          </Box>
+        </Grid.Col>
+      </Grid>
+
+      {/* {collections.map(c => <h4 key={c} onClick={() => setSelectedCollection(c)}>{c}</h4>)}
       <h2>{selectedCollection}</h2>
-      {selectedCollection ? <CollectionList id={selectedCollection} /> : undefined}
+      {selectedCollection ? <CollectionList id={selectedCollection} /> : undefined} */}
     </>
   );
 }
+
+export default DJ;
