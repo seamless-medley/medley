@@ -87,7 +87,7 @@ export class Crate<T extends Track<any>> {
     this.logger.debug('Select limit from', limit, 'as', result);
 
     this._max = (result === 'entirely')
-      ? sumBy(this._sources, s => s.length)
+      ? () => sumBy(this._sources, s => s.length)
       : (isFinite(result) && (result > 0) ? result : 0)
       ;
 
