@@ -57,9 +57,9 @@ export type Remotable<T, Props = PickProp<T>> =
 };
 
 export type ObservedPropertyChange<T = any> = {
-  prop: string;
-  oldValue: T;
-  newValue: T;
+  p: string;
+  o?: T;
+  n: T;
 }
 
 export type ObservedPropertyHandler<T> = (instance: T, changes: ObservedPropertyChange[]) => Promise<any>;

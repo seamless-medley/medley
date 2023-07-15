@@ -445,13 +445,13 @@ export class ObjectObserver<T extends object> {
           }
 
           if (typeof prop === 'string' && this.isPublishedProperty(prop) && old !== v) {
-            changes.push({ prop, oldValue: old, newValue: v });
+            changes.push({ p: prop, o: old, n: v });
 
-            for (const dep of dependents) {
+            for (const [dep, oldValue] of dependents) {
               changes.push({
-                prop: dep[0].name,
-                oldValue: dep[1],
-                newValue: dep[0].get ? dep[0].get.call(dep[0].instance) : dep[0].value
+                p: dep.name,
+                o: oldValue,
+                n: dep.get ? dep.get.call(dep.instance) : dep.value
               })
             }
 

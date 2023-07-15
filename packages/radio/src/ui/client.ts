@@ -111,7 +111,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   private handleRemoteUpdate: ServerEvents['r:u'] = (kind, id, changes) => {
     const store = this.observingStores.get(`${kind}:${id}`);
     if (store) {
-      for (const { prop, oldValue, newValue } of changes) {
+      for (const { p: prop, o: oldValue, n: newValue } of changes) {
         store.observed[prop] = newValue;
       }
 
@@ -151,9 +151,9 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         store.observed = response.result;
 
         const changes = Object.entries(response.result).map<ObservedPropertyChange>(([prop, value]) => ({
-          prop,
-          oldValue: value,
-          newValue: value
+          p: prop,
+          o: value,
+          n: value
         }));
 
         for (const handler of store.handlers) {
@@ -504,7 +504,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     const propertyObserver: ObserverHandler<Kind> = async (kind, id, changes) => {
       const anyPropHandlers = propertyChangeHandlers.get($AnyProp);
 
-      for (const { prop, oldValue, newValue } of changes) {
+      for (const { p: prop, o: oldValue, n: newValue } of changes) {
         const propHandlers = propertyChangeHandlers.get(prop);
 
         const allHandlers = [];
