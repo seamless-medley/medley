@@ -66,7 +66,8 @@ export enum DisconnectReason {
   ByClient,
   ByServer,
   Timeout,
-  Transport
+  Transport,
+  ParseError
 }
 
 function rejectAfter(ms: number, reject: (reason?: any) => any, reason: string = 'Timeout') {
@@ -178,7 +179,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       'io server disconnect': DisconnectReason.ByServer,
       'ping timeout': DisconnectReason.Timeout,
       'transport close': DisconnectReason.Transport,
-      'transport error': DisconnectReason.Transport
+      'transport error': DisconnectReason.Transport,
+      'parse error': DisconnectReason.ParseError
     };
 
     this.emit('disconnect', reasonMap[reason]);
@@ -599,8 +601,14 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     });
 
     const methods = mapValues(methodDescs, (desc, name) => (...args: any[]) => {
+      if (desc.value !== noop) {
+        // The method is implemented at client-side, no need to remotely invoke it on the server
+        (desc.value as Function).apply(surrogate, args);
+        return;
+      }
+
       const timeout = Math.max(0, getRemoteTimeout(StubClass.StubbedFrom, name) ?? 60_000);
-      return this.remoteInvoke(kind, id, timeout, name as any, ...args as any)
+      return this.remoteInvoke(kind, id, timeout, name as any, ...args as any);
     });
 
     const dispose = async () => {
