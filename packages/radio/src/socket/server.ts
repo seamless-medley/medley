@@ -191,7 +191,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     /**
      * Client requests to observe for changes of a remote object
      */
-    'remote:observe': async (socket, kind, id, callback) => {
+    'remote:observe': async (socket, kind, id, options, callback) => {
       this.interact(
         kind, id, undefined,
         (value, object) => !!object,
@@ -205,6 +205,10 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
 
           if (!observation.has(key)) {
             const observer: ObservedPropertyHandler<any> = async (stub, changes) => {
+              if (options?.ignoreOldValue) {
+                changes = changes.map(c => omit(c, 'o'));
+              }
+
               // Inform clients whenever a property of an observing object changed
               socket.emit('r:u', kind, id, changes);
             }

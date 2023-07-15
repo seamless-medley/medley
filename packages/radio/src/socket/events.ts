@@ -37,6 +37,10 @@ export type RemoteCallback<T = any> = (response: RemoteResponse<T>) => Promise<v
 
 export type RemoteCallParams<T> = T extends (...args: [...infer P, infer H]) => any ? { params: P, handler: H } : never;
 
+export type RemoteObserveOptions = {
+  ignoreOldValue?: boolean;
+}
+
 export type ClientEvents = {
   // property
   'remote:get': (kind: string, id: string, prop: string, callback: RemoteCallback) => void;
@@ -47,6 +51,6 @@ export type ClientEvents = {
   'remote:subscribe': (kind: string, id: string, event: string, callback: RemoteCallback) => void;
   'remote:unsubscribe': (kind: string, id: string, event: string, callback: RemoteCallback) => void;
   // observ
-  'remote:observe': (kind: string, id: string, callback: RemoteCallback<{ [prop: string]: any }>) => void;
+  'remote:observe': (kind: string, id: string, options: RemoteObserveOptions | undefined, callback: RemoteCallback<{ [prop: string]: any }>) => void;
   'remote:unobserve': (kind: string, id: string, callback: RemoteCallback) => void;
 }

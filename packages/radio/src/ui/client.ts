@@ -2,7 +2,7 @@ import { isFunction, mapValues, noop, pickBy, uniqueId, } from "lodash";
 import { EventEmitter } from "eventemitter3";
 import { io, Socket } from "socket.io-client";
 import msgpackParser from 'socket.io-msgpack-parser';
-import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents } from '../socket/events';
+import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents, RemoteObserveOptions } from '../socket/events';
 import { isProperty } from "../socket/remote/utils";
 import { Stub } from "../socket/stub";
 import { $AnyProp, AnyProp, ObservedPropertyChange, PickMethod, PickProp, Remotable } from "../socket/types";
@@ -24,6 +24,10 @@ class ObservingStore<T extends object> {
   })
 
   readonly handlers = new Set<ObserverHandler<any>>();
+
+  constructor(readonly options?: RemoteObserveOptions) {
+
+  }
 
   get observed() {
     return this._observed;
@@ -142,7 +146,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     for (const [key, store] of [...this.observingStores]) {
       const [kind, id] = this.extractId(key);
 
-      this.socket.emit('remote:observe', kind, id, async (response) => {
+      this.socket.emit('remote:observe', kind, id, store.options, async (response) => {
         if (response.status !== undefined) {
           // Error reobserving
           return;
@@ -394,7 +398,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     });
   }
 
-  private remoteObserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, handler: ObserverHandler<Kind>) {
+  remoteObserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, options: RemoteObserveOptions | undefined, handler: ObserverHandler<Kind>) {
     return new Promise<Types[Kind]>(async (resolve, reject) => {
       const key = `${kind}:${id}` as const;
 
@@ -408,12 +412,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         return;
       }
 
-      const store = new ObservingStore<Types[Kind]>();
+      const store = new ObservingStore<Types[Kind]>(options);
       this.observingStores.set(key, store);
 
       rejectAfter(5_000, reject);
 
-      this.socket.emit('remote:observe', kind, id, async (response: RemoteResponse<any>) => {
+      this.socket.emit('remote:observe', kind, id, options, async (response: RemoteResponse<any>) => {
         if (response.status !== undefined) {
           reject(new RemoteObservationError(response, kind, id));
           return;
@@ -427,7 +431,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     });
   }
 
-  private remoteUnobserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, handler: ObserverHandler<Kind>) {
+  remoteUnobserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, handler: ObserverHandler<Kind>) {
     return new Promise<void>((resolve, reject) => {
       const key = `${kind}:${id}` as const;
 
@@ -478,7 +482,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   >(
     StubClass: Stub<Types[Kind]>,
     kind: Kind,
-    id: string
+    id: string,
+    observeOptions?: Omit<RemoteObserveOptions, 'excludes'>
   ) {
     const objectId = `${kind}:${id}` as const;
 
@@ -544,7 +549,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       onDisposeHandlers.add(handler);
     }
 
-    await this.remoteObserve(kind, id, propertyObserver);
+    await this.remoteObserve(kind, id, observeOptions, propertyObserver);
 
     const getObservedFromStore = () => {
       const store = this.observingStores.get(objectId);

@@ -5,6 +5,7 @@ import type { Stub } from "../../socket/stub";
 import type { Remotable } from "../../socket/types";
 import { useRemotableProps } from "./remotable";
 import { useClient } from "./useClient";
+import { RemoteObserveOptions } from "../../socket";
 
 export function useSurrogate<
   T extends RemoteTypes[Kind],
@@ -12,8 +13,9 @@ export function useSurrogate<
 >(
   StubClass: Stub<T>,
   kind: Kind,
-  id?: string
-) {
+  id: string | undefined,
+  options?: RemoteObserveOptions
+): [Remotable<T> | undefined, Error | undefined] {
   const client = useClient();
   const [remote, setRemote] = useState<Remotable<T>>();
   const [error, setError] = useState<Error>();
@@ -25,9 +27,8 @@ export function useSurrogate<
   const onDisconnect = () => setRemote(undefined);
 
   useEffect(() => {
-
     if (id && client.ready) {
-      client.surrogateOf<Kind>(StubClass as any, kind, id)
+      client.surrogateOf<Kind>(StubClass as any, kind, id, options)
         .then(s => {
           ref.current = s as any;
           setRemote(s as any);
