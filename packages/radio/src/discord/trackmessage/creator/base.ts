@@ -1,4 +1,19 @@
-import { Audience, AudienceType, DeckPositions, isRequestTrack, Metadata, MetadataFields, MetadataHelper, Station, StationTrack, StationTrackCollection, StationTrackPlay, TrackSequencingLatch, TrackWithRequester } from "@seamless-medley/core";
+import {
+  Audience,
+  AudienceType,
+  DeckPositions,
+  isRequestTrack,
+  Metadata,
+  MetadataFields,
+  MetadataHelper,
+  Station,
+  StationTrack,
+  StationTrackCollection,
+  StationTrackPlay,
+  TrackSequencingLatch,
+  TrackWithRequester
+} from "@seamless-medley/core";
+
 import { AttachmentBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import { chain, get, isEmpty, sample } from "lodash";
 import mime from 'mime-types';
