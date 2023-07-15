@@ -234,9 +234,17 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     return this.audioClient.connect(this.socket.id);
   }
 
+  #playingStationId?: string
+
   async playAudio(stationId: string) {
     await this.connectAudioSocket();
     this.audioClient.play(stationId);
+
+    this.#playingStationId = stationId;
+  }
+
+  get playingStationId() {
+    return this.#playingStationId;
   }
 
   private getDelegateEvents(ns: string, id: string) {
