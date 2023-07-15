@@ -61,7 +61,9 @@ export abstract class TrackMessageCreator {
       .setStyle(ButtonStyle.Danger)
       .setCustomId(`skip:${trackPlay.uuid}`);
 
-    const moreButton = station.isCollectionLatchable(trackPlay.track.collection as StationTrackCollection)
+    const showMoreLikeThis = station.collections.length > 1 && station.isCollectionLatchable(trackPlay.track.collection as StationTrackCollection);
+
+    const moreButton = showMoreLikeThis
       ? new ButtonBuilder()
         .setLabel('More Like This')
         .setEmoji(sample(['❤️', '🧡', '💛', '💕', '💓', '💗', '💖', '💘', '💝'])!)
