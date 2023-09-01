@@ -274,7 +274,7 @@ export class GuildState {
   }
 
   #handleVoiceStateUpdate = (oldState: VoiceState, newState: VoiceState) => {
-    if (newState.guild.id !== this.guildId) {
+    if (![newState.guild.id, oldState.guild.id].includes(this.guildId)) {
       return;
     }
 
@@ -298,7 +298,7 @@ export class GuildState {
       return;
     }
 
-    if (!this.voiceChannelId) {
+    if (!this.#voiceChannelId) {
       if (newState.channelId) {
         // Just joined
         this.#joinedVoiceChannel(newState.channel, newState.serverMute === true);
@@ -321,7 +321,8 @@ export class GuildState {
 
     // Stationary
     if (oldState.serverMute !== newState.serverMute) {
-      this.#updateChannelAudiences(newState.channel, newState.serverMute === true);
+      this.#serverMuted = newState.serverMute === true;
+      this.#updateChannelAudiences(newState.channel, this.#serverMuted);
     }
   }
 
@@ -332,12 +333,12 @@ export class GuildState {
     }
 
     if (!this.#voiceChannelId) {
-      // Me not in a room, ignoring...
+      // Me not in a channel, ignoring...
       return;
     }
 
-    if (this.#serverMuted) {
-      // Muted
+    if ((this.#voiceChannelId !== oldState.channelId) && (this.#voiceChannelId !== newState.channelId)) {
+      // Event occur in another channels
       return;
     }
 
@@ -364,7 +365,11 @@ export class GuildState {
 
       if (newState.channelId === this.#voiceChannelId) {
         // Joined
-        station.addAudience(audienceGroup, newState.member.id);
+        if (!this.#serverMuted && !newState.deaf) {
+          // Add this audience only if they're not deaf and me is not muted
+          station.addAudience(audienceGroup, newState.member.id);
+        }
+
         return;
       }
 
@@ -380,7 +385,9 @@ export class GuildState {
         }
         else {
           // If someone is undeafen, he/she become an audience if is in the same channel as the automaton
-          station.addAudience(audienceGroup, newState.member.id);
+          if (!this.#serverMuted) {
+            station.addAudience(audienceGroup, newState.member.id);
+          }
         }
       }
     }
