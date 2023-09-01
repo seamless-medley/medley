@@ -9,6 +9,9 @@ const logger = createLogger({
 const musicPath = process.env.MUSIC_PATH || "D:\\vittee\\Google Drive\\musics";
 logger.debug(`musicPath: ${musicPath}`);
 
+/**
+ * @deprecated
+ */
 export const musicCollections: MusicCollectionDescriptor[] = [
   { id: 'bright', description: 'Bright', path: `${musicPath}/bright` },
   { id: 'brokenhearted', description: 'Broken Hearted', path: `${musicPath}/brokenhearted` },
@@ -24,6 +27,9 @@ export const musicCollections: MusicCollectionDescriptor[] = [
   { id: 'inter', auxiliary: true, description: 'International', path: 'M:\\Repository\\inter' },
 ];
 
+/**
+ * @deprecated
+ */
 export const sequences: SequenceConfig[] = [
   { crateId: 'guid1', collections: [{ id: 'new-released' }], chance: 'random', limit: { by: 'one-of', list: [1, 1, 1, 2] } },
   { crateId: 'guid2', collections: [{ id: 'bright' }], chance: { yes: 1, no: 2 }, limit: { by: 'upto', upto: 2 } },
@@ -64,6 +70,9 @@ const moods = {
   sad: ['lonely', 'brokenhearted', 'hurt']
 };
 
+/**
+ * @deprecated
+ */
 export const sweeperRules: SweeperInsertionRule[] = [
   {
     to: moods.sad,
