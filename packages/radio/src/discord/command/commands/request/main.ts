@@ -24,7 +24,7 @@ import {
   time as formatTime
 } from "discord.js";
 
-import { chain, chunk, clamp, Dictionary, groupBy, identity, isNull, noop, sample, sortBy, truncate, zip } from "lodash";
+import { chain, chunk, clamp, Dictionary, groupBy, identity, isNull, noop, sample, sortBy, truncate, upperFirst, zip } from "lodash";
 import { parse as parsePath, extname } from 'path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
@@ -49,10 +49,10 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f));
 
   if (options.every(isNull)) {
-    const preview = await makeRequestPreview(station, { guildId });
+    const preview = await makeRequestPreview(station, { guildId, count: 20 });
 
     if (preview) {
-      reply(interaction, joinStrings(preview));
+      reply(interaction, joinStrings([`# Request list`, ...preview]));
     } else {
       reply(interaction, station.requestsCount && interaction.guild?.name ? `Request list for ${interaction.guild.name} is empty` : 'Request list is empty');
     }
@@ -408,52 +408,51 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
 const isExtensionLossless = (ext: string) => /(flac|wav)/i.test(ext);
 
-const makeTrackSelections = (choices: Selection[]) => clarifySelection(choices,
-  [
-    {
-      getKey: selectionOrder,
-      prioritize: identity,
-      clarify: (_, sample) => sample.track.collection.extra.description
-    },
-    {
-      getKey: s => extname(s.track.path.toUpperCase()).substring(1),
-      prioritize: key => isExtensionLossless(key) ? -1 : 0
-    },
-    {
-      getKey: ({ track }) => ((track.extra?.tags?.sampleRate ?? 0) / 1000).toFixed(1),
-      prioritize: k => -k
-    },
-    {
-      getKey: sel => sel.track.extra?.tags?.bitrate ?? 0,
-      prioritize: k => -k
-    },
-    {
-      getKey: s => s.track.extra?.tags?.album ?? '',
-      prioritize: identity,
-      clarify: key => key
-    }
-  ],
-)
+const trackSelectionProcessors: ClarificationProcessor[] = [
+  {
+    getKey: (s => s.track.collection.id),
+    prioritize: identity,
+    clarify: (_, s) => s.track.collection.extra.description
+  },
+  {
+    getKey: s => extname(s.track.path.toUpperCase()).substring(1),
+    prioritize: key => isExtensionLossless(key) ? -1 : 0,
+    clarify: identity,
+  },
+  {
+    getKey: ({ track }) => ((track.extra?.tags?.sampleRate ?? 0) / 1000).toFixed(1),
+    prioritize: k => -k,
+    clarify: (key, s) => s.track.extra?.tags?.sampleRate ? `${key}KHz` : ''
+  },
+  {
+    getKey: sel => sel.track.extra?.tags?.bitrate ?? 0,
+    prioritize: k => -k,
+    clarify: key => `${key}Kbps`
+  },
+  {
+    getKey: s => s.track.extra?.tags?.album ?? '',
+    prioritize: identity,
+    clarify: identity
+  }
+];
+
+export const makeTrackSelections = (choices: Selection[]) => chain(choices)
+  .groupBy(selectionOrder)
+  .values()
+  .flatMap(g => clarifySelection(g, trackSelectionProcessors))
+  .value()
 
 function selectionOrder(selection: Selection): 0 | 1 | 2 {
   const { options } = selection.track.collection;
-  if (options.auxiliary) return 2;
-  if (options.noFollowOnRequest) return 1;
+  if (options?.auxiliary) return 2;
+  if (options?.noFollowOnRequest) return 1;
   return 0;
 }
 
-function selectionToComponentData(selection: Selection, clarified: string[]): SelectMenuComponentOptionData {
+function selectionToComponentData(selection: Selection, [collection, ...clarified]: string[]): SelectMenuComponentOptionData {
   const { title, artist = 'Unknown Artist', track } = selection;
-  const { bitrate = 0, sampleRate = 0 } = selection.track.extra?.tags ?? {};
 
-  const c = clarified.filter(Boolean).join('/');
-  const fmt = [
-    extname(selection.track.path.toUpperCase()).substring(1),
-    sampleRate ? `${(sampleRate / 1000).toFixed(1)}KHz` : undefined,
-    bitrate ? `${bitrate}Kbps` : undefined
-  ].filter(Boolean).join('; ');
-
-  const description =  [c, fmt].filter(Boolean).join(' - ');
+  const description = [collection, clarified.filter(Boolean).join('; ')].filter(Boolean).join(' - ');
 
   return {
     label: `${title} - ${artist}`,
@@ -501,3 +500,4 @@ function clarifySelection(selections: Selection[], processors: ClarificationProc
 
   return result;
 }
+
