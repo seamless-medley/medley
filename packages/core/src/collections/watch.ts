@@ -224,13 +224,26 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     }
   }
 
+  private extScanner = (dir: string) => {
+    if (!this.options.scanner) {
+      return false;
+    }
+
+    return this.options.scanner(dir).catch(stubFalse);
+  }
+
+  private globScanner = (dir: string) => glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
+
   private async scan(dir: string) {
-    const globPromise = this.options.scanner?.(dir) ?? glob(`${normalizePath(dir)}/**/*`)
+    const scanners = [this.extScanner, this.globScanner];
 
-    const files = await globPromise.catch(stubFalse);
+    for (const scanner of scanners) {
+      const files = await scanner(dir);
 
-    if (files !== false) {
-      await this.add(shuffle(files));
+      if (files !== false) {
+        await this.add(shuffle(files));
+        break;
+      }
     }
   }
 
