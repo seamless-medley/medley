@@ -140,7 +140,7 @@ export type RequestTrackLockPredicate<R extends Requester> = (t: TrackWithReques
 export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   readonly id: string;
 
-  readonly sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>;
+  private readonly sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>;
   private readonly sweeperInserter: SweeperInserter;
 
   options: Required<Pick<BoomBoxOptions<BoomBoxTrack, R>, 'artistBacklog' | 'duplicationSimilarity'>>;
@@ -154,7 +154,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
 
   private readonly onInsertRequestTrack?: OnInsertRequestTrack<BoomBoxTrack, R>;
 
-  artistHistory: string[][] = [];
+  artistHistory: Array<string[]> = [];
 
   private logger: Logger<ILogObj>;
 

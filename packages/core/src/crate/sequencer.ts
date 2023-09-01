@@ -52,21 +52,23 @@ export type LatchOptions<T extends Track<any>> = (LatchWithLength | LatchIncreme
 }
 
 export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends TypedEmitter<CrateSequencerEvents<T>> {
-  private _playCounter = 0;
-  private _crateIndex = 0;
-  private _lastCrate: Crate<T> | undefined;
-  private _currentCollection: T['collection'] | undefined;
+  #crates: Array<Crate<T>>;
+  #playCounter = 0;
+  #crateIndex = 0;
+  #lastCrate: Crate<T> | undefined;
+  #currentCollection: T['collection'] | undefined;
 
   private logger = createLogger({
     name: `sequencer/${this.id}`
   })
 
-  constructor(readonly id: string, private _crates: Crate<T>[], private options: CrateSequencerOptions<E> = {}) {
+  constructor(readonly id: string, crates: Array<Crate<T>>, public options: CrateSequencerOptions<E> = {}) {
     super();
+    this.#crates = crates;
   }
 
   get currentCrate(): Crate<T> | undefined {
-    return this._crates[this._crateIndex % this._crates.length];
+    return this.#crates[this.#crateIndex % this.#crates.length];
   }
 
   private isCrate(o: any): o is Crate<T> {
@@ -80,21 +82,21 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   #logNoCrates = debounce(() => this.logger.error('No crates'), 1000);
 
   async nextTrack(): Promise<SequencedTrack<T> | undefined> {
-    if (this._crates.length < 1) {
+    if (this.#crates.length < 1) {
       this.#logNoCrates();
       return undefined;
     }
 
     let scanned = 0;
     let ignored = 0;
-    let count = this._crates.length;
+    let count = this.#crates.length;
     while (count-- > 0) {
       const crate = this.currentCrate;
 
       if (this.isCrate(crate)) {
-        if (this._lastCrate !== crate) {
-          const oldCrate = this._lastCrate;
-          this._lastCrate = crate;
+        if (this.#lastCrate !== crate) {
+          const oldCrate = this.#lastCrate;
+          this.#lastCrate = crate;
 
           const selected = await crate.select();
 
@@ -130,10 +132,10 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             })();
 
             // Check the _playCounter only if the latching is not active
-            if (latchSession === undefined && (this._playCounter + 1) > crate.max) {
+            if (latchSession === undefined && (this.#playCounter + 1) > crate.max) {
               // Stop searching for next track and flow to the next crate
               // With _lastCrate being undefined will cause the selection process to kick in again
-              this._lastCrate = undefined;
+              this.#lastCrate = undefined;
               break;
             }
 
@@ -153,7 +155,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
               if (shouldPlay) {
                 this.increasePlayCount();
 
-                this._currentCollection = track.collection;
+                this.#currentCollection = track.collection;
 
                 let latch: TrackSequencing<T, E>['latch'];
 
@@ -168,13 +170,13 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
                 track.sequencing = {
                   crate: crate as any,
-                  playOrder: [this._playCounter, crate.max],
+                  playOrder: [this.#playCounter, crate.max],
                   latch: latch as any
                 }
 
                 track.extra = this.isExtra(extra) ? extra : undefined;
 
-                this.logger.debug('Next track (', this._playCounter, '/', crate.max, ') =>', track.path);
+                this.logger.debug('Next track (', this.#playCounter, '/', crate.max, ') =>', track.path);
 
                 return track as unknown as SequencedTrack<T>;
               }
@@ -202,55 +204,59 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   }
 
   private ensureCrateIndex(index: number) {
-    return (index % this._crates.length) || 0;
+    return (index % this.#crates.length) || 0;
   }
 
   getCrateIndex() {
-    return this._crateIndex;
+    return this.#crateIndex;
   }
 
   setCrateIndex(newIndex: number, forceSelect?: boolean) {
-    const oldIndex = this._crateIndex;
-    this._crateIndex = this.ensureCrateIndex(newIndex);
+    const oldIndex = this.#crateIndex;
+    this.#crateIndex = this.ensureCrateIndex(newIndex);
 
     if (oldIndex === newIndex) {
       return;
     }
 
-    this._playCounter = 0;
+    this.#playCounter = 0;
 
     if (forceSelect) {
-      this._lastCrate = this.currentCrate;
+      this.#lastCrate = this.currentCrate;
       this.currentCrate?.select(true);
     }
   }
 
   increasePlayCount() {
-    return ++this._playCounter;
+    return ++this.#playCounter;
   }
 
   next() {
-    this._playCounter = 0;
+    this.#playCounter = 0;
 
-    if (this._crates.length <= 0) {
+    if (this.#crates.length <= 0) {
       throw new Error('There is no crate');
     }
 
-    this.setCrateIndex(this._crateIndex + 1);
+    this.setCrateIndex(this.#crateIndex + 1);
     //
     this.logger.debug('next', this.currentCrate?.id);
   }
 
   setCurrentCrate(crate: Crate<T> | number) {
-    const index = (typeof crate !== 'number') ? this._crates.indexOf(crate) : crate;
+    const index = (typeof crate !== 'number') ? this.#crates.indexOf(crate) : crate;
 
-    if (index >= 0 && index < this._crates.length) {
-      this._crateIndex = index;
+    if (index >= 0 && index < this.#crates.length) {
+      this.#crateIndex = index;
     }
   }
 
-  get crates(): ReadonlyArray<Crate<T>> {
-    return this._crates;
+  get crates(): Array<Crate<T>> {
+    return [...this.#crates];
+  }
+
+  set crates(newCrates: Array<Crate<T>>) {
+    this.alterCrates(() => void(this.#crates = newCrates));
   }
 
   private async alterCrates(fn: () => any) {
@@ -259,10 +265,10 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
     await fn();
 
-    let newIndex = this.ensureCrateIndex(this._crateIndex);
+    let newIndex = this.ensureCrateIndex(this.#crateIndex);
 
     if (savedId) {
-      const found = this._crates.findIndex(crate => crate.id === savedId);
+      const found = this.#crates.findIndex(crate => crate.id === savedId);
 
       if (found !== -1) {
         newIndex = found;
@@ -272,9 +278,9 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     this.setCrateIndex(newIndex);
   }
 
-  addCrates(...crates: Crate<T>[]) {
+  addCrates(...crates: Array<Crate<T>>) {
     this.alterCrates(() => {
-      this._crates = chain(this._crates)
+      this.#crates = chain(this.#crates)
         .push(...crates)
         .uniqBy(c => c.id)
         .value();
@@ -287,10 +293,10 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     this.alterCrates(() => {
       for (const id of toBeRemoved) {
         if (id) {
-          const index = this._crates.findIndex(c => c.id === id)
+          const index = this.#crates.findIndex(c => c.id === id)
 
           if (index !== -1) {
-            this._crates.splice(index, 1);
+            this.#crates.splice(index, 1);
           }
         }
       }
@@ -300,21 +306,21 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   moveCrates(newPosition: number, ...cratesOrIds: Array<Crate<T>['id'] | Crate<T>>) {
     this.alterCrates(() => {
       const toMove = cratesOrIds.map(w => this.crates.findIndex(c => c.id === (isString(w) ? w : w.id)));
-      moveArrayIndexes(this._crates, newPosition, ...toMove);
+      moveArrayIndexes(this.#crates, newPosition, ...toMove);
     });
   }
 
   isKnownCollection(collection: T['collection']): boolean {
-    return this._crates.find(c => c.sources.includes(collection)) !== undefined;
+    return this.#crates.find(c => c.sources.includes(collection)) !== undefined;
   }
 
-  private latchSessions: LatchSession<T, E>[] = [];
+  private latchSessions: Array<LatchSession<T, E>> = [];
 
   getActiveLatch(): LatchSession<T, E> | undefined {
     return this.latchSessions.at(0);
   }
 
-  get allLatches(): LatchSession<T, E>[] {
+  get allLatches(): Array<LatchSession<T, E>> {
     return [...this.latchSessions];
   }
 
@@ -354,8 +360,8 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
       collection
     }
 
-    if (this._currentCollection?.id !== collection.id) {
-      this._playCounter = 0;
+    if (this.#currentCollection?.id !== collection.id) {
+      this.#playCounter = 0;
     }
 
     if (important) {
@@ -378,7 +384,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
     const collection = options.collection
       ?? this.getActiveLatch()?.collection
-      ?? this._currentCollection;
+      ?? this.#currentCollection;
 
     const session = this.getLatchSessionFor(collection, options.important);
 

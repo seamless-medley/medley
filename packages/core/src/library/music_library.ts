@@ -67,24 +67,22 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
   }
 
-  private handleTrackAddition = (tracks: MusicTrack<O>[]) => {
+  private handleTrackAddition = (tracks: Array<MusicTrack<O>>) => {
     this.tryIndexTracks(tracks.map(track => ({ track })));
   }
 
-  private tryIndexTracks = (info: IndexInfo<O>[]) => {
-    const failures: IndexInfo<O>[] = [];
+  private tryIndexTracks = (infos: Array<IndexInfo<O>>) => {
+    const failures: Array<IndexInfo<O>> = [];
 
-    this.indexTracks(info, failures, () => {
+    this.indexTracks(infos, failures, () => {
       if (failures.length) {
-        setTimeout(() => {
-          this.tryIndexTracks(failures);
-        }, 1000);
+        setTimeout(() => this.tryIndexTracks(failures), 1000);
       }
     });
   }
 
 
-  private handleTrackRemoval = (tracks: MusicTrack<O>[]) => {
+  private handleTrackRemoval = (tracks: Array<MusicTrack<O>>) => {
     for (const { id } of tracks) {
       this.musicDb.delete(id);
     }
@@ -92,7 +90,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     this.searchEngine.removeAll(tracks);
   }
 
-  private handleTrackUpdates = async (tracks: MusicTrack<O>[]) => {
+  private handleTrackUpdates = async (tracks: Array<MusicTrack<O>>) => {
     await this.searchEngine.removeAll(tracks).catch(e => this.logger.error(e));
 
     for (const track of tracks) {
@@ -100,7 +98,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
   }
 
-  remove(...collections: (string | MusicTrackCollection<O>)[]) {
+  remove(...collections: Array<string | MusicTrackCollection<O>>) {
     for (const c of collections) {
       const collection =  (typeof c === 'string') ? this.get(c) : c;
 
@@ -113,7 +111,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     super.remove(...collections);
   }
 
-  private async indexTracks(infos: IndexInfo<O>[], failures: IndexInfo<O>[], done: () => void) {
+  private async indexTracks(infos: Array<IndexInfo<O>>, failures: Array<IndexInfo<O>>, done: () => void) {
     if (infos.length <= 0) {
       done();
       return;
@@ -228,16 +226,14 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
   }
 
-  async search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): Promise<MusicTrack<O>[]> {
+  async search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): Promise<Array<MusicTrack<O>>> {
     const { artist, title, query } = q;
 
-    const mainQueries: Query[] = [];
-
-    let boost: SearchOptions['boost'] = undefined;
+    const mainQueries: Array<Query> = [];
 
     if (artist || title) {
-      const titleAndArtistFields: TrackDocumentFields[] = [];
-      const titleAndArtistValues: Query[] = [];
+      const titleAndArtistFields: Array<TrackDocumentFields> = [];
+      const titleAndArtistValues: Array<Query> = [];
 
       if (artist) {
         titleAndArtistValues.push({
@@ -285,7 +281,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
 
   async autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string): Promise<string[]> {
     if (!q && field && narrowTerm && narrowBy) {
-      let tracks: MusicTrack<O>[] | undefined;
+      let tracks: Array<MusicTrack<O>> | undefined;
 
       if (field === 'title' && narrowBy === 'artist') {
         // Start showing title suggestion for a known artist
