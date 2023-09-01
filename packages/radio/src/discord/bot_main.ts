@@ -1,5 +1,4 @@
-import { createLogger, Medley, Station, StationOptions, StationRegistry, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
-import { breath } from "@seamless-medley/utils";
+import { createLogger, Medley, Station, StationRegistry, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
 import { Client, GatewayIntentBits } from "discord.js";
 import { Command } from '@commander-js/extra-typings';
 import { shuffle } from "lodash";
@@ -8,6 +7,7 @@ import { MedleyAutomaton } from "./automaton";
 import { loadConfig } from "./config";
 import { ZodError } from "zod";
 import normalizePath from "normalize-path";
+import { scanDir } from "@seamless-medley/core/src/library/scanner";
 
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);
@@ -131,7 +131,7 @@ async function main() {
 
       for (const [id, desc] of Object.entries(musicCollections)) {
         if (!desc.auxiliary) {
-          await station.addCollection({
+          station.addCollection({
             id,
             ...desc,
             logPrefix: stationId
@@ -148,7 +148,7 @@ async function main() {
         from: rule.from,
         to: rule.to,
         collection: (() => {
-          const c = new WatchTrackCollection(rule.path, undefined, { logPrefix: stationId });
+          const c = new WatchTrackCollection(rule.path, undefined, { logPrefix: stationId, scanner: scanDir });
           c.watch(normalizePath(rule.path));
 
           return c;
@@ -159,13 +159,11 @@ async function main() {
 
       for (const [id, desc] of Object.entries(musicCollections)) {
         if (desc.auxiliary) {
-          await station.addCollection({
+          station.addCollection({
             id,
             ...desc,
             logPrefix: stationId
           });
-
-          await breath();
         }
       }
     }))
