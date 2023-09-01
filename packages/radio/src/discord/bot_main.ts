@@ -173,10 +173,10 @@ async function main() {
 
   logger.info('Completed stations construction');
 
-  const stationRepo = new StationRegistry(...stations);
-
   const automatons = await Promise.all(Object.entries(configs.automatons).map(
     ([id, { botToken, clientId, baseCommand, ...config }]) => new Promise<MedleyAutomaton>(async (resolve) => {
+      const allowedStations = config.stations?.length ? stations.filter(s => config.stations!.includes(s.id)) : stations;
+      const stationRepo = new StationRegistry(...allowedStations);
       const automaton = new MedleyAutomaton(stationRepo, {
         id,
         botToken,
