@@ -4,14 +4,16 @@ import { z } from 'zod';
 import { DbConfig } from './db';
 import { StationConfig } from './station';
 import { AutomatonConfig } from './automaton';
-import { pickBy, startsWith } from 'lodash';
+import { pickBy } from 'lodash';
 import { dollar as phrase } from "paraphrase";
+import { ServerConfig } from './server';
 
 async function parseYAML(s: string) {
   return parse(s);
 }
 
 const Config = z.object({
+  server: ServerConfig.optional(),
   db: DbConfig,
   stations: z.record(StationConfig, { required_error: 'No stations' }),
   automatons: z.record(AutomatonConfig, { required_error: 'No automatons' })

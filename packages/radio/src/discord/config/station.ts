@@ -12,6 +12,8 @@ export const MusicCollection = z.object({
   reshuffleEvery: z.number().nonnegative().optional(),
 }).strict();
 
+export type MusicCollection = z.infer<typeof MusicCollection>;
+
 export const SequenceChance = z.union([
   z.literal('random'),
   z.object({
@@ -19,6 +21,8 @@ export const SequenceChance = z.union([
     no: z.number().nonnegative()
   })
 ]);
+
+export type SequenceChance = z.infer<typeof SequenceChance>;
 
 export const SequenceLimiter = z.discriminatedUnion('by', [
   z.object({
@@ -42,11 +46,15 @@ export const SequenceLimiter = z.discriminatedUnion('by', [
   })
 ]);
 
+export type SequenceLimiter = z.infer<typeof SequenceLimiter>;
+
 export const SequenceLimit = z.union([
   z.number().nonnegative(),
   z.literal('entirely'),
   SequenceLimiter
 ]);
+
+export type SequenceLimit = z.infer<typeof SequenceLimit>;
 
 export const Sequence = z.object({
   collections: z.array(z.object({
@@ -57,6 +65,8 @@ export const Sequence = z.object({
   limit: SequenceLimit
 }).strict();
 
+export type Sequence = z.infer<typeof Sequence>;
+
 export const SweeperRule = z.object({
   from: z.string().array().nonempty().optional(),
   to: z.string().array().nonempty().optional(),
@@ -66,7 +76,9 @@ export const SweeperRule = z.object({
 .refine(
   ({ from, to }) => from !== undefined || to !== undefined,
   { message: 'Both `from` and `to` cannot be omitted'}
-)
+);
+
+export type SweeperRule = z.infer<typeof SweeperRule>;
 
 export const StationConfig = z.object({
   name: z.string().nonempty(),
@@ -91,4 +103,6 @@ export const StationConfig = z.object({
   musicCollections: z.record(MusicCollection),
   sequences: z.array(Sequence),
   sweeperRules: z.array(SweeperRule).optional()
-}).strict()
+}).strict();
+
+export type StationConfig = z.infer<typeof StationConfig>;
