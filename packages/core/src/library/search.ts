@@ -71,10 +71,13 @@ function documentsOf(track: BoomBoxTrack): TrackDocument[] {
 
 export class SearchEngine extends WorkerPoolAdapter<Methods> {
   constructor() {
+    // Since the search indexes live in memory, we must use single worker per engine
+    // Each station will then have its own search engine and indexes
+    // It could be more than 1 but that's would increase a lot of memory usage, and indexes in each worker need to be updated simultaneously.
     super(__dirname + '/search_worker.js', {
       minWorkers: 1,
       maxWorkers: 1
-    })
+    });
   }
 
   async add(track: BoomBoxTrack) {

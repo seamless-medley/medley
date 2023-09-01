@@ -102,6 +102,9 @@ type BoomBoxOptions<T extends BoomBoxTrack, R extends Requester> = {
 
   medley: Medley<BoomBoxTrack>;
   queue: Queue<BoomBoxTrack>;
+
+  // TODO: Introduce crates profiles
+
   crates: BoomBoxCrate[];
 
   db?: MusicDb;
