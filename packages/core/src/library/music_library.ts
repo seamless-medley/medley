@@ -256,7 +256,6 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
       mainQueries.push({
         fields: titleAndArtistFields,
         queries: titleAndArtistValues,
-        boost,
         combineWith: 'AND'
       });
     }
