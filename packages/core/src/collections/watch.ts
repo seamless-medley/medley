@@ -17,8 +17,12 @@ type WatchInfo = {
   handler: SubscribeCallback;
 }
 
+export type WatchTrackCollectionOptions<T extends Track<any>> = TrackCollectionOptions<T> & {
+  scanner?: (dir: string) => Promise<false | string[]>;
+}
+
 export class WatchTrackCollection<T extends Track<any>, Extra = any> extends TrackCollection<T, Extra> {
-  constructor(id: string, extra: Extra, options: TrackCollectionOptions<T> = {}) {
+  constructor(id: string, extra: Extra, public options: WatchTrackCollectionOptions<T> = {}) {
     super(id, extra, {
       tracksMapper: async (tracks) => shuffle(tracks),
       ...options
@@ -221,7 +225,9 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   }
 
   private async scan(dir: string) {
-    const files = await glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
+    const globPromise = this.options.scanner?.(dir) ?? glob(`${normalizePath(dir)}/**/*`)
+
+    const files = await globPromise.catch(stubFalse);
 
     if (files !== false) {
       await this.add(shuffle(files));
