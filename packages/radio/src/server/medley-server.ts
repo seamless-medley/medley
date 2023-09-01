@@ -1,94 +1,155 @@
-import { MusicDb, Station, StationEvents} from "@seamless-medley/core";
+import { shuffle } from "lodash";
+import normalizePath from "normalize-path";
+import { MusicDb, Station, StationEvents, StationRegistry, TrackCollection, WatchTrackCollection, createLogger} from "@seamless-medley/core";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { Socket, SocketServer, SocketServerController } from "../socket";
 import { RemoteTypes } from "../socket/remote";
-import { Config } from "../socket/remote/config";
-import { ExposedConfig, ExposedConfigCallback } from "./expose/config";
 import { ExposedStation } from "./expose/station";
-
-import {
-  musicCollections,
-  sequences,
-  sweeperRules
-} from "../fixtures";
 
 import { ExposedColection } from "./expose/collection";
 import { Unpacked } from "../types";
 import { AudioServer } from "./audio/transport";
 import { ExposedDeck } from "./expose/deck";
+import { Config } from "../discord/config";
+import { MedleyAutomaton } from "../discord/automaton";
+import { scanDir } from "@seamless-medley/core/src/library/scanner";
+
+const logger = createLogger({ name: 'medley-server' });
 
 export class MedleyServer extends SocketServerController<RemoteTypes> {
-  private config: Config;
 
-  private _musicDb: MusicDb | undefined;
+  #musicDb!: MusicDb;
 
-  private demoStation!: Station;
-
-  constructor(io: SocketServer, private audioServer: AudioServer) {
+  constructor(io: SocketServer, private audioServer: AudioServer, private configs: Config) {
     super(io);
-
-    this.config = new ExposedConfig({
-      mongodb: {
-        database: 'medley',
-        url: 'mongodb://localhost:27017',
-        connectionOptions: {
-          auth: {
-            username: 'root',
-            password: 'example'
-          }
-        }
-      }
-    }, this.mongoDBConfigHandlers);
-
+    //
     this.connectMongoDB().then(this.initialize);
   }
 
   private initialize = async () => {
-    this.demoStation = new Station({
-      id: 'demo',
-      name: 'Demo station',
-      useNullAudioDevice: true,
-      musicDb: this._musicDb!
-    });
+    const stations = await Promise.all(
+      Object.entries(this.configs.stations).map(([stationId, stationConfig]) => new Promise<Station>(async (resolve) => {
+        const { intros, requestSweepers, musicCollections, sequences, sweeperRules, ...config } = stationConfig;
 
-    for (const desc of musicCollections) {
-      if (!desc.auxiliary) {
-        await this.demoStation.addCollection(desc);
-      }
+        logger.info('Constructing station:', stationId);
+
+        const introCollection = intros ? (() => {
+          const collection = new TrackCollection('$_intros', undefined, { logPrefix: stationId });
+          collection.add(shuffle(intros));
+          return collection;
+        })() : undefined;
+
+        const requestSweeperCollection = requestSweepers ? (() => {
+          const collection = new TrackCollection('$_req_sweepers', undefined, { logPrefix: stationId });
+          collection.add(shuffle(requestSweepers));
+          return collection;
+        })() : undefined;
+
+        const station = new Station({
+          id: stationId,
+          ...config,
+          intros: introCollection,
+          requestSweepers: requestSweeperCollection,
+          musicDb: this.musicDb
+        });
+
+        for (const [id, desc] of Object.entries(musicCollections)) {
+          if (!desc.auxiliary) {
+            station.addCollection({
+              id,
+              ...desc,
+              logPrefix: stationId
+            });
+          }
+        }
+
+        station.updateSequence(sequences.map((s, index) => ({
+          crateId: `${stationId}/${index}`,
+          ...s
+        })));
+
+        station.sweeperInsertionRules = (sweeperRules ?? []).map((rule) => ({
+          from: rule.from,
+          to: rule.to,
+          collection: (() => {
+            const c = new WatchTrackCollection(rule.path, undefined, { logPrefix: stationId, scanner: scanDir });
+            c.watch(normalizePath(rule.path));
+
+            return c;
+          })()
+        }));
+
+        this.registerStation(station);
+        this.audioServer.publish(station);
+
+        resolve(station);
+
+        for (const [id, desc] of Object.entries(musicCollections)) {
+          if (desc.auxiliary) {
+            station.addCollection({
+              id,
+              ...desc,
+              logPrefix: stationId
+            });
+          }
+        }
+      }))
+    );
+
+    logger.info('Completed stations construction');
+
+    const automatons = await Promise.all(Object.entries(this.configs.automatons).map(
+      ([id, { botToken, clientId, baseCommand, ...config }]) => new Promise<MedleyAutomaton>(async (resolve) => {
+        const allowedStations = config.stations?.length ? stations.filter(s => config.stations!.includes(s.id)) : stations;
+        const stationRepo = new StationRegistry(...allowedStations);
+        const automaton = new MedleyAutomaton(stationRepo, {
+          id,
+          botToken,
+          clientId,
+          baseCommand,
+          trackMessage: config.trackMessage
+        });
+
+        automaton.once('ready', () => resolve(automaton));
+
+        await automaton.login();
+
+        return automaton;
+      }))
+    );
+
+    if (automatons.some(a => !a.isReady)) {
+      logger.warn('Started, with some malfunctioning automatons');
+    } else {
+      logger.info('Started');
     }
-
-    this.demoStation.updateSequence(sequences);
-    this.demoStation.sweeperInsertionRules = sweeperRules;
-
-    this.registerStation(this.demoStation);
-
-    this.audioServer.publish(this.demoStation);
-
-    // TODO: Register a demo automaton
 
     this.emit('ready');
   }
 
   protected override addSocket(socket: Socket) {
     super.addSocket(socket);
-    console.log('Adding socket', socket.id);
-  }
-
-  private mongoDBConfigHandlers: ExposedConfigCallback = {
-    onMongoDB: () => this.connectMongoDB()
+    logger.debug('Adding socket', socket.id);
   }
 
   private async connectMongoDB() {
+    const dbConfig = this.configs.db;
+
     try {
       const newInstance = await new MongoMusicDb().init({
-        ...this.config.mongodb,
-        ttls: [60 * 60 * 24 * 7, 60 * 60 * 24 * 12]
+        url: dbConfig.url,
+        database: dbConfig.database,
+        connectionOptions: dbConfig.connectionOptions,
+        ttls: [
+          dbConfig.metadataTTL?.min ?? 60 * 60 * 24 * 7,
+          dbConfig.metadataTTL?.max ?? 60 * 60 * 24 * 12,
+        ]
       });
 
-      this._musicDb?.dispose();
-      this._musicDb = newInstance;
+      this.#musicDb?.dispose();
+      this.#musicDb = newInstance;
 
-      console.log('Connected to MongoDB');
+      logger.info('Connected to MongoDB');
     }
     catch (e) {
       throw e;
@@ -96,7 +157,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   }
 
   get musicDb() {
-    return this._musicDb;
+    return this.#musicDb;
   }
 
   registerStation(station: Station) {
