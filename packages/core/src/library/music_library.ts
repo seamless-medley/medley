@@ -8,7 +8,7 @@ import { SearchEngine, Query, TrackDocumentFields } from './search';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from './music_db';
 import { TrackWithCollectionExtra } from '../track';
-import { SearchOptions } from 'minisearch';
+import { scanDir } from './scanner';
 
 export type MusicCollectionDescriptor = {
   id: string;
@@ -179,7 +179,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
         id, extra,
         {
           ...options,
-          trackCreator: this.trackCreator
+          trackCreator: this.trackCreator,
+          scanner: scanDir
         }
       );
 
