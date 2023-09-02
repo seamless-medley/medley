@@ -1,5 +1,7 @@
 # node-medley
 
+[![node-medley native module](https://github.com/seamless-medley/medley/actions/workflows/node-medley.yml/badge.svg?branch=main)](https://github.com/seamless-medley/medley/actions/workflows/node-medley.yml)
+
 `node-medley` is a Node.js native module built on top of [JUCE](https://github.com/juce-framework/JUCE) framework to provide audio playback to either an audio output device or [Node.js stream](https://nodejs.org/api/stream.html)
 
 # Features
@@ -314,18 +316,23 @@ Forcefully transit to the next track with fade-out effect.
 
 ## `getDeckPositions(deckIndex)`
 
-- `deckIndex` optional deck index, possible values are: `0`, `1`, `2`
+- `deckIndex` deck index, possible values are: `0`, `1`, `2`
 
 Returns an `object` with:
 
-- `current` *(number)* - Current playing position, in seconds
-- `duration` *(number)* - Total duration, in seconds
-- `first` *(number)* - First audible position, in seconds
-- `last` *(number)* - First audible position, in seconds
+- `current` *(number?)* - Current playing position
+- `duration` *(number?)* - Total duration
+- `first` *(number?)* - First audible position
+- `last` *(number?)* - Last audible position
+- `leading` *(number?)* - Fade-in position
+- `trailing` *(number?)* - Fade-out position
+- `cuePoint` *(number?)*
+- `transitionStart` *(number?)*
+- `transitionEnd` *(number?)*
 
 ## `getDeckMetadata(deckIndex)`
 
-- `deckIndex` optional deck index, possible values are: `0`, `1`, `2`
+- `deckIndex` index, possible values are: `0`, `1`, `2`
 
 Returns [Metadata](#metadata) for the specified `deckIndex`
 
