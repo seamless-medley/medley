@@ -19,7 +19,7 @@ const emptyLevel: StationAudioLevels = {
 }
 
 type NormalizedAudioLevel = {
-  level: number;
+  magnitude: number;
   peak: number;
 }
 
@@ -30,6 +30,8 @@ export type UseAudioLevelsData = {
 }
 
 export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, options?: { max?: number }) {
+  console.log('useAudioLevels');
+
   const max = options?.max ?? 0;
   const normalize = (v: number) => interpolate(Math.min(v, max), [-100, max], [0, 1]);
   const process = compose(normalize, gainToDecibels);
@@ -39,20 +41,14 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, opti
   const raf = useRef(0);
 
   const update = (levels: StationAudioLevels) => {
-    const left = mapValues({ ...levels.left }, process);
-    const right = mapValues({ ...levels.right }, process);
+    const left = mapValues(levels.left, process);
+    const right = mapValues(levels.right, process);
     const reduction = normalize(levels.reduction + max);
 
     raf.current = requestAnimationFrame(() => {
-      callback({
-        left: {
-          level: left.magnitude,
-          peak: left.peak
-        },
-        right: {
-          level: right.magnitude,
-          peak: right.peak
-        },
+      callbackRef.current?.({
+        left,
+        right,
         reduction
       });
 

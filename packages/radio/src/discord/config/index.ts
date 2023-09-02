@@ -8,6 +8,8 @@ import { pickBy } from 'lodash';
 import { dollar as phrase } from "paraphrase";
 import { ServerConfig } from './server';
 
+// TODO: Re-locate config out of discord folder
+
 async function parseYAML(s: string) {
   return parse(s);
 }

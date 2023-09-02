@@ -592,20 +592,24 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     const station = this.getGuildState(id)?.tunedStation;
 
     if (!station) {
+      this.#logger.debug('Deny skipping: no station');
       return false;
     }
 
     if (station.paused || !station.playing) {
+      this.#logger.debug('Deny skipping: not playing');
       return false;
     }
 
     const { trackPlay } = station;
 
     if (!trackPlay) {
+      this.#logger.debug('Deny skipping: no track play');
       return false;
     }
 
     if (!station.skip()) {
+      this.#logger.debug('Deny skipping: denied by engine');
       return false;
     }
 

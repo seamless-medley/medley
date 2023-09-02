@@ -1,9 +1,13 @@
-import type {
-  BoomBoxTrack,
-  BoomBoxTrackExtra,
-  BoomBoxTrackPlay,
-  CoverAndLyrics,
-  LatchSession as CoreLatchSession
+import {
+  type BoomBoxTrack,
+  type BoomBoxTrackExtra,
+  type BoomBoxTrackPlay,
+  type CoverAndLyrics,
+  type LatchSession as CoreLatchSession,
+  isRequestTrack,
+  LyricLine,
+  parseLyrics,
+  Lyrics
 } from "@seamless-medley/core";
 
 import type { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
@@ -22,7 +26,9 @@ export type Track = Simplify<Writable<
 
 export type TrackExtra = Simplify<Writable<
   ConditionalPick<BoomBoxTrackExtra, Jsonifiable | undefined> & {
-    coverAndLyrics?: ConditionalPick<CoverAndLyrics, Jsonifiable>;
+    coverAndLyrics?: Omit<ConditionalPick<CoverAndLyrics, Jsonifiable>, 'lyrics'> & {
+      lyrics: ConditionalPick<Lyrics, Jsonifiable>
+    }
   }
 >>;
 
@@ -55,29 +61,43 @@ export type LatchSession = Simplify<Writable<
 >>;
 
 export const toTrack = async (
-  { id, path, musicId, cueInPosition, cueOutPosition, disableNextLeadIn, extra, sequencing, collection }: BoomBoxTrack,
+  track: BoomBoxTrack,
   noCover?: boolean
-): Promise<Track> => ({
-  id,
-  path,
-  musicId,
-  cueInPosition,
-  cueOutPosition,
-  disableNextLeadIn,
-  extra: extra ? await toTrackExtra(extra, noCover) : undefined,
-  sequencing: sequencing ? toTrackSequencing(sequencing): undefined,
-  collection: pickId(collection)
-})
+): Promise<Track> => {
+  const { id, path, musicId, cueInPosition, cueOutPosition, disableNextLeadIn, extra, sequencing, collection } = track;
+
+  const actualExtra = isRequestTrack(track) ? track.original.extra : extra;
+
+  return {
+    id,
+    path,
+    musicId,
+    cueInPosition,
+    cueOutPosition,
+    disableNextLeadIn,
+    extra: actualExtra ? await toTrackExtra(actualExtra, noCover) : undefined,
+    sequencing: sequencing ? toTrackSequencing(sequencing): undefined,
+    collection: pickId(collection)
+  }
+}
 
 export const toTrackExtra = async (
   { kind, source, tags, maybeCoverAndLyrics }: BoomBoxTrackExtra,
   noCover?: boolean
-): Promise<TrackExtra> => ({
-  kind,
-  source,
-  tags,
-  coverAndLyrics: !noCover ? await maybeCoverAndLyrics : undefined
-})
+): Promise<TrackExtra> => {
+  const coverAndLyrics = !noCover ? await maybeCoverAndLyrics : undefined;
+  const lyrics = coverAndLyrics ? parseLyrics(coverAndLyrics?.lyrics, { bpm: tags?.bpm }) : undefined;
+
+  return {
+    kind,
+    source,
+    tags,
+    coverAndLyrics: coverAndLyrics ? {
+      ...coverAndLyrics,
+      lyrics: lyrics!
+    } : undefined
+  }
+}
 
 export const pickId = <T extends { id: any }>({ id }: T): IdOnly<T> => ({ id });
 

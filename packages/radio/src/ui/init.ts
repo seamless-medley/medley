@@ -6,19 +6,28 @@ let root: Root;
 let client: Client<RemoteTypes>;
 
 export function initClient() {
+  console.group('initClient');
   // @ts-ignore
-  if (import.meta.env.DEV) {
+  const isDev = import.meta.env.DEV;
+
+  if (isDev) {
+    console.log('Restore', window.$client);
     client = window.$client;
   }
 
-  client ??= new Client<RemoteTypes>();
+  if (!client) {
+    console.log('Create client');
 
-  // @ts-ignore
-  if (!window.$client && import.meta.env.DEV) {
-    window.$client = client;
+    client = new Client<RemoteTypes>();
+    client.once('disconnect', () => client.dispose());
+
+    if (isDev) {
+      console.log('Save', client);
+      window.$client = client;
+    }
   }
 
-  client.once('disconnect', () => client.dispose());
+  console.groupEnd();
 
   return client;
 }

@@ -3,6 +3,7 @@ import type { ObservedPropertyChange } from "./types";
 export type ServerEvents = {
   'r:e': (kind: string, id: string, event: string, ...args: any[]) => void;
   'r:u': (kind: string, id: string, changes: ObservedPropertyChange[]) => void;
+  // TODO: new server event for sending streaming data
 }
 
 export type OKResponse<T> = {

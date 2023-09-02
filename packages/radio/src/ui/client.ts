@@ -90,6 +90,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   constructor() {
     super();
 
+    console.log('Client ctor');
+
     this.socket = io({ transports: ['websocket'], parser: msgpackParser });
 
     this.socket.on('r:e', this.handleRemoteEvent);

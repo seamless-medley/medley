@@ -24,6 +24,8 @@ export class AudioPipeline extends EventEmitter<AudioPipelineEvents> {
    */
   #consumerNode!: AudioWorkletNode;
 
+  // TODO: Check for window.crossOriginIsolated before creating RingBuffer
+
   /**
    * A RingBuffer for holding 500ms of stereo PCM data
    */

@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
+import mkcert from'vite-plugin-mkcert'
 
 export default defineConfig({
   root: './src/ui/app',
@@ -27,9 +28,11 @@ export default defineConfig({
           ["@babel/plugin-proposal-class-properties", { loose: true }]
         ]
       }
-    })
+    }),
+    mkcert()
   ],
   server: {
+    https: true,
     proxy: {
       '/socket.io': {
         target: 'ws://localhost:3001',
