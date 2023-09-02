@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@parcel/watcher": "^2.1.0",
-    "@seamless-medley/medley": "workspace:0.3.4-alpha.2",
+    "@seamless-medley/medley": "0.3.3",
     "@seamless-medley/utils": "../utils",
     "axios": "1.4.0",
     "fast-glob": "^3.2.11",
