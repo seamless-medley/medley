@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { Box, Button, Center, Grid, Group, Stack } from '@mantine/core';
+import { AspectRatio, Box, Button, Center, Grid, Group, Stack } from '@mantine/core';
 import { useParams } from '@tanstack/router';
 
 import { useClient } from '../../hooks/useClient';
@@ -20,12 +20,15 @@ const PlayHead: React.FC<{ stationId: string }> = ({ stationId }) => {
 
   const activeDeck = station?.activeDeck() ?? 0;
 
-  const { info } = useDeckInfo(stationId, station?.activeDeck() ?? 0);
+  const { info, cover } = useDeckInfo(stationId, station?.activeDeck() ?? 0);
 
   return (
     <>
       <h4>Deck: {activeDeck !== undefined ? activeDeck + 1 : 'None'}</h4>
       <h4>Position: {info.cp.toFixed(2)}</h4>
+      <AspectRatio ratio={1} sx={{ width: 250 }}>
+        <img src={cover}  />
+      </AspectRatio>
     </>
   )
 }

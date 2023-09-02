@@ -238,6 +238,9 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     },
 
     'remote:invoke': async (socket, kind, id, method, args, callback) => {
+      // TODO: Support returning stream back to client
+      // The idea is, when the returned value is a stream, just send some placeholder for referencing the stream
+      // then start emitting stream data with new event
       this.interact(
         kind, id, method,
         // predicate

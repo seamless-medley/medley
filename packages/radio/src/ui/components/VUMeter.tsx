@@ -61,9 +61,9 @@ export const VUMeter: React.FC<VUMeterProps> = ({ channel }) => {
       return;
     }
 
-    const { level, peak } = data[channel];
+    const { magnitude, peak } = data[channel];
 
-    levelEl.style.right = `${(1-level) * 100}%`;
+    levelEl.style.right = `${(1-magnitude) * 100}%`;
     peakEl.style.left = `${(peak) * 100}%`;
 
     reductionEl.style.left = `${(data.reduction) * 100}%`

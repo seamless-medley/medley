@@ -27,16 +27,19 @@ export class RingBuffer {
     this.channels = channels;
 
     const chanelList = Array(channels).fill(0);
-    this.channelData = chanelList.map<Float32Array>(() => new Float32Array(
-      new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
-    ));
+    // this.channelData = chanelList.map<Float32Array>(() => new Float32Array(
+    //   new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
+    // ));
+    this.channelData = chanelList.map(() => createTypedSharedArrayBuffer(Float32Array, this.bufferLength));
 
     this.magnitudeData = chanelList.map<Float32Array>(() => new Float32Array(
       new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
     ));
+
     this.peakData = chanelList.map<Float32Array>(() => new Float32Array(
       new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
     ));
+
     this.reductionData = new Float32Array(new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT));
   }
 
@@ -73,30 +76,29 @@ export class RingBuffer {
         blockB.set(input.subarray(blockA.length));
       }
 
+      // for (const [channel, data] of this.magnitudeData.entries()) {
+      //   const blockA = data.subarray(currentWrite);
+      //   const blockB = data.subarray(0, nextWrite);
 
-      for (const [channel, data] of this.magnitudeData.entries()) {
-        const blockA = data.subarray(currentWrite);
-        const blockB = data.subarray(0, nextWrite);
+      //   blockA.fill(levels[channel].magnitude);
+      //   blockB.fill(levels[channel].magnitude);
+      // }
 
-        blockA.fill(levels[channel].magnitude);
-        blockB.fill(levels[channel].magnitude);
-      }
+      // for (const [channel, data] of this.peakData.entries()) {
+      //   const blockA = data.subarray(currentWrite);
+      //   const blockB = data.subarray(0, nextWrite);
 
-      for (const [channel, data] of this.peakData.entries()) {
-        const blockA = data.subarray(currentWrite);
-        const blockB = data.subarray(0, nextWrite);
+      //   blockA.fill(levels[channel].peak);
+      //   blockB.fill(levels[channel].peak);
+      // }
 
-        blockA.fill(levels[channel].peak);
-        blockB.fill(levels[channel].peak);
-      }
+      // {
+      //   const blockA = this.reductionData.subarray(currentWrite);
+      //   const blockB = this.reductionData.subarray(0, nextWrite);
 
-      {
-        const blockA = this.reductionData.subarray(currentWrite);
-        const blockB = this.reductionData.subarray(0, nextWrite);
-
-        blockA.fill(reduction);
-        blockB.fill(reduction);
-      }
+      //   blockA.fill(reduction);
+      //   blockB.fill(reduction);
+      // }
     } else {
       for (const [channel, data] of this.channelData.entries()) {
         const block = data.subarray(currentWrite, nextWrite);
@@ -104,20 +106,20 @@ export class RingBuffer {
         block.set(inputs[channel].subarray(0, blockLength));
       }
 
-      for (const [channel, data] of this.magnitudeData.entries()) {
-        const block = data.subarray(currentWrite, nextWrite);
-        block.fill(levels[channel].magnitude);
-      }
+      // for (const [channel, data] of this.magnitudeData.entries()) {
+      //   const block = data.subarray(currentWrite, nextWrite);
+      //   block.fill(levels[channel].magnitude);
+      // }
 
-      for (const [channel, data] of this.peakData.entries()) {
-        const block = data.subarray(currentWrite, nextWrite);
-        block.fill(levels[channel].peak);
-      }
+      // for (const [channel, data] of this.peakData.entries()) {
+      //   const block = data.subarray(currentWrite, nextWrite);
+      //   block.fill(levels[channel].peak);
+      // }
 
-      {
-        const block = this.reductionData.subarray(currentWrite, nextWrite);
-        block.fill(reduction);
-      }
+      // {
+      //   const block = this.reductionData.subarray(currentWrite, nextWrite);
+      //   block.fill(reduction);
+      // }
 
       if (nextWrite === this.bufferLength) {
         nextWrite = 0;
@@ -142,7 +144,6 @@ export class RingBuffer {
     let nextRead = currentRead + blockLength;
     if (this.bufferLength < nextRead) {
       nextRead -= this.bufferLength;
-
 
       for (const [channel, data] of this.channelData.entries()) {
         const blockA = data.subarray(currentRead);
