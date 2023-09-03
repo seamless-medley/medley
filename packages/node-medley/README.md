@@ -159,7 +159,7 @@ Use [isTrackLoadable](#istrackloadabletrack) static method.
 
 ## Getting metadata
 
-There are two ways of getting metada:
+There are two ways of getting metadata:
 
 1. From file path
     - Use [getMetadata](#getmetadatapath) static method
