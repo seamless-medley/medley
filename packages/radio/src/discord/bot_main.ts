@@ -1,4 +1,4 @@
-import { createLogger, Medley, Station, StationRegistry, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
+import { createLogger, scanDir, Medley, Station, StationRegistry, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
 import { Client, GatewayIntentBits } from "discord.js";
 import { Command } from '@commander-js/extra-typings';
 import { shuffle } from "lodash";
@@ -7,7 +7,6 @@ import { MedleyAutomaton } from "./automaton";
 import { loadConfig } from "./config";
 import { ZodError } from "zod";
 import normalizePath from "normalize-path";
-import { scanDir } from "@seamless-medley/core/src/library/scanner";
 
 process.on('uncaughtException', (e) => {
   console.error('Exception', e, e.stack);

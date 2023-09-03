@@ -1,6 +1,6 @@
 import { shuffle } from "lodash";
 import normalizePath from "normalize-path";
-import { MusicDb, Station, StationEvents, StationRegistry, TrackCollection, WatchTrackCollection, createLogger} from "@seamless-medley/core";
+import { MusicDb, Station, StationEvents, StationRegistry, TrackCollection, WatchTrackCollection, createLogger, scanDir } from "@seamless-medley/core";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { Socket, SocketServer, SocketServerController } from "../socket";
 import { RemoteTypes } from "../socket/remote";
@@ -12,7 +12,6 @@ import { AudioServer } from "./audio/transport";
 import { ExposedDeck } from "./expose/deck";
 import { Config } from "../discord/config";
 import { MedleyAutomaton } from "../discord/automaton";
-import { scanDir } from "@seamless-medley/core/src/library/scanner";
 
 const logger = createLogger({ name: 'medley-server' });
 
