@@ -1,6 +1,14 @@
 import { IExciter } from "./exciter";
 
 /**
+ * Encapsulated methods used internally by IExciter itself
+ */
+export interface DispatcherPrivate {
+  add(exciter: IExciter): void;
+  remove(exciter: IExciter): void;
+}
+
+/**
  * An AudioDispatcher is responsible for driving audio stream from exciters
  */
 export class AudioDispatcher {
@@ -49,7 +57,7 @@ export class AudioDispatcher {
     return this.#exciters.includes(exciter);
   }
 
-  add(exciter: IExciter) {
+  protected add(exciter: IExciter) {
     if (this.has(exciter)) {
       return;
     }
@@ -64,7 +72,7 @@ export class AudioDispatcher {
     }
   }
 
-  remove(exciter: IExciter) {
+  protected remove(exciter: IExciter) {
     const index = this.#exciters.indexOf(exciter);
     if (index === -1) {
       return;

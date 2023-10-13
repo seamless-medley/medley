@@ -83,7 +83,6 @@ export class AudioServer extends EventEmitter {
 
   async publish(station: Station) {
     const player = new WebStreamExciter(station);
-    await player.start();
 
     player.on('packet', (packet) => {
       const listeners = this.#stationListeners.get(station.id);
@@ -97,7 +96,7 @@ export class AudioServer extends EventEmitter {
       }
     })
 
-    this.#dispatcher.add(player);
+    player.start(this.#dispatcher)
 
     this.#published.set(station, player);
   }

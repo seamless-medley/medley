@@ -147,14 +147,13 @@ export class GuildState {
       this.detune();
     }
 
-    const exciter = DiscordAudioPlayer.make(preferredStation);
-
-    this.adapter.getAudioDispatcher().add(exciter);
-    exciter.start();
+    const exciter = DiscordAudioPlayer.make(preferredStation, 256_000, (newExiter) => {
+      newExiter.start(this.adapter.getAudioDispatcher());
+    });
 
     const newLink: StationLink = {
       station: preferredStation,
-      exciter: exciter
+      exciter
     };
 
     this.stationLink = newLink;
@@ -172,7 +171,6 @@ export class GuildState {
     if (this.voiceConnector) {
       if (exciter.removeCarrier(this.voiceConnector) <= 0) {
         exciter.stop();
-        this.adapter.getAudioDispatcher().remove(exciter);
         DiscordAudioPlayer.destroy(exciter);
       }
     }

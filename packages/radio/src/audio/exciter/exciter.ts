@@ -3,13 +3,18 @@ import { isEqual, noop } from 'lodash';
 import { pipeline, Readable } from 'stream';
 import { ListenerSignature, TypedEmitter } from 'tiny-typed-emitter';
 import { OpusPacketEncoder, OpusPacketEncoderOptions } from '../codecs/opus/stream';
+import { AudioDispatcher, DispatcherPrivate } from './dispatcher';
 
 export interface IExciter {
   readonly station: Station;
   readonly audioOptions: RequestAudioOptions;
   readonly encoderOptions: Partial<OpusPacketEncoderOptions>;
 
-  start(): Promise<void>;
+  /**
+   * Start this exciter using the specified dispatcher to drive audio stream
+   * @param dispatcher
+   */
+  start(dispatcher: AudioDispatcher): Promise<void>;
 
   stop(): void;
 
@@ -24,6 +29,10 @@ export interface IExciter {
   addCarrier(carrier: ICarrier): number;
   removeCarrier(carrier: ICarrier): number;
   hasCarrier(): boolean;
+
+  incRef(): number;
+
+  get refCount(): number;
 
   prepare(): void;
   dispatch(): void;
@@ -67,7 +76,10 @@ export function getExciterFromCache(registration: ExciterRegistration): IExciter
 
   if (entry) {
     const [key] = entry;
-    return cache.get(key)?.deref();
+    const exciter = cache.get(key)?.deref();
+
+    exciter?.incRef();
+    return exciter;
   }
 }
 
@@ -78,6 +90,8 @@ export function registerExciter(exciter: IExciter): IExciter {
     audioOptions: exciter.audioOptions,
     encoderOptions: exciter.encoderOptions
   }
+
+  exciter.incRef();
 
   registry.register(exciter, registration);
   cache.set(registration, new WeakRef(exciter));
@@ -104,6 +118,7 @@ export function unregisterExciter(exciter: IExciter) {
  * An Exciter read PCM stream from node-medley and encode it into Opus packets.
  */
 export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {}> extends TypedEmitter<Listeners> implements IExciter {
+  protected dispatcher?: AudioDispatcher;
   protected request?: RequestAudioStreamResult;
   protected outlet?: Readable;
   protected opusEncoder?: OpusPacketEncoder;
@@ -118,24 +133,35 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     super();
   }
 
-  async start() {
-    if (this.request) {
-      return;
+  async start(dispatcher: AudioDispatcher) {
+    if (this.dispatcher) {
+      throw new Error('An exciter could be used multiple times');
     }
 
-    this.request = await this.station.requestAudioStream(this.audioOptions);
-    this.opusEncoder = new OpusPacketEncoder(this.encoderOptions);
+    this.dispatcher = dispatcher;
+    try {
+      this.request = await this.station.requestAudioStream(this.audioOptions);
+      this.opusEncoder = new OpusPacketEncoder(this.encoderOptions);
 
-    this.outlet = pipeline(
-      [
-        this.request.stream,
-        this.opusEncoder
-      ],
-      noop
-    ) as unknown as Readable;
+      this.outlet = pipeline(
+        [
+          this.request.stream,
+          this.opusEncoder
+        ],
+        noop
+      ) as unknown as Readable;
+
+      (dispatcher as unknown as DispatcherPrivate).add(this);
+    }
+    catch (e: unknown) {
+      this.dispatcher = undefined;
+      throw e;
+    }
   }
 
   stop() {
+    (this.dispatcher as unknown as DispatcherPrivate)?.remove(this);
+
     if (!this.request) {
       return;
     }
@@ -221,6 +247,16 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
 
   hasCarrier() {
     return this.carriers.length > 0;
+  }
+
+  #ref = 0;
+
+  incRef(): number {
+    return ++this.#ref;
+  }
+
+  get refCount(): number {
+    return this.#ref;
   }
 }
 
