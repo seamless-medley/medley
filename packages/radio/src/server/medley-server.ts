@@ -106,7 +106,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
           botToken,
           clientId,
           baseCommand,
-          trackMessage: config.trackMessage
+          guilds: config.guilds
         });
 
         automaton.once('ready', () => resolve(automaton));

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema",
   "title": "Medley Discord",
-  "description": "Configuration filefor Medley/Radio Discord bot",
+  "description": "Configuration file for Medley/Radio Discord bot",
   "type": "object",
   "properties": {
     "db": {
@@ -196,7 +196,7 @@
         },
         "stations": {
           "type": "array",
-          "description": "List of station id to allow tuning from this automaton, or leave blank to allow all",
+          "description": "List of station id to allow tuning from this automaton, or leave blank to allow all stations",
           "items": {
             "type": "string"
           }
@@ -207,34 +207,14 @@
           "minLength": 1,
           "default": "medley"
         },
-        "trackMessage": {
+        "guilds": {
           "type": "object",
-          "properties": {
-            "type": {
-              "default": "extended",
-              "oneOf": [
-                {
-                  "type": "string",
-                  "const": "normal"
-                },
-                {
-                  "type": "string",
-                  "const": "extended"
-                },
-                {
-                  "type": "string",
-                  "const": "simple"
-                }
-              ]
-            },
-            "max": {
-              "type": "integer",
-              "description": "Number of last messages to be kept in a guild",
-              "minimum": 0,
-              "default": 3
+          "description": "Guild specific configurations",
+          "patternProperties": {
+            "^.+$": {
+              "$ref": "#/$defs/guildConfig"
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       "required": ["clientId", "botToken"],
@@ -479,6 +459,57 @@
       "type": "string",
       "description": "Path to a directory\nRecursively scan and watch for music files",
       "minLength": 1
+    },
+    "guildConfig": {
+      "type": "object",
+      "description": "Guild specific configuration",
+      "properties": {
+        "autotune": {
+          "type": "string",
+          "description": "Station id to initially tune-in",
+          "minLength": 1
+        },
+        "autojoin": {
+          "type": "string",
+          "description": "Voice channel id to automatically join",
+          "minLength": 1
+        },
+        "trackMessage": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "default": "extended",
+              "oneOf": [
+                {
+                  "type": "string",
+                  "const": "normal"
+                },
+                {
+                  "type": "string",
+                  "const": "extended"
+                },
+                {
+                  "type": "string",
+                  "const": "simple"
+                }
+              ]
+            },
+            "max": {
+              "type": "integer",
+              "description": "Number of last messages to be kept in a guild",
+              "minimum": 0,
+              "default": 3
+            },
+            "channel": {
+              "type": "string",
+              "description": "Text channel id for sending track message",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

@@ -33,8 +33,25 @@ import { TrackMessage, TrackMessageStatus } from "../trackmessage/types";
 import { trackMessageToMessageOptions } from "../trackmessage";
 import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
 import { AudioDispatcher } from "../../audio/exciter";
-import { CreatorNames, makeCreator } from "../trackmessage/creator";
-import { TrackMessageCreator } from "../trackmessage/creator/base";
+import { CreatorNames } from "../trackmessage/creator";
+
+export type GuildSpecificConfig = {
+  autotune?: string;
+  autojoin?: string;
+  trackMessage?: {
+    /**
+     * @default extended
+     */
+    type?: CreatorNames;
+
+    /**
+     * @default 3
+     */
+    max?: number;
+
+    channel?: string;
+  }
+}
 
 export type MedleyAutomatonOptions = {
   id: string;
@@ -48,18 +65,10 @@ export type MedleyAutomatonOptions = {
   botToken: string;
   owners?: Snowflake[];
 
-
-  trackMessage?: {
-    /**
-     * @default extended
-     */
-    type?: CreatorNames;
-
-    /**
-     * @default 3
-     */
-    max?: number;
-  }
+  /**
+   * Guild specific settings
+   */
+  guilds?: Record<string, GuildSpecificConfig>;
 }
 
 export type UpdateTrackMessageOptions = {
@@ -93,11 +102,11 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   owners: Snowflake[] = [];
 
-  maxTrackMessages: number = 3;
-
   #baseCommand: string;
 
   #client: Client;
+
+  #guildConfigs: NonNullable<MedleyAutomatonOptions['guilds']>;
 
   #guildStates: Map<Guild['id'], GuildState> = new Map();
 
@@ -109,8 +118,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #audioDispatcher: AudioDispatcher;
 
-  #trackMessageCreator: TrackMessageCreator;
-
   constructor(readonly stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
     super();
 
@@ -120,8 +127,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.botToken = options.botToken;
     this.clientId = options.clientId;
     this.owners = options.owners || [];
-    this.maxTrackMessages = options.trackMessage?.max ?? 3;
-    this.#trackMessageCreator = makeCreator(options.trackMessage?.type ?? 'extended');
+    this.#guildConfigs = options.guilds || {};
 
     this.#baseCommand = options.baseCommand || 'medley';
 
@@ -183,6 +189,12 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
 
     this.#logger.info('OAUthURL', this.oAuth2Url.toString());
+
+    this.#client.once('ready', async () => {
+      for (const guildId of Object.keys(this.#guildConfigs)) {
+        this.autoJoinVoiceChannel(guildId);
+      }
+    });
   }
 
   get client() {
@@ -213,6 +225,26 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       if (closeConnection) {
         state.destroyVoiceConnector();
       }
+    }
+  }
+
+  private async autoJoinVoiceChannel(guildId: string) {
+    const config = this.#guildConfigs[guildId];
+
+    if (!config?.autojoin) {
+      return;
+    }
+
+    const guild = this.client.guilds.cache.get(guildId);
+
+    if (!guild) {
+      return;
+    }
+
+    const voiceChannel = guild.channels.cache.get(config.autojoin);
+    if (voiceChannel?.isVoiceBased()) {
+      const { status } = await this.ensureGuildState(guildId).join(voiceChannel, 10_000);
+      this.#logger.debug('Auto join result:', { status, guild: guild.name, channel: voiceChannel.name })
     }
   }
 
@@ -295,6 +327,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     getClient: () => this.client,
     getLogger: () => this.#logger,
     getStations: () => this.stations,
+    getAudioDispatcher: () => this.#audioDispatcher,
+    getConfig: (guildId) => this.#guildConfigs[guildId],
     makeAudienceGroup: (guildId: string) => this.makeAudienceGroup(guildId),
   }
 
@@ -332,7 +366,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     // Invited to
     this.#logger.info(`Invited to ${guild.name}`);
 
-    this.ensureGuildState(guild.id);
+    this.ensureGuildState(guild.id)
+    this.autoJoinVoiceChannel(guild.id);
 
     MedleyAutomaton.registerCommands(({
       guild,
@@ -373,8 +408,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
           maybeMessage
         });
 
-        if (state.trackMessages.length > this.maxTrackMessages) {
-          const oldMessages = state.trackMessages.splice(0, state.trackMessages.length - this.maxTrackMessages);
+        if (state.trackMessages.length > state.maxTrackMessages) {
+          const oldMessages = state.trackMessages.splice(0, state.trackMessages.length - state.maxTrackMessages);
 
           for (const { maybeMessage, lyricMessage } of oldMessages) {
             maybeMessage?.then((sentMessage) => {
@@ -724,7 +759,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
           }
 
           const positions = station.getDeckPositions(deck);
-          const trackMsg = await this.#trackMessageCreator.create({
+          const trackMsg = await state.trackMessageCreator.create({
             guildId,
             station,
             trackPlay,

@@ -1,6 +1,5 @@
 import {
   AudienceGroupId,
-  createLogger,
   ILogObj,
   IReadonlyLibrary,
   Logger,
@@ -23,7 +22,9 @@ import { TrackMessage } from "../trackmessage/types";
 import { VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
 import { AudioDispatcher, IExciter } from "../../audio/exciter";
 import { DiscordAudioPlayer } from "../voice/audio/player";
-import { MedleyAutomaton } from "./automaton";
+import { GuildSpecificConfig, MedleyAutomaton } from "./automaton";
+import { TrackMessageCreator } from "../trackmessage/creator/base";
+import { makeCreator } from "../trackmessage/creator";
 
 export type GuildStateAdapter = {
   getAutomaton(): MedleyAutomaton;
@@ -32,15 +33,17 @@ export type GuildStateAdapter = {
   getStations(): IReadonlyLibrary<Station>;
   getLogger(): Logger<ILogObj>;
   getAudioDispatcher(): AudioDispatcher;
+  getConfig(guildId: string): GuildSpecificConfig | undefined;
   makeAudienceGroup(guildId: string): AudienceGroupId;
 }
 
 export class GuildState {
   constructor (readonly guildId: Guild['id'], readonly adapter: GuildStateAdapter) {
     adapter.getClient().on('voiceStateUpdate', this.#handleVoiceStateUpdate);
-  }
 
-  #logger = createLogger({ name: `guild-state/${this.automaton.id}` })
+    const config = adapter.getConfig(guildId);
+    this.textChannelId = config?.trackMessage?.channel;
+  }
 
   dispose() {
     this.adapter.getClient().off('voiceStateUpdate', this.#handleVoiceStateUpdate);
@@ -52,6 +55,8 @@ export class GuildState {
 
   textChannelId?: string;
 
+  #trackMessageCreator?: TrackMessageCreator;
+
   readonly trackMessages: TrackMessage[] = [];
 
   #serverMuted = false;
@@ -59,6 +64,21 @@ export class GuildState {
   private stationLink?: StationLink;
 
   private voiceConnector?: VoiceConnector;
+
+  get maxTrackMessages() {
+    const config = this.adapter.getConfig(this.guildId);
+    return config?.trackMessage?.max || 3;
+  }
+
+  get trackMessageCreator(): TrackMessageCreator {
+    const type = this.adapter.getConfig(this.guildId)?.trackMessage?.type || 'extended';
+
+    if (this.#trackMessageCreator?.name !== type) {
+      this.#trackMessageCreator = makeCreator(type);
+    }
+
+    return this.#trackMessageCreator;
+  }
 
   get tunedStation() {
     return this.stationLink?.station;
@@ -197,11 +217,19 @@ export class GuildState {
     if (!stationLink) {
       // Auto-tuning
       if (!this.preferredStation) {
+        const config = this.adapter.getConfig(channel.guildId);
         const stations = this.adapter.getStations();
-        const singleStation = stations.size === 1 ? stations.first() : undefined;
 
-        if (singleStation) {
-          this.preferredStation = singleStation;
+        if (config?.autotune) {
+          this.preferredStation = stations.get(config?.autotune);
+        }
+
+        if (!this.preferredStation) {
+          const singleStation = stations.size === 1 ? stations.first() : undefined;
+
+          if (singleStation) {
+            this.preferredStation = singleStation;
+          }
         }
       }
 

@@ -179,7 +179,7 @@ async function main() {
         botToken,
         clientId,
         baseCommand,
-        trackMessage: config.trackMessage
+        guilds: config.guilds
       });
 
       automaton.once('ready', () => resolve(automaton));
