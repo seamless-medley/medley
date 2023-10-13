@@ -5,7 +5,7 @@ import {
   Client, Guild,
   GatewayIntentBits, Message,
   OAuth2Guild,
-  Snowflake, ChannelType, PermissionsBitField, PartialMessage
+  Snowflake, ChannelType, PermissionsBitField, PartialMessage, GuildBasedChannel, TextChannel
 } from "discord.js";
 
 import {
@@ -233,7 +233,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
       const channel = this.client.channels.cache.get(voiceChannelId);
 
-      if (channel?.type !== ChannelType.GuildVoice) {
+      if (!channel?.isVoiceBased()) {
         continue;
       }
 
@@ -663,6 +663,44 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       .filter((guildId): guildId is string => !!guildId);
   }
 
+  canSendMessageTo(channel: TextChannel): boolean {
+    const guild = channel.guild;
+    const me = guild.members.me;
+
+    if (!me) {
+      return false;
+    }
+
+    return channel.members.has(me.id) && channel.permissionsFor(me).has(PermissionsBitField.Flags.SendMessages);
+  }
+
+  private getTextChannel(guildId: string) {
+    const state = this.#guildStates.get(guildId);
+
+    if (!state) {
+      return;
+    }
+
+    const guild = this.client.guilds.cache.get(guildId);
+
+    if (!guild) {
+      return;
+    }
+
+    const textChannel = state.textChannelId ? guild.channels.cache.get(state.textChannelId) : undefined;
+
+    if (textChannel?.type === ChannelType.GuildText) {
+      if (this.canSendMessageTo(textChannel)) {
+        return textChannel;
+      }
+    }
+
+    // fallback
+    if (guild.systemChannel && this.canSendMessageTo(guild.systemChannel)) {
+      return guild.systemChannel;
+    }
+  }
+
   /**
    * Send to all guilds for a station
    */
@@ -676,11 +714,14 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
       if (state?.tunedStation === station) {
         const guild = this.client.guilds.cache.get(guildId);
-        const { textChannelId } = state;
 
         if (guild && state.hasVoiceChannel()) {
-          const channel = textChannelId ? guild.channels.cache.get(textChannelId) : undefined;
-          const textChannel = channel?.type == ChannelType.GuildText ? channel : undefined;
+          const textChannel = this.getTextChannel(guildId);
+
+          if (!textChannel) {
+            state.textChannelId = undefined;
+            continue;
+          }
 
           const positions = station.getDeckPositions(deck);
           const trackMsg = await this.#trackMessageCreator.create({
@@ -699,7 +740,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
             }
           });
 
-          const d = (textChannel || guild.systemChannel)?.send(options).catch(e => void this.#logger.error(e));
+          const d = textChannel?.send(options).catch(e => void this.#logger.error(e));
 
           results.push([guildId, trackMsg, d]);
         }

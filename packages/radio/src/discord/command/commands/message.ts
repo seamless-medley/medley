@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction } from "discord.js";
+import { ChatInputCommandInteraction, ChannelType as DJSChannelType } from "discord.js";
 import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildIdGuard, reply } from "../utils";
 
@@ -26,6 +26,16 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     const channel = interaction.options.getChannel('channel');
 
     if (!channel) {
+      return;
+    }
+
+    const guildChannel = interaction.guild?.channels?.cache?.get(channel.id);
+
+    if (guildChannel?.type !== DJSChannelType.GuildText || !automation.canSendMessageTo(guildChannel)) {
+      reply(interaction, {
+        content: `Message could not be sent to channel ${channel.toString()}`,
+        ephemeral: true
+      });
       return;
     }
 

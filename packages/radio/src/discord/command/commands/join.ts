@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder, hyperlink, PermissionsBitField } from "discord.js";
+import { ChatInputCommandInteraction, EmbedBuilder, hyperlink, PermissionsBitField, ChannelType as DJSChannelType } from "discord.js";
 import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deny, guildIdGuard, permissionGuard, reply } from "../utils";
 import { createStationSelector } from "./tune";
@@ -44,25 +44,11 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   }
 
   const guildId = guildIdGuard(interaction);
-
   const state = automaton.ensureGuildState(guildId);
-
-  const me = interaction.guild?.members.me;
-  const myPermissions = me ? channelToJoin.permissionsFor(me) : undefined;
-
-  if (!myPermissions?.has(PermissionsBitField.Flags.Connect)) {
-    await deny(interaction, 'Could not join: no `connect` permission');
-    return;
-  }
-
-  if (!myPermissions?.has(PermissionsBitField.Flags.Speak)) {
-    await deny(interaction, 'Could not join: no `speak` permission');
-    return;
-  }
 
   await reply(interaction, `Joining ${channelToJoin}`);
 
-  if (!state.textChannelId && myPermissions?.has(PermissionsBitField.Flags.SendMessages)) {
+  if (!state.textChannelId && interaction.channel?.type === DJSChannelType.GuildText && automaton.canSendMessageTo(interaction.channel)) {
     state.textChannelId = interaction.channelId;
   }
 
@@ -91,34 +77,40 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   try {
     const result = await state.join(channelToJoin);
 
-    if (result.status === 'joined') {
-      reply(interaction, {
-        content: null,
-        embeds: [createEmbed()]
-      });
-
-      return;
-    }
-
-    if (result.status === 'no_station') {
-      createStationSelector(automaton, interaction, async (tuned) => {
-        if (tuned) {
-          if ((await state.join(channelToJoin)).status !== 'joined') {
-            deny(interaction, 'Could not tune and join');
-            return;
-          }
-        }
-
+    switch (result.status) {
+      case 'joined':
         reply(interaction, {
           content: null,
           embeds: [createEmbed()]
         });
-      });
 
-      return;
+        return;
+
+      case 'no_station':
+        createStationSelector(automaton, interaction, async (tuned) => {
+          if (tuned) {
+            if ((await state.join(channelToJoin)).status !== 'joined') {
+              deny(interaction, 'Could not tune and join');
+              return;
+            }
+          }
+
+          reply(interaction, {
+            content: null,
+            embeds: [createEmbed()]
+          });
+        });
+
+        return;
+
+      case 'not_granted':
+        deny(interaction, 'Could not join, not allowed');
+        return;
+
+      case 'not_joined':
+        deny(interaction, 'Could not join, error establishing a voice connection');
+        return;
     }
-
-    deny(interaction, 'Could not join, error establishing a voice connection');
   }
   catch (e) {
     console.error(e);

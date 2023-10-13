@@ -14,6 +14,7 @@ import {
   Guild,
   GuildBasedChannel,
   GuildMember,
+  PermissionsBitField,
   VoiceBasedChannel,
   VoiceState
 } from "discord.js";
@@ -183,6 +184,14 @@ export class GuildState {
   }
 
   async join(channel: BaseGuildVoiceChannel, timeout: number = 5000): Promise<JoinResult> {
+    const { me } = channel.guild.members;
+
+    const granted = me && channel.permissionsFor(me).has([PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak])
+
+    if (!granted) {
+      return { status: 'not_granted' }
+    }
+
     let { stationLink } = this;
 
     if (!stationLink) {
@@ -395,7 +404,7 @@ export class GuildState {
 }
 
 export type JoinResult = {
-  status: 'no_station' | 'not_joined';
+  status: 'no_station' | 'not_granted' | 'not_joined';
 } | {
   status: 'joined';
   station: Station;
