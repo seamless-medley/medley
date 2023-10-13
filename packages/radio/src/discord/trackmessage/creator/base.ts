@@ -36,6 +36,8 @@ export type CreateTrackMessageOptionsEx = CreateTrackMessageOptions & {
 }
 
 export abstract class TrackMessageCreator {
+  abstract readonly name: string;
+
   protected abstract doCreate(options: CreateTrackMessageOptionsEx): Promise<CreateTrackMessageOptionsEx & Pick<TrackMessage, 'embed'> & { cover?: CoverImageAttachment }>;
 
   async create(options: CreateTrackMessageOptions): Promise<TrackMessage> {

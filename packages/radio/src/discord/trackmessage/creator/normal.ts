@@ -1,5 +1,5 @@
 import { MetadataFields } from "@seamless-medley/core";
-import { APIEmbedField, bold, formatEmoji, hyperlink, quote, userMention } from "discord.js";
+import { APIEmbedField, bold, hyperlink, quote, userMention } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
 import { formatDuration } from "../../format/format";
 import { extractSpotifyMetadata, formatSpotifyField, metadataFields, spotifyURI } from "../fields";
@@ -14,6 +14,8 @@ const fieldCaptionFuncs: Partial<Record<MetadataFields, () => any>> = {
 };
 
 export class Normal extends TrackMessageCreator {
+  name = "normal";
+
   protected async doCreate(options: CreateTrackMessageOptionsEx) {
     const { station, embed, guildId, track, playDuration, requestedBy } = options;
 

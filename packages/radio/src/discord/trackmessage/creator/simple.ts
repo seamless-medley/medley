@@ -3,6 +3,8 @@ import { bold, quote } from "discord.js";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
 export class Simple extends TrackMessageCreator {
+  name = "simple";
+
   protected async doCreate(options: CreateTrackMessageOptionsEx) {
     const { station, embed, track } = options;
 
