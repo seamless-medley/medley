@@ -5,7 +5,7 @@ import which from 'which';
 
 import fg from 'fast-glob';
 import { minimatch } from 'minimatch';
-import { debounce, groupBy, shuffle, stubFalse, stubTrue, uniq } from "lodash";
+import { debounce, groupBy, noop, once, shuffle, stubFalse, stubTrue, uniq } from "lodash";
 import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
 
@@ -198,9 +198,10 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
 
     this.logger.info('Watching', normalized);
 
-    await this.scan(normalized);
-    await this.subscribeToPath(normalized);
-    this.becomeReady();
+    await this.scan(normalized, async () => {
+      await this.subscribeToPath(normalized);
+      this.becomeReady();
+    });
   }
 
   unwatch(dir: string, removeTracks: boolean = true) {
@@ -234,14 +235,14 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
 
   private globScanner = (dir: string) => glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
 
-  private async scan(dir: string) {
+  private async scan(dir: string, fn: () => any = () => noop) {
     const scanners = [this.extScanner, this.globScanner];
 
     for (const scanner of scanners) {
       const files = await scanner(dir);
 
       if (files !== false) {
-        await this.add(shuffle(files));
+        await this.add(shuffle(files), undefined, once(fn));
         break;
       }
     }

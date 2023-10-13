@@ -182,8 +182,11 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     return immediateTracks;
   }
 
-  async add(paths: string[], mode?: TrackAddingMode): Promise<T[]> {
-    return this.transform(paths, async created => this.addTracks(created, mode));
+  async add(paths: string[], mode?: TrackAddingMode, fn?: () => any): Promise<T[]> {
+    return this.transform(paths, async created => {
+      await this.addTracks(created, mode);
+      await fn?.();
+    });
   }
 
   private async addTracks(tracks: T[], mode?: TrackAddingMode) {
