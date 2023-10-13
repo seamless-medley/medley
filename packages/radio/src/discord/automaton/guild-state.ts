@@ -25,15 +25,17 @@ import { DiscordAudioPlayer } from "../voice/audio/player";
 import { MedleyAutomaton } from "./automaton";
 
 export type GuildStateAdapter = {
+  getAutomaton(): MedleyAutomaton;
   getClient(): Client;
   getChannel(id: string): GuildBasedChannel | undefined;
   getStations(): IReadonlyLibrary<Station>;
   getLogger(): Logger<ILogObj>;
   getAudioDispatcher(): AudioDispatcher;
+  makeAudienceGroup(guildId: string): AudienceGroupId;
 }
 
 export class GuildState {
-  constructor (readonly automaton: MedleyAutomaton, readonly guildId: Guild['id'], readonly adapter: GuildStateAdapter) {
+  constructor (readonly guildId: Guild['id'], readonly adapter: GuildStateAdapter) {
     adapter.getClient().on('voiceStateUpdate', this.#handleVoiceStateUpdate);
   }
 
@@ -89,7 +91,7 @@ export class GuildState {
       return;
     }
 
-    const audienceGroup = this.automaton.makeAudienceGroup(this.guildId);
+    const audienceGroup = this.adapter.makeAudienceGroup(this.guildId);
 
     if (muted || !channel) {
       station.removeAudiencesForGroup(audienceGroup);
@@ -175,7 +177,7 @@ export class GuildState {
       }
     }
 
-    station.removeAudiencesForGroup(this.automaton.makeAudienceGroup(this.guildId));
+    station.removeAudiencesForGroup(this.adapter.makeAudienceGroup(this.guildId));
 
     this.stationLink = undefined;
   }
@@ -218,7 +220,7 @@ export class GuildState {
 
     let connector: VoiceConnector | undefined = VoiceConnector.connect(
       {
-        automatonId: this.automaton.id,
+        automatonId: this.adapter.getAutomaton().id,
         channelId,
         guildId,
         selfDeaf: true,
@@ -265,7 +267,7 @@ export class GuildState {
     if (channel?.type === ChannelType.GuildVoice) {
       updateStationAudiences(
         this.preferredStation,
-        this.automaton.makeAudienceGroup(this.guildId),
+        this.adapter.makeAudienceGroup(this.guildId),
         channel
       );
     }
@@ -351,7 +353,7 @@ export class GuildState {
       return;
     }
 
-    const audienceGroup = this.automaton.makeAudienceGroup(this.guildId);
+    const audienceGroup = this.adapter.makeAudienceGroup(this.guildId);
 
     if (oldState.channelId !== newState.channelId) {
 

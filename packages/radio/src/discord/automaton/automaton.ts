@@ -291,10 +291,11 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   #baseAdapter: Omit<GuildStateAdapter, 'getChannel'> = {
+    getAutomaton: () => this,
     getClient: () => this.client,
     getLogger: () => this.#logger,
     getStations: () => this.stations,
-    getAudioDispatcher: () => this.#audioDispatcher
+    makeAudienceGroup: (guildId: string) => this.makeAudienceGroup(guildId),
   }
 
   private makeAdapter(guildId: Guild['id']): GuildStateAdapter {
@@ -306,7 +307,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   ensureGuildState(guildId: Guild['id']) {
     if (!this.#guildStates.has(guildId)) {
-      this.#guildStates.set(guildId, new GuildState(this, guildId, this.makeAdapter(guildId)));
+      this.#guildStates.set(guildId, new GuildState(guildId, this.makeAdapter(guildId)));
     }
 
     return this.#guildStates.get(guildId)!;
