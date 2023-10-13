@@ -130,7 +130,7 @@ async function main() {
 
       for (const [id, desc] of Object.entries(musicCollections)) {
         if (!desc.auxiliary) {
-          station.addCollection({
+          await station.addCollection({
             id,
             ...desc,
             logPrefix: stationId
