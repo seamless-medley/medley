@@ -112,8 +112,6 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
         automaton.once('ready', () => resolve(automaton));
 
         await automaton.login();
-
-        return automaton;
       }))
     );
 

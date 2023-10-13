@@ -185,8 +185,6 @@ async function main() {
       automaton.once('ready', () => resolve(automaton));
 
       await automaton.login();
-
-      return automaton;
     }))
   );
 
