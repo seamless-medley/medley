@@ -374,7 +374,6 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
 	prepareAudioPacket(opusPacket: Buffer): Buffer | undefined {
 		if (this.#state.status !== ConnectionStatus.Ready) {
-      console.log('Cannot prepareAudioPacket', this.#state.status);
       return;
     }
 
@@ -384,7 +383,6 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
 	dispatchAudio() {
 		if (this.#state.status !== ConnectionStatus.Ready) {
-      console.log('Cannot dispatchAudio', this.#state.status);
       return false;
     }
 
@@ -399,7 +397,6 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
 	#sendAudioPacket(audioPacket: Buffer) {
 		if (this.#state.status !== ConnectionStatus.Ready) {
-      console.log('Cannot sendAudioPacket', this.#state.status);
       return;
     }
 

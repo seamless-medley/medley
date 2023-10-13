@@ -194,7 +194,6 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 
   dispatchAudio(): boolean {
 		if (this.#state.status !== VoiceConnectorStatus.Ready) {
-      console.log('Cannot dispatchAudio', this.#state.status);
       return false;
     }
 

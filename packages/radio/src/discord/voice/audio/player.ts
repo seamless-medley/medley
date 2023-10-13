@@ -34,7 +34,6 @@ export class DiscordAudioPlayer extends Exciter implements IExciter {
       return existing;
     }
 
-    console.log('Creating new exciter for', station.name);
     const newExiter = registerExciter(new DiscordAudioPlayer(station, bitrate));
     onNew?.(newExiter);
     return newExiter;
