@@ -382,8 +382,7 @@ export class Station extends TypedEmitter<StationEvents> {
         const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
 
         if (located) {
-          // isSameCollection = true;
-          this.boombox.setCrateIndex(located.index);
+          this.setCrateIndex(located.index);
         }
       }
     }
