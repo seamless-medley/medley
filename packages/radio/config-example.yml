@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/vittee/medley/develop/packages/radio/medley-discord-schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/seamless-medley/medley/56f73114303015166b8589dbdfea87d03878f155/packages/radio/medley-discord-schema.json
 
 db:
   driver: mongodb
@@ -229,3 +229,4 @@ automatons:
   medley:
     botToken: 'invalid_token'
     clientId: 'unknown_id'
+
