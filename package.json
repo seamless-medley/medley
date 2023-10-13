@@ -50,5 +50,10 @@
       "@npmcli/move-file": "*",
       "string-similarity": "*"
     }
+  },
+  "commitlint": {
+    "rules": {
+      "header-max-length": [2, "always", 200]
+    }
   }
 }
