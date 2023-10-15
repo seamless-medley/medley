@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { creatorNames } from "../trackmessage/creator";
+import { creatorNames } from "../discord/trackmessage/creator";
 
 export const TrackMessageConfig = z.object({
   type: z.enum(creatorNames).optional(),

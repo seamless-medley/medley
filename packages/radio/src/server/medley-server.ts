@@ -10,7 +10,7 @@ import { ExposedColection } from "./expose/collection";
 import { Unpacked } from "../types";
 import { AudioServer } from "./audio/transport";
 import { ExposedDeck } from "./expose/deck";
-import { Config } from "../discord/config";
+import { Config } from "../config";
 import { MedleyAutomaton } from "../discord/automaton";
 
 const logger = createLogger({ name: 'medley-server' });

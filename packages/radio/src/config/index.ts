@@ -8,14 +8,12 @@ import { pickBy } from 'lodash';
 import { dollar as phrase } from "paraphrase";
 import { ServerConfig } from './server';
 
-// TODO: Re-locate config out of discord folder
-
 async function parseYAML(s: string) {
   return parse(s);
 }
 
 const Config = z.object({
-  server: ServerConfig.optional(),
+  server: ServerConfig.optional(), // TODO: make this mandatory
   db: DbConfig,
   stations: z.record(StationConfig, { required_error: 'No stations' }),
   automatons: z.record(AutomatonConfig, { required_error: 'No automatons' })

@@ -7,7 +7,7 @@ import { createLogger, Medley } from '@seamless-medley/core';
 import { SocketServer as SocketIOServer } from '../socket';
 import { MedleyServer } from './medley-server';
 import { AudioServer } from './audio/transport';
-import { Config, loadConfig } from '../discord/config';
+import { Config, loadConfig } from '../config';
 import { MedleyAutomaton } from '../discord/automaton';
 
 const logger = createLogger({ name: 'main' });

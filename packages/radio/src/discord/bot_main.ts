@@ -4,7 +4,7 @@ import { Command } from '@commander-js/extra-typings';
 import { shuffle } from "lodash";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton } from "./automaton";
-import { loadConfig } from "./config";
+import { loadConfig } from "../config";
 import { ZodError } from "zod";
 import normalizePath from "normalize-path";
 
