@@ -13,7 +13,7 @@ async function parseYAML(s: string) {
 }
 
 const Config = z.object({
-  server: ServerConfig.optional(), // TODO: make this mandatory
+  server: ServerConfig,
   db: DbConfig,
   stations: z.record(StationConfig, { required_error: 'No stations' }),
   automatons: z.record(AutomatonConfig, { required_error: 'No automatons' })
@@ -21,14 +21,22 @@ const Config = z.object({
   required_error: 'Configuration file is empty or malformed'
 }).strict();
 
+const DiscordOnlyConfig = Config.omit({
+  server: true
+});
+
 export type Config = z.infer<typeof Config>;
+
+export type DiscordOnlyConfig = z.infer<typeof DiscordOnlyConfig>;
 
 const catchError = (e: any) => e as Error;
 
 /**
  * Parse configurations from file
  */
-export async function loadConfig(configFile: string): Promise<Config | Error> {
+export async function loadConfig(configFile: string, discordOnly: true): Promise<DiscordOnlyConfig | Error>;
+export async function loadConfig(configFile: string, discordOnly: false): Promise<Config | Error>;
+export async function loadConfig(configFile: string, discordOnly: boolean): Promise<Config | DiscordOnlyConfig | Error> {
   const fileData = await readFile(configFile).catch(catchError);
 
   if (fileData instanceof Error) {
@@ -45,7 +53,7 @@ export async function loadConfig(configFile: string): Promise<Config | Error> {
     return data;
   }
 
-  const parsed = await Config.safeParseAsync(data ?? undefined);
+  const parsed = await (discordOnly ? DiscordOnlyConfig : Config).safeParseAsync(data ?? undefined);
 
   return (parsed.success) ? parsed.data : parsed.error;
 }

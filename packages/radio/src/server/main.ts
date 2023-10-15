@@ -81,7 +81,7 @@ async function main() {
   logger.info('node-medley version:', `${info.version.major}.${info.version.minor}.${info.version.patch}`);
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
 
-  const configs = await loadConfig(configFile);
+  const configs = await loadConfig(configFile, false);
 
   if (configs instanceof Error) {
     logger.fatal('Error loading configurations:');
