@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/vittee/medley/develop/packages/radio/medley-discord-schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/vittee/medley/develop/packages/radio/medley-schema.json
 
 db:
   driver: mongodb
