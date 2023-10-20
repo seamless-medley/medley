@@ -1,3 +1,4 @@
+import { createServer } from 'net';
 import http from 'http';
 import express from 'express';
 import { ZodError } from "zod";
@@ -30,10 +31,29 @@ function getVersionLine() {
   return `${runtime} version: ${version}; abi=${process.versions.modules}; uv=${process.versions.uv}; v8=${process.versions.v8}`;
 }
 
+function isPortAvailable(port: number, address?: string) {
+  return new Promise<boolean>((resolve, reject) => {
+    const probe = createServer()
+      .once('error', () => resolve(false))
+      .once('listening', () => {
+        probe.close()
+          .once('close', () => resolve(true))
+      })
+      .listen(port, address);
+  });
+}
 
 async function startServer(config: Config) {
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<[MedleyServer, http.Server]>(async (resolve, reject) => {
     const httpServer = http.createServer(express());
+
+    const listeningPort = +(process.env.PORT || config.server?.port || 3001);
+    const listeningAddr = (process.env.BIND || config.server?.address)?.toString();
+
+    if (!await isPortAvailable(listeningPort)) {
+      reject(new Error('Address is already in used'));
+      return;
+    }
 
     const server = new MedleyServer(
       new SocketIOServer(httpServer, '/socket.io'),
@@ -46,15 +66,13 @@ async function startServer(config: Config) {
         reject(e);
       }
 
-      const listeningPort = +(process.env.PORT || config.server?.port || 3001);
-
       httpServer
         .once('error', listenErrorHandler)
-        .listen(listeningPort, () => {
+        .listen(listeningPort, listeningAddr, () => {
           httpServer.off('error', listenErrorHandler);
           logger.info('Listening on port', listeningPort);
 
-          resolve();
+          resolve([server, httpServer]);
         });
     });
   });
