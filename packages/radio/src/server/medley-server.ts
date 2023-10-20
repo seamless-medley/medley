@@ -8,7 +8,7 @@ import { ExposedStation } from "./expose/station";
 
 import { ExposedColection } from "./expose/collection";
 import { Unpacked } from "../types";
-import { AudioServer } from "./audio/transport";
+import { AudioWebSocketServer } from "./audio/transport";
 import { ExposedDeck } from "./expose/deck";
 import { Config } from "../config";
 import { MedleyAutomaton } from "../discord/automaton";
@@ -19,7 +19,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
   #musicDb!: MusicDb;
 
-  constructor(io: SocketServer, private audioServer: AudioServer, private configs: Config) {
+  constructor(io: SocketServer, private audioServer: AudioWebSocketServer, private configs: Config) {
     super(io);
     //
     this.connectMongoDB().then(this.initialize);

@@ -8,10 +8,10 @@ import { AudioSocketCommand, AudioSocketReply } from "../../socket/audio";
 import { AudioDispatcher } from "../../audio/exciter/dispatcher";
 import { WebStreamExciter } from "./stream";
 
-export class AudioServer extends EventEmitter {
+export class AudioWebSocketServer extends EventEmitter {
   #server: WebSocketServer;
 
-  #sockets: AudioSocket[] = [];
+  #sockets: AudioWebSocket[] = [];
 
   #dispatcher = new AudioDispatcher();
 
@@ -41,7 +41,7 @@ export class AudioServer extends EventEmitter {
   }
 
   private onWebSocket = (socket: WebSocket) => {
-    this.#sockets.push(new AudioSocket(this, socket));
+    this.#sockets.push(new AudioWebSocket(this, socket));
 
     socket.on('close', () => {
       const index = this.#sockets.findIndex(a => a.socket === socket);
@@ -52,9 +52,9 @@ export class AudioServer extends EventEmitter {
     });
   }
 
-  #stationListeners = new Map<Station['id'], Set<AudioSocket>>();
+  #stationListeners = new Map<Station['id'], Set<AudioWebSocket>>();
 
-  tuneAudioSocket(stationId: Station['id'], socket: AudioSocket) {
+  tuneAudioSocket(stationId: Station['id'], socket: AudioWebSocket) {
     const station = [...this.#published.keys()].find(s => s.id === stationId);
     if (!station) {
       return;
@@ -113,10 +113,10 @@ export class AudioServer extends EventEmitter {
   }
 }
 
-class AudioSocket {
+class AudioWebSocket {
   #socketId?: string;
 
-  constructor(readonly server: AudioServer, readonly socket: WebSocket) {
+  constructor(readonly server: AudioWebSocketServer, readonly socket: WebSocket) {
     socket.on('message', this.#handleMessage);
   }
 

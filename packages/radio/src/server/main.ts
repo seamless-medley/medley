@@ -7,7 +7,7 @@ import { Client, GatewayIntentBits } from "discord.js";
 import { createLogger, Medley } from '@seamless-medley/core';
 import { SocketServer as SocketIOServer } from '../socket';
 import { MedleyServer } from './medley-server';
-import { AudioServer } from './audio/transport';
+import { AudioWebSocketServer } from './audio/transport';
 import { Config, loadConfig } from '../config';
 import { MedleyAutomaton } from '../discord/automaton';
 
@@ -57,7 +57,7 @@ async function startServer(config: Config) {
 
     const server = new MedleyServer(
       new SocketIOServer(httpServer, '/socket.io'),
-      new AudioServer(httpServer),
+      new AudioWebSocketServer(httpServer),
       config
     );
 
