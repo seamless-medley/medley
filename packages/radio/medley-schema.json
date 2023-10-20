@@ -1,13 +1,40 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema",
-  "title": "Medley Discord",
-  "description": "Configuration file for Medley/Radio Discord bot",
+  "title": "Medley",
+  "description": "Configuration file for Medley",
   "type": "object",
   "properties": {
+    "server": {
+      "properties": {
+        "port": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 65535
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "IPv4",
+              "pattern": "^(25[0-5]|2[0-4][0-9]|1?[0-9][0-9]{1,2})(\\.(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})){3}$"
+            },
+            {
+              "type": "string",
+              "description": "IPv6",
+              "pattern": "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
     "db": {
       "$ref": "#/$defs/db"
     },
     "stations": {
+      "title": "Stations",
+      "description": "List of stations",
       "type": "object",
       "patternProperties": {
         "^.+$": {
@@ -16,6 +43,8 @@
       }
     },
     "automatons": {
+      "title": "Automaton",
+      "description": "List of Discord bot",
       "type": "object",
       "patternProperties": {
         "^.+$": {
@@ -68,7 +97,7 @@
     },
     "station": {
       "title": "Station",
-      "description": "Station",
+      "description": "Define a station",
       "type": "object",
       "properties": {
         "name": {
@@ -497,8 +526,7 @@
             "max": {
               "type": "integer",
               "description": "Number of last messages to be kept in a guild",
-              "minimum": 0,
-              "default": 3
+              "minimum": 0
             },
             "channel": {
               "type": "string",
