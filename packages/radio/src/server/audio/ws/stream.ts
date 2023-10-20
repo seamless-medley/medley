@@ -1,7 +1,7 @@
 import { Station } from "@seamless-medley/core";
 import { encode } from 'notepack.io';
-import { IExciter, Exciter, ICarrier } from "../../audio/exciter";
-import { AudioTransportExtraPayload } from "../../audio/types";
+import { IExciter, Exciter, ICarrier } from "../../../audio/exciter";
+import { AudioTransportExtraPayload } from "../../../audio/types";
 
 interface AudioStreamPlayerEvents {
   packet(packet: Buffer): void;

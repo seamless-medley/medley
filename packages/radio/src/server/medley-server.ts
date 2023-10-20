@@ -8,7 +8,7 @@ import { ExposedStation } from "./expose/station";
 
 import { ExposedColection } from "./expose/collection";
 import { Unpacked } from "../types";
-import { AudioWebSocketServer } from "./audio/transport";
+import { AudioWebSocketServer } from "./audio/ws/transport";
 import { ExposedDeck } from "./expose/deck";
 import { Config } from "../config";
 import { MedleyAutomaton } from "../discord/automaton";
