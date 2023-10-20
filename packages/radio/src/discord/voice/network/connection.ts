@@ -7,6 +7,7 @@ import { EncryptionMode, ENCRYPTION_MODES, ReadyVoicePayload } from "./payload";
 import { SocketConfig, UDPConnection } from "./udp";
 import { WebSocketConnection, WebSocketConnectionEvents } from "./websocket";
 import * as secretbox from '../secretbox';
+import { RTPData, createRTPHeader, incRTPData } from "../../../audio/network/rtp";
 
 export enum ConnectionStatus {
 	Opening,
@@ -80,16 +81,13 @@ export type ConnectionOptions = {
 	userId: string;
 }
 
-export interface ConnectionData {
+export interface ConnectionData extends RTPData {
 	encryptionMode: EncryptionMode;
 	nonce: number;
 	nonceBuffer: Buffer;
 	packetsPlayed: number;
 	secretKey: Uint8Array;
-	sequence: number;
 	speaking: boolean;
-	ssrc: number;
-	timestamp: number;
 }
 
 export interface VoiceConnectionEvents {
@@ -355,14 +353,10 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
   }
 
   #createAudioPacket(opusPacket: Buffer, connectionData: ConnectionData) {
-    const { sequence, timestamp, ssrc } = connectionData;
-
-    const header = Buffer.alloc(12);
-    header.writeUInt8(0x80, 0);
-    header.writeUInt8(0x78, 1);
-    header.writeUIntBE(sequence, 2, 2);
-		header.writeUIntBE(timestamp, 4, 4);
-		header.writeUIntBE(ssrc, 8, 4);
+    const header = createRTPHeader({
+      ...connectionData,
+      payloadType: 0x78
+    });
 
     header.copy(this.#nonceBuffer, 0, 0, 12);
 
@@ -402,16 +396,8 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
 		const { connectionData } = this.#state;
 		connectionData.packetsPlayed++;
-		connectionData.sequence++;
-		connectionData.timestamp += 960;
 
-		if (connectionData.sequence >= 2 ** 16) {
-      connectionData.sequence = 0;
-    }
-
-		if (connectionData.timestamp >= 2 ** 32) {
-      connectionData.timestamp = 0;
-    }
+		incRTPData(connectionData);
 
 		this.setSpeaking(true);
 		this.#state.udp.send(audioPacket);
