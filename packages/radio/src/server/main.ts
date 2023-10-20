@@ -80,7 +80,7 @@ async function startServer(config: Config) {
 
 async function main() {
   const program = new Command()
-    .name('medley-discord')
+    .name('medley')
     .argument('<config-file>')
     .option('-r, --register')
     .parse(process.argv);
@@ -142,14 +142,18 @@ async function main() {
 
   logger.info('Initializing');
 
-  await startServer(configs)
+  const [medleyServer, httpServer] = await startServer(configs)
     .catch(e => {
       logger.error('Error starting server,', e.message);
       process.exit(1);
     });
 
   process.on('SIGINT', () => {
-    process.exit(0);
+    medleyServer.terminate();
+    httpServer.close();
+    //
+    process.exitCode = 0;
+    process.kill(process.pid);
   });
 }
 

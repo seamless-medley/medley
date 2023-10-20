@@ -35,7 +35,7 @@ export type SocketServerEvents = {
 }
 
 export class SocketServerController<Remote> extends TypedEmitter<SocketServerEvents> {
-  constructor(private io: SocketServer) {
+  constructor(protected io: SocketServer) {
     super();
     io.on('connection', socket => this.addSocket(socket));
   }

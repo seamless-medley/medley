@@ -157,6 +157,11 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     return this.#musicDb;
   }
 
+  terminate() {
+    this.io.close();
+    this.#musicDb?.dispose();
+  }
+
   registerStation(station: Station) {
     station.on('collectionAdded', this.handleStationCollectionAdded);
     station.on('collectionRemoved', this.handleStationCollectionRemoved);
