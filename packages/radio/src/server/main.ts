@@ -43,23 +43,23 @@ function isPortAvailable(port: number, address?: string) {
   });
 }
 
-async function startServer(config: Config) {
+async function startServer(configs: Config) {
   return new Promise<[MedleyServer, http.Server]>(async (resolve, reject) => {
     const httpServer = http.createServer(express());
 
-    const listeningPort = +(process.env.PORT || config.server?.port || 3001);
-    const listeningAddr = (process.env.BIND || config.server?.address)?.toString();
+    const listeningPort = +(process.env.PORT || configs.server?.port || 3001);
+    const listeningAddr = (process.env.BIND || configs.server?.address)?.toString();
 
     if (!await isPortAvailable(listeningPort)) {
       reject(new Error('Address is already in used'));
       return;
     }
 
-    const server = new MedleyServer(
-      new SocketIOServer(httpServer, '/socket.io'),
-      new AudioWebSocketServer(httpServer),
-      config
-    );
+    const server = new MedleyServer({
+      io: new SocketIOServer(httpServer, '/socket.io'),
+      audioServer: new AudioWebSocketServer(httpServer),
+      configs
+    });
 
     server.once('ready', () => {
       const listenErrorHandler = (e: Error) => {

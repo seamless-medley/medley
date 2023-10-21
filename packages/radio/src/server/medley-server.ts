@@ -15,19 +15,32 @@ import { MedleyAutomaton } from "../discord/automaton";
 
 const logger = createLogger({ name: 'medley-server' });
 
+export type MedleyServerOptions = {
+  io: SocketServer;
+  audioServer: AudioWebSocketServer;
+  configs: Config;
+}
+
 export class MedleyServer extends SocketServerController<RemoteTypes> {
 
   #musicDb!: MusicDb;
 
-  constructor(io: SocketServer, private audioServer: AudioWebSocketServer, private configs: Config) {
-    super(io);
+  #audioServer: AudioWebSocketServer;
+
+  #configs: Config;
+
+  constructor(options: MedleyServerOptions) {
+    super(options.io);
+    //
+    this.#audioServer = options.audioServer;
+    this.#configs = options.configs;
     //
     this.connectMongoDB().then(this.initialize);
   }
 
   private initialize = async () => {
     const stations = await Promise.all(
-      Object.entries(this.configs.stations).map(([stationId, stationConfig]) => new Promise<Station>(async (resolve) => {
+      Object.entries(this.#configs.stations).map(([stationId, stationConfig]) => new Promise<Station>(async (resolve) => {
         const { intros, requestSweepers, musicCollections, sequences, sweeperRules, ...config } = stationConfig;
 
         logger.info('Constructing station:', stationId);
@@ -79,7 +92,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
         }));
 
         this.registerStation(station);
-        this.audioServer.publish(station);
+        this.#audioServer.publish(station);
 
         resolve(station);
 
@@ -97,7 +110,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
     logger.info('Completed stations construction');
 
-    const automatons = await Promise.all(Object.entries(this.configs.automatons).map(
+    const automatons = await Promise.all(Object.entries(this.#configs.automatons).map(
       ([id, { botToken, clientId, baseCommand, ...config }]) => new Promise<MedleyAutomaton>(async (resolve) => {
         const allowedStations = config.stations?.length ? stations.filter(s => config.stations!.includes(s.id)) : stations;
         const stationRepo = new StationRegistry(...allowedStations);
@@ -130,7 +143,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   }
 
   private async connectMongoDB() {
-    const dbConfig = this.configs.db;
+    const dbConfig = this.#configs.db;
 
     try {
       const newInstance = await new MongoMusicDb().init({
