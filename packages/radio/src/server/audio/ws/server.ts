@@ -6,7 +6,7 @@ import { Duplex } from "stream";
 import { WebSocket, WebSocketServer } from "ws";
 import { AudioSocketCommand, AudioSocketReply } from "../../../socket/audio";
 import { AudioDispatcher } from "../../../audio/exciter/dispatcher";
-import { WebStreamExciter } from "./stream";
+import { WebSocketExciter } from "./stream";
 
 export class AudioWebSocketServer extends EventEmitter {
   #server: WebSocketServer;
@@ -15,7 +15,7 @@ export class AudioWebSocketServer extends EventEmitter {
 
   #dispatcher = new AudioDispatcher();
 
-  #published = new Map<Station, WebStreamExciter>();
+  #published = new Map<Station, WebSocketExciter>();
 
   constructor(httpServer: http.Server) {
     super();
@@ -82,7 +82,7 @@ export class AudioWebSocketServer extends EventEmitter {
   }
 
   async publish(station: Station) {
-    const player = new WebStreamExciter(station);
+    const player = new WebSocketExciter(station);
 
     player.on('packet', (packet) => {
       const listeners = this.#stationListeners.get(station.id);

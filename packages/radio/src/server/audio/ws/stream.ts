@@ -7,7 +7,7 @@ interface AudioStreamPlayerEvents {
   packet(packet: Buffer): void;
 }
 
-export class WebStreamExciter extends Exciter<AudioStreamPlayerEvents> implements IExciter {
+export class WebSocketExciter extends Exciter<AudioStreamPlayerEvents> implements IExciter {
   constructor(station: Station) {
     super(
       station,
@@ -55,7 +55,7 @@ export class WebStreamExciter extends Exciter<AudioStreamPlayerEvents> implement
   }
 
   addCarrier(carrier: ICarrier) {
-    console.warn('[WebStreamExciter] Adding carrier is not supported');
+    console.warn('[WebSocketExciter] Adding carrier is not supported');
     return 0;
   }
 
