@@ -6,7 +6,7 @@ import { Duplex } from "stream";
 import { WebSocket, WebSocketServer } from "ws";
 import { AudioSocketCommand, AudioSocketReply } from "../../../socket/audio";
 import { AudioDispatcher } from "../../../audio/exciter/dispatcher";
-import { WebSocketExciter } from "./stream";
+import { WebSocketExciter } from "./exciter";
 
 export class AudioWebSocketServer extends EventEmitter {
   #server: WebSocketServer;
