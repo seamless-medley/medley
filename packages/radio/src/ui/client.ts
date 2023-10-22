@@ -3,7 +3,7 @@ import { EventEmitter } from "eventemitter3";
 import { io, Socket } from "socket.io-client";
 import msgpackParser from 'socket.io-msgpack-parser';
 import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents, RemoteObserveOptions } from '../socket/events';
-import { isProperty } from "../socket/remote/utils";
+import { isProperty } from "../socket/utils";
 import { Stub } from "../socket/stub";
 import { $AnyProp, AnyProp, ObservedPropertyChange, PickMethod, PickProp, Remotable } from "../socket/types";
 import { Callable, ParametersOf, ReturnTypeOf } from "../types";

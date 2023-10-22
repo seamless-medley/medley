@@ -1,4 +1,4 @@
-import { StationAudioLevels } from "@seamless-medley/core";
+import type { StationAudioLevels } from "@seamless-medley/core";
 import { gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { mapValues } from "lodash";
 import { compose } from "lodash/fp";

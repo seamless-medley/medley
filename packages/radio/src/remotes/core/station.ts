@@ -1,5 +1,5 @@
 import { DeckIndex, DeckPositions, PlayState } from "@seamless-medley/core";
-import * as deckPO from "../po/deck";
+import * as deckPO from "./po/deck";
 
 export interface Station {
   readonly id: string;

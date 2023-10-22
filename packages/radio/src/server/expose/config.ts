@@ -1,6 +1,6 @@
 import { Options as MongoDBOptions } from "../../musicdb/mongo";
 import { $Exposing, Exposable } from "../../socket/expose";
-import { Config } from "../../socket/remote";
+import { Config } from "../../remotes/core";
 import { PickProp } from "../../socket/types";
 
 export type ExposedConfigCallback = {

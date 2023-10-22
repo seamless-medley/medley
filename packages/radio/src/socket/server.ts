@@ -8,7 +8,7 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { getDependents } from "./decorator";
 import { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "./events";
 import { $Exposing } from "./expose";
-import { isProperty, isPublicPropertyName, propertyDescriptorOf } from "./remote/utils";
+import { isProperty, isPublicPropertyName, propertyDescriptorOf } from "./utils";
 import { ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents } from "./types";
 
 export class SocketServer extends IOServer<ClientEvents, ServerEvents> {

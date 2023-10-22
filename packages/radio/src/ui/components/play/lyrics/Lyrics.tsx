@@ -1,6 +1,6 @@
 import React from 'react';
 import { Line, Container, Ticker, LineColors } from './elements';
-import { LyricLine, Lyrics as CoreLyrics } from '@seamless-medley/core';
+import type { LyricLine, Lyrics as CoreLyrics } from '@seamless-medley/core';
 import { clamp, debounce, findIndex } from 'lodash';
 // import type { TrackInfo, LyricLine } from 'common/types';
 

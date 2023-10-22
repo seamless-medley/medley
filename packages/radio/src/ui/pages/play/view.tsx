@@ -26,7 +26,7 @@ import { PlayHead } from "../../components/play/playhead/PlayHead";
 import { castArray, chain, random, sortBy, trim, uniq } from "lodash";
 import { useRemotableProp } from "../../hooks/remotable";
 import { useSetState } from "@mantine/hooks";
-import { DeckIndex, Metadata } from "@seamless-medley/core";
+import type { DeckIndex, Metadata } from "@seamless-medley/core";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 

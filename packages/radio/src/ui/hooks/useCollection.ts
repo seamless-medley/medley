@@ -1,4 +1,4 @@
-import { StubCollection } from "../stubs/collection";
+import { StubCollection } from "../stubs/core/collection";
 import { useSurrogate } from "./surrogate";
 
 export function useCollection(id?: string) {

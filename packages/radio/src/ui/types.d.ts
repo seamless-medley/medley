@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 import type { Root } from "react-dom/client";
-import type { RemoteTypes } from "../socket/remote";
+import type { RemoteTypes } from "../remotes/core";
 import type { Client } from "./client";
 
 declare global {

@@ -1,4 +1,4 @@
-import { StubStation } from "../stubs/station";
+import { StubStation } from "../stubs/core/station";
 import { useSurrogate } from "./surrogate";
 
 export function useStation(id: string) {

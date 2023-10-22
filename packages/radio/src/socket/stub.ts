@@ -1,4 +1,4 @@
-import { propertyDescriptorOf } from "./remote/utils";
+import { propertyDescriptorOf } from "./utils";
 import { WithoutEvents } from "./types";
 
 type StubCtor<T> = abstract new () => WithoutEvents<T>;

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { DeckIndex, DeckPositions } from "@seamless-medley/core";
+import type { DeckIndex, DeckPositions } from "@seamless-medley/core";
 import { useDeckInfo } from "../hooks/useDeck";
 import { Box, Image, Text } from "@mantine/core";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
