@@ -20,7 +20,7 @@ import {
 
 import { TrackMessage } from "../trackmessage/types";
 import { VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
-import { AudioDispatcher, IExciter } from "../../audio/exciter";
+import { AudioDispatcher, ICarriableExciter } from "../../audio/exciter";
 import { DiscordAudioPlayer } from "../voice/audio/player";
 import { GuildSpecificConfig, MedleyAutomaton } from "./automaton";
 import { TrackMessageCreator } from "../trackmessage/creator/base";
@@ -440,7 +440,7 @@ export type JoinResult = {
 
 export type StationLink = {
   station: Station;
-  exciter: IExciter;
+  exciter: ICarriableExciter;
 }
 
 export function updateStationAudiences(station: Station, groupId: AudienceGroupId, channel: VoiceBasedChannel) {

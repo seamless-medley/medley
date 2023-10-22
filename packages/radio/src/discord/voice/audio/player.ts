@@ -1,10 +1,10 @@
 import { cpus } from "node:os";
 import { RequestAudioOptions, Station } from "@seamless-medley/core";
-import { Exciter, getExciterFromCache, IExciter, registerExciter, unregisterExciter } from "../../../audio/exciter";
+import { Exciter, getExciterFromCache, ICarriableExciter, IExciter, registerExciter, unregisterExciter } from "../../../audio/exciter";
 
 const NUM_CPUS = cpus().length;
 
-export class DiscordAudioPlayer extends Exciter implements IExciter {
+export class DiscordAudioPlayer extends Exciter implements ICarriableExciter {
   private constructor(station: Station, bitrate = 256_000) {
     super(
       station,
@@ -22,7 +22,7 @@ export class DiscordAudioPlayer extends Exciter implements IExciter {
     format: 'Int16LE'
   }
 
-  static make(station: Station, bitrate: number, onNew?: (exciter: IExciter) => any) {
+  static make(station: Station, bitrate: number, onNew?: (exciter: IExciter) => any): DiscordAudioPlayer {
     const existing = getExciterFromCache({
       constructor: DiscordAudioPlayer,
       station,
@@ -31,7 +31,7 @@ export class DiscordAudioPlayer extends Exciter implements IExciter {
     });
 
     if (existing && existing.refCount < NUM_CPUS) {
-      return existing;
+      return existing as DiscordAudioPlayer;
     }
 
     const newExiter = registerExciter(new DiscordAudioPlayer(station, bitrate));

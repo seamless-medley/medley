@@ -26,16 +26,18 @@ export interface IExciter {
 
   get isPlayable(): boolean;
 
-  addCarrier(carrier: ICarrier): number;
-  removeCarrier(carrier: ICarrier): number;
-  hasCarrier(): boolean;
-
   incRef(): number;
 
   get refCount(): number;
 
   prepare(): void;
   dispatch(): void;
+}
+
+export interface ICarriableExciter extends IExciter {
+  addCarrier(carrier: ICarrier): number;
+  removeCarrier(carrier: ICarrier): number;
+  hasCarrier(): boolean;
 }
 
 export interface ICarrier {
@@ -83,7 +85,7 @@ export function getExciterFromCache(registration: ExciterRegistration): IExciter
   }
 }
 
-export function registerExciter(exciter: IExciter): IExciter {
+export function registerExciter<E extends IExciter>(exciter: E): E {
   const registration: ExciterRegistration = {
     constructor: exciter.constructor,
     station: exciter.station,
