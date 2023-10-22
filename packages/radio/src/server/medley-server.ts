@@ -4,12 +4,12 @@ import { MusicDb, Station, StationEvents, StationRegistry, TrackCollection, Watc
 import { MongoMusicDb } from "../musicdb/mongo";
 import { Socket, SocketServer, SocketServerController } from "../socket";
 import { RemoteTypes } from "../remotes/core";
-import { ExposedStation } from "./expose/station";
+import { ExposedStation } from "./expose/core/station";
 
-import { ExposedColection } from "./expose/collection";
+import { ExposedColection } from "./expose/core/collection";
 import { Unpacked } from "../types";
 import { AudioWebSocketServer } from "./audio/ws/server";
-import { ExposedDeck } from "./expose/deck";
+import { ExposedDeck } from "./expose/core/deck";
 import { Config } from "../config";
 import { MedleyAutomaton } from "../discord/automaton";
 
