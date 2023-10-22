@@ -1,5 +1,5 @@
 import { createRoot, type Root } from "react-dom/client";
-import type { RemoteTypes } from "../remotes/core";
+import type { RemoteTypes } from "../remotes";
 import { Client } from "./client";
 
 let root: Root;

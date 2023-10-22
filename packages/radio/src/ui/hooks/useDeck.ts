@@ -1,6 +1,6 @@
 import type { DeckIndex } from "@seamless-medley/core";
 import { useCallback, useEffect, useState } from "react";
-import { Deck } from "../../remotes/core";
+import { Deck } from "../../remotes/core/deck";
 import { $AnyProp } from "../../socket/types";
 import { useSurrogate } from "./surrogate";
 import { StubDeck } from "../stubs/core/deck";

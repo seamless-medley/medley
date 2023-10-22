@@ -9,7 +9,7 @@ import { useRemotableProps } from '../../hooks/remotable';
 import { VUMeter } from '../../components/VUMeter';
 import { useCollection } from '../../hooks/useCollection';
 import { Track } from '../../../remotes/core/po/track';
-import { Station } from '../../../remotes/core';
+import { Station } from '../../../remotes';
 import { PlayDeck } from '../../components';
 import { route } from './route';
 import { times } from 'lodash';

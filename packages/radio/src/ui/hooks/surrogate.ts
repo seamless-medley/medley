@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useForceUpdate } from "@mantine/hooks";
-import type { RemoteTypes } from "../../remotes/core";
+import type { RemoteTypes } from "../../remotes";
 import type { Stub } from "../../socket/stub";
 import type { Remotable } from "../../socket/types";
 import { useRemotableProps } from "./remotable";

@@ -1,5 +1,5 @@
 import { noop } from "lodash";
-import { Collection } from "../../../remotes/core";
+import { Collection } from "../../../remotes/core/collection";
 import { StubOf } from "../../../socket/stub";
 
 export const StubCollection = StubOf<Collection>(class StubbingCollecting {

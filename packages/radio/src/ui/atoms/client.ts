@@ -1,5 +1,5 @@
 import { atom } from "jotai";
-import type { RemoteTypes } from "../../remotes/core";
+import type { RemoteTypes } from "../../remotes";
 import type { Client } from "../client";
 import { initClient } from "../init";
 

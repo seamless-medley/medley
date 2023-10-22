@@ -3,7 +3,7 @@ import normalizePath from "normalize-path";
 import { MusicDb, Station, StationEvents, StationRegistry, TrackCollection, WatchTrackCollection, createLogger, scanDir } from "@seamless-medley/core";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { Socket, SocketServer, SocketServerController } from "../socket";
-import { RemoteTypes } from "../remotes/core";
+import { RemoteTypes } from "../remotes";
 import { ExposedStation } from "./expose/core/station";
 
 import { ExposedColection } from "./expose/core/collection";
