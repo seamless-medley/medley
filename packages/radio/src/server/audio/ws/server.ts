@@ -1,4 +1,4 @@
-import { Station } from "@seamless-medley/core";
+import { AudienceType, Station, makeAudienceGroupId } from "@seamless-medley/core";
 import EventEmitter from "events";
 import http, { IncomingMessage } from "http";
 import { decode } from "notepack.io";
@@ -41,7 +41,8 @@ export class AudioWebSocketServer extends EventEmitter {
   }
 
   private onWebSocket = (socket: WebSocket) => {
-    this.#sockets.push(new AudioWebSocket(this, socket));
+    const audioSocket = new AudioWebSocket(this, socket);
+    this.#sockets.push(audioSocket);
 
     socket.on('close', () => {
       const index = this.#sockets.findIndex(a => a.socket === socket);
@@ -49,19 +50,34 @@ export class AudioWebSocketServer extends EventEmitter {
       if (index > -1) {
         this.#sockets.splice(index, 1);
       }
+
+      const { stationId, socketId } = audioSocket;
+
+      if (stationId && socketId) {
+        const station = this.#stationFromId(stationId);
+
+        station?.removeAudience(
+          makeAudienceGroupId(AudienceType.Web, `ws`),
+          socketId
+        );
+      }
     });
   }
 
   #stationListeners = new Map<Station['id'], Set<AudioWebSocket>>();
 
-  tuneAudioSocket(stationId: Station['id'], socket: AudioWebSocket) {
-    const station = [...this.#published.keys()].find(s => s.id === stationId);
+  #stationFromId(stationId: Station['id']) {
+    return [...this.#published.keys()].find(s => s.id === stationId);
+  }
+
+  tuneAudioSocket(stationId: Station['id'], socket: AudioWebSocket): boolean {
+    const station = this.#stationFromId(stationId);
     if (!station) {
-      return;
+      return false;
     }
 
     if (this.#stationListeners.get(stationId)?.has(socket)) {
-      return;
+      return true;
     }
 
     // Remove socket from old station
@@ -78,7 +94,14 @@ export class AudioWebSocketServer extends EventEmitter {
 
     this.#stationListeners.get(stationId)!.add(socket);
 
-    // TODO: Station audience
+    if (socket.socketId) {
+      station.addAudience(
+        makeAudienceGroupId(AudienceType.Web, `ws`),
+        socket.socketId
+      );
+    }
+
+    return true;
   }
 
   async publish(station: Station) {
@@ -116,6 +139,8 @@ export class AudioWebSocketServer extends EventEmitter {
 class AudioWebSocket {
   #socketId?: string;
 
+  #stationId?: Station['id'];
+
   constructor(readonly server: AudioWebSocketServer, readonly socket: WebSocket) {
     socket.on('message', this.#handleMessage);
   }
@@ -132,13 +157,19 @@ class AudioWebSocket {
 
       case AudioSocketCommand.Tune:
         const stationId = data;
-        this.server.tuneAudioSocket(stationId, this);
+        if (this.server.tuneAudioSocket(stationId, this)) {
+          this.#stationId = stationId;
+        }
         break;
     }
   }
 
   get socketId() {
     return this.#socketId;
+  }
+
+  get stationId() {
+    return this.#stationId;
   }
 
   sendPayload(reply: AudioSocketReply, data: Buffer) {

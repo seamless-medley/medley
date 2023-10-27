@@ -1,4 +1,4 @@
-import type { Station } from '@seamless-medley/core';
+import { AudienceType, makeAudienceGroupId, type Station } from '@seamless-medley/core';
 import { type types, createWorker } from 'mediasoup';
 import { Socket } from 'socket.io';
 import { RTCExciter } from './exciter';
@@ -17,6 +17,7 @@ export type ClientTransportInfo = {
 export type ClientTransportData = {
   socket: Socket<{}>;
   disconnectHandler: () => void;
+  stationId?: string;
 }
 
 export type ClientConsumerInfo = {
@@ -114,6 +115,17 @@ export class RTCTransponder {
     transport.on('@close', () => {
       console.log('transport', transport.id, '@close');
       this.#transport.delete(transport.id);
+
+      const { stationId } = transport.appData;
+
+      if (stationId) {
+        const station = this.#stationFromId(stationId);
+
+        station?.removeAudience(
+          makeAudienceGroupId(AudienceType.Web, `rtc`),
+          transport.id
+        );
+      }
     });
 
     return {
@@ -140,8 +152,12 @@ export class RTCTransponder {
     transport.close();
   }
 
+  #stationFromId(stationId: Station['id']) {
+    return [...this.#published.keys()].find(s => s.id === stationId);
+  }
+
   async initiateClientConsumer(transportId: string, clientCaps: types.RtpCapabilities, stationId: Station['id']): Promise<ClientConsumerInfo | undefined> {
-    const station = [...this.#published.keys()].find(s => s.id === stationId);
+    const station = this.#stationFromId(stationId);
     if (!station) {
       return;
     }
@@ -161,6 +177,13 @@ export class RTCTransponder {
     if (!producerId) {
       return;
     }
+
+    transport.appData.stationId = stationId;
+
+    station.addAudience(
+      makeAudienceGroupId(AudienceType.Web, `rtc`),
+      transportId
+    );
 
     const consumer = await transport.consume({
       producerId,
