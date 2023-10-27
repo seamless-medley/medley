@@ -168,3 +168,5 @@ export function concatUint8Array(...items: Uint8Array[]): Uint8Array {
 }
 
 export const makeUint8ArrayFromText = (s: string) => Uint8Array.from(s.split('').map(c => c.charCodeAt(0)));
+
+export const randomNBit = (numberOfBits: number) => Math.floor(Math.random() * 2 ** numberOfBits);

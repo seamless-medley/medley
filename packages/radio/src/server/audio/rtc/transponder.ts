@@ -1,0 +1,196 @@
+import type { Station } from '@seamless-medley/core';
+import { type types, createWorker } from 'mediasoup';
+import { Socket } from 'socket.io';
+import { RTCExciter } from './exciter';
+import { AudioDispatcher } from '../../../audio/exciter';
+
+export type ClientTransportInfo = {
+  id: types.Transport['id'];
+  ice: {
+    params: types.WebRtcTransport['iceParameters'];
+    candidates: types.WebRtcTransport['iceCandidates'];
+  },
+  dtls: types.WebRtcTransport['dtlsParameters'];
+  sctp: types.WebRtcTransport['sctpParameters'];
+}
+
+export type ClientTransportData = {
+  socket: Socket<{}>;
+  disconnectHandler: () => void;
+}
+
+export type ClientConsumerInfo = {
+  rtp: Pick<types.Consumer, 'id' | 'producerId' | 'kind' | 'rtpParameters'>;
+  audioLevelData?: Pick<types.DataConsumer, 'id' | 'dataProducerId' | 'label' | 'sctpStreamParameters'>;
+}
+
+export class RTCTransponder {
+  #dispatcher = new AudioDispatcher();
+
+  #worker!: types.Worker;
+  #webrtcServer!: types.WebRtcServer;
+  #router!: types.Router;
+
+  #published = new Map<Station, RTCExciter>();
+
+  #transport = new Map<types.Transport['id'], types.WebRtcTransport<ClientTransportData>>();
+
+  constructor() {
+    this.initialize();
+  }
+
+  private async initialize() {
+    this.#worker = await createWorker({
+      logLevel: 'warn',
+      logTags: ['rtp', 'ice']
+    });
+
+    this.#webrtcServer = await this.#worker.createWebRtcServer({
+      listenInfos: [
+        { protocol: 'tcp', ip: '192.168.1.10', port: 25878 },
+        { protocol: 'udp', ip: '192.168.1.10', port: 25878 },
+      ]
+    });
+
+    this.#router = await this.#worker.createRouter({
+      mediaCodecs: [
+        {
+          kind: 'audio',
+          mimeType: 'audio/opus',
+          clockRate: 48000,
+          channels: 2,
+          preferredPayloadType: 109,
+          parameters: {
+            usedtx: 1
+          }
+        }
+      ]
+    });
+  }
+
+  async publish(station: Station) {
+    const transport = await this.#router.createDirectTransport();
+
+    const exciter = new RTCExciter(station, transport);
+
+    exciter.start(this.#dispatcher)
+
+    this.#published.set(station, exciter);
+  }
+
+  unpublish(station: Station) {
+    if (this.#published.has(station)) {
+      const player = this.#published.get(station)!
+      player.stop();
+
+      this.#published.delete(station);
+    }
+  }
+
+  getCaps() {
+    return this.#router.rtpCapabilities;
+  }
+
+  async newClientTransport(sctpCaps: types.SctpCapabilities, socket: Socket<{}>): Promise<ClientTransportInfo> {
+    const disconnectHandler = () => transport.close();
+
+    const transport = await this.#router.createWebRtcTransport<ClientTransportData>({
+      webRtcServer: this.#webrtcServer,
+      enableTcp: true,
+      enableUdp: true,
+      preferTcp: true,
+      enableSctp: true,
+      numSctpStreams: sctpCaps.numStreams,
+      appData: {
+        socket,
+        disconnectHandler
+      }
+    });
+
+    this.#transport.set(transport.id, transport);
+
+    socket.once('disconnect', disconnectHandler);
+
+    transport.on('@close', () => {
+      console.log('transport', transport.id, '@close');
+      this.#transport.delete(transport.id);
+    });
+
+    return {
+      id: transport.id,
+      ice: {
+        candidates: transport.iceCandidates,
+        params: transport.iceParameters,
+      },
+      dtls: transport.dtlsParameters,
+      sctp: transport.sctpParameters
+    }
+  }
+
+  async closeClientTransport(transportId: string) {
+    const transport = this.#transport.get(transportId);
+    if (!transport) {
+      return;
+    }
+
+    const { socket, disconnectHandler } = transport.appData;
+
+    socket.off('disconnect', disconnectHandler);
+
+    transport.close();
+  }
+
+  async initiateClientConsumer(transportId: string, clientCaps: types.RtpCapabilities, stationId: Station['id']): Promise<ClientConsumerInfo | undefined> {
+    const station = [...this.#published.keys()].find(s => s.id === stationId);
+    if (!station) {
+      return;
+    }
+
+    const exciter = this.#published.get(station);
+    if (!exciter) {
+      return;
+    }
+
+    const transport = this.#transport.get(transportId);
+    if (!transport) {
+      return;
+    }
+
+    const { producerId, audioLevelDataProducerId } = exciter;
+
+    if (!producerId) {
+      return;
+    }
+
+    const consumer = await transport.consume({
+      producerId,
+      rtpCapabilities: clientCaps
+    });
+
+    const audioLevelDataConsumer = audioLevelDataProducerId ? await transport.consumeData({ dataProducerId: audioLevelDataProducerId }) : undefined;
+
+    return {
+      rtp: {
+        id: consumer.id,
+        producerId: consumer.producerId,
+        kind: consumer.kind,
+        rtpParameters: consumer.rtpParameters
+      },
+      audioLevelData: audioLevelDataConsumer ? {
+        id: audioLevelDataConsumer.id,
+        dataProducerId: audioLevelDataConsumer.dataProducerId,
+        label: audioLevelDataConsumer.label,
+        sctpStreamParameters: audioLevelDataConsumer.sctpStreamParameters,
+      } : undefined
+    }
+  }
+
+  async startClientConsumer(transportId: string, dtlsParameters: types.DtlsParameters) {
+    const transport = this.#transport.get(transportId);
+    if (!transport) {
+      return;
+    }
+
+    await transport.connect({ dtlsParameters });
+  }
+}

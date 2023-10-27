@@ -2,22 +2,28 @@ import { shuffle } from "lodash";
 import normalizePath from "normalize-path";
 import { MusicDb, Station, StationEvents, StationRegistry, TrackCollection, WatchTrackCollection, createLogger, scanDir } from "@seamless-medley/core";
 import { MongoMusicDb } from "../musicdb/mongo";
-import { Socket, SocketServer, SocketServerController } from "../socket";
-import { RemoteTypes } from "../remotes";
-import { ExposedStation } from "./expose/core/station";
-
-import { ExposedColection } from "./expose/core/collection";
-import { Unpacked } from "../types";
-import { AudioWebSocketServer } from "./audio/ws/server";
-import { ExposedDeck } from "./expose/core/deck";
-import { Config } from "../config";
 import { MedleyAutomaton } from "../discord/automaton";
+//
+import type { Config } from "../config";
+//
+import { Socket, SocketServer, SocketServerController } from "../socket";
+import type { RemoteTypes } from "../remotes";
+import type { Unpacked } from "../types";
+//
+import { ExposedStation } from "./expose/core/station";
+import { ExposedColection } from "./expose/core/collection";
+import { ExposedDeck } from "./expose/core/deck";
+import { AudioWebSocketServer } from "./audio/ws/server";
+import { RTCTransponder } from "./audio/rtc/transponder";
+import { ExposedTransponder } from "./expose/rtc/transponder";
+import { EventEmitter } from "events";
 
 const logger = createLogger({ name: 'medley-server' });
 
 export type MedleyServerOptions = {
   io: SocketServer;
   audioServer: AudioWebSocketServer;
+  rtcTransponder: RTCTransponder;
   configs: Config;
 }
 
@@ -27,18 +33,23 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
   #audioServer: AudioWebSocketServer;
 
+  #rtcTransponder: RTCTransponder;
+
   #configs: Config;
 
   constructor(options: MedleyServerOptions) {
     super(options.io);
     //
     this.#audioServer = options.audioServer;
+    this.#rtcTransponder = options.rtcTransponder;
     this.#configs = options.configs;
     //
     this.connectMongoDB().then(this.initialize);
   }
 
   private initialize = async () => {
+    this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
+
     const stations = await Promise.all(
       Object.entries(this.#configs.stations).map(([stationId, stationConfig]) => new Promise<Station>(async (resolve) => {
         const { intros, requestSweepers, musicCollections, sequences, sweeperRules, ...config } = stationConfig;
@@ -93,6 +104,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
         this.registerStation(station);
         this.#audioServer.publish(station);
+        this.#rtcTransponder.publish(station);
 
         resolve(station);
 
