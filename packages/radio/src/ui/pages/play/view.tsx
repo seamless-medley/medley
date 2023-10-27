@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { Cover, CoverProps } from "../../components/play/cover/Cover";
+import { useEffect, useState } from "react";
 import { useParams } from "@tanstack/router";
+import { prominent } from 'color.js'
+import { Cover, CoverProps } from "../../components/play/cover/Cover";
 import { route } from "./route";
 import { useDeck, useDeckInfo } from "../../hooks/useDeck";
 import { useStation } from "../../hooks/useStation";
-import { Title, TitleProps } from "../../components/play/title/Title";
-import { prominent } from 'color.js'
+import { Title } from "../../components/play/title/Title";
 
 import { getLuminance,
   darken,
@@ -27,6 +27,8 @@ import { castArray, chain, random, sortBy, trim, uniq } from "lodash";
 import { useRemotableProp } from "../../hooks/remotable";
 import { useSetState } from "@mantine/hooks";
 import type { DeckIndex, Metadata } from "@seamless-medley/core";
+import { useClient } from "../../hooks/useClient";
+import styled from "@emotion/styled";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -61,7 +63,25 @@ export const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).
 
 export const getNextDeck = (index: DeckIndex): DeckIndex => [1, 2, 0][index];
 
+const ListenButton = styled.div`
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 90000;
+  cursor: pointer;
+  opacity: 0;
+  border-radius: 0 0 0 0.5em;
+  transition: all 0.7s ease;
+  background-color: aqua;
+  padding: 0 4px;
+
+  :hover {
+    opacity: 1;
+  }
+`;
+
 export const Play: React.FC = () => {
+  const client = useClient();
   const { station: stationId } = useParams({ from: route.id });
 
   const [station] = useStation(stationId);
@@ -191,6 +211,11 @@ export const Play: React.FC = () => {
 
   return (
     <div style={{ height: '100vh', overflow: 'hidden' }}>
+      <ListenButton onClick={() => {
+        client.playAudio(stationId);
+      }}>
+        Listen
+      </ListenButton>
       <Cover { ...coverProps } />
 
       <Lyrics
@@ -213,6 +238,8 @@ export const Play: React.FC = () => {
         position={info.cp * 1000}
         duration={(info.duration ?? 0) * 1000}
       />
+
+      <audio id="rtc_audio" />
     </div>
   )
 }
