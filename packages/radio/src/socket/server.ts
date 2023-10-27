@@ -419,7 +419,15 @@ export class ObjectObserver<T extends object> {
 
     this.#methods = pickBy(declared, desc => isFunction(desc.value));
     this.#exposingProps = pickBy(exposing, desc => (desc.name in declared) && isProperty(desc) && isPublicPropertyName(desc.name));
-    this.#declaredProps = pickBy(declared, desc => isProperty(desc) && isPublicPropertyName(desc.name));
+    this.#declaredProps = pickBy(declared, desc => {
+      if (desc.instance instanceof EventEmitter) {
+        if (['domain'].includes(desc.name)) {
+          return false;
+        }
+      }
+
+      return isProperty(desc) && isPublicPropertyName(desc.name)
+    });
 
     for (const [prop, desc] of Object.entries(this.#exposingProps)) {
       Object.defineProperty(desc.instance, prop, {
@@ -491,9 +499,11 @@ export class ObjectObserver<T extends object> {
     return Array.from(props).reduce((o, prop) => {
       const declared = this.#declaredProps[prop];
       const exposing = this.#exposingProps[prop];
+
       o[prop] =
-        (declared.value ?? declared.get?.call(declared.instance))
-        ?? (exposing.value ?? exposing.get?.call(exposing.instance))
+        (declared?.value ?? declared?.get?.call(declared.instance))
+        ?? (exposing?.value ?? exposing?.get?.call(exposing.instance))
+
       return o;
     }, {} as any) as T;
   }
