@@ -246,7 +246,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
         // predicate
         (func, object, observer) => isFunction(func) && (observer?.isPublishedMethod(method) ?? false),
         // executor
-        async (object, fn: Function) => fn.apply(object, args),
+        async (object, fn: Function) => fn.apply(object, [...args, socket]),
         callback
       );
     },
