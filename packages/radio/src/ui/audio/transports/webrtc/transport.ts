@@ -12,7 +12,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   readonly #ctx: AudioContext;
 
-  readonly #device = new MediaSoupDevice();
+  readonly #device: MediaSoupDevice;
 
   #transport?: types.Transport;
 
@@ -22,16 +22,16 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   #stationId?: string;
 
-  constructor(transponder: Remotable<RTCTransponder>, context: AudioContext) {
+  constructor(transponder: Remotable<RTCTransponder>, device: MediaSoupDevice, context: AudioContext) {
     super();
 
     this.#transponder = transponder;
+    this.#device = device;
     this.#ctx = context;
-    this.#device.load({ routerRtpCapabilities: transponder.caps() });
   }
 
   get ready(): boolean {
-    return this.#device.loaded && this.#transport?.connectionState === 'connected';
+    return this.#device.loaded;
   }
 
   async #createTransport() {

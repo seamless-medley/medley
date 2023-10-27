@@ -1,3 +1,4 @@
+import { Device as MediaSoupDevice, type types } from 'mediasoup-client';
 import type { RemoteTypes } from "../remotes";
 import type { RTCTransponder } from "../remotes/rtc/transponder";
 import type { Remotable } from "../socket/types";
@@ -5,52 +6,67 @@ import { WebSocketAudioTransport } from "./audio/transports/ws/transport";
 import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
 import { Client } from "./client";
 import { StubRTCTransponder } from "./stubs/rtc/transponder";
+import { IAudioTransport } from "./audio/types";
 
 export class MedleyClient extends Client<RemoteTypes> {
   #audioContext = new AudioContext({ latencyHint: 'playback' });
 
-  #audioSocketPipeline: WebSocketAudioTransport;
-
-  #rtcClient?: WebRTCAudioTransport;
+  #audioTransport?: IAudioTransport;
 
   #transponder?: Remotable<RTCTransponder>;
 
   #playingStationId?: string;
 
-  constructor() {
-    super();
-
-    this.#audioSocketPipeline = new WebSocketAudioTransport(this.#audioContext)
-      .on('audioExtra', e => this.emit('audioExtra', e));
-  }
-
   protected override async handleSocketConnect() {
     super.handleSocketConnect();
-    // TODO: try with transponder first
-    // this.#transponder = await this.surrogateOf(StubRTCTransponder, 'transponder', '~').catch(() => undefined);
 
-    // if (this.#transponder) {
-    //   this.#rtcClient = new RTCAudioClient(this.#transponder, this.#audioContext)
-    //     .on('audioExtra', e => this.emit('audioExtra', e));
-    // }
-    // TODO: and fallback to audio socket
+    this.#transponder = await this.surrogateOf(StubRTCTransponder, 'transponder', '~').catch(() => undefined);
+
+    if (this.#transponder) {
+      const device = new MediaSoupDevice();
+      await device.load({ routerRtpCapabilities: this.#transponder.caps() });
+
+      if (device.loaded) {
+        console.log('Using WebRTCAudioTransport');
+        this.#audioTransport = new WebRTCAudioTransport(this.#transponder, device, this.#audioContext);
+      }
+    }
+
+    if (!this.#audioTransport && window.crossOriginIsolated) {
+      console.log('Using WebSocketAudioTransport');
+      this.#audioTransport = new WebSocketAudioTransport(this.#audioContext);
+    }
+
+    if (!this.#audioTransport) {
+      console.error('No audio transport');
+    }
+
+    this.#audioTransport?.on('audioExtra', e => this.emit('audioExtra', e));
+
     this.connectAudioSocket();
   }
 
   private async connectAudioSocket() {
-    return this.#audioSocketPipeline.connect(this.socket.id);
+    if (this.#audioTransport instanceof WebSocketAudioTransport) {
+      return this.#audioTransport.connect(this.socket.id);
+    }
   }
 
-  async playAudio(stationId: string) {
-    await this.connectAudioSocket();
-    await this.#audioSocketPipeline.play(stationId);
+  get hasTransport() {
+    return this.#audioTransport !== undefined;
+  }
 
-    // console.log(this.#rtcClient);
-    // this.#rtcClient?.play(stationId).then((result) => {
-    //   console.log('rtc play', result);
-    // })
+  async playAudio(stationId: string): Promise<boolean> {
+    if (!this.#audioTransport) {
+      return false;
+    }
+
+    await this.connectAudioSocket();
+    await this.#audioTransport.play(stationId);
 
     this.#playingStationId = stationId;
+
+    return true;
   }
 
   get playingStationId() {
