@@ -6,7 +6,23 @@ import { RTPData, createRTPHeader, incRTPData } from "../../../audio/network/rtp
 import { randomNBit } from "@seamless-medley/utils";
 import type { AudioTransportExtraPayload } from "../../../audio/types";
 
+const payloadType = 119;
+
+const allSSRC = new Set<number>();
+
+function makeSSRC() {
+  while (true) {
+    const ssrc = randomNBit(32);
+
+    if (allSSRC.has(ssrc)) continue;
+
+    allSSRC.add(ssrc);
+    return ssrc;
+  }
+}
+
 export class RTCExciter extends Exciter implements IExciter {
+  #ssrc = makeSSRC();
   #transport: types.DirectTransport;
   #producer?: types.Producer;
   #audioLevelDataProducer?: types.DataProducer;
@@ -25,7 +41,7 @@ export class RTCExciter extends Exciter implements IExciter {
     this.#transport = transport;
 
     this.#rtpData = {
-      ssrc: 12345678, // TODO: Register new SSRC
+      ssrc: this.#ssrc,
       sequence: randomNBit(16),
       timestamp: randomNBit(32),
     }
@@ -38,25 +54,21 @@ export class RTCExciter extends Exciter implements IExciter {
       kind: 'audio',
       rtpParameters: {
         codecs: [
-          // TODO: Define payload type
           {
-            payloadType: 109,
+            payloadType,
             mimeType: 'audio/opus',
-            clockRate: 48000,
+            clockRate: 48_000,
             channels: 2,
             parameters: {
               usedtx: 1,
               useinbandfec: 1,
-              stereo: 1,
               'sprop-stereo': 1,
-              maxplaybackrate: 48000,
-              maxaveragebitrate: 510000,
+              maxplaybackrate: 48_000,
             }
           }
         ],
         encodings: [
-          // TODO: Randomize SSRC
-          { ssrc: 12345678 }
+          { ssrc: this.#ssrc }
         ]
       }
     });
@@ -85,7 +97,7 @@ export class RTCExciter extends Exciter implements IExciter {
 
     const header = createRTPHeader({
       ...this.#rtpData,
-      payloadType: 109
+      payloadType
     });
 
     this.#preparedPacket = Buffer.concat([
