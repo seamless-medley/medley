@@ -119,7 +119,7 @@ export function unregisterExciter(exciter: IExciter) {
 /**
  * An Exciter read PCM stream from node-medley and encode it into Opus packets.
  */
-export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {}> extends TypedEmitter<Listeners> implements IExciter {
+export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {}> extends TypedEmitter<Listeners> implements ICarriableExciter {
   protected dispatcher?: AudioDispatcher;
   protected request?: RequestAudioStreamResult;
   protected outlet?: Readable;

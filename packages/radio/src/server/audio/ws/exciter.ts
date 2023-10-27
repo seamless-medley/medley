@@ -18,7 +18,7 @@ export class WebSocketExciter extends Exciter<AudioStreamPlayerEvents> implement
 
   private preparedPacket?: Buffer;
 
-  prepare(): void {
+  override prepare(): void {
     const opus = this.read();
 
     if (!opus) {
@@ -46,7 +46,7 @@ export class WebSocketExciter extends Exciter<AudioStreamPlayerEvents> implement
     this.preparedPacket = resultPacket;
   }
 
-  dispatch(): void {
+  override dispatch(): void {
     if (this.preparedPacket) {
       this.emit('packet', this.preparedPacket);
     }

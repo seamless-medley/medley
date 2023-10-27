@@ -82,9 +82,9 @@ export class AudioWebSocketServer extends EventEmitter {
   }
 
   async publish(station: Station) {
-    const player = new WebSocketExciter(station);
+    const exciter = new WebSocketExciter(station);
 
-    player.on('packet', (packet) => {
+    exciter.on('packet', (packet) => {
       const listeners = this.#stationListeners.get(station.id);
 
       if (!listeners || listeners.size < 1)  {
@@ -96,9 +96,9 @@ export class AudioWebSocketServer extends EventEmitter {
       }
     })
 
-    player.start(this.#dispatcher)
+    exciter.start(this.#dispatcher)
 
-    this.#published.set(station, player);
+    this.#published.set(station, exciter);
   }
 
   unpublish(station: Station) {
