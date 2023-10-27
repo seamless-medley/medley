@@ -8,6 +8,7 @@ import { SocketConfig, UDPConnection } from "./udp";
 import { WebSocketConnection, WebSocketConnectionEvents } from "./websocket";
 import * as secretbox from '../secretbox';
 import { RTPData, createRTPHeader, incRTPData } from "../../../audio/network/rtp";
+import { randomNBit } from "@seamless-medley/utils";
 
 export enum ConnectionStatus {
 	Opening,
@@ -354,7 +355,9 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
   #createAudioPacket(opusPacket: Buffer, connectionData: ConnectionData) {
     const header = createRTPHeader({
-      ...connectionData,
+      ssrc: connectionData.ssrc,
+      sequence: connectionData.sequence,
+      timestamp: connectionData.timestamp,
       payloadType: 0x78
     });
 
@@ -433,8 +436,6 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
     }
   }
 }
-
-const randomNBit = (numberOfBits: number) => Math.floor(Math.random() * 2 ** numberOfBits);
 
 function chooseEncryptionMode(options: EncryptionMode[]) {
 	const option = options.find((option) => ENCRYPTION_MODES.includes(option));

@@ -272,7 +272,13 @@ export class GuildState {
 
     try {
       await connector.waitForState(VoiceConnectorStatus.Ready, timeout);
+
       stationLink.exciter.addCarrier(connector);
+      this.voiceConnector = connector;
+
+      this.#updateAudiences();
+
+      return { status: 'joined', station: stationLink.station };
     }
     catch (e) {
       connector?.destroy();
@@ -280,14 +286,8 @@ export class GuildState {
       this.voiceConnector = undefined;
       //
       this.adapter.getLogger().error(e);
-      throw e;
+      return { status: 'not_joined' };
     }
-
-    this.voiceConnector = connector;
-
-    this.#updateAudiences();
-
-    return { status: 'joined', station: stationLink.station };
   }
 
   #updateAudiences() {

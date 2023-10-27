@@ -30,14 +30,11 @@ export type UseAudioLevelsData = {
 }
 
 export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, options?: { max?: number }) {
-  console.log('useAudioLevels');
-
   const max = options?.max ?? 0;
   const normalize = (v: number) => interpolate(Math.min(v, max), [-100, max], [0, 1]);
   const process = compose(normalize, gainToDecibels);
 
   const client = useClient();
-  const callbackRef = useRef<typeof callback>();
   const raf = useRef(0);
 
   const update = (levels: StationAudioLevels) => {
@@ -46,7 +43,7 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, opti
     const reduction = normalize(levels.reduction + max);
 
     raf.current = requestAnimationFrame(() => {
-      callbackRef.current?.({
+      callback({
         left,
         right,
         reduction
@@ -56,7 +53,7 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, opti
     });
   }
 
-  const handleAudioExtra = useCallback((extra: AudioTransportExtra) => update(extra.audioLevels), []);
+  const handleAudioExtra = useCallback((extra: AudioTransportExtra) => update(extra.audioLevels), [callback]);
   const handleDisconnect = useCallback(() => update(emptyLevel), []);
 
   useEffect(() => {
