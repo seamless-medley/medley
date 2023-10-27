@@ -5,19 +5,16 @@ import type { AudioClientIntf } from "./client";
 import { RingBuffer } from "./ringbuffer";
 import type { AudioTransportExtra } from "../../audio/types";
 import type { MedleyStreamProcessorNodeOptions } from "./worklets/stream-consumer";
-
-export type AudioPipelineEvents = {
-  audioExtra(extra: AudioTransportExtra): void;
-}
+import type { AudioTransportEvents, IAudioTransport } from "./types";
 
 /**
  * This is where the whole audio pipeline happens
  */
-export class AudioPipeline extends EventEmitter<AudioPipelineEvents> {
+export class AudioSocketPipeline extends EventEmitter<AudioTransportEvents> implements IAudioTransport {
   /**
    * Web Audio API context, needed for sending audio data to the output device
    */
-  #ctx?: AudioContext;
+  readonly #ctx: AudioContext;
 
   /**
    * Web Audio API Worklet node which attach a stream-processor used for reading decoded PCM data and feed it into Web Audio API context
@@ -36,22 +33,38 @@ export class AudioPipeline extends EventEmitter<AudioPipelineEvents> {
    */
   #clientWorker = new AudioClientWorker() as unknown as AudioClientIntf;
 
-  constructor() {
+  #prepared = false;
+
+  #ready = false;
+
+  constructor(context: AudioContext) {
     super();
+
+    this.#ctx = context;
 
     this.#clientWorker.postMessage({ type: 'init', pcmBuffer: this.#pcmBuffer });
 
     this.#clientWorker.onmessage = (e) => {
       if (e.data.type === 'open') {
+        this.#ready = true;
         this.#pcmBuffer.reset();
         return;
       }
     }
   }
 
-  play(stationId: string) {
+  get ready() {
+    return this.#prepared && this.#ready;
+  }
+
+  async play(stationId: string) {
+    if (!this.ready) {
+      return false;
+    }
+
     this.#clientWorker.postMessage({ type: 'play', stationId });
     this.#ctx?.resume();
+    return true;
   }
 
   async connect(socketId: string): Promise<void> {
@@ -60,12 +73,11 @@ export class AudioPipeline extends EventEmitter<AudioPipelineEvents> {
   }
 
   async #prepareAudioContext() {
-    if (this.#ctx) {
+    if (this.#prepared) {
       return;
     }
 
     try {
-      this.#ctx = new AudioContext();
       await this.#ctx.audioWorklet.addModule(worklet);
     }
     catch (e) {
@@ -88,6 +100,8 @@ export class AudioPipeline extends EventEmitter<AudioPipelineEvents> {
     this.#consumerNode.port.onmessage = this.#handleWorkletNodeMessage;
 
     this.#consumerNode.connect(this.#ctx.destination);
+
+    this.#prepared = true;
   }
 
   #handleProcessorError = (e: Event) => {
@@ -99,7 +113,7 @@ export class AudioPipeline extends EventEmitter<AudioPipelineEvents> {
   #handleWorkletNodeMessage = ({ data: extra }: MessageEvent<AudioTransportExtra>) => {
     this.#delayedAudioExtra.push(extra);
 
-    while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx!.outputLatency * this.#ctx!.sampleRate / 960) + 1) {
+    while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx.outputLatency * this.#ctx.sampleRate / 960) + 10) {
       this.emit('audioExtra', this.#delayedAudioExtra.shift()!);
     }
   }
