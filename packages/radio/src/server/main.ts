@@ -10,6 +10,7 @@ import { MedleyServer } from './medley-server';
 import { AudioWebSocketServer } from './audio/ws/server';
 import { Config, loadConfig } from '../config';
 import { MedleyAutomaton } from '../discord/automaton';
+import { RTCTransponder } from './audio/rtc/transponder';
 
 const logger = createLogger({ name: 'main' });
 
@@ -58,6 +59,7 @@ async function startServer(configs: Config) {
     const server = new MedleyServer({
       io: new SocketIOServer(httpServer, '/socket.io'),
       audioServer: new AudioWebSocketServer(httpServer),
+      rtcTransponder: new RTCTransponder(),
       configs
     });
 
