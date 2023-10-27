@@ -1,6 +1,6 @@
 import type { AudioLevel } from "@seamless-medley/core";
 import type { TypedArray } from "type-fest";
-import type { AudioTransportExtra, AudioTransportExtraPayload } from "../../audio/types";
+import type { AudioTransportExtra, AudioTransportExtraPayload } from "../../../../audio/types";
 
 enum State {
   Read,

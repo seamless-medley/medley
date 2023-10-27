@@ -1,5 +1,5 @@
 import { RingBuffer } from "../ringbuffer";
-import type { AudioTransportExtra } from "../../../audio/types";
+import type { AudioTransportExtra } from "../../../../../audio/types";
 
 export type MedleyStreamProcessorNodeOptions = Omit<AudioWorkletNodeOptions, 'processorOptions'> & {
   processorOptions: {

@@ -3,14 +3,14 @@ import worklet from "./worklets/stream-consumer-module.js?worker&url";
 import AudioClientWorker from './client?worker';
 import type { AudioClientIntf } from "./client";
 import { RingBuffer } from "./ringbuffer";
-import type { AudioTransportExtra } from "../../audio/types";
+import type { AudioTransportExtra } from "../../../../audio/types";
 import type { MedleyStreamProcessorNodeOptions } from "./worklets/stream-consumer";
-import type { AudioTransportEvents, IAudioTransport } from "./types";
+import type { AudioTransportEvents, IAudioTransport } from "../../types";
 
 /**
  * This is where the whole audio pipeline happens
  */
-export class AudioSocketPipeline extends EventEmitter<AudioTransportEvents> implements IAudioTransport {
+export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> implements IAudioTransport {
   /**
    * Web Audio API context, needed for sending audio data to the output device
    */
