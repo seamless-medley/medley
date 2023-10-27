@@ -10,7 +10,8 @@ import { Callable, ParametersOf, ReturnTypeOf } from "../types";
 import { DisconnectDescription } from "socket.io-client/build/esm/socket";
 import { waitFor } from "@seamless-medley/utils";
 import { getRemoteTimeout } from "../socket/decorator";
-import { AudioPipeline, type AudioPipelineEvents } from "./audio/pipeline";
+import { type AudioTransportEvents } from "./audio/types";
+
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, changes: ObservedPropertyChange<T>[]) => Promise<any>;
 
@@ -57,7 +58,7 @@ class ObservingStore<T extends object> {
   }
 }
 
-type ClientEvents = AudioPipelineEvents & {
+type ClientEvents = AudioTransportEvents & {
   connect(): void;
   disconnect(reason?: DisconnectReason): void;
 }
@@ -77,15 +78,13 @@ function rejectAfter(ms: number, reject: (reason?: any) => any, reason: string =
 }
 
 export class Client<Types extends { [key: string]: any }> extends EventEmitter<ClientEvents> {
-  private socket: Socket<ServerEvents, SocketClientEvents>;
+  protected socket: Socket<ServerEvents, SocketClientEvents>;
 
   private delegates = new Map<`${string}:${string}`, { [event: string]: Set<Callable> | undefined }>();
 
   private observingStores = new Map<`${string}:${string}`, ObservingStore<any>>();
 
   private surrogates = new Map<string, Remotable<Types[any]>>();
-
-  private audioClient: AudioPipeline;
 
   constructor() {
     super();
@@ -98,11 +97,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     this.socket.on('r:u', this.handleRemoteUpdate);
     this.socket.io.on('reconnect', this.handleSocketReconnect);
 
-    this.socket.on('connect', this.handleSocketConnect);
+    this.socket.on('connect', () => this.handleSocketConnect());
     this.socket.on('disconnect', this.handleSocketDisconnect);
-
-    this.audioClient = new AudioPipeline()
-      .on('audioExtra', e => this.emit('audioExtra', e));
   }
 
   private handleRemoteEvent: ServerEvents['r:e'] = (kind, id, event, ...args) => {
@@ -170,9 +166,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     }
   }
 
-  private handleSocketConnect = () => {
+  protected async handleSocketConnect() {
     this.emit('connect');
-    this.connectAudioSocket();
   }
 
   private handleSocketDisconnect = (reason: Socket.DisconnectReason, description?: DisconnectDescription) => {
@@ -230,23 +225,6 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   get ready() {
     // TODO: This should also check whether connection initialization was done (auth, etc)
     return this.connected;
-  }
-
-  private async connectAudioSocket() {
-    return this.audioClient.connect(this.socket.id);
-  }
-
-  #playingStationId?: string
-
-  async playAudio(stationId: string) {
-    await this.connectAudioSocket();
-    this.audioClient.play(stationId);
-
-    this.#playingStationId = stationId;
-  }
-
-  get playingStationId() {
-    return this.#playingStationId;
   }
 
   private getDelegateEvents(ns: string, id: string) {
@@ -496,7 +474,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     kind: Kind,
     id: string,
     observeOptions?: Omit<RemoteObserveOptions, 'excludes'>
-  ) {
+  ): Promise<Remotable<Types[Kind]>> {
     const objectId = `${kind}:${id}` as const;
 
     if (this.surrogateCache.has(objectId)) {
@@ -681,7 +659,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     this.surrogateRefCounters.set(objectId, 1);
     this.surrogateRegistry.register(surrogate, objectId);
 
-    return surrogate;
+    return surrogate as unknown as Remotable<Types[Kind]>;
   }
 }
 

@@ -1,6 +1,5 @@
 import { atom } from "jotai";
-import type { RemoteTypes } from "../../remotes";
-import type { Client } from "../client";
 import { initClient } from "../init";
+import { MedleyClient } from "../medley-client";
 
-export const clientAtom = atom<Client<RemoteTypes>>(initClient());
+export const clientAtom = atom<MedleyClient>(initClient());

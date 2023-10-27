@@ -1,9 +1,8 @@
 import { createRoot, type Root } from "react-dom/client";
-import type { RemoteTypes } from "../remotes";
-import { Client } from "./client";
+import { MedleyClient } from "./medley-client";
 
 let root: Root;
-let client: Client<RemoteTypes>;
+let client: MedleyClient;
 
 export function initClient() {
   console.group('initClient');
@@ -18,7 +17,7 @@ export function initClient() {
   if (!client) {
     console.log('Create client');
 
-    client = new Client<RemoteTypes>();
+    client = new MedleyClient();
     client.once('disconnect', () => client.dispose());
 
     if (isDev) {
