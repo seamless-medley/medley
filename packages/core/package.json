@@ -22,7 +22,7 @@
     "string-similarity": "^4.0.4",
     "tiny-typed-emitter": "^2.1.0",
     "tslog": "^4.8.2",
-    "which": "^3.0.0",
+    "which": "^4.0.0",
     "workerpool": "^6.4.0"
   },
   "devDependencies": {
