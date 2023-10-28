@@ -59,7 +59,7 @@ async function startServer(configs: Config) {
     const server = new MedleyServer({
       io: new SocketIOServer(httpServer, '/socket.io'),
       audioServer: new AudioWebSocketServer(httpServer),
-      rtcTransponder: new RTCTransponder(),
+      rtcTransponder: configs.webrtc ? new RTCTransponder(configs.webrtc) : undefined,
       configs
     });
 

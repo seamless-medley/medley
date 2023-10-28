@@ -7,6 +7,7 @@ import { AutomatonConfig } from './automaton';
 import { pickBy } from 'lodash';
 import { dollar as phrase } from "paraphrase";
 import { ServerConfig } from './server';
+import { WebRtcConfig } from './webrtc';
 
 async function parseYAML(s: string) {
   return parse(s);
@@ -15,6 +16,7 @@ async function parseYAML(s: string) {
 const Config = z.object({
   server: ServerConfig,
   db: DbConfig,
+  webrtc: WebRtcConfig.optional(),
   stations: z.record(StationConfig, { required_error: 'No stations' }),
   automatons: z.record(AutomatonConfig, { required_error: 'No automatons' })
 }, {
@@ -22,7 +24,8 @@ const Config = z.object({
 }).strict();
 
 const DiscordOnlyConfig = Config.omit({
-  server: true
+  server: true,
+  webrtc: true
 });
 
 export type Config = z.infer<typeof Config>;

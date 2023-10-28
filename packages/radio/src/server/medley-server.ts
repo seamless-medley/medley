@@ -23,7 +23,7 @@ const logger = createLogger({ name: 'medley-server' });
 export type MedleyServerOptions = {
   io: SocketServer;
   audioServer: AudioWebSocketServer;
-  rtcTransponder: RTCTransponder;
+  rtcTransponder?: RTCTransponder;
   configs: Config;
 }
 
@@ -33,7 +33,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
   #audioServer: AudioWebSocketServer;
 
-  #rtcTransponder: RTCTransponder;
+  #rtcTransponder?: RTCTransponder;
 
   #configs: Config;
 
@@ -48,7 +48,9 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   }
 
   private initialize = async () => {
-    this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
+    if (this.#rtcTransponder) {
+      this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
+    }
 
     const stations = await Promise.all(
       Object.entries(this.#configs.stations).map(([stationId, stationConfig]) => new Promise<Station>(async (resolve) => {
@@ -104,7 +106,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
         this.registerStation(station);
         this.#audioServer.publish(station);
-        this.#rtcTransponder.publish(station);
+        this.#rtcTransponder?.publish(station);
 
         resolve(station);
 

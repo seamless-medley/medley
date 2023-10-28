@@ -3,6 +3,7 @@ import { type types, createWorker } from 'mediasoup';
 import { Socket } from 'socket.io';
 import { RTCExciter } from './exciter';
 import { AudioDispatcher } from '../../../audio/exciter';
+import { type WebRtcConfig } from '../../../config/webrtc';
 
 export type ClientTransportInfo = {
   id: types.Transport['id'];
@@ -36,21 +37,19 @@ export class RTCTransponder {
 
   #transport = new Map<types.Transport['id'], types.WebRtcTransport<ClientTransportData>>();
 
-  constructor() {
-    this.initialize();
+  constructor(config: WebRtcConfig) {
+    this.initialize(config);
   }
 
-  private async initialize() {
+  private async initialize(config: WebRtcConfig) {
     this.#worker = await createWorker({
       logLevel: 'warn',
       logTags: ['rtp', 'ice']
     });
 
+    // TODO: Configurable
     this.#webrtcServer = await this.#worker.createWebRtcServer({
-      listenInfos: [
-        { protocol: 'tcp', ip: '192.168.1.10', port: 25878 },
-        { protocol: 'udp', ip: '192.168.1.10', port: 25878 },
-      ]
+      listenInfos: config.listens
     });
 
     this.#router = await this.#worker.createRouter({

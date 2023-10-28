@@ -5,6 +5,9 @@
   "type": "object",
   "properties": {
     "server": {
+      "title": "Server",
+      "description": "Web server configuration",
+      "type": "object",
       "properties": {
         "port": {
           "type": "integer",
@@ -12,21 +15,54 @@
           "maximum": 65535
         },
         "address": {
-          "oneOf": [
-            {
-              "type": "string",
-              "description": "IPv4",
-              "pattern": "^(25[0-5]|2[0-4][0-9]|1?[0-9][0-9]{1,2})(\\.(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})){3}$"
-            },
-            {
-              "type": "string",
-              "description": "IPv6",
-              "pattern": "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
-            }
-          ]
+          "$ref": "#/$defs/ipAddress"
         }
       },
       "required": [],
+      "additionalProperties": false
+    },
+    "webrtc": {
+      "properties": {
+        "listens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "title": "Listen",
+            "properties": {
+              "protocol": {
+                "title": "Network protocol",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "const": "tcp"
+                  },
+                  {
+                    "type": "string",
+                    "const": "udp"
+                  }
+                ]
+              },
+              "ip": {
+                "title": "Listening IP",
+                "$ref": "#/$defs/ipAddress"
+              },
+              "port": {
+                "title": "Port",
+                "type": "integer",
+                "minimum": 1024,
+                "maximum": 65535
+              },
+              "announcedIp": {
+                "title": "Useful when running behind NAT with private IP",
+                "$ref": "#/$defs/ipAddress"
+              }
+            },
+            "required": ["protocol", "ip", "port"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["listens"],
       "additionalProperties": false
     },
     "db": {
@@ -538,6 +574,20 @@
         }
       },
       "additionalProperties": false
+    },
+    "ipAddress": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "IPv4",
+          "pattern": "^(25[0-5]|2[0-4][0-9]|1?[0-9][0-9]{1,2})(\\.(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})){3}$"
+        },
+        {
+          "type": "string",
+          "description": "IPv6",
+          "pattern": "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
+        }
+      ]
     }
   }
 }
