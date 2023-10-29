@@ -1,11 +1,11 @@
 import { EventEmitter } from "eventemitter3";
 import worklet from "./worklets/stream-consumer-module.js?worker&url";
 import AudioClientWorker from './client?worker';
-import type { AudioClientIntf } from "./client";
+import type { AudioClientIntf, OpenMessage } from "./client";
 import { RingBuffer } from "./ringbuffer";
 import type { AudioTransportExtra } from "../../../../audio/types";
 import type { MedleyStreamProcessorNodeOptions } from "./worklets/stream-consumer";
-import type { AudioTransportEvents, IAudioTransport } from "../../types";
+import type { AudioTransportEvents, AudioTransportState, IAudioTransport } from "../../transport";
 
 /**
  * This is where the whole audio pipeline happens
@@ -33,30 +33,43 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
   #prepared = false;
 
-  #ready = false;
+  #state: AudioTransportState = 'new';
 
-  constructor(context: AudioContext) {
+  constructor(context: AudioContext, socketId: string) {
     super();
 
     this.#ctx = context;
 
     this.#clientWorker.postMessage({ type: 'init', pcmBuffer: this.#pcmBuffer });
 
-    this.#clientWorker.onmessage = (e) => {
+    const listener = (e: MessageEvent<OpenMessage>) => {
       if (e.data.type === 'open') {
-        this.#ready = true;
+        this.#clientWorker.removeEventListener('message', listener);
+        this.#setState('ready');
         this.#pcmBuffer.reset();
         return;
       }
     }
+
+    this.#clientWorker.addEventListener('message', listener);
+    this.#clientWorker.postMessage({ type: 'connect', socketId });
   }
 
-  get ready() {
-    return this.#prepared && this.#ready;
+  get state() {
+    return this.#state;
+  }
+
+  #setState(newState: AudioTransportState) {
+    if (this.#state === newState) {
+      return;
+    }
+
+    this.#state = newState;
+    this.emit('stateChanged', newState);
   }
 
   async play(stationId: string) {
-    if (!this.ready) {
+    if (!this.#prepared) {
       return false;
     }
 
@@ -65,12 +78,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
     return true;
   }
 
-  async connect(socketId: string): Promise<void> {
-    await this.#prepareAudioContext();
-    this.#clientWorker.postMessage({ type: 'connect', socketId });
-  }
-
-  async #prepareAudioContext() {
+  async prepareAudioContext() {
     if (this.#prepared) {
       return;
     }
@@ -79,7 +87,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
       await this.#ctx.audioWorklet.addModule(worklet);
     }
     catch (e) {
-      console.log('Error adding AudioWorklet module', e);
+      console.error('Error adding AudioWorklet module', e);
       return;
     }
 
@@ -103,7 +111,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
   }
 
   #handleProcessorError = (e: Event) => {
-    console.log('Processor error', e);
+    console.error('Processor error', e);
   }
 
   #delayedAudioExtra: AudioTransportExtra[] = [];

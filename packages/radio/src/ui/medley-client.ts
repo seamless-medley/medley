@@ -1,4 +1,4 @@
-import { Device as MediaSoupDevice, type types } from 'mediasoup-client';
+import { Device as MediaSoupDevice } from 'mediasoup-client';
 import type { RemoteTypes } from "../remotes";
 import type { RTCTransponder } from "../remotes/rtc/transponder";
 import type { Remotable } from "../socket/types";
@@ -6,7 +6,7 @@ import { WebSocketAudioTransport } from "./audio/transports/ws/transport";
 import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
 import { Client } from "./client";
 import { StubRTCTransponder } from "./stubs/rtc/transponder";
-import { IAudioTransport } from "./audio/types";
+import { IAudioTransport, waitForAudioTransportState } from "./audio/transport";
 
 export class MedleyClient extends Client<RemoteTypes> {
   #audioContext = new AudioContext({ latencyHint: 'playback' });
@@ -16,6 +16,8 @@ export class MedleyClient extends Client<RemoteTypes> {
   #transponder?: Remotable<RTCTransponder>;
 
   #playingStationId?: string;
+
+  #transportCreators: Array<() => IAudioTransport> = [];
 
   protected override async handleSocketConnect() {
     super.handleSocketConnect();
@@ -27,28 +29,46 @@ export class MedleyClient extends Client<RemoteTypes> {
       await device.load({ routerRtpCapabilities: this.#transponder.caps() });
 
       if (device.loaded) {
-        console.log('Using WebRTCAudioTransport');
-        this.#audioTransport = new WebRTCAudioTransport(this.#transponder, device, this.#audioContext);
+        this.#transportCreators.push(() => {
+          console.log('Using WebRTCAudioTransport');
+          return new WebRTCAudioTransport(this.#transponder!, device, this.#audioContext)
+        });
       }
     }
 
-    if (!this.#audioTransport && window.crossOriginIsolated) {
-      console.log('Using WebSocketAudioTransport');
-      this.#audioTransport = new WebSocketAudioTransport(this.#audioContext);
+    if (window.crossOriginIsolated) {
+      this.#transportCreators.push(() => {
+        console.log('Using WebSocketAudioTransport');
+        return new WebSocketAudioTransport(this.#audioContext, this.socket.id);
+      });
     }
 
-    if (!this.#audioTransport) {
+    const transport = await this.#nextTransport();
+
+    if (!transport) {
       console.error('No audio transport');
+      return;
     }
 
-    this.#audioTransport?.on('audioExtra', e => this.emit('audioExtra', e));
-
-    this.connectAudioSocket();
+    transport.prepareAudioContext();
   }
 
-  private async connectAudioSocket() {
-    if (this.#audioTransport instanceof WebSocketAudioTransport) {
-      return this.#audioTransport.connect(this.socket.id);
+  async #nextTransport() {
+    while (this.#transportCreators.length) {
+      const transport = this.#transportCreators.shift()?.();
+
+      if (!transport) {
+        continue;
+      }
+
+      const ready = await waitForAudioTransportState(transport, ['ready', 'failed']) === 'ready';
+
+      if (ready) {
+        this.#audioTransport = transport;
+        transport.on('audioExtra', e => this.emit('audioExtra', e));
+        this.emit('audioTransport', transport);
+        return transport;
+      }
     }
   }
 
@@ -61,12 +81,25 @@ export class MedleyClient extends Client<RemoteTypes> {
       return false;
     }
 
-    await this.connectAudioSocket();
-    await this.#audioTransport.play(stationId);
+    await this.#audioTransport.prepareAudioContext();;
 
-    this.#playingStationId = stationId;
+    const playResult = await this.#audioTransport.play(stationId);
 
-    return true;
+    if (playResult === true) {
+      this.#playingStationId = stationId;
+      return true;
+    }
+
+    // something went wrong, try next transport
+    if (typeof playResult !== 'boolean') {
+      await this.#nextTransport();
+
+      if (this.#audioTransport) {
+        return this.playAudio(stationId);
+      }
+    }
+
+    return false;
   }
 
   get playingStationId() {

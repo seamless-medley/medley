@@ -2,10 +2,10 @@ import EventEmitter from 'eventemitter3';
 import { decode } from "notepack.io";
 import { stubFalse } from 'lodash';
 import { Device as MediaSoupDevice, type types } from 'mediasoup-client';
-import { AudioTransportEvents, type IAudioTransport } from "../../types";
+import type { AudioTransportEvents, AudioTransportPlayResult, AudioTransportState, IAudioTransport } from "../../transport";
 import { type RTCTransponder } from '../../../../remotes/rtc/transponder';
 import { type Remotable } from '../../../../socket/types';
-import { type AudioTransportExtraPayload } from '../../../../audio/types';
+import type { AudioTransportExtra, AudioTransportExtraPayload } from '../../../../audio/types';
 
 export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> implements IAudioTransport {
   readonly #transponder: Remotable<RTCTransponder>;
@@ -22,16 +22,37 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   #stationId?: string;
 
+  #state: AudioTransportState = 'new';
+
   constructor(transponder: Remotable<RTCTransponder>, device: MediaSoupDevice, context: AudioContext) {
     super();
 
     this.#transponder = transponder;
     this.#device = device;
     this.#ctx = context;
+
+    this.#createTransport().then(async (transport) => {
+      if (!transport) {
+        this.#setState('failed');
+        return;
+      }
+
+      const rtcState = await waitForTransportState(transport, ['connected', 'failed'], 1000);
+      this.#setState(rtcState === 'connected' ? 'ready' : 'failed');
+    })
   }
 
-  get ready(): boolean {
-    return this.#device.loaded;
+  get state() {
+    return this.#state;
+  }
+
+  #setState(newState: AudioTransportState) {
+    if (this.#state === newState) {
+      return;
+    }
+
+    this.#state = newState;
+    this.emit('stateChanged', newState);
   }
 
   async #createTransport() {
@@ -48,32 +69,38 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
       sctpParameters: transportInfo.sctp
     });
 
+    let nullConsumer: Promise<types.DataConsumer>;
+
     this.#transport.on('connect', (params, done, raise) => {
       this.#transponder
         .startClientConsumer(transportInfo.id, params.dtlsParameters)
         .then(done)
         .catch(raise);
+
+      nullConsumer?.then(c => c.close());
+    });
+
+    nullConsumer = this.#transport.consumeData({
+      ...transportInfo.tester,
+      sctpStreamParameters: transportInfo.tester.sctpStreamParameters ?? {}
     });
 
     return transport;
   }
 
-  async play(stationId: string, options?: any) {
+  async prepareAudioContext() {
+
+  }
+
+  async play(stationId: string, options?: any): Promise<AudioTransportPlayResult> {
     this.#ctx.resume();
 
-    // if (this.#stationId === stationId) {
-    //   return true;
-    // }
-
-    if (this.#transport) {
-      this.#transport.close();
-      this.#transponder.closeClientTransport(this.#transport.id);
+    if (this.#stationId === stationId) {
+      return true;
     }
 
-    const transport = await this.#createTransport();
-
-    if (!transport) {
-      return false;
+    if (!this.#transport) {
+      return 'transport_failed';
     }
 
     const consumerInfo = await this.#transponder.initiateClientConsumer(
@@ -83,10 +110,10 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     );
 
     if (!consumerInfo) {
-      return false;
+      return 'transport_failed';
     }
 
-    const consumer = await transport.consume(consumerInfo.rtp);
+    const consumer = await this.#transport.consume(consumerInfo.rtp);
 
     const stream = new MediaStream();
     stream.addTrack(consumer.track);
@@ -95,10 +122,10 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     this.#sourceNode = this.#ctx.createMediaStreamSource(stream);
     this.#sourceNode.connect(this.#ctx.destination);
 
-    const state = await waitForTransportState(transport, ['connected', 'failed'], options?.timeout);
+    const state = await waitForTransportState(this.#transport, ['connected', 'failed'], options?.timeout);
 
     if (state === undefined) {
-      return false;
+      return 'transport_failed';
     }
 
     this.#audioElement.srcObject = stream;
@@ -106,12 +133,14 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
     const result = await waitForAudioElement(this.#audioElement, options?.timeout);
 
-    if (result) {
-      this.#stationId = stationId;
+    if (!result) {
+      return 'media_failed';
     }
 
+    this.#stationId = stationId;
+
     if (consumerInfo.audioLevelData) {
-      const dataConsumer = await transport.consumeData({
+      const dataConsumer = await this.#transport.consumeData({
         ...consumerInfo.audioLevelData,
         sctpStreamParameters: consumerInfo.audioLevelData.sctpStreamParameters ?? {}
       });

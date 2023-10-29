@@ -10,8 +10,7 @@ import { Callable, ParametersOf, ReturnTypeOf } from "../types";
 import { DisconnectDescription } from "socket.io-client/build/esm/socket";
 import { waitFor } from "@seamless-medley/utils";
 import { getRemoteTimeout } from "../socket/decorator";
-import { type AudioTransportEvents } from "./audio/types";
-
+import { IAudioTransport, type AudioTransportEvents } from "./audio/transport";
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, changes: ObservedPropertyChange<T>[]) => Promise<any>;
 
@@ -61,6 +60,8 @@ class ObservingStore<T extends object> {
 type ClientEvents = AudioTransportEvents & {
   connect(): void;
   disconnect(reason?: DisconnectReason): void;
+  //
+  audioTransport(transport: IAudioTransport): void;
 }
 
 export enum DisconnectReason {
