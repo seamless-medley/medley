@@ -11,11 +11,18 @@
       "properties": {
         "port": {
           "type": "integer",
-          "minimum": 1024,
+          "minimum": 1,
           "maximum": 65535
         },
         "address": {
           "$ref": "#/$defs/ipAddress"
+        },
+        "audioBitrate": {
+          "title": "Bitrate",
+          "description": "Bitrate for Opus, in kbps",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
         }
       },
       "required": [],
@@ -49,7 +56,7 @@
               "port": {
                 "title": "Port",
                 "type": "integer",
-                "minimum": 1024,
+                "minimum": 1,
                 "maximum": 65535
               },
               "announcedIp": {
@@ -60,6 +67,13 @@
             "required": ["protocol", "ip", "port"],
             "additionalProperties": false
           }
+        },
+        "bitrate": {
+          "title": "Bitrate",
+          "description": "Bitrate for Opus, in kbps",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
         }
       },
       "required": ["listens"],
@@ -380,7 +394,7 @@
           "description": "Limit number of tracks to play after being selected",
           "oneOf": [
             {
-              "type": "number",
+              "type": "integer",
               "minimum": 0
             },
             {
@@ -571,6 +585,13 @@
             }
           },
           "additionalProperties": false
+        },
+        "bitrate": {
+          "title": "Bitrate",
+          "description": "Bitrate for Opus, in kbps",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
         }
       },
       "additionalProperties": false
