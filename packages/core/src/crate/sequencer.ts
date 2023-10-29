@@ -3,7 +3,7 @@ import { chain, debounce, isObjectLike, isString } from "lodash";
 import { TrackCollection } from "../collections";
 import { SequencedTrack, Track, TrackExtra, TrackSequencing } from "../track";
 import { Crate } from "./base";
-import { createLogger } from "../logging";
+import { ILogObj, Logger, createLogger } from "../logging";
 import { randomUUID } from "crypto";
 import { moveArrayIndexes } from "@seamless-medley/utils";
 
@@ -58,12 +58,15 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   #lastCrate: Crate<T> | undefined;
   #currentCollection: T['collection'] | undefined;
 
-  private logger = createLogger({
-    name: `sequencer/${this.id}`
-  })
+  private logger: Logger<ILogObj>;
 
   constructor(readonly id: string, crates: Array<Crate<T>>, public options: CrateSequencerOptions<E> = {}) {
     super();
+
+    this.logger = createLogger({
+      name: `sequencer/${this.id}`
+    });
+
     this.#crates = crates;
   }
 

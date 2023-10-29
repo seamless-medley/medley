@@ -1,7 +1,7 @@
 import { castArray, chain, isString, noop } from 'lodash';
 import normalizePath from 'normalize-path';
 import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents } from '../collections';
-import { createLogger } from '../logging';
+import { ILogObj, Logger, createLogger } from '../logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
 import { SearchEngine, Query, TrackDocumentFields } from './search';
@@ -33,7 +33,7 @@ type IndexInfo<O> = {
 }
 
 export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
-  private logger = createLogger({ name: `library/${this.id}` });
+  private logger: Logger<ILogObj>;
 
   private searchEngine = new SearchEngine();
 
@@ -45,6 +45,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     readonly musicDb: MusicDb
   ) {
     super();
+
+    this.logger = createLogger({ name: `library/${this.id}` });
   }
 
   private trackCreator: TrackCreator<MusicTrack<O>> = async (path) => {
