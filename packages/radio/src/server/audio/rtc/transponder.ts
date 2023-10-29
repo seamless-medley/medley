@@ -5,6 +5,9 @@ import { RTCExciter } from './exciter';
 import { AudioDispatcher } from '../../../audio/exciter';
 import { type WebRtcConfig } from '../../../config/webrtc';
 
+type ConsumerResponse = Pick<types.Consumer, 'id' | 'producerId' | 'kind' | 'rtpParameters'>;;
+type DataConsumerResponse = Pick<types.DataConsumer, 'id' | 'dataProducerId' | 'label' | 'sctpStreamParameters'>;;
+
 export type ClientTransportInfo = {
   id: types.Transport['id'];
   ice: {
@@ -13,6 +16,7 @@ export type ClientTransportInfo = {
   },
   dtls: types.WebRtcTransport['dtlsParameters'];
   sctp: types.WebRtcTransport['sctpParameters'];
+  tester: DataConsumerResponse;
 }
 
 export type ClientTransportData = {
@@ -22,8 +26,8 @@ export type ClientTransportData = {
 }
 
 export type ClientConsumerInfo = {
-  rtp: Pick<types.Consumer, 'id' | 'producerId' | 'kind' | 'rtpParameters'>;
-  audioLevelData?: Pick<types.DataConsumer, 'id' | 'dataProducerId' | 'label' | 'sctpStreamParameters'>;
+  rtp: ConsumerResponse;
+  audioLevelData?: DataConsumerResponse;
 }
 
 export class RTCTransponder {
@@ -32,16 +36,17 @@ export class RTCTransponder {
   #worker!: types.Worker;
   #webrtcServer!: types.WebRtcServer;
   #router!: types.Router;
+  #nullDirectTransport!: types.DirectTransport;
+  #nullDataProducer!: types.DataProducer;
 
   #published = new Map<Station, RTCExciter>();
 
   #transport = new Map<types.Transport['id'], types.WebRtcTransport<ClientTransportData>>();
 
   constructor(config: WebRtcConfig) {
-    this.initialize(config);
   }
 
-  private async initialize(config: WebRtcConfig) {
+  async initialize(config: WebRtcConfig): Promise<this> {
     this.#worker = await createWorker({
       logLevel: 'warn',
       logTags: ['rtp', 'ice']
@@ -66,6 +71,14 @@ export class RTCTransponder {
         }
       ]
     });
+
+    this.#nullDirectTransport = await this.#router.createDirectTransport();
+    this.#nullDataProducer = await this.#nullDirectTransport.produceData({
+      label: 'null',
+      protocol: 'none'
+    });
+
+    return this;
   }
 
   async publish(station: Station) {
@@ -92,27 +105,27 @@ export class RTCTransponder {
   }
 
   async newClientTransport(sctpCaps: types.SctpCapabilities, socket: Socket<{}>): Promise<ClientTransportInfo> {
-    const disconnectHandler = () => transport.close();
-
     const transport = await this.#router.createWebRtcTransport<ClientTransportData>({
       webRtcServer: this.#webrtcServer,
       enableTcp: true,
       enableUdp: true,
       preferTcp: true,
       enableSctp: true,
-      numSctpStreams: sctpCaps.numStreams,
-      appData: {
-        socket,
-        disconnectHandler
-      }
+      numSctpStreams: sctpCaps.numStreams
     });
+
+    const disconnectHandler = () => transport.close();
+
+    transport.appData = {
+      socket,
+      disconnectHandler
+    }
 
     this.#transport.set(transport.id, transport);
 
     socket.once('disconnect', disconnectHandler);
 
     transport.on('@close', () => {
-      console.log('transport', transport.id, '@close');
       this.#transport.delete(transport.id);
 
       const { stationId } = transport.appData;
@@ -127,6 +140,8 @@ export class RTCTransponder {
       }
     });
 
+    const nullConsumer = await transport.consumeData({ dataProducerId: this.#nullDataProducer.id });
+
     return {
       id: transport.id,
       ice: {
@@ -134,7 +149,13 @@ export class RTCTransponder {
         params: transport.iceParameters,
       },
       dtls: transport.dtlsParameters,
-      sctp: transport.sctpParameters
+      sctp: transport.sctpParameters,
+      tester: {
+        id: nullConsumer.id,
+        dataProducerId: nullConsumer.dataProducerId,
+        label: nullConsumer.label,
+        sctpStreamParameters: nullConsumer.sctpStreamParameters
+      }
     }
   }
 

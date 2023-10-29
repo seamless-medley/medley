@@ -56,10 +56,18 @@ async function startServer(configs: Config) {
       return;
     }
 
+    const rtcTransponder = (configs.webrtc)
+      ? await new RTCTransponder()
+        .initialize(configs.webrtc)
+        .catch((error) => {
+          reject(error);
+          return undefined;
+        })
+      : undefined;
     const server = new MedleyServer({
       io: new SocketIOServer(httpServer, '/socket.io'),
       audioServer: new AudioWebSocketServer(httpServer),
-      rtcTransponder: configs.webrtc ? new RTCTransponder(configs.webrtc) : undefined,
+      rtcTransponder,
       configs
     });
 
