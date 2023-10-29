@@ -200,8 +200,8 @@ importers:
         specifier: ^14.13.0
         version: 14.13.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       eventemitter3:
-        specifier: ^5.0.0
-        version: 5.0.0
+        specifier: ^5.0.1
+        version: 5.0.1
       express:
         specifier: 4.18.2
         version: 4.18.2
@@ -221,11 +221,11 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       mediasoup:
-        specifier: '3'
-        version: 3.12.15
+        specifier: ^3.12.16
+        version: 3.12.16
       mediasoup-client:
-        specifier: '3'
-        version: 3.6.102
+        specifier: ^3.6.103
+        version: 3.6.103
       mime-types:
         specifier: ^2.1.35
         version: 2.1.35
@@ -260,11 +260,11 @@ importers:
         specifier: ^0.1.13
         version: 0.1.13
       socket.io:
-        specifier: ^4.7.1
-        version: 4.7.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+        specifier: ^4.7.2
+        version: 4.7.2(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       socket.io-client:
-        specifier: ^4.7.1
-        version: 4.7.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+        specifier: ^4.7.2
+        version: 4.7.2(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       socket.io-msgpack-parser:
         specifier: ^3.0.2
         version: 3.0.2
@@ -2079,10 +2079,10 @@ packages:
     resolution: {integrity: sha512-HE56+wRx6tKl5y5DYAITu61mLBfR1t2I//RyQsCpDP76r72uTTfnR6begNeAo5PqRM+PUpIS/L/ZnRHIK6verQ==}
     dev: true
 
-  /@types/cors@2.8.13:
-    resolution: {integrity: sha512-RG8AStHlUiV5ysZQKq97copd2UmVYw3/pRMLefISZ3S1hK104Cwm7iLQ3fTKx+lsUH2CE8FlLaYeEA2LSeqYUA==}
+  /@types/cors@2.8.15:
+    resolution: {integrity: sha512-n91JxbNLD8eQIuXDIChAN1tCKNWCEgpceU9b7ZMbFA+P+Q4yIeh80jizFLEvolRPc1ES0VdwFlGv+kJTSirogw==}
     dependencies:
-      '@types/node': 18.16.3
+      '@types/node': 20.8.9
     dev: false
 
   /@types/debug@4.1.10:
@@ -2165,10 +2165,6 @@ packages:
 
   /@types/node@18.15.11:
     resolution: {integrity: sha512-E5Kwq2n4SbMzQOn6wnmBjuK9ouqlURrcZDVfbo9ftDDTFt3nk7ZKK4GMOzoYgnpQJKcxwQw+lGaBvvlMo0qN/Q==}
-
-  /@types/node@18.16.3:
-    resolution: {integrity: sha512-OPs5WnnT1xkCBiuQrZA4+YAV4HEJejmHneyraIaxsbev5yCEr6KMwINNFP9wQeFIw8FWcoTqF3vQsa5CDaI+8Q==}
-    dev: false
 
   /@types/node@20.8.9:
     resolution: {integrity: sha512-UzykFsT3FhHb1h7yD4CA4YhBHq545JC0YnEz41xkipN88eKQtL6rSgocL5tbAP6Ola9Izm/Aw4Ora8He4x0BHg==}
@@ -2460,9 +2456,9 @@ packages:
   /asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
 
-  /awaitqueue@3.0.1(supports-color@9.4.0):
-    resolution: {integrity: sha512-w3uWpUVI/7Q/gS7SrW8UCkZBDC+JPxSjVSFVqlty+OEo4tSEOGPB6jHWXxsi+bRktDXFaFiVKFBvMVzPhUhvqA==}
-    engines: {node: '>=14'}
+  /awaitqueue@3.0.2(supports-color@9.4.0):
+    resolution: {integrity: sha512-AVAtRwmf0DNSesMdyanFKKejTrOnjdKtz5LIDQFu2OTUgXvB/CRTYMrkPAF/2GCF9XBtYVxSwxDORlD41S+RyQ==}
+    engines: {node: '>=16'}
     dependencies:
       debug: 4.3.4(supports-color@9.4.0)
     transitivePeerDependencies:
@@ -3194,12 +3190,12 @@ packages:
       once: 1.4.0
     dev: true
 
-  /engine.io-client@6.5.1(bufferutil@4.0.8)(utf-8-validate@5.0.10):
-    resolution: {integrity: sha512-hE5wKXH8Ru4L19MbM1GgYV/2Qo54JSMh1rlJbfpa40bEWkCKNo3ol2eOtGmowcr+ysgbI7+SGL+by42Q3pt/Ng==}
+  /engine.io-client@6.5.2(bufferutil@4.0.8)(utf-8-validate@5.0.10):
+    resolution: {integrity: sha512-CQZqbrpEYnrpGqC07a9dJDz4gePZUgTPMU3NKJPSeQOyw27Tst4Pl3FemKoFGAlHzgZmKjoRmiJvbWfhCXUlIg==}
     dependencies:
       '@socket.io/component-emitter': 3.1.0
       debug: 4.3.4(supports-color@9.4.0)
-      engine.io-parser: 5.1.0
+      engine.io-parser: 5.2.1
       ws: 8.11.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       xmlhttprequest-ssl: 2.0.0
     transitivePeerDependencies:
@@ -3208,24 +3204,24 @@ packages:
       - utf-8-validate
     dev: false
 
-  /engine.io-parser@5.1.0:
-    resolution: {integrity: sha512-enySgNiK5tyZFynt3z7iqBR+Bto9EVVVvDFuTT0ioHCGbzirZVGDGiQjZzEp8hWl6hd5FSVytJGuScX1C1C35w==}
+  /engine.io-parser@5.2.1:
+    resolution: {integrity: sha512-9JktcM3u18nU9N2Lz3bWeBgxVgOKpw7yhRaoxQA3FUDZzzw+9WlA6p4G4u0RixNkg14fH7EfEc/RhpurtiROTQ==}
     engines: {node: '>=10.0.0'}
     dev: false
 
-  /engine.io@6.5.1(bufferutil@4.0.8)(utf-8-validate@5.0.10):
-    resolution: {integrity: sha512-mGqhI+D7YxS9KJMppR6Iuo37Ed3abhU8NdfgSvJSDUafQutrN+sPTncJYTyM9+tkhSmWodKtVYGPPHyXJEwEQA==}
-    engines: {node: '>=10.0.0'}
+  /engine.io@6.5.3(bufferutil@4.0.8)(utf-8-validate@5.0.10):
+    resolution: {integrity: sha512-IML/R4eG/pUS5w7OfcDE0jKrljWS9nwnEfsxWCIJF5eO6AHo6+Hlv+lQbdlAYsiJPHzUthLm1RUjnBzWOs45cw==}
+    engines: {node: '>=10.2.0'}
     dependencies:
       '@types/cookie': 0.4.1
-      '@types/cors': 2.8.13
-      '@types/node': 18.16.3
+      '@types/cors': 2.8.15
+      '@types/node': 20.8.9
       accepts: 1.3.8
       base64id: 2.0.0
       cookie: 0.4.2
       cors: 2.8.5
       debug: 4.3.4(supports-color@9.4.0)
-      engine.io-parser: 5.1.0
+      engine.io-parser: 5.2.1
       ws: 8.11.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
@@ -3309,8 +3305,8 @@ packages:
     engines: {node: '>=10.13.0'}
     dev: false
 
-  /eventemitter3@5.0.0:
-    resolution: {integrity: sha512-riuVbElZZNXLeLEoprfNYoDSwTBRR44X3mnhdI1YcnENpWTCsTTVZ2zFuqQcpoyqPQIUXdiPEU0ECAq0KQRaHg==}
+  /eventemitter3@5.0.1:
+    resolution: {integrity: sha512-GWkBvjiSZK87ELrYOSESUYeVIc9mvLLf/nXalMOS5dYrgZq9o5OVkbZAVM06CVxYsCwH9BDZFPlQTlPA1j4ahA==}
     dev: false
 
   /events@3.3.0:
@@ -4366,12 +4362,12 @@ packages:
     engines: {node: '>= 0.6'}
     dev: false
 
-  /mediasoup-client@3.6.102:
-    resolution: {integrity: sha512-C388Deb9OcVxoL+4g+zLHFzv8/OH5KNESQEln8SyKa2Afd28PuTlEtX7xkC22Bxx0xlN5VV7ivYP8+56jhVZMA==}
+  /mediasoup-client@3.6.103:
+    resolution: {integrity: sha512-njbRpcdlqYaJwAE92pWV9uJxMg5aA3YFetCdwXY0l285pA/tDr7hSM22cczAHLx50C1DODL8/uBVqq+fDMMEmw==}
     engines: {node: '>=16'}
     dependencies:
       '@types/debug': 4.1.10
-      awaitqueue: 3.0.1(supports-color@9.4.0)
+      awaitqueue: 3.0.2(supports-color@9.4.0)
       debug: 4.3.4(supports-color@9.4.0)
       events: 3.3.0
       fake-mediastreamtrack: 1.2.0
@@ -4382,8 +4378,8 @@ packages:
       ua-parser-js: 1.0.36
     dev: false
 
-  /mediasoup@3.12.15:
-    resolution: {integrity: sha512-ZeHI5YcziYQKdTw7fm5mMiMP+TwTErWkYAtMy4vlDT39Lh7V+/c2TonN+LUFwXaGYcnW/IahnZym3HGFmhztyA==}
+  /mediasoup@3.12.16:
+    resolution: {integrity: sha512-yLk/OBlHKrosfFBWKVGLpAQ55tssQ/9+EteOrt/C5xgS8OHOpGTIIrP0/OFjfCA/lhxAr1xV8qUTXM3D7NGxJA==}
     engines: {node: '>=16'}
     requiresBuild: true
     dependencies:
@@ -5553,13 +5549,13 @@ packages:
       - utf-8-validate
     dev: false
 
-  /socket.io-client@4.7.1(bufferutil@4.0.8)(utf-8-validate@5.0.10):
-    resolution: {integrity: sha512-Qk3Xj8ekbnzKu3faejo4wk2MzXA029XppiXtTF/PkbTg+fcwaTw1PlDrTrrrU4mKoYC4dvlApOnSeyLCKwek2w==}
+  /socket.io-client@4.7.2(bufferutil@4.0.8)(utf-8-validate@5.0.10):
+    resolution: {integrity: sha512-vtA0uD4ibrYD793SOIAwlo8cj6haOeMHrGvwPxJsxH7CeIksqJ+3Zc06RvWTIFgiSqx4A3sOnTXpfAEE2Zyz6w==}
     engines: {node: '>=10.0.0'}
     dependencies:
       '@socket.io/component-emitter': 3.1.0
       debug: 4.3.4(supports-color@9.4.0)
-      engine.io-client: 6.5.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      engine.io-client: 6.5.2(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       socket.io-parser: 4.2.4
     transitivePeerDependencies:
       - bufferutil
@@ -5584,15 +5580,15 @@ packages:
       - supports-color
     dev: false
 
-  /socket.io@4.7.1(bufferutil@4.0.8)(utf-8-validate@5.0.10):
-    resolution: {integrity: sha512-W+utHys2w//dhFjy7iQQu9sGd3eokCjGbl2r59tyLqNiJJBdIebn3GAKEXBr3osqHTObJi2die/25bCx2zsaaw==}
-    engines: {node: '>=10.0.0'}
+  /socket.io@4.7.2(bufferutil@4.0.8)(utf-8-validate@5.0.10):
+    resolution: {integrity: sha512-bvKVS29/I5fl2FGLNHuXlQaUH/BlzX1IN6S+NKLNZpBsPZIDH+90eQmCs2Railn4YUiww4SzUedJ6+uzwFnKLw==}
+    engines: {node: '>=10.2.0'}
     dependencies:
       accepts: 1.3.8
       base64id: 2.0.0
       cors: 2.8.5
       debug: 4.3.4(supports-color@9.4.0)
-      engine.io: 6.5.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      engine.io: 6.5.3(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       socket.io-adapter: 2.5.2(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       socket.io-parser: 4.2.4
     transitivePeerDependencies:

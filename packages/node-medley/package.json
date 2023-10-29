@@ -32,12 +32,12 @@
   },
   "gypfile": true,
   "dependencies": {
-    "node-gyp-build": "^4.6.0"
+    "node-gyp-build": "^4.6.1"
   },
   "devDependencies": {
-    "@types/semver": "^7.3.13",
-    "node-addon-api": "6.0.0",
+    "@types/semver": "^7.5.4",
+    "node-addon-api": "7.0.0",
     "prebuildify": "^5.0.1",
-    "semver": "^7.4.0"
+    "semver": "^7.5.4"
   }
 }

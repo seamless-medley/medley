@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es2020",
-    "module": "CommonJS",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "commonjs",
     "allowJs": false,
     "declaration": false,
     "removeComments": true,
