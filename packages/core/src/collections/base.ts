@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import { TypedEmitter } from "tiny-typed-emitter";
 import { castArray, chain, chunk, clamp, findLastIndex, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
 import normalizePath from 'normalize-path';
-import { createLogger } from '../logging';
+import { ILogObj, Logger, createLogger } from '../logging';
 import { Track } from "../track";
 import { breath, moveArrayElements, moveArrayIndexes } from '@seamless-medley/utils';
 
@@ -70,12 +70,15 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
 
   extra: Extra;
 
-  protected logger = createLogger({
-    name: ['collection', this.options.logPrefix, this.id].filter(s => !!s).join('/'),
-  });
+  protected logger!: Logger<ILogObj>;
 
   constructor(readonly id: string, extra: Extra, public options: TrackCollectionOptions<T> = {}) {
     super();
+
+    this.logger = createLogger({
+      name: ['collection', this.options.logPrefix, this.id].filter(s => !!s).join('/'),
+    });
+
     this.extra = extra;
     this.afterConstruct();
   }
