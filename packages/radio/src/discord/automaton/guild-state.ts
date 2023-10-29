@@ -92,6 +92,16 @@ export class GuildState {
     return this.#serverMuted;
   }
 
+  get bitrate() {
+    return this.stationLink?.exciter?.bitrate ?? 0;
+  }
+
+  set bitrate(newBitrate: number) {
+    if (this.stationLink?.exciter) {
+      this.stationLink.exciter.bitrate = newBitrate;
+    }
+  }
+
   hasVoiceConnection() {
     return this.voiceConnector !== undefined;
   }
@@ -170,7 +180,8 @@ export class GuildState {
       this.detune();
     }
 
-    const exciter = DiscordAudioPlayer.make(preferredStation, 256_000, (newExiter) => {
+    const bitrate = (this.adapter.getConfig(this.guildId)?.bitrate ?? 256) * 1000;
+    const exciter = DiscordAudioPlayer.make(preferredStation, bitrate , (newExiter) => {
       newExiter.start(this.adapter.getAudioDispatcher());
     });
 

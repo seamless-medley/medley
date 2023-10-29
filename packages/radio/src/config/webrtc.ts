@@ -8,7 +8,8 @@ export const WebRtcConfig = z.object({
       port: z.number().min(1).max(65535),
       announcedIp: z.string().ip().optional()
     })
-  )
+  ),
+  bitrate: z.number().positive().max(256).optional().default(256)
 });
 
 export type WebRtcConfig = z.infer<typeof WebRtcConfig>;

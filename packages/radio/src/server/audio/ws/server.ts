@@ -17,8 +17,12 @@ export class AudioWebSocketServer extends EventEmitter {
 
   #published = new Map<Station, WebSocketExciter>();
 
-  constructor(httpServer: http.Server) {
+  #bitrate: number;
+
+  constructor(httpServer: http.Server, bitrate: number = 256_000) {
     super();
+
+    this.#bitrate = bitrate;
 
     this.#server = new WebSocketServer({
       noServer: true,
@@ -105,7 +109,7 @@ export class AudioWebSocketServer extends EventEmitter {
   }
 
   async publish(station: Station) {
-    const exciter = new WebSocketExciter(station);
+    const exciter = new WebSocketExciter(station, this.#bitrate);
 
     exciter.on('packet', (packet) => {
       const listeners = this.#stationListeners.get(station.id);

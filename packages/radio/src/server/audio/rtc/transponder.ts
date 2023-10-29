@@ -43,16 +43,20 @@ export class RTCTransponder {
 
   #transport = new Map<types.Transport['id'], types.WebRtcTransport<ClientTransportData>>();
 
-  constructor(config: WebRtcConfig) {
+  #bitrate = 256_000;
+
+  constructor() {
+
   }
 
   async initialize(config: WebRtcConfig): Promise<this> {
+    this.#bitrate = config.bitrate * 1000;
+
     this.#worker = await createWorker({
       logLevel: 'warn',
       logTags: ['rtp', 'ice']
     });
 
-    // TODO: Configurable
     this.#webrtcServer = await this.#worker.createWebRtcServer({
       listenInfos: config.listens
     });
@@ -84,7 +88,11 @@ export class RTCTransponder {
   async publish(station: Station) {
     const transport = await this.#router.createDirectTransport();
 
-    const exciter = new RTCExciter(station, transport);
+    const exciter = new RTCExciter({
+      station,
+      transport,
+      bitrate: this.#bitrate
+    });
 
     exciter.start(this.#dispatcher)
 

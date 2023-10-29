@@ -21,6 +21,12 @@ function makeSSRC() {
   }
 }
 
+export type RTCExciterOptions = {
+  station: Station;
+  transport: types.DirectTransport;
+  bitrate: number;
+}
+
 export class RTCExciter extends Exciter implements IExciter {
   #ssrc = makeSSRC();
   #transport: types.DirectTransport;
@@ -31,11 +37,11 @@ export class RTCExciter extends Exciter implements IExciter {
   #preparedPacket?: Buffer;
   #preparedInfo?: Buffer;
 
-  constructor(station: Station, transport: types.DirectTransport) {
+  constructor({ station, transport, bitrate }: RTCExciterOptions) {
     super(
       station,
       { format: 'Int16LE', sampleRate: 48_000 },
-      { bitrate: 256_000 }
+      { bitrate }
     );
 
     this.#transport = transport;

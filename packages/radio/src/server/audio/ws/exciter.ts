@@ -8,11 +8,11 @@ interface AudioStreamPlayerEvents {
 }
 
 export class WebSocketExciter extends Exciter<AudioStreamPlayerEvents> implements IExciter {
-  constructor(station: Station) {
+  constructor(station: Station, bitrate = 256_000) {
     super(
       station,
       { format: 'Int16LE', sampleRate: 48_000 },
-      { bitrate: 256_000 }
+      { bitrate }
     );
   }
 

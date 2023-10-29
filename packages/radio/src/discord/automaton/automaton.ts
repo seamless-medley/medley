@@ -51,6 +51,11 @@ export type GuildSpecificConfig = {
 
     channel?: string;
   }
+
+  /**
+   * Opus bitrate, in kbps
+   */
+  bitrate: number;
 }
 
 export type MedleyAutomatonOptions = {
