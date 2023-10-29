@@ -149,7 +149,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
         const extra = decode(data) as AudioTransportExtraPayload;
         const [left_mag, left_peak, right_mag, right_peak, reduction] = extra;
 
-        this.emit('audioExtra', {
+        this.#pushAudioExtra({
           audioLevels: {
             left: {
               magnitude: left_mag,
@@ -166,6 +166,16 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     }
 
     return result;
+  }
+
+  #delayedAudioExtra: AudioTransportExtra[] = [];
+
+  #pushAudioExtra(extra: AudioTransportExtra) {
+    this.#delayedAudioExtra.push(extra);
+
+    while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx.outputLatency * this.#ctx.sampleRate / 960) + 6) {
+      this.emit('audioExtra', this.#delayedAudioExtra.shift()!);
+    }
   }
 }
 
