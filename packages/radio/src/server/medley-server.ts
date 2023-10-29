@@ -16,7 +16,6 @@ import { ExposedDeck } from "./expose/core/deck";
 import { AudioWebSocketServer } from "./audio/ws/server";
 import { RTCTransponder } from "./audio/rtc/transponder";
 import { ExposedTransponder } from "./expose/rtc/transponder";
-import { EventEmitter } from "events";
 
 const logger = createLogger({ name: 'medley-server' });
 
