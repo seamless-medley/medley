@@ -87,7 +87,7 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
 
   return (
     <>
-      <Box sx={{ height: 440, width: '100%', border: '1px solid green' }}>
+      <Box style={{ height: 440, width: '100%', border: '1px solid green' }}>
         <h2>Deck{index+1}</h2>
         <div>{info.cp.toFixed(2)} / {info.duration}</div>
         { cover
@@ -97,11 +97,11 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
             radius='md'
             height={300}
             />
-          : <Text align="center">No Image</Text>
+          : <Text>No Image</Text>
         }
       </Box>
 
-      <Box sx={{ border: '1px solid blue', height: '24px' }}>
+      <Box style={{ border: '1px solid blue', height: '24px' }}>
         <CanvasPlayHead current={info.cp} { ...info } />
       </Box>
       <ul>

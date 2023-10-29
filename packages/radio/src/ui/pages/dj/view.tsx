@@ -26,7 +26,7 @@ const PlayHead: React.FC<{ stationId: string }> = ({ stationId }) => {
     <>
       <h4>Deck: {activeDeck !== undefined ? activeDeck + 1 : 'None'}</h4>
       <h4>Position: {info.cp.toFixed(2)}</h4>
-      <AspectRatio ratio={1} sx={{ width: 250 }}>
+      <AspectRatio ratio={1} style={{ width: 250 }}>
         <img src={cover}  />
       </AspectRatio>
     </>
@@ -163,14 +163,14 @@ export const DJ: React.FC = () => {
         <Grid.Col span={4}>
           <Stack>
             {times(3).map(index => (
-              <Center key={index} sx={{ display: 'block' }}>
+              <Center key={index} style={{ display: 'block' }}>
                 { <PlayDeck {...{ stationId, index }}/> }
               </Center>
             ))}
           </Stack>
         </Grid.Col>
         <Grid.Col span='auto'>
-          <Box sx={{ border: '1px solid red', height: '100%' }}>
+          <Box style={{ border: '1px solid red', height: '100%' }}>
           </Box>
         </Grid.Col>
       </Grid>

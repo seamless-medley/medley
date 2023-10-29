@@ -12,11 +12,13 @@ export type IcyMetadata = {
 
 export class MetadataMux extends Transform {
 
+  private bytesLeft: number;
+
   constructor(private interval: number = 0) {
     super();
-  }
 
-  private bytesLeft = this.interval;
+    this.bytesLeft = this.interval;
+  }
 
   private tail = Buffer.alloc(0);
 
