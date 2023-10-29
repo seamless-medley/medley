@@ -87,8 +87,8 @@ importers:
         specifier: 9.0.3
         version: 9.0.3
       minisearch:
-        specifier: ^6.0.0
-        version: 6.0.0
+        specifier: ^6.2.0
+        version: 6.2.0
       normalize-path:
         specifier: ^3.0.0
         version: 3.0.0
@@ -4580,8 +4580,8 @@ packages:
     engines: {node: '>=16 || 14 >=14.17'}
     dev: true
 
-  /minisearch@6.0.0:
-    resolution: {integrity: sha512-N7yUgtH5T9iQfdmzI8Dnke8TK+grccrWUsdiwvalGv04hJggOUI/EpWIEQj3v8t7XSi/kSfQ7GdLAS540+GxpQ==}
+  /minisearch@6.2.0:
+    resolution: {integrity: sha512-BECkorDF1TY2rGKt9XHdSeP9TP29yUbrAaCh/C03wpyf1vx3uYcP/+8XlMcpTkgoU0rBVnHMAOaP83Rc9Tm+TQ==}
     dev: false
 
   /minizlib@2.1.2:
