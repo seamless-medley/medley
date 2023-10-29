@@ -76,7 +76,7 @@
     "tslog": "^4.9.2",
     "typed-emitter": "2.1.0",
     "valtio": "^1.11.3",
-    "workerpool": "^6.4.0",
+    "workerpool": "^8.0.0",
     "ws": "^8.14.2",
     "yaml": "^2.3.3",
     "zod": "^3.22.4"
@@ -95,7 +95,7 @@
     "@types/react": "18.2.33",
     "@types/react-dom": "18.2.14",
     "@types/sodium-native": "^2.3.8",
-    "@types/workerpool": "^6.4.0",
+    "@types/workerpool": "^6.4.5",
     "@types/ws": "^8.5.8",
     "@vitejs/plugin-react": "4.1.0",
     "electron": "^23.0.0",

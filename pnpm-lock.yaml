@@ -105,8 +105,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0
       workerpool:
-        specifier: ^6.4.0
-        version: 6.4.0
+        specifier: ^8.0.0
+        version: 8.0.0
     devDependencies:
       '@types/normalize-path':
         specifier: ^3.0.1
@@ -284,8 +284,8 @@ importers:
         specifier: ^1.11.3
         version: 1.11.3(@types/react@18.2.33)(react@18.2.0)
       workerpool:
-        specifier: ^6.4.0
-        version: 6.4.0
+        specifier: ^8.0.0
+        version: 8.0.0
       ws:
         specifier: ^8.14.2
         version: 8.14.2(bufferutil@4.0.8)(utf-8-validate@5.0.10)
@@ -343,8 +343,8 @@ importers:
         specifier: ^2.3.8
         version: 2.3.8
       '@types/workerpool':
-        specifier: ^6.4.0
-        version: 6.4.0
+        specifier: ^6.4.5
+        version: 6.4.5
       '@types/ws':
         specifier: ^8.5.8
         version: 8.5.8
@@ -2255,12 +2255,6 @@ packages:
 
   /@types/which@3.0.1:
     resolution: {integrity: sha512-OJWjr4k8gS1HXuOnCmQbBrQez+xqt/zqfp5PhgbKtsmEFEuojAg23arr+TiTZZ1TORdUF9RKXb/WKEpT1dwgSg==}
-    dev: true
-
-  /@types/workerpool@6.4.0:
-    resolution: {integrity: sha512-SIF2/169pDsLKeM8GQGHkOFifGalDbZgiBSaLUnnlVSRsAOenkAvQ6h4uhV2W+PZZczS+8LQxACwNkSykdT91A==}
-    dependencies:
-      '@types/node': 18.15.11
     dev: true
 
   /@types/workerpool@6.4.5:
@@ -6434,8 +6428,8 @@ packages:
     dependencies:
       string-width: 4.2.3
 
-  /workerpool@6.4.0:
-    resolution: {integrity: sha512-i3KR1mQMNwY2wx20ozq2EjISGtQWDIfV56We+yGJ5yDs8jTwQiLLaqHlkBHITlCuJnYlVRmXegxFxZg7gqI++A==}
+  /workerpool@8.0.0:
+    resolution: {integrity: sha512-aoLtwqMXoYVA1JV+t8uCLo7sXkF4Q1Ijrn7954X2IVyysk2bv2Il7C9sVJH8xk9xJAL0FNgR+hPOhmvnMk/P5Q==}
     dev: false
 
   /wrap-ansi@7.0.0:
