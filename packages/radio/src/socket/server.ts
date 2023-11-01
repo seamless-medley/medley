@@ -157,7 +157,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
   }
 
   private handlers: Handlers = {
-    'remote:get': async (socket, kind, id, prop, callback) => {
+    'r:pg': async (socket, kind, id, prop, callback) => {
       this.interact(
         kind, id, prop,
         (value, object, observed) => observed?.isPublishedProperty(prop) ?? false,
@@ -166,7 +166,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       );
     },
 
-    'remote:set': async (socket, kind, id, prop, value, callback) => {
+    'r:ps': async (socket, kind, id, prop, value, callback) => {
       this.interact(
         kind, id, prop,
         (value, object, observed) => observed?.isPublishedProperty(prop) ?? false,
@@ -191,7 +191,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     /**
      * Client requests to observe for changes of a remote object
      */
-    'remote:observe': async (socket, kind, id, options, callback) => {
+    'r:ob': async (socket, kind, id, options, callback) => {
       this.interact(
         kind, id, undefined,
         (value, object) => !!object,
@@ -222,7 +222,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       )
     },
 
-    'remote:unobserve': async (socket, kind, id, callback) => {
+    'r:ub': async (socket, kind, id, callback) => {
       this.interact(
         kind, id, undefined,
         (value, object) => !!object,
@@ -237,7 +237,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       )
     },
 
-    'remote:invoke': async (socket, kind, id, method, args, callback) => {
+    'r:mi': async (socket, kind, id, method, args, callback) => {
       // TODO: Support returning stream back to client
       // The idea is, when the returned value is a stream, just send some placeholder for referencing the stream
       // then start emitting stream data with new event
@@ -254,7 +254,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     /**
      * Client requests to subscribe to an event of a remote object
      */
-    'remote:subscribe': async (socket, kind, id, event, callback) => {
+    'r:es': async (socket, kind, id, event, callback) => {
       this.interact(
         kind, id, 'on',
         isEvented,
@@ -288,7 +288,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       );
     },
 
-    'remote:unsubscribe': async (socket, kind, id, event, callback) => {
+    'r:eu': async (socket, kind, id, event, callback) => {
       this.interact(kind, id, 'off', isEvented, async (object: EventEmitter) => {
         this.unsubscribe(socket, object, event);
       }, callback);

@@ -130,7 +130,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       const [kind, id] = this.extractId(key);
 
       for (const event of Object.keys(events)) {
-        this.socket.emit('remote:subscribe', kind, id, event, async (response) => {
+        this.socket.emit('r:es', kind, id, event, async (response) => {
           if (response.status !== undefined) {
             // Error resubscribing to event, remove it
             delete events[event];
@@ -146,7 +146,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     for (const [key, store] of [...this.observingStores]) {
       const [kind, id] = this.extractId(key);
 
-      this.socket.emit('remote:observe', kind, id, store.options, async (response) => {
+      this.socket.emit('r:ob', kind, id, store.options, async (response) => {
         if (response.status !== undefined) {
           // Error reobserving
           return;
@@ -257,7 +257,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     return new Promise<any>((resolve, reject) => {
       rejectAfter(timeout, reject);
 
-      this.socket.emit('remote:get', kind, id, prop as string, async (response: RemoteResponse<any>) => {
+      this.socket.emit('r:pg', kind, id, prop as string, async (response: RemoteResponse<any>) => {
         if (response.status === undefined) {
           resolve(response.result);
           return;
@@ -282,7 +282,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     return new Promise<any>((resolve, reject) => {
       rejectAfter(timeout, reject);
 
-      this.socket.emit('remote:set', kind, id, prop as string, value, async (response: RemoteResponse<any>) => {
+      this.socket.emit('r:ps', kind, id, prop as string, value, async (response: RemoteResponse<any>) => {
         if (response.status === undefined) {
           resolve(response.result);
           return;
@@ -307,7 +307,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     return new Promise((resolve, reject) => {
       rejectAfter(timeout, reject);
 
-      this.socket.emit('remote:invoke', kind, id, method as string, args, async (response: RemoteResponse<ReturnTypeOf<M[N]>>) => {
+      this.socket.emit('r:mi', kind, id, method as string, args, async (response: RemoteResponse<ReturnTypeOf<M[N]>>) => {
         if (response.status === undefined) {
           resolve(response.result);
           return;
@@ -338,7 +338,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       rejectAfter(5_000, reject);
 
       // It is the first time, subscrbe to remote first
-      this.socket.emit('remote:subscribe', kind, id, event, async (response: RemoteResponse<void>) => {
+      this.socket.emit('r:es', kind, id, event, async (response: RemoteResponse<void>) => {
         if (response.status !== undefined) {
           reject(new RemoteSubscriptionError(response, kind, id, event));
           return;
@@ -378,7 +378,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
       rejectAfter(5_000, reject);
 
-      this.socket.emit('remote:unsubscribe', kind, id, event, async (response: RemoteResponse<void>) => {
+      this.socket.emit('r:eu', kind, id, event, async (response: RemoteResponse<void>) => {
         if (response.status !== undefined) {
           reject(new RemoteSubscriptionError(response, kind, id, event));
           return;
@@ -408,7 +408,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
       rejectAfter(5_000, reject);
 
-      this.socket.emit('remote:observe', kind, id, options, async (response: RemoteResponse<any>) => {
+      this.socket.emit('r:ob', kind, id, options, async (response: RemoteResponse<any>) => {
         if (response.status !== undefined) {
           reject(new RemoteObservationError(response, kind, id));
           return;
@@ -443,7 +443,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
       rejectAfter(5_000, reject);
 
-      this.socket.emit('remote:unobserve', kind, id, async (response) => {
+      this.socket.emit('r:ub', kind, id, async (response) => {
         if (response.status === undefined) {
           resolve();
           return;

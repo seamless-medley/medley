@@ -44,14 +44,14 @@ export type RemoteObserveOptions = {
 
 export type ClientEvents = {
   // property
-  'remote:get': (kind: string, id: string, prop: string, callback: RemoteCallback) => void;
-  'remote:set': (kind: string, id: string, prop: string, value: any, callback: RemoteCallback) => void;
+  'r:pg': (kind: string, id: string, prop: string, callback: RemoteCallback) => void;
+  'r:ps': (kind: string, id: string, prop: string, value: any, callback: RemoteCallback) => void;
   // method
-  'remote:invoke': (kind: string, id: string, method: string, args: any[], callback: RemoteCallback) => void;
+  'r:mi': (kind: string, id: string, method: string, args: any[], callback: RemoteCallback) => void;
   // object event
-  'remote:subscribe': (kind: string, id: string, event: string, callback: RemoteCallback) => void;
-  'remote:unsubscribe': (kind: string, id: string, event: string, callback: RemoteCallback) => void;
+  'r:es': (kind: string, id: string, event: string, callback: RemoteCallback) => void;
+  'r:eu': (kind: string, id: string, event: string, callback: RemoteCallback) => void;
   // observ
-  'remote:observe': (kind: string, id: string, options: RemoteObserveOptions | undefined, callback: RemoteCallback<{ [prop: string]: any }>) => void;
-  'remote:unobserve': (kind: string, id: string, callback: RemoteCallback) => void;
+  'r:ob': (kind: string, id: string, options: RemoteObserveOptions | undefined, callback: RemoteCallback<{ [prop: string]: any }>) => void;
+  'r:ub': (kind: string, id: string, callback: RemoteCallback) => void;
 }
