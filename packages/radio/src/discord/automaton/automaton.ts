@@ -287,7 +287,11 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
             return { status: 'not_joined' }
           }
 
-          const result = state.join(channel, joinTimeout);
+          const result = await state.join(channel, joinTimeout);
+
+          if (result.status !== 'joined') {
+            throw new Error('Rejoin again');
+          }
 
           this.#rejoining = false;
           this.#logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
