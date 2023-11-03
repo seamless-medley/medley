@@ -58,12 +58,12 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   #lastCrate: Crate<T> | undefined;
   #currentCollection: T['collection'] | undefined;
 
-  #logger: Logger<ILogObj>;
+  private logger: Logger<ILogObj>;
 
   constructor(readonly id: string, crates: Array<Crate<T>>, public options: CrateSequencerOptions<E> = {}) {
     super();
 
-    this.#logger = createLogger({
+    this.logger = createLogger({
       name: `sequencer/${this.id}`
     });
 
@@ -74,15 +74,15 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     return this.#crates[this.#crateIndex % this.#crates.length];
   }
 
-  #isCrate(o: any): o is Crate<T> {
+  private isCrate(o: any): o is Crate<T> {
     return isObjectLike(o) && ((o as Crate<T>).sources[0] instanceof TrackCollection);
   }
 
-  #isExtra(o: any): o is E {
+  private isExtra(o: any): o is E {
     return isObjectLike(o);
   }
 
-  #logNoCrates = debounce(() => this.#logger.error('No crates'), 1000);
+  #logNoCrates = debounce(() => this.logger.error('No crates'), 1000);
 
   async nextTrack(): Promise<SequencedTrack<T> | undefined> {
     if (this.#crates.length < 1) {
@@ -96,7 +96,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     while (count-- > 0) {
       const crate = this.currentCrate;
 
-      if (this.#isCrate(crate)) {
+      if (this.isCrate(crate)) {
         if (this.#lastCrate !== crate) {
           const oldCrate = this.#lastCrate;
           this.#lastCrate = crate;
@@ -108,7 +108,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             continue;
           }
 
-          this.#logger.debug('Changed to crate', crate.id);
+          this.logger.debug('Changed to crate', crate.id);
 
           this.emit('change',
             crate,
@@ -125,8 +125,8 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
               if (session && session.count>= session.max) {
                 // Ends latching
-                this.#logger.debug(`Removing latch for ${session.collection.id}: count (${session.count}) >= max (${session.max})`)
-                this.#removeLatch(session);
+                this.logger.debug(`Removing latch for ${session.collection.id}: count (${session.count}) >= max (${session.max})`)
+                this.removeLatch(session);
 
                 return;
               }
@@ -147,7 +147,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             const latchingCollection = latchSession?.collection;
 
             if (latchingCollection) {
-              this.#logger.debug('Using collection', latchingCollection.id, 'for latching');
+              this.logger.debug('Using collection', latchingCollection.id, 'for latching');
             }
 
             const track = await crate.next(trackValidator, latchingCollection);
@@ -177,9 +177,9 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
                   latch: latch as any
                 }
 
-                track.extra = this.#isExtra(extra) ? extra : undefined;
+                track.extra = this.isExtra(extra) ? extra : undefined;
 
-                this.#logger.debug('Next track (', this.#playCounter, '/', crate.max, ') =>', track.path);
+                this.logger.debug('Next track (', this.#playCounter, '/', crate.max, ') =>', track.path);
 
                 return track as unknown as SequencedTrack<T>;
               }
@@ -199,14 +199,14 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     // no valid track in any crates
     if (ignored === scanned && scanned > 0) {
       // Rescue, tracks were found but none was allowed to play
-      this.#logger.debug('Tracks were found but none were allowed to play, rescuing...');
+      this.logger.debug('Tracks were found but none were allowed to play, rescuing...');
       this.emit('rescue', scanned, ignored);
     }
 
     return undefined;
   }
 
-  #ensureCrateIndex(index: number) {
+  private ensureCrateIndex(index: number) {
     return (index % this.#crates.length) || 0;
   }
 
@@ -216,7 +216,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
   setCrateIndex(newIndex: number, forceSelect?: boolean) {
     const oldIndex = this.#crateIndex;
-    this.#crateIndex = this.#ensureCrateIndex(newIndex);
+    this.#crateIndex = this.ensureCrateIndex(newIndex);
 
     if (oldIndex === newIndex) {
       return;
@@ -243,7 +243,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
     this.setCrateIndex(this.#crateIndex + 1);
     //
-    this.#logger.debug('next', this.currentCrate?.id);
+    this.logger.debug('next', this.currentCrate?.id);
   }
 
   setCurrentCrate(crate: Crate<T> | number) {
@@ -259,16 +259,16 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   }
 
   set crates(newCrates: Array<Crate<T>>) {
-    this.#alterCrates(() => void(this.#crates = newCrates));
+    this.alterCrates(() => void(this.#crates = newCrates));
   }
 
-  async #alterCrates(fn: () => any) {
+  private async alterCrates(fn: () => any) {
     const oldCurrent = this.currentCrate;
     const savedId = oldCurrent?.id;
 
     await fn();
 
-    let newIndex = this.#ensureCrateIndex(this.#crateIndex);
+    let newIndex = this.ensureCrateIndex(this.#crateIndex);
 
     if (savedId) {
       const found = this.#crates.findIndex(crate => crate.id === savedId);
@@ -282,7 +282,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   }
 
   addCrates(...crates: Array<Crate<T>>) {
-    this.#alterCrates(() => {
+    this.alterCrates(() => {
       this.#crates = chain(this.#crates)
         .push(...crates)
         .uniqBy(c => c.id)
@@ -293,7 +293,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   removeCrates(...cratesOrIds: Array<Crate<T>['id'] | Crate<T>>) {
     const toBeRemoved = cratesOrIds.map(w => isString(w) ? w : w.id);
 
-    this.#alterCrates(() => {
+    this.alterCrates(() => {
       for (const id of toBeRemoved) {
         if (id) {
           const index = this.#crates.findIndex(c => c.id === id)
@@ -307,7 +307,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   }
 
   moveCrates(newPosition: number, ...cratesOrIds: Array<Crate<T>['id'] | Crate<T>>) {
-    this.#alterCrates(() => {
+    this.alterCrates(() => {
       const toMove = cratesOrIds.map(w => this.crates.findIndex(c => c.id === (isString(w) ? w : w.id)));
       moveArrayIndexes(this.#crates, newPosition, ...toMove);
     });
@@ -317,36 +317,36 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     return this.#crates.find(c => c.sources.includes(collection)) !== undefined;
   }
 
-  #latchSessions: Array<LatchSession<T, E>> = [];
+  private latchSessions: Array<LatchSession<T, E>> = [];
 
   getActiveLatch(): LatchSession<T, E> | undefined {
-    return this.#latchSessions.at(0);
+    return this.latchSessions.at(0);
   }
 
   get allLatches(): Array<LatchSession<T, E>> {
-    return [...this.#latchSessions];
+    return [...this.latchSessions];
   }
 
-  #removeLatch(session: number | LatchSession<T, E>) {
-    const index = typeof session === 'number' ? session : this.#latchSessions.indexOf(session);
+  private removeLatch(session: number | LatchSession<T, E>) {
+    const index = typeof session === 'number' ? session : this.latchSessions.indexOf(session);
 
     if (index > -1) {
-      const removingSession = this.#latchSessions[index];
-      this.#latchSessions.splice(index, 1);
+      const removingSession = this.latchSessions[index];
+      this.latchSessions.splice(index, 1);
       removingSession.max = 0;
       return removingSession;
     }
   }
 
-  #getLatchSessionFor(collection: T['collection'] | undefined, important?: boolean): LatchSession<T, E> | undefined {
-    const existingIndex = collection ? this.#latchSessions.findIndex(s => s.collection.id === collection.id) : -1;
+  private getLatchSessionFor(collection: T['collection'] | undefined, important?: boolean): LatchSession<T, E> | undefined {
+    const existingIndex = collection ? this.latchSessions.findIndex(s => s.collection.id === collection.id) : -1;
 
     if (existingIndex > -1) {
-      const existing = this.#latchSessions[existingIndex];
+      const existing = this.latchSessions[existingIndex];
 
       if (important) {
-        this.#latchSessions.splice(existingIndex, 1);
-        this.#latchSessions.unshift(existing);
+        this.latchSessions.splice(existingIndex, 1);
+        this.latchSessions.unshift(existing);
       }
 
       return existing;
@@ -368,9 +368,9 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     }
 
     if (important) {
-      this.#latchSessions.unshift(newSession);
+      this.latchSessions.unshift(newSession);
     } else {
-      this.#latchSessions.push(newSession);
+      this.latchSessions.push(newSession);
     }
 
     return newSession;
@@ -382,14 +382,14 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     }
 
     if (options.increase === false && options.length === 0) {
-      return this.#removeLatch(0);
+      return this.removeLatch(0);
     }
 
     const collection = options.collection
       ?? this.getActiveLatch()?.collection
       ?? this.#currentCollection;
 
-    const session = this.#getLatchSessionFor(collection, options.important);
+    const session = this.getLatchSessionFor(collection, options.important);
 
     if (!session) {
       return;
@@ -405,7 +405,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     }
 
     if (session.max === 0) {
-      return this.#removeLatch(session);
+      return this.removeLatch(session);
     }
 
     return session;

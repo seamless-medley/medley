@@ -143,29 +143,29 @@ export type RequestTrackLockPredicate<R extends Requester> = (t: TrackWithReques
 export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   readonly id: string;
 
-  readonly #sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>;
-  readonly #sweeperInserter: SweeperInserter;
+  private readonly sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>;
+  private readonly sweeperInserter: SweeperInserter;
 
   options: Required<Pick<BoomBoxOptions<BoomBoxTrack, R>, 'artistBacklog' | 'duplicationSimilarity'>>;
 
-  #decks = Array(3).fill(0).map<DeckInfo>(() => ({ playing: false, active: false })) as [DeckInfo, DeckInfo, DeckInfo];
+  private decks = Array(3).fill(0).map<DeckInfo>(() => ({ playing: false, active: false })) as [DeckInfo, DeckInfo, DeckInfo];
 
   readonly medley: Medley<BoomBoxTrack>;
   readonly queue: Queue<BoomBoxTrack>;
 
   readonly musicDb?: MusicDb;
 
-  readonly #onInsertRequestTrack?: OnInsertRequestTrack<BoomBoxTrack, R>;
+  private readonly onInsertRequestTrack?: OnInsertRequestTrack<BoomBoxTrack, R>;
 
   artistHistory: Array<string[]> = [];
 
-  #logger: Logger<ILogObj>;
+  private logger: Logger<ILogObj>;
 
   constructor(options: BoomBoxOptions<BoomBoxTrack, R>) {
     super();
     //
     this.id = options.id;
-    this.#logger = createLogger({
+    this.logger = createLogger({
       name: `boombox/${this.id}`
     });
 
@@ -177,61 +177,61 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     this.medley = options.medley;
     this.queue = options.queue;
     //
-    this.medley.on('enqueueNext', this.#enqueue);
-    this.medley.on('loaded', this.#deckLoaded);
-    this.medley.on('unloaded', this.#deckUnloaded);
-    this.medley.on('started', this.#deckStarted);
-    this.medley.on('finished', this.#deckFinished);
-    this.medley.on('mainDeckChanged', this.#mainDeckChanged);
+    this.medley.on('enqueueNext', this.enqueue);
+    this.medley.on('loaded', this.deckLoaded);
+    this.medley.on('unloaded', this.deckUnloaded);
+    this.medley.on('started', this.deckStarted);
+    this.medley.on('finished', this.deckFinished);
+    this.medley.on('mainDeckChanged', this.mainDeckChanged);
 
-    this.#onInsertRequestTrack = options.onInsertRequestTrack;
+    this.onInsertRequestTrack = options.onInsertRequestTrack;
 
     //
-    this.#sequencer = new CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>(this.id, options.crates, {
-      trackValidator: this.#isTrackLoadable,
-      trackVerifier: this.#verifyTrack
+    this.sequencer = new CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>(this.id, options.crates, {
+      trackValidator: this.isTrackLoadable,
+      trackVerifier: this.verifyTrack
     });
 
-    this.#sequencer.on('change', (crate: BoomBoxCrate, oldCrate?: BoomBoxCrate) => this.emit('sequenceChange', crate, oldCrate));
-    this.#sequencer.on('rescue', (scanned, ignored) => {
+    this.sequencer.on('change', (crate: BoomBoxCrate, oldCrate?: BoomBoxCrate) => this.emit('sequenceChange', crate, oldCrate));
+    this.sequencer.on('rescue', (scanned, ignored) => {
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
-      this.#logger.debug('Rescue, removing', n, 'artist history entries');
+      this.logger.debug('Rescue, removing', n, 'artist history entries');
       this.artistHistory = this.artistHistory.slice(n);
     });
 
-    this.#sweeperInserter = new SweeperInserter(this, []);
+    this.sweeperInserter = new SweeperInserter(this, []);
   }
 
 
   get sweeperInsertionRules() {
-    return this.#sweeperInserter.rules;
+    return this.sweeperInserter.rules;
   }
 
   set sweeperInsertionRules(rules) {
-    this.#sweeperInserter.rules = rules;
+    this.sweeperInserter.rules = rules;
   }
 
-  #currentCrate?: BoomBoxCrate;
-  #currentTrackPlay?: BoomBoxTrackPlay;
-  #inTransition = false;
+  private _currentCrate?: BoomBoxCrate;
+  private _currentTrackPlay?: BoomBoxTrackPlay;
+  private _inTransition = false;
 
   /**
    * Current crate
    */
   get crate() {
-    return this.#currentCrate;
+    return this._currentCrate;
   }
 
   get trackPlay() {
-    return this.#currentTrackPlay;
+    return this._currentTrackPlay;
   }
 
   get isInTransition() {
-    return this.#inTransition;
+    return this._inTransition;
   }
 
   getDeckPositions(index: DeckIndex): DeckPositions {
-    if (!this.#decks[index].trackPlay) {
+    if (!this.decks[index].trackPlay) {
       return {};
     }
 
@@ -242,21 +242,21 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     const positions = this.getDeckPositions(index);
 
     return {
-      ...this.#decks[index],
+      ...this.decks[index],
       positions
     }
   }
 
   get activeDeck(): DeckIndex | undefined {
-    const index = this.#decks.findIndex(d => d.active);
+    const index = this.decks.findIndex(d => d.active);
     return index !== -1 ? index : undefined;
   }
 
-  #requests: TrackCollection<TrackWithRequester<BoomBoxTrack, R>> = new TrackCollection('$_requests', undefined);
+  private requests: TrackCollection<TrackWithRequester<BoomBoxTrack, R>> = new TrackCollection('$_requests', undefined);
 
-  #isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path);
+  private isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path);
 
-  #verifyTrack: TrackVerifier<BoomBoxTrackExtra> = async (track): Promise<TrackVerifierResult<BoomBoxTrackExtra>> => {
+  private verifyTrack: TrackVerifier<BoomBoxTrackExtra> = async (track): Promise<TrackVerifierResult<BoomBoxTrackExtra>> => {
     try {
       const metadata = track.extra?.tags ?? (await helper.fetchMetadata(track, this.musicDb, true)).metadata;
 
@@ -276,7 +276,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
       }
     }
     catch (e: unknown) {
-      this.#logger.debug('Error in verifyTrack()', (e as Error).message);
+      this.logger.debug('Error in verifyTrack()', (e as Error).message);
     }
 
     return {
@@ -285,10 +285,10 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     };
   }
 
-  #lastRequestId = 0;
+  private _lastRequestId = 0;
 
   request(track: BoomBoxTrack, requestedBy?: R): TrackIndex<TrackWithRequester<BoomBoxTrack, R>> {
-    const existing = this.#requests.fromId(track.id);
+    const existing = this.requests.fromId(track.id);
 
     if (existing) {
       existing.priority = (existing.priority || 0) + 1;
@@ -300,7 +300,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
       this.sortRequests();
 
       return {
-        index: this.#requests.indexOf(existing),
+        index: this.requests.indexOf(existing),
         track: existing
       }
     }
@@ -309,7 +309,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     const requested: TrackWithRequester<BoomBoxTrack, R> = {
       ...track,
       original: track,
-      rid: ++this.#lastRequestId,
+      rid: ++this._lastRequestId,
       priority: 0,
       requestedBy: requestedBy ? [requestedBy]: [],
       firstRequestTime: new Date()
@@ -321,7 +321,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     }
 
     return {
-      index: this.#requests.push(requested),
+      index: this.requests.push(requested),
       track: requested
     }
   }
@@ -333,13 +333,13 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     ];
 
     if (!scopedBy) {
-      this.#requests.sort(functions);
+      this.requests.sort(functions);
       return;
     }
 
-    const scopes = uniq(this.#requests.all().flatMap(scopedBy));
+    const scopes = uniq(this.requests.all().flatMap(scopedBy));
     for (const [index, scope] of scopes.entries()) {
-      this.#requests.sort(
+      this.requests.sort(
         functions,
         t => scopedBy(t).includes(scope),
         index === scopes.length - 1
@@ -360,14 +360,14 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   }
 
   get requestsCount() {
-    return this.#requests.length;
+    return this.requests.length;
   }
 
-  async #fetchRequestTrack(): Promise<TrackWithRequester<BoomBoxTrack, R> | undefined> {
+  private async fetchRequestTrack(): Promise<TrackWithRequester<BoomBoxTrack, R> | undefined> {
     const predicates = [...this.#requestLockPredicates.values()];
 
-    for (let i = 0; i < this.#requests.length; i++) {
-      const track = this.#requests.at(i);
+    for (let i = 0; i < this.requests.length; i++) {
+      const track = this.requests.at(i);
 
       if (!track) {
         break;
@@ -377,9 +377,9 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
         continue;
       }
 
-      this.#requests.delete(i);
+      this.requests.delete(i);
 
-      if (await this.#isTrackLoadable(track.path)) {
+      if (await this.isTrackLoadable(track.path)) {
         return track;
       }
     }
@@ -388,24 +388,24 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   }
 
   get allRequests() {
-    return this.#requests;
+    return this.requests;
   }
 
   getRequestsOf(requester: R) {
     const matchRequester = matches(requester);
-    return this.#requests.filter(r => r.requestedBy.some(matchRequester));
+    return this.requests.filter(r => r.requestedBy.some(matchRequester));
   }
 
   unrequest(requestIds: number[]) {
     const all = new Set(requestIds);
-    const removed = this.#requests.removeBy(r => all.has(r.rid));
+    const removed = this.requests.removeBy(r => all.has(r.rid));
     return {
       removed,
       invalid: without(requestIds, ...removed.map(r => r.rid))
     }
   }
 
-  #enqueue: EnqueueListener = async (done) => {
+  private enqueue: EnqueueListener = async (done) => {
     if (this.queue.length > 0) {
       done(true);
     }
@@ -417,21 +417,21 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
         done(true);
       }
 
-      const requestedTrack = await this.#fetchRequestTrack();
+      const requestedTrack = await this.fetchRequestTrack();
       if (requestedTrack) {
-        await this.#onInsertRequestTrack?.(requestedTrack);
+        await this.onInsertRequestTrack?.(requestedTrack);
         addToQueue(requestedTrack);
         return;
       }
 
-      const nextTrack = await this.#sequencer.nextTrack();
+      const nextTrack = await this.sequencer.nextTrack();
 
       if (!nextTrack) {
         done(false);
         return;
       }
 
-      const currentTrack = this.#currentTrackPlay?.track;
+      const currentTrack = this._currentTrackPlay?.track;
       const currentCollection = currentTrack?.collection;
       const nextCollection = nextTrack.collection;
       const collectionChange = currentCollection?.id !== nextCollection.id;
@@ -441,13 +441,13 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
         this.emit('collectionChange', currentCollection, nextCollection, transitingFromRequestTrack);
       }
 
-      if (this.#currentCrate !== nextTrack.sequencing.crate) {
+      if (this._currentCrate !== nextTrack.sequencing.crate) {
 
         if (nextTrack.sequencing.crate) {
-          this.emit('crateChange', this.#currentCrate, nextTrack.sequencing.crate);
+          this.emit('crateChange', this._currentCrate, nextTrack.sequencing.crate);
         }
 
-        this.#currentCrate = nextTrack.sequencing.crate;
+        this._currentCrate = nextTrack.sequencing.crate;
       }
 
       addToQueue(nextTrack);
@@ -460,8 +460,8 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     done(false);
   }
 
-  #deckLoaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
-    this.#decks[deck] = {
+  private deckLoaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
+    this.decks[deck] = {
       trackPlay,
       playing: false,
       active: false
@@ -489,8 +489,8 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     this.emit('deckLoaded', deck, trackPlay);
   }
 
-  #deckUnloaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
-    this.#decks[deck] = {
+  private deckUnloaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
+    this.decks[deck] = {
       trackPlay: undefined,
       playing: false,
       active: false
@@ -508,12 +508,12 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     this.emit('deckUnloaded', deck, trackPlay);
   }
 
-  #deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
-    this.#decks[deck].playing = true;
+  private deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
+    this.decks[deck].playing = true;
 
     const kind = trackPlay.track.extra?.kind;
 
-    this.#inTransition = kind === TrackKind.Insertion;
+    this._inTransition = kind === TrackKind.Insertion;
 
     this.emit('deckStarted', deck, trackPlay);
 
@@ -525,12 +525,12 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
       return;
     }
 
-    if (this.#currentTrackPlay?.uuid === trackPlay.uuid) {
+    if (this._currentTrackPlay?.uuid === trackPlay.uuid) {
       return;
     }
 
-    const lastTrack = this.#currentTrackPlay;
-    this.#currentTrackPlay = trackPlay;
+    const lastTrack = this._currentTrackPlay;
+    this._currentTrackPlay = trackPlay;
 
     this.emit('trackStarted', deck, trackPlay, lastTrack);
 
@@ -545,8 +545,8 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     }
   }
 
-  #deckFinished: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
-    this.#decks[deck].playing = false;
+  private deckFinished: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
+    this.decks[deck].playing = false;
 
     this.emit('deckFinished', deck, trackPlay);
 
@@ -558,11 +558,11 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     }
   }
 
-  #mainDeckChanged: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
-    this.#decks[deck].active = true;
+  private mainDeckChanged: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
+    this.decks[deck].active = true;
     for (let i = 0; i < 3; i++) {
       if (i !== deck) {
-        this.#decks[i].active = false;
+        this.decks[i].active = false;
       }
     }
 
@@ -579,47 +579,47 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
    * All creates
    */
   get crates() {
-    return this.#sequencer.crates;
+    return this.sequencer.crates;
   }
 
   addCrates(...crates: BoomBoxCrate[]) {
-    this.#sequencer.addCrates(...crates);
+    this.sequencer.addCrates(...crates);
   }
 
   removeCrates(...cratesOrIds: Array<BoomBoxCrate['id'] | BoomBoxCrate>) {
-    this.#sequencer.removeCrates(...cratesOrIds);
+    this.sequencer.removeCrates(...cratesOrIds);
   }
 
   moveCrates(newPosition: number, ...cratesOrIds: Array<BoomBoxCrate['id'] | BoomBoxCrate>) {
-    this.#sequencer.moveCrates(newPosition, ...cratesOrIds);
+    this.sequencer.moveCrates(newPosition, ...cratesOrIds);
   }
 
   getCrateIndex() {
-    return this.#sequencer.getCrateIndex();
+    return this.sequencer.getCrateIndex();
   }
 
   setCrateIndex(newIndex: number) {
-    this.#sequencer.setCrateIndex(newIndex, true);
+    this.sequencer.setCrateIndex(newIndex, true);
   }
 
   increasePlayCount() {
-    return this.#sequencer.increasePlayCount();
+    return this.sequencer.increasePlayCount();
   }
 
   latch(options?: LatchOptions<BoomBoxTrack>) {
-    return this.#sequencer.latch(options);
+    return this.sequencer.latch(options);
   }
 
   isKnownCollection(collection: BoomBoxTrackCollection): boolean {
-    return this.#sequencer.isKnownCollection(collection);
+    return this.sequencer.isKnownCollection(collection);
   }
 
   get isLatchActive(): boolean {
-    return this.#sequencer.getActiveLatch() !== undefined;
+    return this.sequencer.getActiveLatch() !== undefined;
   }
 
   get allLatches(): LatchSession<BoomBoxTrack, any>[] {
-    return this.#sequencer.allLatches;
+    return this.sequencer.allLatches;
   }
 }
 

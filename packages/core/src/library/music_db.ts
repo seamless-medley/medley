@@ -58,10 +58,10 @@ export interface MusicDbTrack extends Metadata {
  * INTERNAL USE ONLY
  */
 export class InMemoryMusicDb implements MusicDb {
-  #tracks = new Map<string, MusicDbTrack>();
+  private tracks = new Map<string, MusicDbTrack>();
 
   async findById(trackId: string) {
-    return this.#tracks.get(trackId);
+    return this.tracks.get(trackId);
   }
 
   async findByPath(path: string) {
@@ -73,26 +73,26 @@ export class InMemoryMusicDb implements MusicDb {
   }
 
   async update(trackId: string, update: Omit<MusicDbTrack, "trackId">) {
-    const existing = this.#tracks.get(trackId) ?? {};
-    this.#tracks.set(trackId, {
+    const existing = this.tracks.get(trackId) ?? {};
+    this.tracks.set(trackId, {
       ...existing,
       ...update
     } as MusicDbTrack)
   }
 
   async delete(trackId: string){
-    this.#tracks.delete(trackId);
+    this.tracks.delete(trackId);
   }
 
   get searchHistory(): SearchHistory {
-    return this.#searchHistory;
+    return this._searchHistory;
   }
 
   get trackHistory(): TrackHistory {
-    return this.#trackHistory;
+    return this._trackHistory;
   }
 
-  readonly #searchHistory: SearchHistory = {
+  private readonly _searchHistory: SearchHistory = {
     async add(scope, query) {
 
     },
@@ -102,7 +102,7 @@ export class InMemoryMusicDb implements MusicDb {
     unmatchedItems: async (scope) => []
   }
 
-  readonly #trackHistory: TrackHistory = {
+  private readonly _trackHistory: TrackHistory = {
     async add(scope, record, max) {
 
     },

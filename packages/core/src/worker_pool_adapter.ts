@@ -9,14 +9,14 @@ export abstract class WorkerPoolAdapter<Methods extends { [name: string]: any }>
   protected pool!: WorkerPool;
 
   constructor(script: string, options: WorkerPoolOptions) {
-    this.pool = this.#patchPool(workerpool.pool(script, options));
+    this.pool = this.patchPool(workerpool.pool(script, options));
   }
 
   protected exec<M extends keyof Methods>(m: M, ...args: Parameters<Methods[M]>) {
     return this.pool.exec<Methods[M]>(m as string, args);
   }
 
-  #patchSend(handler: any) {
+  private patchSend(handler: any) {
     const worker = handler.worker;
 
     if (!worker.patched) {
@@ -33,7 +33,7 @@ export abstract class WorkerPoolAdapter<Methods extends { [name: string]: any }>
     }
   }
 
-  #patchPool(pool: WorkerPool) {
+  private patchPool(pool: WorkerPool) {
     const p = pool as any;
     p._next = () => {
       if (p.tasks.length > 0) {
@@ -47,7 +47,7 @@ export abstract class WorkerPoolAdapter<Methods extends { [name: string]: any }>
             return;
           }
 
-          this.#patchSend(worker);
+          this.patchSend(worker);
 
           const promise = worker.exec(task.method, task.params, task.resolver, task.options)
             .then(p._boundNext)

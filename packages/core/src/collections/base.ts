@@ -127,18 +127,18 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     return this.options.disableLatch === true;
   }
 
-  #shiftCounter = 0;
+  private shiftCounter = 0;
 
   shift(): T | undefined {
     const track = this.tracks.shift();
 
     if (this.options.reshuffleEvery) {
-      ++this.#shiftCounter;
+      ++this.shiftCounter;
 
-      if (this.#shiftCounter >= this.options.reshuffleEvery) {
+      if (this.shiftCounter >= this.options.reshuffleEvery) {
         this.logger.info('Re-shuffle', this.options.reshuffleEvery);
 
-        this.#shiftCounter = 0;
+        this.shiftCounter = 0;
         this.shuffle();
         return track;
       }
@@ -166,7 +166,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
     return knownExtRegExp.test(filename);
   }
 
-  async #transform(paths: string[], fn: (tracks: T[]) => Promise<any>) {
+  private async transform(paths: string[], fn: (tracks: T[]) => Promise<any>) {
     const validPaths = chain(paths)
       .castArray()
       .map(p => normalizePath(p))
@@ -186,13 +186,13 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
   }
 
   async add(paths: string[], mode?: TrackAddingMode, fn?: () => any): Promise<T[]> {
-    return this.#transform(paths, async created => {
-      await this.#addTracks(created, mode);
+    return this.transform(paths, async created => {
+      await this.addTracks(created, mode);
       await fn?.();
     });
   }
 
-  async #addTracks(tracks: T[], mode?: TrackAddingMode) {
+  private async addTracks(tracks: T[], mode?: TrackAddingMode) {
     const { tracksMapper } = this.options;
 
     const newTracks = tracks.filter(it => !this.trackIdMap.has(it.id));
@@ -234,7 +234,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
   }
 
   async update(paths: string[]) {
-    return this.#transform(paths, async updated => {
+    return this.transform(paths, async updated => {
       const existing = updated.filter(it => this.trackIdMap.has(it.id));
 
       if (existing.length > 0) {

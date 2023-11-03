@@ -33,11 +33,11 @@ type IndexInfo<O> = {
 }
 
 export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
-  #logger: Logger<ILogObj>;
+  private logger: Logger<ILogObj>;
 
-  #searchEngine = new SearchEngine();
+  private searchEngine = new SearchEngine();
 
-  #collectionPaths = new Map<string, string>();
+  private collectionPaths = new Map<string, string>();
 
   constructor(
     readonly id: string,
@@ -46,10 +46,10 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
   ) {
     super();
 
-    this.#logger = createLogger({ name: `library/${this.id}` });
+    this.logger = createLogger({ name: `library/${this.id}` });
   }
 
-  #trackCreator: TrackCreator<MusicTrack<O>> = async (path) => {
+  private trackCreator: TrackCreator<MusicTrack<O>> = async (path) => {
     const fromDb = await this.musicDb.findByPath(path);
 
     if (!fromDb) {
@@ -69,34 +69,34 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
   }
 
-  #handleTrackAddition = (tracks: Array<MusicTrack<O>>) => {
-    this.#tryIndexTracks(tracks.map(track => ({ track })));
+  private handleTrackAddition = (tracks: Array<MusicTrack<O>>) => {
+    this.tryIndexTracks(tracks.map(track => ({ track })));
   }
 
-  #tryIndexTracks = (infos: Array<IndexInfo<O>>) => {
+  private tryIndexTracks = (infos: Array<IndexInfo<O>>) => {
     const failures: Array<IndexInfo<O>> = [];
 
-    this.#indexTracks(infos, failures, () => {
+    this.indexTracks(infos, failures, () => {
       if (failures.length) {
-        setTimeout(() => this.#tryIndexTracks(failures), 1000);
+        setTimeout(() => this.tryIndexTracks(failures), 1000);
       }
     });
   }
 
 
-  #handleTrackRemoval = (tracks: Array<MusicTrack<O>>) => {
+  private handleTrackRemoval = (tracks: Array<MusicTrack<O>>) => {
     for (const { id } of tracks) {
       this.musicDb.delete(id);
     }
 
-    this.#searchEngine.removeAll(tracks);
+    this.searchEngine.removeAll(tracks);
   }
 
-  #handleTrackUpdates = async (tracks: Array<MusicTrack<O>>) => {
-    await this.#searchEngine.removeAll(tracks).catch(e => this.#logger.error(e));
+  private handleTrackUpdates = async (tracks: Array<MusicTrack<O>>) => {
+    await this.searchEngine.removeAll(tracks).catch(e => this.logger.error(e));
 
     for (const track of tracks) {
-      await this.#indexTrack({ track }, true).catch(noop);
+      await this.indexTrack({ track }, true).catch(noop);
     }
   }
 
@@ -106,14 +106,14 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
 
       if (collection) {
         collection.unwatchAll();
-        this.#collectionPaths.delete(collection.id);
+        this.collectionPaths.delete(collection.id);
       }
     }
 
     super.remove(...collections);
   }
 
-  async #indexTracks(infos: Array<IndexInfo<O>>, failures: Array<IndexInfo<O>>, done: () => void) {
+  private async indexTracks(infos: Array<IndexInfo<O>>, failures: Array<IndexInfo<O>>, done: () => void) {
     if (infos.length <= 0) {
       done();
       return;
@@ -122,7 +122,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     const [first, ...remainings] = infos;
 
     try {
-      await this.#indexTrack(first);
+      await this.indexTrack(first);
     }
     catch (e) {
       first.retried ??= 0;
@@ -133,10 +133,10 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
       }
     }
 
-    this.#indexTracks(remainings, failures, done);
+    this.indexTracks(remainings, failures, done);
   }
 
-  async #indexTrack({ track }: IndexInfo<O>, force: boolean = false) {
+  private async indexTrack({ track }: IndexInfo<O>, force: boolean = false) {
     if (force || !track.extra?.tags) {
       try {
         await helper.fetchMetadata(track, this.musicDb, force)
@@ -150,16 +150,16 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
           });
       }
       catch (e) {
-        this.#logger.error('Error while indexing a track: ', (e as any).message);
+        this.logger.error('Error while indexing a track: ', (e as any).message);
         throw e;
       }
     }
 
     try {
-      this.#searchEngine.add(track);
+      this.searchEngine.add(track);
     }
     catch (e) {
-      this.#logger.error(e);
+      this.logger.error(e);
       throw e;
     }
   }
@@ -181,7 +181,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
         id, extra,
         {
           ...options,
-          trackCreator: this.#trackCreator,
+          trackCreator: this.trackCreator,
           scanner: scanDir
         }
       );
@@ -192,14 +192,14 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
         resolve(newCollection);
       });
 
-      newCollection.on('tracksAdd', this.#handleTrackAddition);
-      newCollection.on('tracksRemove', this.#handleTrackRemoval);
-      newCollection.on('tracksUpdate', this.#handleTrackUpdates);
+      newCollection.on('tracksAdd', this.handleTrackAddition);
+      newCollection.on('tracksRemove', this.handleTrackRemoval);
+      newCollection.on('tracksUpdate', this.handleTrackUpdates);
 
       const normalizedPath = normalizePath(path);
 
       this.add(newCollection);
-      this.#collectionPaths.set(id, normalizedPath);
+      this.collectionPaths.set(id, normalizedPath);
       newCollection.watch(normalizedPath);
     });
   }
@@ -267,7 +267,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
       mainQueries.push(query)
     }
 
-    const result = await this.#searchEngine.search(
+    const result = await this.searchEngine.search(
       { queries: mainQueries, combineWith: 'OR' },
       { prefix: true, fuzzy: 0.2 }
     );
@@ -320,7 +320,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
       })
       : undefined;
 
-    const result = await this.#searchEngine.autoSuggest(
+    const result = await this.searchEngine.autoSuggest(
       q,
       {
         fields: field ? castArray(field) : undefined,
