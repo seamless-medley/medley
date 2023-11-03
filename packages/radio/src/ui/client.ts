@@ -2,6 +2,7 @@ import { isFunction, mapValues, noop, pickBy, uniqueId, } from "lodash";
 import { EventEmitter } from "eventemitter3";
 import { io, Socket } from "socket.io-client";
 import msgpackParser from 'socket.io-msgpack-parser';
+import { Duplex, PassThrough } from 'readable-stream';
 import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents, RemoteObserveOptions } from '../socket/events';
 import { isProperty } from "../socket/utils";
 import { Stub } from "../socket/stub";
@@ -96,6 +97,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     this.socket.on('r:e', this.handleRemoteEvent);
     this.socket.on('r:u', this.handleRemoteUpdate);
+    this.socket.on('r:sd', this.handleRemoteStreamData);
+    this.socket.on('r:sc', this.handleRemoteStreamClose);
     this.socket.io.on('reconnect', this.handleSocketReconnect);
 
     this.socket.on('connect', () => this.handleSocketConnect());
@@ -123,6 +126,25 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         handler(kind, id, changes);
       }
     }
+  }
+
+  private handleRemoteStreamData: ServerEvents['r:sd'] = (id, data) => {
+    if (!this.localStreams.has(id)) {
+      return false;
+    }
+
+    this.localStreams.get(id)?.push(new Uint8Array(data));
+    return true;
+  }
+
+  private handleRemoteStreamClose: ServerEvents['r:sc'] = (id) => {
+    if (!this.localStreams.has(id)) {
+      return false;
+    }
+
+    this.localStreams.get(id)?.destroy();
+    this.localStreams.delete(id);
+    return true;
   }
 
   private handleSocketReconnect = (attempt: number) => {
@@ -154,14 +176,16 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
         store.observed = response.result;
 
-        const changes = Object.entries(response.result).map<ObservedPropertyChange>(([prop, value]) => ({
-          p: prop,
-          o: value,
-          n: value
-        }));
+        if (response.result) {
+          const changes = Object.entries(response.result).map<ObservedPropertyChange>(([prop, value]) => ({
+            p: prop,
+            o: value,
+            n: value
+          }));
 
-        for (const handler of store.handlers) {
-          handler(kind, id, changes);
+          for (const handler of store.handlers) {
+            handler(kind, id, changes);
+          }
         }
       });
     }
@@ -244,6 +268,18 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     return hasSet ? events[event]! : (() => events[event] = new Set<Callable>())();
   }
 
+  private localStreams = new Map<number, PassThrough>();
+
+  private createLocalStream(id: number) {
+    if (this.localStreams.has(id)) {
+      return false;
+    }
+
+    const result = new PassThrough();
+    this.localStreams.set(id, result);
+    return result;
+  }
+
   remoteGet<
     Kind extends Extract<keyof Types, string>,
     P extends keyof O,
@@ -261,6 +297,13 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         if (response.status === undefined) {
           resolve(response.result);
           return;
+        }
+
+        if (response.status === 'stream') {
+          response = {
+            status: 'exception',
+            message: 'Remote property of type stream is not supported'
+          }
         }
 
         reject(new RemotePropertyError(response, kind, id, prop as string, 'get'));
@@ -288,6 +331,13 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
           return;
         }
 
+        if (response.status === 'stream') {
+          response = {
+            status: 'exception',
+            message: 'Remote property of type stream is not supported'
+          }
+        }
+
         reject(new RemotePropertyError(response, kind, id, prop as string, 'set'));
       })
     });
@@ -311,6 +361,29 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         if (response.status === undefined) {
           resolve(response.result);
           return;
+        }
+
+        if (response.status === 'stream') {
+          const [id1, id2] = response.result;
+
+          if ((id1 ^ id2) === 0x1eafc0b7) {
+            const stream = this.createLocalStream(id1);
+
+            if (stream !== false) {
+              resolve(stream);
+              return;
+            }
+
+            response = {
+              status: 'exception',
+              message: 'The stream returned by the remove invocation is already exist'
+            }
+          } else {
+            response = {
+              status: 'exception',
+              message: 'The stream returned by the remove invocation is invalid'
+            }
+          }
         }
 
         reject(new RemoteInvocationError(response, kind, id, method as string));
@@ -337,15 +410,22 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
       rejectAfter(5_000, reject);
 
-      // It is the first time, subscrbe to remote first
+      // It is the first time, subscribe to remote first
       this.socket.emit('r:es', kind, id, event, async (response: RemoteResponse<void>) => {
-        if (response.status !== undefined) {
-          reject(new RemoteSubscriptionError(response, kind, id, event));
+        if (response.status === undefined) {
+          deletgates.add(delegate);
+          resolve();
           return;
         }
 
-        deletgates.add(delegate);
-        resolve(response.result);
+        if (response.status === 'stream') {
+          response = {
+            status: 'exception',
+            message: 'Remote subscription of type stream is not possible'
+          }
+        }
+
+        reject(new RemoteSubscriptionError(response, kind, id, event));
       });
     });
   }
@@ -379,12 +459,20 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       rejectAfter(5_000, reject);
 
       this.socket.emit('r:eu', kind, id, event, async (response: RemoteResponse<void>) => {
-        if (response.status !== undefined) {
-          reject(new RemoteSubscriptionError(response, kind, id, event));
+        if (response.status === undefined) {
+          resolve();
           return;
         }
 
-        resolve();
+        if (response.status === 'stream') {
+          response = {
+            status: 'exception',
+            message: 'Remote subscription of type stream is not possible'
+          }
+        }
+
+
+        reject(new RemoteSubscriptionError(response, kind, id, event));
       })
     });
   }
@@ -409,15 +497,22 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       rejectAfter(5_000, reject);
 
       this.socket.emit('r:ob', kind, id, options, async (response: RemoteResponse<any>) => {
-        if (response.status !== undefined) {
-          reject(new RemoteObservationError(response, kind, id));
+        if (response.status === undefined) {
+          store.observed = response.result;
+          store.add(handler);
+
+          resolve(store.observed);
           return;
         }
 
-        store.observed = response.result;
-        store.add(handler);
+        if (response.status === 'stream') {
+          response = {
+            status: 'exception',
+            message: 'Remote observation of type stream is not supported'
+          }
+        }
 
-        resolve(store.observed);
+        reject(new RemoteObservationError(response, kind, id));
       });
     });
   }
@@ -447,6 +542,13 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         if (response.status === undefined) {
           resolve();
           return;
+        }
+
+        if (response.status === 'stream') {
+          response = {
+            status: 'exception',
+            message: 'Remote observation of type stream is not supported'
+          }
         }
 
         reject(new RemoteObservationError(response, kind, id));

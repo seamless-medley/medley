@@ -1,6 +1,7 @@
+import { Readable } from 'stream';
 import EventEmitter from "events";
 import http from "http";
-import { capitalize, isEqual, isFunction, isObject, mapValues, noop, omit, pickBy } from "lodash";
+import { capitalize, isEqual, isFunction, isObject, mapValues, noop, omit, pickBy, random } from "lodash";
 import { Server as IOServer, Socket as IOSocket } from "socket.io";
 import msgpackParser from 'socket.io-msgpack-parser';
 import { ConditionalKeys } from "type-fest";
@@ -8,7 +9,7 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { getDependents } from "./decorator";
 import { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "./events";
 import { $Exposing } from "./expose";
-import { isProperty, isPublicPropertyName, propertyDescriptorOf } from "./utils";
+import { isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf } from "./utils";
 import { ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents } from "./types";
 
 export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
@@ -103,11 +104,44 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
   }
 
+  private registeredStreams = new Map<number, Readable>();
+
+  private makeStreamId() {
+    while (true) {
+      const id = random(2 ** 31);
+
+      if (this.registeredStreams.has(id)) {
+        continue;
+      }
+
+      return id;
+    }
+  }
+
+  private registerStream(socket: Socket, stream: Readable): [number, number] {
+    const id = this.makeStreamId();
+
+    stream.on('data', data => {
+      if (Buffer.isBuffer(data)) {
+        socket.emit('r:sd', id, data);
+      }
+    });
+
+
+    stream.on('close', () => {
+      this.registeredStreams.delete(id);
+      socket.emit('r:sc', id);
+    });
+
+    return [id, id ^ 0x1eafc0b7];
+  }
+
   /**
    * Interact with a remote object specified by kind, id altogether
    *
    */
   private async interact(
+    socket: Socket,
     kind: string, id: string, key: string | undefined,
     predicate: (value: any, object: any, observer: ObjectObserver<any> | undefined) => boolean,
     execute: (object: any, value: any, observer: ObjectObserver<any> | undefined) => Promise<any>,
@@ -128,7 +162,15 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       if (predicate(value, instance, observed)) {
         try {
           result = await execute(instance, value, observed);
+
           resp = { status: undefined, result };
+
+          if (isReadableStream(result)) {
+            resp = {
+              status: 'stream',
+              result: this.registerStream(socket, result)
+            }
+          }
         }
         catch (e: any) {
           resp = {
@@ -159,6 +201,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
   private handlers: Handlers = {
     'r:pg': async (socket, kind, id, prop, callback) => {
       this.interact(
+        socket,
         kind, id, prop,
         (value, object, observed) => observed?.isPublishedProperty(prop) ?? false,
         async (_, value) => value,
@@ -168,6 +211,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
 
     'r:ps': async (socket, kind, id, prop, value, callback) => {
       this.interact(
+        socket,
         kind, id, prop,
         (value, object, observed) => observed?.isPublishedProperty(prop) ?? false,
         async (object) => {
@@ -193,6 +237,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
      */
     'r:ob': async (socket, kind, id, options, callback) => {
       this.interact(
+        socket,
         kind, id, undefined,
         (value, object) => !!object,
         async (object, _, observed) => {
@@ -224,6 +269,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
 
     'r:ub': async (socket, kind, id, callback) => {
       this.interact(
+        socket,
         kind, id, undefined,
         (value, object) => !!object,
         async (object, _, observerd) => {
@@ -238,10 +284,8 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     },
 
     'r:mi': async (socket, kind, id, method, args, callback) => {
-      // TODO: Support returning stream back to client
-      // The idea is, when the returned value is a stream, just send some placeholder for referencing the stream
-      // then start emitting stream data with new event
       this.interact(
+        socket,
         kind, id, method,
         // predicate
         (func, object, observer) => isFunction(func) && (observer?.isPublishedMethod(method) ?? false),
@@ -256,6 +300,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
      */
     'r:es': async (socket, kind, id, event, callback) => {
       this.interact(
+        socket,
         kind, id, 'on',
         isEvented,
         async (object: EventEmitter) => {
@@ -289,9 +334,15 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     },
 
     'r:eu': async (socket, kind, id, event, callback) => {
-      this.interact(kind, id, 'off', isEvented, async (object: EventEmitter) => {
-        this.unsubscribe(socket, object, event);
-      }, callback);
+      this.interact(
+        socket,
+        kind, id, 'off',
+        isEvented,
+        async (object: EventEmitter) => {
+          this.unsubscribe(socket, object, event);
+        },
+        callback
+      );
     }
   }
 

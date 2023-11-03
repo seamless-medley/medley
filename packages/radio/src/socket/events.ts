@@ -4,11 +4,19 @@ export type ServerEvents = {
   'r:e': (kind: string, id: string, event: string, ...args: any[]) => void;
   'r:u': (kind: string, id: string, changes: ObservedPropertyChange[]) => void;
   // TODO: new server event for sending streaming data
+  'r:sd': (id: number, data: Buffer) => void;
+  'r:sc': (id: number) => void;
 }
+
 
 export type OKResponse<T> = {
   status: undefined;
   result: T;
+}
+
+export type StreamResponse = {
+  status: 'stream';
+  result: [number, number];
 }
 
 export type IdErrorResponse = {
@@ -28,7 +36,7 @@ export type ExceptionResponse = {
 
 export type ErrorResponse = IdErrorResponse | KeyErrorResponse | ExceptionResponse;;
 
-export type RemoteResponse<T> = OKResponse<T> | ErrorResponse;
+export type RemoteResponse<T> = OKResponse<T> | StreamResponse | ErrorResponse;
 
 export type ResponseStatus = RemoteResponse<any>['status'];
 
