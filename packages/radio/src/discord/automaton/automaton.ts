@@ -283,20 +283,20 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       const retries = Math.ceil(timeoutSeconds * 1000 / (joinTimeout + 1000));
 
       retryable<JoinResult>(async () => {
-          if (!this.#rejoining) {
-            return { status: 'not_joined' }
-          }
+        if (!this.#rejoining) {
+          return { status: 'not_joined' }
+        }
 
-          const result = await state.join(channel, joinTimeout);
+        const result = await state.join(channel, joinTimeout);
 
-          if (result.status !== 'joined') {
-            throw new Error('Rejoin again');
-          }
+        if (result.status !== 'joined') {
+          throw new Error('Rejoin again');
+        }
 
-          this.#rejoining = false;
-          this.#logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
+        this.#rejoining = false;
+        this.#logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
 
-          return result;
+        return result;
       }, { retries, wait: 1000 }).then(() => state.preferredStation?.updatePlayback());
     }
   }
