@@ -489,15 +489,23 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     this.emit('deckLoaded', deck, trackPlay);
   }
 
-  #deckUnloaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
-    this.#decks[deck] = {
+  #deckUnloaded: DeckListener<BoomBoxTrack> = async (deckIndex, trackPlay) => {
+    this.#decks[deckIndex] = {
       trackPlay: undefined,
       playing: false,
       active: false
     }
 
+    const trackIsActuallyUnloaded = this.#decks.find((deck) => deck.trackPlay?.track.id === trackPlay.track.id) === undefined;
+
+    if (!trackIsActuallyUnloaded) {
+      this.#logger.debug('Deck unloaded, but the track is being loaded by some other decks');
+    }
+
     // clean up memory holding the cover, lyrics and extra
-    if (trackPlay.track?.extra) {
+    if (trackIsActuallyUnloaded && trackPlay.track?.extra) {
+      this.#logger.debug('Removing maybeCoverAndLyrics for', { deckIndex, track: trackPlay.track.path });
+
       trackPlay.track.extra.maybeCoverAndLyrics = undefined;
 
       if (isRequestTrack(trackPlay.track) && trackPlay.track.original.extra?.maybeCoverAndLyrics) {
@@ -505,7 +513,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
       }
     }
 
-    this.emit('deckUnloaded', deck, trackPlay);
+    this.emit('deckUnloaded', deckIndex, trackPlay);
   }
 
   #deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
