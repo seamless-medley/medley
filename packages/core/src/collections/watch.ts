@@ -35,46 +35,46 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
 
   protected override becomeReady(): void {
     if (!this._ready) {
-      setInterval(this.resubscribe, 5000);
+      setInterval(this.#resubscribe, 5000);
     }
 
     super.becomeReady();
   }
 
-  private watchInfos = new Map<string, WatchInfo>();
+  #watchInfos = new Map<string, WatchInfo>();
 
-  private newPaths: string[] = [];
-  private updatePaths: string[] = [];
-  private removedIds = new Set<string>();
+  #newPaths: string[] = [];
+  #updatePaths: string[] = [];
+  #removedIds = new Set<string>();
 
-  private fetchNewPaths() {
-    const result = uniq(this.newPaths);
-    this.newPaths = [];
+  #fetchNewPaths() {
+    const result = uniq(this.#newPaths);
+    this.#newPaths = [];
     return result;
   }
 
-  private storeNewFiles = debounce(() => this.add(this.fetchNewPaths()), 2000);
+  #storeNewFiles = debounce(() => this.add(this.#fetchNewPaths()), 2000);
 
-  private fetchUpdatePaths(): string[] {
-    const result = uniq(this.updatePaths);
-    this.updatePaths = [];
+  #fetchUpdatePaths(): string[] {
+    const result = uniq(this.#updatePaths);
+    this.#updatePaths = [];
     return result;
   }
 
-  private updateFiles = debounce(() => this.update(this.fetchUpdatePaths()), 2000);
+  #updateFiles = debounce(() => this.update(this.#fetchUpdatePaths()), 2000);
 
-  private handleFilesRemoval = debounce(() => {
-    this.removeBy(({ id }) => this.removedIds.has(id));
-    this.removedIds.clear();
+  #handleFilesRemoval = debounce(() => {
+    this.removeBy(({ id }) => this.#removedIds.has(id));
+    this.#removedIds.clear();
   }, 2000);
 
-  private handleSubscriptionEvents = (dir: string): SubscribeCallback => async (error, events) => {
+  #handleSubscriptionEvents = (dir: string): SubscribeCallback => async (error, events) => {
     if (error) {
       const normalized = normalizePath(dir);
 
       this.logger.error('Error in subscription for dir:', normalized, 'marking it for re-subscribing, the error was:', error);
 
-      const info = this.watchInfos.get(normalized);
+      const info = this.#watchInfos.get(normalized);
 
       if (info) {
         info.subscription?.unsubscribe();
@@ -87,19 +87,19 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     const byType = groupBy(events, 'type') as Partial<Record<watcher.EventType, watcher.Event[]>>;
 
     if (byType.delete) {
-      this.handlePathDeletion(byType.delete);
+      this.#handlePathDeletion(byType.delete);
     }
 
     if (byType.create) {
-      this.handlePathCreation(byType.create);
+      this.#handlePathCreation(byType.create);
     }
 
     if (byType.update) {
-      this.handlePathUpdate(byType.update);
+      this.#handlePathUpdate(byType.update);
     }
   }
 
-  private async handlePathDeletion(events: watcher.Event[]) {
+  async #handlePathDeletion(events: watcher.Event[]) {
     for (let { path } of events) {
       path = normalizePath(path);
 
@@ -111,20 +111,20 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       if (files.length) {
         // This is sub-folder deletion
         for (const { id } of files) {
-          this.removedIds.add(id);
+          this.#removedIds.add(id);
         }
 
         continue;
       }
 
       // File deletion
-      this.removedIds.add(await this.getTrackId(path));
+      this.#removedIds.add(await this.getTrackId(path));
     }
 
-    this.handleFilesRemoval();
+    this.#handleFilesRemoval();
   }
 
-  private async handlePathCreation(events: watcher.Event[]) {
+  async #handlePathCreation(events: watcher.Event[]) {
     for (let { path } of events) {
       path = normalizePath(path);
 
@@ -136,29 +136,29 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
 
       if (stats.isDirectory()) {
         // A sub folder rename results in a single create event, explicitly scan the path now
-        this.scan(path);
+        this.#scan(path);
         continue;
       }
 
-      this.newPaths.push(path);
+      this.#newPaths.push(path);
     }
 
-    this.storeNewFiles();
+    this.#storeNewFiles();
   }
 
-  private async handlePathUpdate(events: watcher.Event[]) {
-    this.updatePaths.push(...events.map(e => normalizePath(e.path)));
-    this.updateFiles();
+  async #handlePathUpdate(events: watcher.Event[]) {
+    this.#updatePaths.push(...events.map(e => normalizePath(e.path)));
+    this.#updateFiles();
   }
 
-  private async subscribeToPath(normalizedPath: string) {
-    if (!this.watchInfos.has(normalizedPath)) {
-      this.watchInfos.set(normalizedPath, {
-        handler: this.handleSubscriptionEvents(normalizedPath)
+  async #subscribeToPath(normalizedPath: string) {
+    if (!this.#watchInfos.has(normalizedPath)) {
+      this.#watchInfos.set(normalizedPath, {
+        handler: this.#handleSubscriptionEvents(normalizedPath)
       })
     }
 
-    const info = this.watchInfos.get(normalizedPath)!;
+    const info = this.#watchInfos.get(normalizedPath)!;
 
     info.subscription = await watch(normalizedPath, info.handler);
   }
@@ -166,17 +166,17 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   /**
    * Re-subscribe all broken subscriptions
    */
-  private resubscribe = async () => {
-    for (const [dir, info] of this.watchInfos) {
+  #resubscribe = async () => {
+    for (const [dir, info] of this.#watchInfos) {
       if (info.subscription !== undefined) {
         continue;
       }
 
-      await this.subscribeToPath(normalizePath(dir))
+      await this.#subscribeToPath(normalizePath(dir))
 
       if (info.subscription) {
         this.logger.info('Resume subscription for', dir);
-        this.scan(dir);
+        this.#scan(dir);
       }
     }
   }
@@ -192,14 +192,14 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   async watch(dir: string) {
     const normalized = normalizePath(dir);
 
-    if (this.watchInfos.has(normalized)) {
+    if (this.#watchInfos.has(normalized)) {
       return;
     }
 
     this.logger.info('Watching', normalized);
 
-    await this.scan(normalized, async () => {
-      await this.subscribeToPath(normalized);
+    await this.#scan(normalized, async () => {
+      await this.#subscribeToPath(normalized);
       this.becomeReady();
     });
   }
@@ -207,12 +207,12 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   unwatch(dir: string, removeTracks: boolean = true) {
     dir = normalizePath(dir);
 
-    const info = this.watchInfos.get(dir);
+    const info = this.#watchInfos.get(dir);
     if (info) {
       info.subscription?.unsubscribe();
     }
 
-    this.watchInfos.delete(dir);
+    this.#watchInfos.delete(dir);
 
     if (removeTracks) {
       this.removeBy(({ path }) => minimatch(path, dir));
@@ -220,12 +220,12 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   }
 
   unwatchAll(removeTracks: boolean = true) {
-    for (const dir of this.watchInfos.keys()) {
+    for (const dir of this.#watchInfos.keys()) {
       this.unwatch(dir, removeTracks);
     }
   }
 
-  private extScanner = (dir: string) => {
+  async #extScanner(dir: string) {
     if (!this.options.scanner) {
       return false;
     }
@@ -233,13 +233,15 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     return this.options.scanner(dir).catch(stubFalse);
   }
 
-  private globScanner = (dir: string) => glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
+  async #globScanner(dir: string) {
+    return glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
+  }
 
-  private async scan(dir: string, fn: () => any = () => noop) {
-    const scanners = [this.extScanner, this.globScanner];
+  async #scan(dir: string, fn: () => any = () => noop) {
+    const scanners = [this.#extScanner, this.#globScanner];
 
     for (const scanner of scanners) {
-      const files = await scanner(dir);
+      const files = await scanner.call(this, dir);
 
       if (files !== false) {
         await this.add(shuffle(files), undefined, once(fn));
@@ -253,13 +255,13 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       this.clear();
     }
 
-    for (const dir of this.watchInfos.keys()) {
-      this.scan(dir);
+    for (const dir of this.#watchInfos.keys()) {
+      this.#scan(dir);
     }
   }
 
   async rewatch() {
-    const dirs = this.watchInfos.keys();
+    const dirs = this.#watchInfos.keys();
 
     this.unwatchAll(false);
 

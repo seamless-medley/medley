@@ -34,10 +34,10 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     super(__dirname + '/worker.js', { workerType });
   }
 
-  private ongoingTasks = new Map<string, Promise<any>>();
+  #ongoingTasks = new Map<string, Promise<any>>();
 
-  private async runIfNeeded<E extends () => Promise<any>, R = E extends () => Promise<infer R> ? R : unknown>(key: string, executor: E, ttl: number = 1000): Promise<R> {
-    const ongoingTasks = this.ongoingTasks;
+  async #runIfNeeded<E extends () => Promise<any>, R = E extends () => Promise<infer R> ? R : unknown>(key: string, executor: E, ttl: number = 1000): Promise<R> {
+    const ongoingTasks = this.#ongoingTasks;
 
     if (ongoingTasks.has(key)) {
       return ongoingTasks.get(key) as Promise<R>;
@@ -53,12 +53,12 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   }
 
   async metadata(path: string) {
-    const m = await this.runIfNeeded(`metadata:${path}`, async () => this.exec('metadata', path).then(omitBy(falsy)));
+    const m = await this.#runIfNeeded(`metadata:${path}`, async () => this.exec('metadata', path).then(omitBy(falsy)));
     return (m ?? {}) as Metadata;
   }
 
   async coverAndLyrics(path: string) {
-    return this.runIfNeeded(`coverAndLyrics:${path}`, async () => {
+    return this.#runIfNeeded(`coverAndLyrics:${path}`, async () => {
       const lyricsSource = { text: 'Metadata' };
 
       const result = await this.exec('coverAndLyrics', path);
@@ -95,11 +95,11 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   }
 
   async isTrackLoadable(path: string) {
-    return this.runIfNeeded(`isTrackLoadable:${path}`, async () => this.exec('isTrackLoadable', path), 500);
+    return this.#runIfNeeded(`isTrackLoadable:${path}`, async () => this.exec('isTrackLoadable', path), 500);
   }
 
   async searchLyrics(artist: string, title: string) {
-    return this.runIfNeeded(`searchLyrics:${artist}:${title}`, async () => this.exec('searchLyrics', artist, title));
+    return this.#runIfNeeded(`searchLyrics:${artist}:${title}`, async () => this.exec('searchLyrics', artist, title));
   }
 
   static getDefaultInstance() {

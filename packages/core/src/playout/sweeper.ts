@@ -67,17 +67,20 @@ export const findRule = (from: string, to: string, rules: SweeperInsertionRule[]
 }
 
 export class SweeperInserter {
-  private logger: Logger<ILogObj>;
+  #logger: Logger<ILogObj>;
 
-  constructor(private boombox: BoomBox<any>, public rules: SweeperInsertionRule[] = []) {
-    this.logger = createLogger({ name: `sweeper-inserter/${boombox.id}` });
-    boombox.on('collectionChange', this.handler);
+  #boombox: BoomBox<any>
+
+  constructor(boombox: BoomBox<any>, public rules: SweeperInsertionRule[] = []) {
+    this.#logger = createLogger({ name: `sweeper-inserter/${boombox.id}` });
+    this.#boombox = boombox;
+    boombox.on('collectionChange', this.#handler);
   }
 
-  private recent: string[] = [];
+  #recent: string[] = [];
 
-  private pick(collection: BoomBoxTrackCollection) {
-    const count = this.recent.length + 1;
+  #pick(collection: BoomBoxTrackCollection) {
+    const count = this.#recent.length + 1;
 
     for (let i = 0; i < count; i++) {
       for (let j = 0; j < collection.length; j++) {
@@ -88,20 +91,20 @@ export class SweeperInserter {
 
           const id = track.musicId ?? basename(track.path).toLowerCase();
 
-          if (!this.recent.includes(id)) {
-            this.recent.push(id);
+          if (!this.#recent.includes(id)) {
+            this.#recent.push(id);
             return track;
           }
         }
       }
 
-      this.recent.shift();
+      this.#recent.shift();
     }
 
     return collection.sample();
   }
 
-  private handler: BoomBoxEvents['collectionChange'] = (oldCollection, newCollection, ignoreFrom) => {
+  #handler: BoomBoxEvents['collectionChange'] = (oldCollection, newCollection, ignoreFrom) => {
     if (!oldCollection) {
       return;
     }
@@ -112,9 +115,9 @@ export class SweeperInserter {
       return;
     }
 
-    const insertion = this.pick(matched.collection);
+    const insertion = this.#pick(matched.collection);
     if (insertion) {
-      this.logger.info('Inserting', insertion.path);
+      this.#logger.info('Inserting', insertion.path);
       // ensure track kind
       if (insertion.extra?.kind === undefined) {
         insertion.extra = {
@@ -123,7 +126,7 @@ export class SweeperInserter {
         }
       }
 
-      this.boombox.queue.add({
+      this.#boombox.queue.add({
         ...insertion,
         disableNextLeadIn: true
       });
