@@ -29,10 +29,10 @@ export class AudioWebSocketServer extends EventEmitter {
       clientTracking: false
     });
 
-    httpServer.on('upgrade', this.handleUpgrade);
+    httpServer.on('upgrade', this.#handleUpgrade);
   }
 
-  private handleUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+  #handleUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     if (!req.url) {
       return;
     }
@@ -41,10 +41,10 @@ export class AudioWebSocketServer extends EventEmitter {
       return;
     }
 
-    this.#server.handleUpgrade(req, socket, head, this.onWebSocket);
+    this.#server.handleUpgrade(req, socket, head, this.#onWebSocket);
   }
 
-  private onWebSocket = (socket: WebSocket) => {
+  #onWebSocket = (socket: WebSocket) => {
     const audioSocket = new AudioWebSocket(this, socket);
     this.#sockets.push(audioSocket);
 

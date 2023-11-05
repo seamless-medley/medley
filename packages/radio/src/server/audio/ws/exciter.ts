@@ -16,13 +16,13 @@ export class WebSocketExciter extends Exciter<AudioStreamPlayerEvents> implement
     );
   }
 
-  private preparedPacket?: Buffer;
+  #preparedPacket?: Buffer;
 
   override prepare(): void {
     const opus = this.read();
 
     if (!opus) {
-      this.preparedPacket = undefined;
+      this.#preparedPacket = undefined;
       return;
     }
 
@@ -43,14 +43,14 @@ export class WebSocketExciter extends Exciter<AudioStreamPlayerEvents> implement
     resultPacket.set(infoBuffer, 2);
     resultPacket.set(opus, 2 + infoBuffer.byteLength);
 
-    this.preparedPacket = resultPacket;
+    this.#preparedPacket = resultPacket;
   }
 
   override dispatch(): void {
-    if (this.preparedPacket) {
-      this.emit('packet', this.preparedPacket);
+    if (this.#preparedPacket) {
+      this.emit('packet', this.#preparedPacket);
     }
 
-    this.preparedPacket = undefined;
+    this.#preparedPacket = undefined;
   }
 }

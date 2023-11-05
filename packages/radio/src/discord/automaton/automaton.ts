@@ -155,7 +155,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.#logger.error('Automaton Error', error);
     });
 
-    this.#client.on('shardError', this.handleShardError);
+    this.#client.on('shardError', this.#handleShardError);
 
     this.#client.on('shardReconnecting', (shardId) => {
       this.#logger.debug('Shard', shardId, 'reconnecting');
@@ -165,7 +165,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.#logger.debug('Shard', shardId, 'resume');
 
       if (!this.#shardReady) {
-        this.rejoinVoiceChannels(30);
+        this.#rejoinVoiceChannels(30);
       }
 
       this.#shardReady = true;
@@ -174,30 +174,30 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#client.on('shardReady', (shardId) => {
       this.#shardReady = true;
       this.#logger.debug('Shard', shardId, 'ready');
-      this.rejoinVoiceChannels(30);
+      this.#rejoinVoiceChannels(30);
     })
 
-    this.#client.on('ready', this.handleClientReady);
-    this.#client.on('guildCreate', this.handleGuildCreate);
-    this.#client.on('guildDelete', this.handleGuildDelete);
+    this.#client.on('ready', this.#handleClientReady);
+    this.#client.on('guildCreate', this.#handleGuildCreate);
+    this.#client.on('guildDelete', this.#handleGuildDelete);
     // this.#client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
     this.#client.on('interactionCreate', createInteractionHandler(this));
 
-    this.#client.on('messageDelete', this.handleMessageDeletion);
-    this.#client.on('messageDeleteBulk', async messages => void messages.mapValues(this.handleMessageDeletion))
+    this.#client.on('messageDelete', this.#handleMessageDeletion);
+    this.#client.on('messageDeleteBulk', async messages => void messages.mapValues(this.#handleMessageDeletion))
 
     for (const station of stations) {
-      station.on('trackStarted', this.handleTrackStarted(station));
-      station.on('trackActive', this.handleTrackActive);
-      station.on('trackFinished', this.handleTrackFinished);
-      station.on('collectionChange', this.handleCollectionChange(station));
+      station.on('trackStarted', this.#handleTrackStarted(station));
+      station.on('trackActive', this.#handleTrackActive);
+      station.on('trackFinished', this.#handleTrackFinished);
+      station.on('collectionChange', this.#handleCollectionChange(station));
     }
 
     this.#logger.info('OAUthURL', this.oAuth2Url.toString());
 
     this.#client.once('ready', async () => {
       for (const guildId of Object.keys(this.#guildConfigs)) {
-        this.autoJoinVoiceChannel(guildId);
+        this.#autoJoinVoiceChannel(guildId);
       }
     });
   }
@@ -210,15 +210,15 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     return this.#baseCommand || 'medley';
   }
 
-  private handleShardError = (error: Error, shardId: number) => {
+  #handleShardError = (error: Error, shardId: number) => {
     this.#logger.error('Shard', shardId, 'error', error.message);
 
     this.#shardReady = false;
     this.#rejoining = false;
-    this.removeAllAudiences();
+    this.#removeAllAudiences();
   }
 
-  private removeAllAudiences(closeConnection?: boolean) {
+  #removeAllAudiences(closeConnection?: boolean) {
     // Remove audiences from all stations
     for (const [guildId, state] of this.#guildStates) {
       const group = this.makeAudienceGroup(guildId);
@@ -233,7 +233,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
   }
 
-  private async autoJoinVoiceChannel(guildId: string) {
+  async #autoJoinVoiceChannel(guildId: string) {
     const config = this.#guildConfigs[guildId];
 
     if (!config?.autojoin) {
@@ -253,7 +253,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
   }
 
-  private async rejoinVoiceChannels(timeoutSeconds: number) {
+  async #rejoinVoiceChannels(timeoutSeconds: number) {
     if (this.#rejoining) {
       return;
     }
@@ -305,11 +305,11 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     return this.client.isReady();
   }
 
-  private loginAbortController: AbortController | undefined;
+  #loginAbortController: AbortController | undefined;
 
   async login() {
-    this.loginAbortController?.abort();
-    this.loginAbortController = new AbortController();
+    this.#loginAbortController?.abort();
+    this.#loginAbortController = new AbortController();
 
     try {
       const result = await retryable(async () => {
@@ -320,7 +320,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
             this.#logger.error('Error login', e);
             throw e;
           });
-      }, { wait: 5000, signal: this.loginAbortController.signal });
+      }, { wait: 5000, signal: this.#loginAbortController.signal });
 
       if (result !== undefined) {
         this.#logger.debug('Logging in done');
@@ -341,7 +341,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     makeAudienceGroup: (guildId: string) => this.makeAudienceGroup(guildId),
   }
 
-  private makeAdapter(guildId: Guild['id']): GuildStateAdapter {
+  #makeAdapter(guildId: Guild['id']): GuildStateAdapter {
     return ({
       ...this.#baseAdapter,
       getChannel: (id) => this.client.guilds.cache.get(guildId)?.channels.cache.get(id)
@@ -350,7 +350,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   ensureGuildState(guildId: Guild['id']) {
     if (!this.#guildStates.has(guildId)) {
-      this.#guildStates.set(guildId, new GuildState(guildId, this.makeAdapter(guildId)));
+      this.#guildStates.set(guildId, new GuildState(guildId, this.#makeAdapter(guildId)));
     }
 
     return this.#guildStates.get(guildId)!;
@@ -360,7 +360,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     return this.#guildStates.get(id);
   }
 
-  private handleClientReady = async (client: Client) => {
+  #handleClientReady = async (client: Client) => {
     const guilds = [...(await client.guilds.fetch()).values()];
 
     for (const { id } of guilds) {
@@ -371,12 +371,12 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.emit('ready');
   }
 
-  private handleGuildCreate = async (guild: Guild) => {
+  #handleGuildCreate = async (guild: Guild) => {
     // Invited to
     this.#logger.info(`Invited to ${guild.name}`);
 
     this.ensureGuildState(guild.id)
-    this.autoJoinVoiceChannel(guild.id);
+    this.#autoJoinVoiceChannel(guild.id);
 
     MedleyAutomaton.registerCommands(({
       guild,
@@ -391,7 +391,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.emit('guildCreate', guild);
   }
 
-  private handleGuildDelete = async (guild: Guild) => {
+  #handleGuildDelete = async (guild: Guild) => {
     // Removed from
     this.#logger.info(`Removed from ${guild.name}`);
     this.#guildStates.get(guild.id)?.dispose();
@@ -400,9 +400,9 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.emit('guildDelete', guild);
   }
 
-  private handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay, lastTrackPlay) => {
+  #handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay, lastTrackPlay) => {
     if (trackPlay.track.extra?.kind !== TrackKind.Insertion) {
-      const sentMessages = await this.sendTrackPlayForStation(trackPlay, deck, station);
+      const sentMessages = await this.#sendTrackPlayForStation(trackPlay, deck, station);
 
       // Store message for each guild
       for (const [guildId, trackMsg, maybeMessage] of sentMessages) {
@@ -457,7 +457,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     });
   }
 
-  private handleTrackActive: StationEvents['trackActive'] = async (deck, trackPlay) => {
+  #handleTrackActive: StationEvents['trackActive'] = async (deck, trackPlay) => {
     await waitFor(1000);
 
     // Reveal all buttons for this trackPlay
@@ -478,7 +478,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     });
   }
 
-  private handleTrackFinished: StationEvents['trackFinished'] = (deck, trackPlay) => {
+  #handleTrackFinished: StationEvents['trackFinished'] = (deck, trackPlay) => {
     // Update this trackPlay status to "Played"
     this.updateTrackMessage(async (msg) => {
       // Only update this trackPlay if it is neither played nor skipped
@@ -496,7 +496,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     });
   }
 
-  private handleCollectionChange = (station: Station): StationEvents['collectionChange'] => (oldCollection, newCollection) => {
+  #handleCollectionChange = (station: Station): StationEvents['collectionChange'] => (oldCollection, newCollection) => {
     // Hide "more like this" button for this currently playing track
     this.updateTrackMessage(
       async (msg) =>  {
@@ -519,7 +519,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     )
   }
 
-  private handleMessageDeletion = (message: Message<boolean> | PartialMessage) => {
+  #handleMessageDeletion = (message: Message<boolean> | PartialMessage) => {
     const { guildId } = message;
 
     if (!message.inGuild || !guildId) {
@@ -687,7 +687,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   /**
    * Returns guild id which has audiences for this station
    */
-  private getAudienceGuildsForStation(station: Station): string[] {
+  #getAudienceGuildsForStation(station: Station): string[] {
     return station.audienceGroups
       .map(group => {
         if ((station.getAudiences(group)?.size ?? 0) < 1) {
@@ -718,7 +718,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     return channel.members.has(me.id) && channel.permissionsFor(me).has(PermissionsBitField.Flags.SendMessages);
   }
 
-  private getTextChannel(guildId: string) {
+  #getTextChannel(guildId: string) {
     const state = this.#guildStates.get(guildId);
 
     if (!state) {
@@ -748,10 +748,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   /**
    * Send to all guilds for a station
    */
-  private async sendTrackPlayForStation(trackPlay: StationTrackPlay, deck: DeckIndex, station: Station) {
+  async #sendTrackPlayForStation(trackPlay: StationTrackPlay, deck: DeckIndex, station: Station) {
     const results: [guildId: string, trackMsg: TrackMessage, maybeMessage: Promise<Message<boolean> | undefined> | undefined][] = [];
 
-    const guildIds = this.getAudienceGuildsForStation(station);
+    const guildIds = this.#getAudienceGuildsForStation(station);
 
     for (const guildId of guildIds) {
       const state = this.#guildStates.get(guildId);
@@ -760,7 +760,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         const guild = this.client.guilds.cache.get(guildId);
 
         if (guild && state.hasVoiceChannel()) {
-          const textChannel = this.getTextChannel(guildId);
+          const textChannel = this.#getTextChannel(guildId);
 
           if (!textChannel) {
             state.textChannelId = undefined;

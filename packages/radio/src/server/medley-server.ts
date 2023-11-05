@@ -43,10 +43,10 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     this.#rtcTransponder = options.rtcTransponder;
     this.#configs = options.configs;
     //
-    this.connectMongoDB().then(this.initialize);
+    this.#connectMongoDB().then(this.#initialize);
   }
 
-  private initialize = async () => {
+  #initialize = async () => {
     if (this.#rtcTransponder) {
       this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
     }
@@ -155,7 +155,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     logger.debug('Adding socket', socket.id);
   }
 
-  private async connectMongoDB() {
+  async #connectMongoDB() {
     const dbConfig = this.#configs.db;
 
     try {
@@ -189,8 +189,8 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   }
 
   registerStation(station: Station) {
-    station.on('collectionAdded', this.handleStationCollectionAdded);
-    station.on('collectionRemoved', this.handleStationCollectionRemoved);
+    station.on('collectionAdded', this.#handleStationCollectionAdded);
+    station.on('collectionRemoved', this.#handleStationCollectionRemoved);
 
     this.register('station', station.id, new ExposedStation(station));
 
@@ -204,17 +204,17 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   }
 
   deregisterStation(station: Station) {
-    station.off('collectionAdded', this.handleStationCollectionAdded);
-    station.off('collectionRemoved', this.handleStationCollectionRemoved);
+    station.off('collectionAdded', this.#handleStationCollectionAdded);
+    station.off('collectionRemoved', this.#handleStationCollectionRemoved);
 
     this.deregister('station', station.id);
   }
 
-  private handleStationCollectionAdded: StationEvents['collectionAdded'] = (collection) => {
+  #handleStationCollectionAdded: StationEvents['collectionAdded'] = (collection) => {
     this.registerCollection(collection);
   }
 
-  private handleStationCollectionRemoved: StationEvents['collectionAdded'] = (collection) => {
+  #handleStationCollectionRemoved: StationEvents['collectionAdded'] = (collection) => {
     this.deregisterCollection(collection);
   }
 

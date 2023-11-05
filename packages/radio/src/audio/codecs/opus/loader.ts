@@ -65,17 +65,17 @@ export abstract class Opus {
 export class OpusScript extends Opus {
   constructor(options?: Partial<OpusOptions>) {
     super();
-    this.native = new OpusScript.Opus(48000, 2, OpusScript.Opus.Application.AUDIO);
+    this.native = new OpusScript.#Opus(48000, 2, OpusScript.#Opus.Application.AUDIO);
     this.init(makeOpusOptions(options));
   }
 
-  private static Opus: any;
+  static #Opus: any;
 
   static load() {
-    if (this.Opus) return true;
+    if (this.#Opus) return true;
 
     try {
-      this.Opus = require('opusscript');
+      this.#Opus = require('opusscript');
       return true;
     }
     catch {
@@ -103,17 +103,17 @@ export class OpusScript extends Opus {
 export class DiscordOpus extends Opus {
   constructor(options?: Partial<OpusOptions>) {
     super();
-    this.native = new DiscordOpus.OpusEncoder(48000, 2);
+    this.native = new DiscordOpus.#OpusEncoder(48000, 2);
     this.init(makeOpusOptions(options));
   }
 
-  private static OpusEncoder: any;
+  static #OpusEncoder: any;
 
   static load() {
-    if (this.OpusEncoder) return true;
+    if (this.#OpusEncoder) return true;
 
     try {
-      this.OpusEncoder = require('@discordjs/opus').OpusEncoder;
+      this.#OpusEncoder = require('@discordjs/opus').OpusEncoder;
       return true;
     }
     catch {

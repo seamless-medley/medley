@@ -63,7 +63,7 @@ export class GuildState {
 
   private stationLink?: StationLink;
 
-  private voiceConnector?: VoiceConnector;
+  #voiceConnector?: VoiceConnector;
 
   get maxTrackMessages() {
     const config = this.adapter.getConfig(this.guildId);
@@ -103,7 +103,7 @@ export class GuildState {
   }
 
   hasVoiceConnection() {
-    return this.voiceConnector !== undefined;
+    return this.#voiceConnector !== undefined;
   }
 
   hasVoiceChannel() {
@@ -111,8 +111,8 @@ export class GuildState {
   }
 
   destroyVoiceConnector(): void {
-    this.voiceConnector?.destroy();
-    this.voiceConnector = undefined;
+    this.#voiceConnector?.destroy();
+    this.#voiceConnector = undefined;
   }
 
   #updateChannelAudiences(channel: VoiceBasedChannel | null | undefined, muted: boolean) {
@@ -142,7 +142,7 @@ export class GuildState {
     // if the voiceConnection is defined, meaning the voice state has been forcefully closed
     // if the voiceConnection is undefined here, meaning it might be the result of the `join` command
 
-    if (this.voiceConnector !== undefined) {
+    if (this.#voiceConnector !== undefined) {
       this.detune();
       this.destroyVoiceConnector();
       this.#voiceChannelId = undefined;
@@ -154,8 +154,8 @@ export class GuildState {
 
     const link = await this.createStationLink();
 
-    if (link && this.voiceConnector) {
-      link.exciter.addCarrier(this.voiceConnector);
+    if (link && this.#voiceConnector) {
+      link.exciter.addCarrier(this.#voiceConnector);
     }
 
     this.#updateAudiences();
@@ -202,8 +202,8 @@ export class GuildState {
 
     const { station, exciter } = this.stationLink;
 
-    if (this.voiceConnector) {
-      if (exciter.removeCarrier(this.voiceConnector) <= 0) {
+    if (this.#voiceConnector) {
+      if (exciter.removeCarrier(this.#voiceConnector) <= 0) {
         exciter.stop();
         DiscordAudioPlayer.destroy(exciter);
       }
@@ -254,10 +254,10 @@ export class GuildState {
       return { status: 'no_station' };
     }
 
-    const existingConnection = this.voiceConnector;
+    const existingConnection = this.#voiceConnector;
 
     // Release the voiceConnection to make VoiceStateUpdate handler aware of the this join command
-    this.voiceConnector = undefined;
+    this.#voiceConnector = undefined;
     // This is crucial for channel change detection to know about this new joining
     this.#voiceChannelId = undefined;
 
@@ -285,7 +285,7 @@ export class GuildState {
       await connector.waitForState(VoiceConnectorStatus.Ready, timeout);
 
       stationLink.exciter.addCarrier(connector);
-      this.voiceConnector = connector;
+      this.#voiceConnector = connector;
 
       this.#updateAudiences();
 
@@ -294,7 +294,7 @@ export class GuildState {
     catch (e) {
       connector?.destroy();
       connector = undefined;
-      this.voiceConnector = undefined;
+      this.#voiceConnector = undefined;
       //
       this.adapter.getLogger().error(e);
       return { status: 'not_joined' };
@@ -302,7 +302,7 @@ export class GuildState {
   }
 
   #updateAudiences() {
-    if (!this.voiceConnector) {
+    if (!this.#voiceConnector) {
       return;
     }
 

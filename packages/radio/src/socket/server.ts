@@ -41,45 +41,45 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     io.on('connection', socket => this.addSocket(socket));
   }
 
-  private objectNamespaces = new Map<string, Map<string, ObjectObserver<object>>>();
+  #objectNamespaces = new Map<string, Map<string, ObjectObserver<object>>>();
 
-  private socketSubscriptions = new Map<Socket, Map<object, { [event: string]: (...args: any[]) => any }>>();
+  #socketSubscriptions = new Map<Socket, Map<object, { [event: string]: (...args: any[]) => any }>>();
 
-  private socketObservations = new Map<Socket, Map<`${string}:${string}`, ObservedPropertyHandler<any>>>();
+  #socketObservations = new Map<Socket, Map<`${string}:${string}`, ObservedPropertyHandler<any>>>();
 
   protected addSocket(socket: Socket) {
-    for (const [name, handler] of Object.entries(this.handlers)) {
+    for (const [name, handler] of Object.entries(this.#handlers)) {
       socket.on(name as keyof ClientEvents, (...args: any[]) => {
         handler(socket, ...args);
       });
     }
 
-    socket.on('disconnect', () => this.removeSocket(socket))
+    socket.on('disconnect', () => this.#removeSocket(socket))
   }
 
-  private removeSocket(socket: Socket) {
-    const subscriptions = this.socketSubscriptions.get(socket);
+  #removeSocket(socket: Socket) {
+    const subscriptions = this.#socketSubscriptions.get(socket);
 
     if (subscriptions) {
       for (const [object, eventHandlerMap] of [...subscriptions]) {
         if (object instanceof EventEmitter) {
           for (const event of Object.keys(eventHandlerMap)) {
-            this.unsubscribe(socket, object, event);
+            this.#unsubscribe(socket, object, event);
           }
         }
       }
     }
 
-    this.socketSubscriptions.delete(socket);
+    this.#socketSubscriptions.delete(socket);
 
 
-    if (this.socketObservations.has(socket)) {
-      this.socketObservations.delete(socket);
+    if (this.#socketObservations.has(socket)) {
+      this.#socketObservations.delete(socket);
     }
   }
 
-  private unsubscribe(socket: Socket, object: EventEmitter, event: string) {
-    const socketSubscriptions = this.socketSubscriptions.get(socket);
+  #unsubscribe(socket: Socket, object: EventEmitter, event: string) {
+    const socketSubscriptions = this.#socketSubscriptions.get(socket);
 
     if (!socketSubscriptions) {
       return;
@@ -104,13 +104,13 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
   }
 
-  private registeredStreams = new Map<number, Readable>();
+  #registeredStreams = new Map<number, Readable>();
 
-  private makeStreamId() {
+  #makeStreamId() {
     while (true) {
       const id = random(2 ** 31);
 
-      if (this.registeredStreams.has(id)) {
+      if (this.#registeredStreams.has(id)) {
         continue;
       }
 
@@ -118,8 +118,8 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
   }
 
-  private registerStream(socket: Socket, stream: Readable): [number, number] {
-    const id = this.makeStreamId();
+  #registerStream(socket: Socket, stream: Readable): [number, number] {
+    const id = this.#makeStreamId();
 
     stream.on('data', data => {
       if (Buffer.isBuffer(data)) {
@@ -129,7 +129,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
 
 
     stream.on('close', () => {
-      this.registeredStreams.delete(id);
+      this.#registeredStreams.delete(id);
       socket.emit('r:sc', id);
     });
 
@@ -140,14 +140,14 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
    * Interact with a remote object specified by kind, id altogether
    *
    */
-  private async interact(
+  async #interact(
     socket: Socket,
     kind: string, id: string, key: string | undefined,
     predicate: (value: any, object: any, observer: ObjectObserver<any> | undefined) => boolean,
     execute: (object: any, value: any, observer: ObjectObserver<any> | undefined) => Promise<any>,
     callback: RemoteCallback<any>
   ) {
-    const namespace = this.objectNamespaces.get(kind);
+    const namespace = this.#objectNamespaces.get(kind);
     const object = namespace?.get(id) as any;
     const observed = object instanceof ObjectObserver ? object : undefined;
     const instance = observed?.instance ?? object;
@@ -168,7 +168,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
           if (isReadableStream(result)) {
             resp = {
               status: 'stream',
-              result: this.registerStream(socket, result)
+              result: this.#registerStream(socket, result)
             }
           }
         }
@@ -198,9 +198,9 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
   }
 
-  private handlers: Handlers = {
+  #handlers: Handlers = {
     'r:pg': async (socket, kind, id, prop, callback) => {
-      this.interact(
+      this.#interact(
         socket,
         kind, id, prop,
         (value, object, observed) => observed?.isPublishedProperty(prop) ?? false,
@@ -210,7 +210,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     },
 
     'r:ps': async (socket, kind, id, prop, value, callback) => {
-      this.interact(
+      this.#interact(
         socket,
         kind, id, prop,
         (value, object, observed) => observed?.isPublishedProperty(prop) ?? false,
@@ -236,16 +236,16 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
      * Client requests to observe for changes of a remote object
      */
     'r:ob': async (socket, kind, id, options, callback) => {
-      this.interact(
+      this.#interact(
         socket,
         kind, id, undefined,
         (value, object) => !!object,
         async (object, _, observed) => {
-          if (!this.socketObservations.has(socket)) {
-            this.socketObservations.set(socket, new Map());
+          if (!this.#socketObservations.has(socket)) {
+            this.#socketObservations.set(socket, new Map());
           }
 
-          const observation = this.socketObservations.get(socket)!;
+          const observation = this.#socketObservations.get(socket)!;
           const key = `${kind}:${id}` as `${string}:${string}`;
 
           if (!observation.has(key)) {
@@ -268,14 +268,14 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     },
 
     'r:ub': async (socket, kind, id, callback) => {
-      this.interact(
+      this.#interact(
         socket,
         kind, id, undefined,
         (value, object) => !!object,
         async (object, _, observerd) => {
-          if (this.socketObservations.has(socket)) {
+          if (this.#socketObservations.has(socket)) {
             const key = `${kind}:${id}` as `${string}:${string}`;
-            const observation = this.socketObservations.get(socket)!;
+            const observation = this.#socketObservations.get(socket)!;
             observation.delete(key);
           }
         },
@@ -284,7 +284,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     },
 
     'r:mi': async (socket, kind, id, method, args, callback) => {
-      this.interact(
+      this.#interact(
         socket,
         kind, id, method,
         // predicate
@@ -299,7 +299,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
      * Client requests to subscribe to an event of a remote object
      */
     'r:es': async (socket, kind, id, event, callback) => {
-      this.interact(
+      this.#interact(
         socket,
         kind, id, 'on',
         isEvented,
@@ -308,11 +308,11 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
             socket.emit('r:e', kind, id, event, ...args);
           };
 
-          if (!this.socketSubscriptions.has(socket)) {
-            this.socketSubscriptions.set(socket, new Map());
+          if (!this.#socketSubscriptions.has(socket)) {
+            this.#socketSubscriptions.set(socket, new Map());
           }
 
-          const socketSubscriptions = this.socketSubscriptions.get(socket)!;
+          const socketSubscriptions = this.#socketSubscriptions.get(socket)!;
 
           if (!socketSubscriptions.has(object)) {
             socketSubscriptions.set(object, {});
@@ -334,12 +334,12 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     },
 
     'r:eu': async (socket, kind, id, event, callback) => {
-      this.interact(
+      this.#interact(
         socket,
         kind, id, 'off',
         isEvented,
         async (object: EventEmitter) => {
-          this.unsubscribe(socket, object, event);
+          this.#unsubscribe(socket, object, event);
         },
         callback
       );
@@ -351,11 +351,11 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       return;
     }
 
-    if (!this.objectNamespaces.has(kind)) {
-      this.objectNamespaces.set(kind, new Map());
+    if (!this.#objectNamespaces.has(kind)) {
+      this.#objectNamespaces.set(kind, new Map());
     }
 
-    const scoped = this.objectNamespaces.get(kind)!;
+    const scoped = this.#objectNamespaces.get(kind)!;
     const instance = o as unknown as object;
 
     if (scoped.get(id)?.instance === instance) {
@@ -364,11 +364,11 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
 
     this.deregister(kind, id);
-    this.objectNamespaces.get(kind)?.set(id, new ObjectObserver(instance, this.makeObserverPropertyHandler(kind, id)));
+    this.#objectNamespaces.get(kind)?.set(id, new ObjectObserver(instance, this.#makeObserverPropertyHandler(kind, id)));
   }
 
   protected deregister<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string) {
-    const namespace = this.objectNamespaces.get(kind);
+    const namespace = this.#objectNamespaces.get(kind);
     if (!namespace) {
       return;
     }
@@ -380,7 +380,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     const object = namespace.get(id)!;
 
     if (object instanceof EventEmitter) {
-      for (const [socket, subscriptions] of [...this.socketSubscriptions]) {
+      for (const [socket, subscriptions] of [...this.#socketSubscriptions]) {
         for (const [o, events] of subscriptions) {
           if (o === object) {
             for (const [event, handler] of Object.entries(events)) {
@@ -390,12 +390,12 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
         }
 
         if (subscriptions.size <= 0) {
-          this.socketSubscriptions.delete(socket);
+          this.#socketSubscriptions.delete(socket);
         }
       }
     }
 
-    for (const [socket, observations] of [...this.socketObservations]) {
+    for (const [socket, observations] of [...this.#socketObservations]) {
       for (const key of [...observations.keys()]) {
         if (key === `${kind}:${id}`) {
           observations.delete(key);
@@ -403,7 +403,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       }
 
       if (observations.size <= 0) {
-        this.socketObservations.delete(socket);
+        this.#socketObservations.delete(socket);
       }
     }
 
@@ -411,13 +411,13 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     namespace.delete(id);
 
     if (namespace.size <= 0) {
-      this.objectNamespaces.delete(kind);
+      this.#objectNamespaces.delete(kind);
     }
   }
 
-  private makeObserverPropertyHandler = (kind: string, id: string): ObservedPropertyHandler<any> => async (stub, changes) => {
+  #makeObserverPropertyHandler = (kind: string, id: string): ObservedPropertyHandler<any> => async (stub, changes) => {
     for (const [, socket] of this.io.sockets.sockets) {
-      const observation = this.socketObservations.get(socket);
+      const observation = this.#socketObservations.get(socket);
 
 
       if (observation) {
@@ -451,7 +451,7 @@ export class ObjectObserver<T extends object> {
   readonly #declaredProps: Record<string, TypedPropertyDescriptorOf>;
 
   constructor(readonly instance: T, private readonly notify: ObservedPropertyHandler<T>) {
-    const exposingInstance = this.getExposing();
+    const exposingInstance = this.#getExposing();
 
     const own = propertyDescriptorOf(instance);
     const proto = propertyDescriptorOf(Object.getPrototypeOf(instance));
@@ -528,7 +528,7 @@ export class ObjectObserver<T extends object> {
     }
   }
 
-  private getExposing() {
+  #getExposing() {
     if ($Exposing in this.instance) {
       const exposed = (this.instance as any)[$Exposing];
 
