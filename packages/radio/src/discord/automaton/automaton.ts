@@ -248,7 +248,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     const voiceChannel = guild.channels.cache.get(config.autojoin);
     if (voiceChannel?.isVoiceBased()) {
-      const { status } = await this.ensureGuildState(guildId).join(voiceChannel, 10_000);
+      const { status } = await this.ensureGuildState(guildId).join(voiceChannel, 5_000, 5);
       this.#logger.debug('Auto join result:', { status, guild: guild.name, channel: voiceChannel.name })
     }
   }
