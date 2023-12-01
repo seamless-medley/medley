@@ -25,6 +25,7 @@ import { DiscordAudioPlayer } from "../voice/audio/player";
 import { GuildSpecificConfig, MedleyAutomaton } from "./automaton";
 import { TrackMessageCreator } from "../trackmessage/creator/base";
 import { makeCreator } from "../trackmessage/creator";
+import { retryable } from "@seamless-medley/utils";
 
 export type GuildStateAdapter = {
   getAutomaton(): MedleyAutomaton;
@@ -282,14 +283,25 @@ export class GuildState {
     }
 
     try {
-      await connector.waitForState(VoiceConnectorStatus.Ready, timeout);
+      const conn = connector;
+      const link = stationLink;
 
-      stationLink.exciter.addCarrier(connector);
-      this.#voiceConnector = connector;
+      const result = await retryable<JoinResult>(async() => {
+        await conn.waitForState(VoiceConnectorStatus.Ready, timeout);
 
-      this.#updateAudiences();
+        link.exciter.addCarrier(conn);
+        this.#voiceConnector = conn;
 
-      return { status: 'joined', station: stationLink.station };
+        this.#updateAudiences();
+
+        return { status: 'joined', station: stationLink!.station };
+      }, { retries: 4, wait: 1000 });
+
+      if (result === undefined) {
+        throw new Error('Aborted');
+      }
+
+      return result;
     }
     catch (e) {
       connector?.destroy();
