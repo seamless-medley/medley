@@ -12,7 +12,7 @@ import { scanDir } from './scanner';
 
 export type MusicCollectionDescriptor = {
   id: string;
-  path: string;
+  paths: string[];
   description: string;
 } & TrackCollectionBasicOptions;
 
@@ -36,8 +36,6 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
   #logger: Logger<ILogObj>;
 
   #searchEngine = new SearchEngine();
-
-  #collectionPaths = new Map<string, string>();
 
   constructor(
     readonly id: string,
@@ -106,7 +104,6 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
 
       if (collection) {
         collection.unwatchAll();
-        this.#collectionPaths.delete(collection.id);
       }
     }
 
@@ -170,7 +167,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
 
     return new Promise(async (resolve) => {
-      const { id, description, path, ...options } = descriptor;
+      const { id, description, paths, ...options } = descriptor;
 
       const extra: MusicLibraryExtra<O> = {
         description,
@@ -196,11 +193,12 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
       newCollection.on('tracksRemove', this.#handleTrackRemoval);
       newCollection.on('tracksUpdate', this.#handleTrackUpdates);
 
-      const normalizedPath = normalizePath(path);
-
       this.add(newCollection);
-      this.#collectionPaths.set(id, normalizedPath);
-      newCollection.watch(normalizedPath);
+
+      for (const path of paths) {
+        const normalizedPath = normalizePath(path);
+        newCollection.watch(normalizedPath);
+      }
     });
   }
 

@@ -2,7 +2,7 @@ import { TrackAddingMode } from "@seamless-medley/core";
 import { z } from "zod";
 
 export const MusicCollection = z.object({
-  path: z.string().nonempty(),
+  paths: z.array(z.string().min(1)).nonempty(),
   description: z.string(),
 
   auxiliary: z.boolean().optional(),
