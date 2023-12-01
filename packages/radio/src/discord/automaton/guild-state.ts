@@ -215,7 +215,7 @@ export class GuildState {
     this.stationLink = undefined;
   }
 
-  async join(channel: BaseGuildVoiceChannel, timeout: number = 5000): Promise<JoinResult> {
+  async join(channel: BaseGuildVoiceChannel, timeout: number = 5000, retries: number = 0): Promise<JoinResult> {
     const { me } = channel.guild.members;
 
     const granted = me && channel.permissionsFor(me).has([PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak])
@@ -295,7 +295,7 @@ export class GuildState {
         this.#updateAudiences();
 
         return { status: 'joined', station: stationLink!.station };
-      }, { retries: 4, wait: 1000 });
+      }, { retries, wait: 1000 });
 
       if (result === undefined) {
         throw new Error('Aborted');
