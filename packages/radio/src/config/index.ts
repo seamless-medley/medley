@@ -5,7 +5,7 @@ import { DbConfig } from './db';
 import { StationConfig } from './station';
 import { AutomatonConfig } from './automaton';
 import { pickBy } from 'lodash';
-import { dollar as phrase } from "paraphrase";
+import { paraphrase, dollar } from "paraphrase";
 import { ServerConfig } from './server';
 import { WebRtcConfig } from './webrtc';
 
@@ -46,11 +46,13 @@ export async function loadConfig(configFile: string, discordOnly: boolean): Prom
     return fileData;
   }
 
-  const data = await parseYAML(
-    phrase(fileData.toString(),
+  const phrase = paraphrase(...dollar.patterns, { clean: true });
+  const yaml = phrase(
+    fileData.toString(),
     pickBy(process.env, (_, key) => /^MEDLEY_[A-Z0-9_]+$/.test(key))
-  ))
-  .catch(catchError);
+  )
+
+  const data = await parseYAML(yaml).catch(catchError);
 
   if (data instanceof Error) {
     return data;
