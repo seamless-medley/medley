@@ -1,5 +1,5 @@
 import { Station, StationTrackPlay } from "@seamless-medley/core";
-import { AttachmentBuilder, ButtonBuilder, EmbedBuilder, Message } from "discord.js";
+import { AttachmentBuilder, ButtonBuilder, EmbedBuilder, GuildEmoji, Message } from "discord.js";
 
 export enum TrackMessageStatus {
   Playing,
@@ -23,4 +23,6 @@ export type TrackMessage = {
   };
   maybeMessage?: Promise<Message<boolean> | undefined>;
   lyricMessage?: Message;
+
+  reactions?: Set<GuildEmoji['id']>;
 }

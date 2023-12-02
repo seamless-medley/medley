@@ -5,7 +5,7 @@ import {
   Client, Guild,
   GatewayIntentBits, Message,
   OAuth2Guild,
-  Snowflake, ChannelType, PermissionsBitField, PartialMessage, GuildBasedChannel, TextChannel
+  Snowflake, ChannelType, PermissionsBitField, PartialMessage, GuildBasedChannel, TextChannel, MessageReaction, PartialMessageReaction, ReactionEmoji, Emoji
 } from "discord.js";
 
 import {
@@ -38,6 +38,7 @@ import { CreatorNames } from "../trackmessage/creator";
 export type GuildSpecificConfig = {
   autotune?: string;
   autojoin?: string;
+
   trackMessage?: {
     /**
      * @default extended
@@ -50,6 +51,8 @@ export type GuildSpecificConfig = {
     max?: number;
 
     channel?: string;
+
+    retainOnReaction?: boolean;
   }
 
   /**
@@ -180,11 +183,15 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#client.on('ready', this.#handleClientReady);
     this.#client.on('guildCreate', this.#handleGuildCreate);
     this.#client.on('guildDelete', this.#handleGuildDelete);
-    // this.#client.on('voiceStateUpdate', this.handleVoiceStateUpdate);
     this.#client.on('interactionCreate', createInteractionHandler(this));
 
     this.#client.on('messageDelete', this.#handleMessageDeletion);
-    this.#client.on('messageDeleteBulk', async messages => void messages.mapValues(this.#handleMessageDeletion))
+    this.#client.on('messageDeleteBulk', async messages => void messages.mapValues(this.#handleMessageDeletion));
+
+    this.#client.on('messageReactionAdd', message => this.#handleMessageReaction(message, 'add'));
+    this.#client.on('messageReactionRemove', message => this.#handleMessageReaction(message, 'remove'));
+    this.#client.on('messageReactionRemoveEmoji', message => this.#handleMessageReaction(message, 'remove'));
+    this.#client.on('messageReactionRemoveAll', this.#handleMessageReactionRemoveAll);
 
     for (const station of stations) {
       station.on('trackStarted', this.#handleTrackStarted(station));
@@ -412,6 +419,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
           continue;
         }
 
+        const guildConfig = this.#guildConfigs[guildId];
+
         state.trackMessages.push({
           ...trackMsg,
           maybeMessage
@@ -420,7 +429,11 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         if (state.trackMessages.length > state.maxTrackMessages) {
           const oldMessages = state.trackMessages.splice(0, state.trackMessages.length - state.maxTrackMessages);
 
-          for (const { maybeMessage, lyricMessage } of oldMessages) {
+          for (const { maybeMessage, lyricMessage, reactions } of oldMessages) {
+            if (guildConfig?.trackMessage?.retainOnReaction && reactions?.size) {
+              continue;
+            }
+
             maybeMessage?.then((sentMessage) => {
               if (sentMessage?.deletable) {
                 sentMessage.delete();
@@ -542,6 +555,93 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       trackMessage.maybeMessage?.then(sentMessage => {
         if (sentMessage?.id === message.id)  {
           trackMessage.maybeMessage = undefined;
+        }
+      });
+    }
+  }
+
+  #manipulateTrackMessageReactions(trackMessage: TrackMessage, action: 'add' | 'remove' | 'remove-all', emoji?: Emoji) {
+    if (action === 'remove-all') {
+      trackMessage.reactions = undefined;
+      return;
+    }
+
+    const emojiId = emoji?.id ?? emoji?.name;
+
+    if (!emojiId) {
+      return;
+    }
+
+    if (action === 'add' && !trackMessage.reactions) {
+      trackMessage.reactions = new Set();
+    }
+
+    switch (action) {
+      case 'add':
+        trackMessage.reactions?.add(emojiId);
+        return;
+
+      case 'remove':
+        trackMessage.reactions?.delete(emojiId);
+        return;
+    }
+  }
+
+  #handleMessageReactionRemoveAll = (message: Message<boolean> | PartialMessage) => {
+    const { guildId } = message;
+
+    if (!message.inGuild || !guildId) {
+      return;
+    }
+
+    const state = this.getGuildState(guildId);
+
+    if (!state) {
+      return;
+    }
+
+    const { trackMessages } = state;
+
+    for (const trackMessage of [...trackMessages]) {
+      if (trackMessage.lyricMessage?.id === message.id) {
+        this.#manipulateTrackMessageReactions(trackMessage, 'remove-all');
+        continue;
+      }
+
+      trackMessage.maybeMessage?.then(sentMessage => {
+        if (sentMessage?.id === message.id) {
+          this.#manipulateTrackMessageReactions(trackMessage, 'remove-all');
+        }
+      });
+    }
+  }
+
+  #handleMessageReaction = async (reaction: MessageReaction | PartialMessageReaction, action: 'add' | 'remove') => {
+    const { message, emoji } = reaction;
+
+    const { guildId } = message;
+
+    if (!message.inGuild || !guildId) {
+      return;
+    }
+
+    const state = this.getGuildState(guildId);
+
+    if (!state) {
+      return;
+    }
+
+    const { trackMessages } = state;
+
+    for (const trackMessage of [...trackMessages]) {
+      if (trackMessage.lyricMessage?.id === message.id) {
+        this.#manipulateTrackMessageReactions(trackMessage, action, emoji);
+        continue;
+      }
+
+      trackMessage.maybeMessage?.then(sentMessage => {
+        if (sentMessage?.id === message.id) {
+          this.#manipulateTrackMessageReactions(trackMessage, action, emoji);
         }
       });
     }

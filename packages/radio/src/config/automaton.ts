@@ -4,7 +4,8 @@ import { creatorNames } from "../discord/trackmessage/creator";
 export const TrackMessageConfig = z.object({
   type: z.enum(creatorNames).optional(),
   max: z.number().nonnegative().optional(),
-  channel: z.string().optional()
+  channel: z.string().optional(),
+  retainOnReaction: z.boolean().optional(),
 });
 
 export const GuildSpecificConfig = z.object({
