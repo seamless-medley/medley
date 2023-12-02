@@ -23,8 +23,8 @@ export const MongoClientOptions = z.object({
   maxPoolSize: z.number(),
   minPoolSize: z.number(),
   auth: z.object({
-    username: z.string().nonempty().optional(),
-    password: z.string().nonempty().optional()
+    username: z.string().min(1).optional(),
+    password: z.string().min(1).optional()
   }),
   authSource: z.string(),
   authMechanism: z.custom<MongoClientOptionsType['authMechanism']>(),
@@ -39,8 +39,8 @@ export const MongoClientOptions = z.object({
 
 export const MongoDbConfig = z.object({
   driver: z.literal('mongodb'),
-  url: z.string().nonempty(),
-  database: z.string().nonempty(),
+  url: z.string().min(1),
+  database: z.string().min(1),
   connectionOptions: MongoClientOptions.optional(),
   metadataTTL: z.object({
       min: z.number().nonnegative(),

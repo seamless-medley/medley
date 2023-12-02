@@ -70,7 +70,7 @@ export type Sequence = z.infer<typeof Sequence>;
 export const SweeperRule = z.object({
   from: z.string().array().nonempty().optional(),
   to: z.string().array().nonempty().optional(),
-  path: z.string().nonempty()
+  path: z.string().min(1)
 })
 .strict()
 .refine(
@@ -81,11 +81,11 @@ export const SweeperRule = z.object({
 export type SweeperRule = z.infer<typeof SweeperRule>;
 
 export const StationConfig = z.object({
-  name: z.string().nonempty(),
+  name: z.string().min(1),
   description: z.string(),
 
-  url: z.string().nonempty().optional(),
-  iconURL: z.string().nonempty().optional(),
+  url: z.string().min(1).optional(),
+  iconURL: z.string().min(1).optional(),
 
   maxTrackHistory: z.number().optional(),
   artistBacklog: z.union([

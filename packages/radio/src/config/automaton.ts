@@ -8,15 +8,15 @@ export const TrackMessageConfig = z.object({
 });
 
 export const GuildSpecificConfig = z.object({
-  autotune: z.string().nonempty().optional(),
-  autojoin: z.string().nonempty().optional(),
+  autotune: z.string().min(1).optional(),
+  autojoin: z.string().min(1).optional(),
   trackMessage: TrackMessageConfig.optional(),
   bitrate: z.number().positive().max(256).optional().default(256)
 }).strict();
 
 export const AutomatonConfig = z.object({
-  clientId: z.string().nonempty(),
-  botToken: z.string().nonempty(),
+  clientId: z.string().min(1),
+  botToken: z.string().min(1),
   baseCommand: z.string().optional(),
   owners: z.string().array().nonempty().optional(),
   stations: z.string().array().optional(),
