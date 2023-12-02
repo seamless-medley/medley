@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "@tanstack/router";
 import { prominent } from 'color.js'
 import { Cover, CoverProps } from "../../components/play/cover/Cover";
@@ -74,6 +74,8 @@ const ListenButton = styled.div`
   transition: all 0.7s ease;
   background-color: aqua;
   padding: 0 4px;
+
+  user-select: none;
 
   :hover {
     opacity: 1;
@@ -192,7 +194,11 @@ export const Play: React.FC = () => {
     }
   }, []);
 
-  const colors = (coverProps.colors.length >= 6) ? (() => {
+  const colors = useMemo(() => {
+    if (coverProps.colors.length < 6) {
+      return undefined;
+    }
+
     const [background, dim, text, shadow, active, glow] = coverProps.colors;
 
     return {
@@ -205,9 +211,12 @@ export const Play: React.FC = () => {
         glow: findColor(glow, v => v < 0.97, lighten)
       }
     }
-  })() : undefined;
+
+  }, [coverProps.colors]);
 
   const lyrics = info?.trackPlay?.track?.extra?.coverAndLyrics?.lyrics;
+
+  const simple = !!titleText && !cover && !lyrics?.timeline?.length;
 
   return (
     <div style={{ height: '100vh', overflow: 'hidden' }}>
@@ -227,7 +236,7 @@ export const Play: React.FC = () => {
           colors
         }}
       />
-      <Title text={titleText} bg={titleBg} />
+      <Title text={titleText} bg={titleBg} center={simple} />
       <PlayHead
         backgroundColor={colors?.background ?? defaultLyricsColors.background}
         textColor={colors?.line?.text ?? defaultLyricsColors.line.text}
@@ -238,8 +247,6 @@ export const Play: React.FC = () => {
         position={info.cp * 1000}
         duration={(info.duration ?? 0) * 1000}
       />
-
-      <audio id="rtc_audio" />
     </div>
   )
 }

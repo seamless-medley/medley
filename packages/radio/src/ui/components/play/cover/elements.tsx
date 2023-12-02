@@ -1,7 +1,7 @@
 
 import React, { PropsWithChildren, forwardRef, useEffect, useState } from 'react';
 import styled from "@emotion/styled";
-import { chain, first } from 'lodash';
+import { chain, first, random } from 'lodash';
 import { rgba, transparentize } from "polished";
 
 export interface ColorsProp {
@@ -46,13 +46,13 @@ export const CoverContainer = styled.div`
 `;
 
 //#region backgrounds
-function tracks(n: number) {
+function tracks(n: number, color: string) {
   const availSize = 65; // %
   const start = 30; // %
   const size = availSize / n;
   const variation = 3; // %
   const ridgeSize = 1; // %
-  const ridgeColor = rgba(0,0,0,0.3);
+  const ridgeColor = rgba(color,0.3);
   const ridgeBlur = 0.2; // %
 
   return chain(n).times().flatMap(i => {
@@ -68,13 +68,12 @@ function tracks(n: number) {
   }).join(', ');
 }
 
-function grooves(steps = 59) {
+function grooves(steps = 59, color: string = 'black') {
   const loopSize = 70;
   const stepSize = loopSize / steps;
 
-  const color = 'black';
   const variation = 0.3;
-  const maxTransparency = 0.5;
+  const maxTransparency = 0.18;
 
   return chain(steps).times().flatMap(i => {
     const step = stepSize * (i + 1);
@@ -100,7 +99,7 @@ const discAreas = (borderColor: string) => `radial-gradient(
   ${borderColor} 96.5%
 )`;
 
-const createTracks = () => `radial-gradient(circle closest-side, ${tracks(7)})`;
+const createTracks = (color: string) => `radial-gradient(circle closest-side, ${tracks(7, color)})`;
 
 const highlights = `conic-gradient(
   black 40deg,
@@ -113,7 +112,7 @@ const highlights = `conic-gradient(
   black 229deg
 )`;
 
-const createGrooves = () => `repeating-radial-gradient(${grooves(59)})`;
+const createGrooves = (color: string) => `repeating-radial-gradient(${grooves(59, color)})`;
 
 const weakLightning = `conic-gradient(
   ${transparentize(1, 'white')} 80deg,
@@ -198,12 +197,13 @@ export const CoverDisc = forwardRef<CoverDisc, PropsWithChildren<ColorsProp>>((p
     const pColors = props.colors || [];
     const colors = pColors.concat(first(pColors) || '').join(', ');
     const gradient = `conic-gradient(from 200deg, ${colors})`;
+    const fColor = first(props.colors) || 'black';
 
     setBackground([
-      discAreas(first(props.colors) || 'black'),
-      createTracks(),
+      discAreas(fColor),
+      createTracks(fColor),
       highlights,
-      createGrooves(),
+      createGrooves(fColor),
       weakLightning,
       strongLightning,
       gradient

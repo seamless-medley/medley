@@ -5,6 +5,7 @@ import { TitleBox, TitleText, TitleContainer } from './elements';
 export type TitleProps = {
   text: string;
   bg: string;
+  center?: boolean;
 }
 
 export const Title: React.FC<TitleProps> = (props) => {
@@ -72,8 +73,8 @@ export const Title: React.FC<TitleProps> = (props) => {
   }, [props.text]);
 
   return (
-    <TitleContainer>
-      <TitleBox ref={boxEl}>
+    <TitleContainer className={ props.center ? 'center' : undefined }>
+      <TitleBox ref={boxEl} className={ props.center ? 'center' : undefined }>
         <canvas ref={canvasEl} style={{ display: 'none' }} width={500} height={500} />
         <TitleText ref={textEl} />
       </TitleBox>
