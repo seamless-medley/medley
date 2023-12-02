@@ -92,6 +92,10 @@ export class Library<T extends { id: ID }, ID = IDOf<T>> extends BaseLibrary<T, 
     super.remove(...elements);
   }
 
+  contains(el: T) {
+    return new Set(this.elements.values()).has(el);
+  }
+
   all(): T[] {
     return super.all();
   }

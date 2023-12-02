@@ -11,6 +11,7 @@ import { SweeperInserter } from "./sweeper";
 import { createLogger, Logger, type ILogObj } from '../logging';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from '../library/music_db';
+import { CrateProfile, CrateProfileBook } from '../crate/profile';
 
 export type TrackRecord = {
   trackId: string;
@@ -59,6 +60,8 @@ export function isRequestTrack<T extends BoomBoxTrack, R extends Requester>(o: a
   return !!o && !!o.requestedBy;
 }
 
+export type BoomBoxProfile = CrateProfile<BoomBoxTrack>;
+
 export type BoomBoxEvents = {
   /**
    * Emit when an active crate is changed by the sequencer during the sequencing phase
@@ -103,10 +106,6 @@ type BoomBoxOptions<T extends BoomBoxTrack, R extends Requester> = {
   medley: Medley<BoomBoxTrack>;
   queue: Queue<BoomBoxTrack>;
 
-  // TODO: Introduce crates profiles
-
-  crates: BoomBoxCrate[];
-
   db?: MusicDb;
 
   /**
@@ -140,7 +139,7 @@ export type DeckInfoWithPositions = DeckInfo & {
 
 export type RequestTrackLockPredicate<R extends Requester> = (t: TrackWithRequester<BoomBoxTrack, R>) => boolean;
 
-export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
+export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfile<BoomBoxTrack>> extends TypedEmitter<BoomBoxEvents> {
   readonly id: string;
 
   readonly #sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>;
@@ -156,6 +155,8 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   readonly musicDb?: MusicDb;
 
   readonly #onInsertRequestTrack?: OnInsertRequestTrack<BoomBoxTrack, R>;
+
+  readonly #profileBook = new CrateProfileBook<BoomBoxProfile>();
 
   artistHistory: Array<string[]> = [];
 
@@ -187,7 +188,7 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     this.#onInsertRequestTrack = options.onInsertRequestTrack;
 
     //
-    this.#sequencer = new CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>(this.id, options.crates, {
+    this.#sequencer = new CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>(this.id, {
       trackValidator: this.#isTrackLoadable,
       trackVerifier: this.#verifyTrack
     });
@@ -215,10 +216,11 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
   #currentTrackPlay?: BoomBoxTrackPlay;
   #inTransition = false;
 
-  /**
-   * Current crate
-   */
-  get crate() {
+  get profileBook() {
+    return this.#profileBook;
+  }
+
+  get currentCrate() {
     return this.#currentCrate;
   }
 
@@ -583,23 +585,36 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     }
   }
 
-  /**
-   * All creates
-   */
+  hasProfile(profile: P | string) {
+    return isString(profile) ? this.profileBook.has(profile) : this.#profileBook.contains(profile);
+  }
+
+  addProfile(profile: P) {
+    return this.#profileBook.add(profile);
+  }
+
+  removeProfile(profile: P | string) {
+    return this.#profileBook.remove(profile);
+  }
+
+  getProfile(id: string): P | undefined {
+    return this.#profileBook.get(id) as P;
+  }
+
+  changeProfile(id: string): P | undefined {
+    const profile = this.getProfile(id);
+
+    if (!profile) {
+      return;
+    }
+
+    this.#sequencer.changeProfile(profile);
+    return profile;
+  }
+
+
   get crates() {
     return this.#sequencer.crates;
-  }
-
-  addCrates(...crates: BoomBoxCrate[]) {
-    this.#sequencer.addCrates(...crates);
-  }
-
-  removeCrates(...cratesOrIds: Array<BoomBoxCrate['id'] | BoomBoxCrate>) {
-    this.#sequencer.removeCrates(...cratesOrIds);
-  }
-
-  moveCrates(newPosition: number, ...cratesOrIds: Array<BoomBoxCrate['id'] | BoomBoxCrate>) {
-    this.#sequencer.moveCrates(newPosition, ...cratesOrIds);
   }
 
   getCrateIndex() {
@@ -622,11 +637,15 @@ export class BoomBox<R extends Requester> extends TypedEmitter<BoomBoxEvents> {
     return this.#sequencer.isKnownCollection(collection);
   }
 
+  forcefullySelectCollection(collection: BoomBoxTrackCollection): boolean {
+    return this.#sequencer.forcefullySelectCollection(collection);
+  }
+
   get isLatchActive(): boolean {
     return this.#sequencer.getActiveLatch() !== undefined;
   }
 
-  get allLatches(): LatchSession<BoomBoxTrack, any>[] {
+  get allLatches(): ReadonlyArray<LatchSession<BoomBoxTrack, any>> {
     return this.#sequencer.allLatches;
   }
 }

@@ -56,16 +56,16 @@ export const SequenceLimit = z.union([
 
 export type SequenceLimit = z.infer<typeof SequenceLimit>;
 
-export const Sequence = z.object({
+export const SequenceConfig = z.object({
   collections: z.array(z.object({
-    id: z.string().nonempty(),
+    id: z.string().min(1),
     weight: z.number().optional()
   })),
   chance: SequenceChance.optional(),
   limit: SequenceLimit
 }).strict();
 
-export type Sequence = z.infer<typeof Sequence>;
+export type SequenceConfig = z.infer<typeof SequenceConfig>;
 
 export const SweeperRule = z.object({
   from: z.string().array().nonempty().optional(),
@@ -79,6 +79,30 @@ export const SweeperRule = z.object({
 );
 
 export type SweeperRule = z.infer<typeof SweeperRule>;
+
+export const StationProfile = z.object({
+  intros: z.string().array().optional(),
+  sweeperRules: z.array(SweeperRule).optional(),
+  requestSweepers: z.string().array().optional(),
+  followCrateAfterRequestTrack: z.boolean().optional(),
+  noRequestSweeperOnIdenticalCollection: z.boolean().optional(),
+  sequences: z.array(SequenceConfig)
+})
+.strict();
+
+export type StationProfile = z.infer<typeof StationProfile>;
+
+export const StationProfiles =  z.record(
+  z.string().min(1),
+  StationProfile
+)
+.refine(
+  (record) => typeof record.default !== 'undefined',
+  { message: 'The mandatory profile name `default` was not found' }
+);
+
+
+export type StationProfiles = z.infer<typeof StationProfiles>;
 
 export const StationConfig = z.object({
   name: z.string().min(1),
@@ -94,15 +118,9 @@ export const StationConfig = z.object({
   ]).optional(),
   duplicationSimilarity: z.number().optional(),
 
-  followCrateAfterRequestTrack: z.boolean().optional(),
-  noRequestSweeperOnIdenticalCollection: z.boolean().optional(),
-
-  intros: z.string().array().optional(),
-  requestSweepers: z.string().array().optional(),
-
   musicCollections: z.record(MusicCollection),
-  sequences: z.array(Sequence),
-  sweeperRules: z.array(SweeperRule).optional()
+
+  profiles: StationProfiles
 }).strict();
 
 export type StationConfig = z.infer<typeof StationConfig>;

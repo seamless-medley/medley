@@ -1,11 +1,11 @@
 import { TypedEmitter } from "tiny-typed-emitter";
-import { chain, debounce, isObjectLike, isString } from "lodash";
+import { debounce, isObjectLike } from "lodash";
 import { TrackCollection } from "../collections";
 import { SequencedTrack, Track, TrackExtra, TrackSequencing } from "../track";
 import { Crate } from "./base";
 import { ILogObj, Logger, createLogger } from "../logging";
 import { randomUUID } from "crypto";
-import { moveArrayIndexes } from "@seamless-medley/utils";
+import { CrateProfile } from "./profile";
 
 export type CrateSequencerEvents<T extends Track<any>> = {
   change: (crate: Crate<T>, oldCrate?: Crate<T>) => void;
@@ -51,8 +51,14 @@ export type LatchOptions<T extends Track<any>> = (LatchWithLength | LatchIncreme
   important?: boolean;
 }
 
+interface CrateProfilePrivate<T extends Track<any>> {
+  attachSequencer(sequencer: CrateSequencer<T, any>): void;
+  detachSequencer(): void;
+}
+
 export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends TypedEmitter<CrateSequencerEvents<T>> {
-  #crates: Array<Crate<T>>;
+  #profile = new CrateProfile<T>('$empty');
+
   #playCounter = 0;
   #crateIndex = 0;
   #lastCrate: Crate<T> | undefined;
@@ -60,18 +66,81 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
   #logger: Logger<ILogObj>;
 
-  constructor(readonly id: string, crates: Array<Crate<T>>, public options: CrateSequencerOptions<E> = {}) {
+  constructor(readonly id: string, public options: CrateSequencerOptions<E> = {}) {
     super();
 
     this.#logger = createLogger({
       name: `sequencer/${this.id}`
     });
+  }
 
-    this.#crates = crates;
+  get profile() {
+    return this.#profile;
+  }
+
+  changeProfile(newProfile: CrateProfile<T>) {
+    if (newProfile === this.#profile) {
+      return false;
+    }
+
+    (this.#profile as unknown as CrateProfilePrivate<T>)?.detachSequencer();
+    (newProfile as unknown as CrateProfilePrivate<T>).attachSequencer(this);
+
+    const currentCollectionId = this.#currentCollection?.id;
+
+    this.#profile = newProfile;
+    this.#playCounter = 0;
+
+    const crateIndex = currentCollectionId ? this.#findCrateIndexContainingCollection(currentCollectionId) : 0;
+    this.#logger.debug('Change to profile', { id: newProfile.id, crateIndex });
+    this.#crateIndex = crateIndex > -1 ? this.#ensureCrateIndex(crateIndex) : 0;
+
+    return true;
+  }
+
+  #findCrateIndexContainingCollection(id: string) {
+    return this.#profile.crates.findIndex(c => c.sources.find(s => s.id === id) !== undefined);
+  }
+
+  get #crates() {
+    return this.#profile.crates;
   }
 
   get currentCrate(): Crate<T> | undefined {
-    return this.#crates[this.#crateIndex % this.#crates.length];
+    const { crates } = this;
+    return crates[this.#crateIndex % crates.length];
+  }
+
+  set currentCrate(crate: Crate<T> | number) {
+    const index = (typeof crate !== 'number') ? this.#crates.indexOf(crate) : crate;
+
+    if (index >= 0 && index < this.#crates.length) {
+      this.#crateIndex = index;
+    }
+  }
+
+  #ensureCrateIndex(index: number) {
+    return (index % this.#crates.length) || 0;
+  }
+
+  getCrateIndex() {
+    return this.#crateIndex;
+  }
+
+  setCrateIndex(newIndex: number, forceSelect?: boolean) {
+    const oldIndex = this.#crateIndex;
+    this.#crateIndex = this.#ensureCrateIndex(newIndex);
+
+    if (oldIndex === newIndex) {
+      return;
+    }
+
+    this.#playCounter = 0;
+
+    if (forceSelect) {
+      this.#lastCrate = this.currentCrate;
+      this.currentCrate?.select(true);
+    }
   }
 
   #isCrate(o: any): o is Crate<T> {
@@ -83,6 +152,8 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   }
 
   #logNoCrates = debounce(() => this.#logger.error('No crates'), 1000);
+
+  #temporalCollection: T['collection'] | undefined;
 
   async nextTrack(): Promise<SequencedTrack<T> | undefined> {
     if (this.#crates.length < 1) {
@@ -150,7 +221,10 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
               this.#logger.debug('Using collection', latchingCollection.id, 'for latching');
             }
 
-            const track = await crate.next(trackValidator, latchingCollection);
+            const intendedCollection = latchingCollection ?? this.#temporalCollection;
+            this.#temporalCollection = undefined;
+
+            const track = await crate.next(trackValidator, intendedCollection);
 
             if (track) {
               const { shouldPlay, extra } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, extra: undefined };
@@ -206,30 +280,6 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     return undefined;
   }
 
-  #ensureCrateIndex(index: number) {
-    return (index % this.#crates.length) || 0;
-  }
-
-  getCrateIndex() {
-    return this.#crateIndex;
-  }
-
-  setCrateIndex(newIndex: number, forceSelect?: boolean) {
-    const oldIndex = this.#crateIndex;
-    this.#crateIndex = this.#ensureCrateIndex(newIndex);
-
-    if (oldIndex === newIndex) {
-      return;
-    }
-
-    this.#playCounter = 0;
-
-    if (forceSelect) {
-      this.#lastCrate = this.currentCrate;
-      this.currentCrate?.select(true);
-    }
-  }
-
   increasePlayCount() {
     return ++this.#playCounter;
   }
@@ -246,75 +296,23 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     this.#logger.debug('next', this.currentCrate?.id);
   }
 
-  setCurrentCrate(crate: Crate<T> | number) {
-    const index = (typeof crate !== 'number') ? this.#crates.indexOf(crate) : crate;
-
-    if (index >= 0 && index < this.#crates.length) {
-      this.#crateIndex = index;
-    }
-  }
-
-  get crates(): Array<Crate<T>> {
+  get crates(): ReadonlyArray<Crate<T>> {
     return [...this.#crates];
-  }
-
-  set crates(newCrates: Array<Crate<T>>) {
-    this.#alterCrates(() => void(this.#crates = newCrates));
-  }
-
-  async #alterCrates(fn: () => any) {
-    const oldCurrent = this.currentCrate;
-    const savedId = oldCurrent?.id;
-
-    await fn();
-
-    let newIndex = this.#ensureCrateIndex(this.#crateIndex);
-
-    if (savedId) {
-      const found = this.#crates.findIndex(crate => crate.id === savedId);
-
-      if (found !== -1) {
-        newIndex = found;
-      }
-    }
-
-    this.setCrateIndex(newIndex);
-  }
-
-  addCrates(...crates: Array<Crate<T>>) {
-    this.#alterCrates(() => {
-      this.#crates = chain(this.#crates)
-        .push(...crates)
-        .uniqBy(c => c.id)
-        .value();
-    });
-  }
-
-  removeCrates(...cratesOrIds: Array<Crate<T>['id'] | Crate<T>>) {
-    const toBeRemoved = cratesOrIds.map(w => isString(w) ? w : w.id);
-
-    this.#alterCrates(() => {
-      for (const id of toBeRemoved) {
-        if (id) {
-          const index = this.#crates.findIndex(c => c.id === id)
-
-          if (index !== -1) {
-            this.#crates.splice(index, 1);
-          }
-        }
-      }
-    });
-  }
-
-  moveCrates(newPosition: number, ...cratesOrIds: Array<Crate<T>['id'] | Crate<T>>) {
-    this.#alterCrates(() => {
-      const toMove = cratesOrIds.map(w => this.crates.findIndex(c => c.id === (isString(w) ? w : w.id)));
-      moveArrayIndexes(this.#crates, newPosition, ...toMove);
-    });
   }
 
   isKnownCollection(collection: T['collection']): boolean {
     return this.#crates.find(c => c.sources.includes(collection)) !== undefined;
+  }
+
+  forcefullySelectCollection(collection: T['collection']): boolean {
+    const crateIndex = this.#crates.findIndex(c => c.sources.includes(collection));
+    if (crateIndex === -1) {
+      return false;
+    }
+
+    this.#temporalCollection = collection;
+    this.setCrateIndex(crateIndex, true);
+    return false;
   }
 
   #latchSessions: Array<LatchSession<T, E>> = [];
@@ -323,7 +321,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     return this.#latchSessions.at(0);
   }
 
-  get allLatches(): Array<LatchSession<T, E>> {
+  get allLatches(): ReadonlyArray<LatchSession<T, E>> {
     return [...this.#latchSessions];
   }
 

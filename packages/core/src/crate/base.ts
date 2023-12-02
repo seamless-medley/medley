@@ -1,4 +1,4 @@
-import { isFunction, sumBy } from "lodash";
+import { isFunction, random, sample, shuffle, sortBy, sumBy } from "lodash";
 import { Track } from "../track";
 import { createLogger, Logger, type ILogObj } from '../logging';
 import { weightedSample } from "@seamless-medley/utils";
@@ -19,12 +19,113 @@ export type CrateLimit = CrateLimitValue | (() => CrateLimitValue);
 
 export type CrateOptions<T extends Track<any>> = {
   id: string;
+
   sources: CrateSourceWithWeight<T>[];
 
   chance?: Chanceable;
 
   limit: CrateLimit;
   max?: number | (() => number);
+}
+
+export type SequenceChance = 'random' | { yes: number, no: number } | (() => Promise<boolean>);
+
+export type LimitByUpto = {
+  by: 'upto';
+  upto: number;
+}
+
+export type LimitByRange = {
+  by: 'range';
+  range: {
+    min: number;
+    max: number;
+  }
+}
+
+export type LimitBySample = {
+  by: 'sample' | 'one-of';
+  list: number[];
+}
+
+export type SequenceLimit = number | 'entirely' | LimitByUpto | LimitByRange | LimitBySample;
+
+export function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit  {
+  if (typeof limit === 'number') {
+    return limit;
+  }
+
+  if (limit === 'entirely') {
+    return limit;
+  }
+
+  const { by } = limit;
+
+  if (by === 'upto') {
+    const upto = () => random(1, limit.upto);
+    return upto;
+  }
+
+  if (by === 'range') {
+    const [min, max] = sortBy(limit.range);
+    const range = () => random(min, max);
+    return range;
+  }
+
+  if (by === 'sample' || by === 'one-of') {
+    const oneOf = () => sample(limit.list) ?? 0;
+    return oneOf;
+  }
+
+  return 0;
+}
+
+const randomChance = () => random() === 1;
+const always = () => true;
+
+export function createChanceable(def: SequenceChance | undefined): Chanceable {
+  if (def === 'random') {
+    return { next: randomChance };
+  }
+
+  if (isFunction(def)) {
+    return { next: def };
+  }
+
+  if (def !== undefined) {
+    return chanceOf([def.yes, def.no]);
+  }
+
+  return {
+    next: always,
+    chances: () => [true]
+  }
+}
+
+function chanceOf(n: [yes: number, no: number]): Chanceable {
+  const [yes, no] = n;
+
+  let all = shuffle(
+    Array(yes).fill(true)
+      .concat(Array(no).fill(false))
+  );
+
+  let count = 0;
+
+  return {
+    next: function chanceOf() {
+      const v = all.shift();
+      all.push(v);
+
+      if (count >= all.length) {
+        count = 0;
+        all = shuffle(all);
+      }
+
+      return v ?? false;
+    },
+    chances: () => all
+  }
 }
 
 export class Crate<T extends Track<any>> {

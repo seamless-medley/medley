@@ -1,8 +1,18 @@
-import { AudioLevels, DeckIndex, DeckPositions, Medley, Queue, RequestAudioOptions, TrackPlay, UpdateAudioStreamOptions } from "@seamless-medley/medley";
-import { isFunction, random, sample, shuffle, sortBy } from "lodash";
 import { TypedEmitter } from 'tiny-typed-emitter';
-import { TrackCollectionBasicOptions, TrackIndex } from "./collections";
-import { Chanceable, Crate, CrateLimit, LatchOptions, LatchSession } from "./crate";
+
+import {
+  AudioLevels,
+  DeckIndex,
+  DeckPositions,
+  Medley,
+  Queue,
+  RequestAudioOptions,
+  TrackPlay,
+  UpdateAudioStreamOptions
+} from "@seamless-medley/medley";
+
+import { TrackCollection, TrackCollectionBasicOptions, TrackIndex } from "./collections";
+import { Crate, LatchOptions, LatchSession } from "./crate";
 import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "./library";
 import { createLogger, Logger, type ILogObj } from "./logging";
 import {
@@ -19,6 +29,7 @@ import {
 } from "./playout";
 import { MetadataHelper } from "./metadata";
 import { SearchQuery, SearchQueryField } from "./library/search";
+import { CrateProfile } from "./crate/profile";
 
 export type StationAudioLevels = AudioLevels & {
   reduction: number;
@@ -28,35 +39,6 @@ export enum PlayState {
   Idle = 'idle',
   Playing = 'playing',
   Paused = 'paused'
-}
-
-export type SequenceChance = 'random' | { yes: number, no: number } | (() => Promise<boolean>);
-
-export type LimitByUpto = {
-  by: 'upto';
-  upto: number;
-}
-
-export type LimitByRange = {
-  by: 'range';
-  range: {
-    min: number;
-    max: number;
-  }
-}
-
-export type LimitBySample = {
-  by: 'sample' | 'one-of';
-  list: number[];
-}
-
-export type SequenceLimit = number | 'entirely' | LimitByUpto | LimitByRange | LimitBySample;
-
-export type SequenceConfig = {
-  crateId: string;
-  collections: { id: string; weight?: number }[];
-  chance?: SequenceChance;
-  limit: SequenceLimit;
 }
 
 export type StationOptions = {
@@ -71,10 +53,6 @@ export type StationOptions = {
 
   useNullAudioDevice?: boolean;
 
-  intros?: BoomBoxTrackCollection;
-
-  requestSweepers?: BoomBoxTrackCollection;
-
   // BoomBox
   musicDb: MusicDb;
 
@@ -86,20 +64,6 @@ export type StationOptions = {
 
   artistBacklog?: number | false;
   duplicationSimilarity?: number;
-
-  /**
-   * Whether to follow crate on a requested track
-   * @default true
-   */
-  followCrateAfterRequestTrack?: boolean;
-
-  /**
-   * When enabled, a request sweeper will not be inserted
-   * if the consecutive tracks are from the same collection
-   *
-   * @default true
-   */
-  noRequestSweeperOnIdenticalCollection?: boolean;
 }
 
 export enum AudienceType {
@@ -173,18 +137,13 @@ export class Station extends TypedEmitter<StationEvents> {
   readonly queue: Queue<StationTrack>;
   readonly medley: Medley<StationTrack>;
 
-  readonly #boombox: BoomBox<Audience>;
+  readonly #boombox: BoomBox<Audience, StationProfile>;
 
   readonly #musicDb: MusicDb;
 
   readonly #library: MusicLibrary<Station>;
 
-  intros?: StationOptions['intros'];
-  requestSweepers?: StationOptions['requestSweepers'];
-
-  followCrateAfterRequestTrack: boolean;
-
-  noRequestSweeperOnIdenticalCollection: boolean;
+  #profile = new StationProfile('$empty');
 
   maxTrackHistory: number = 50;
 
@@ -192,7 +151,7 @@ export class Station extends TypedEmitter<StationEvents> {
 
   #logger: Logger<ILogObj>;
 
-  constructor(options: Omit<StationOptions, 'musicCollections' | 'sequences' | 'sweeperRules'>) {
+  constructor(options: StationOptions) {
     super();
 
     this.id = options.id;
@@ -200,11 +159,8 @@ export class Station extends TypedEmitter<StationEvents> {
     this.description = options.description;
     this.url = options.url;
     this.iconURL = options.iconURL;
-    this.intros = options.intros;
-    this.requestSweepers = options.requestSweepers;
-    this.followCrateAfterRequestTrack = options.followCrateAfterRequestTrack ?? true;
+
     this.maxTrackHistory = options.maxTrackHistory || 50;
-    this.noRequestSweeperOnIdenticalCollection = options.noRequestSweeperOnIdenticalCollection ?? true;
 
     this.#logger = createLogger({ name: `station/${this.id}`});
     this.#logger.info('Creating station');
@@ -229,11 +185,10 @@ export class Station extends TypedEmitter<StationEvents> {
     );
 
     // Create boombox
-    const boombox = new BoomBox<Audience>({
+    const boombox = new BoomBox<Audience, StationProfile>({
       id: this.id,
       medley: this.medley,
       queue: this.queue,
-      crates: [],
       artistBacklog: options.artistBacklog !== false ? Math.max(options.artistBacklog ?? 0, this.maxTrackHistory) : false,
       duplicationSimilarity: options.duplicationSimilarity,
       onInsertRequestTrack: this.#handleRequestTrack
@@ -336,13 +291,17 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 
   #handleRequestTrack = async (track: StationRequestedTrack) => {
-    const { requestSweepers } = this;
+    const {
+      requestSweepers,
+      noRequestSweeperOnIdenticalCollection,
+      followCrateAfterRequestTrack
+    } = this.#profile;
 
     const currentTrack =  this.#boombox.trackPlay?.track;
-    let isSameCollection = currentTrack?.collection.id === track.collection.id;
+    const isSameCollection = currentTrack?.collection.id === track.collection.id;
 
-      const shouldSweep = this.noRequestSweeperOnIdenticalCollection
     if (requestSweepers && !track.disallowSweepers) {
+      const shouldSweep = noRequestSweeperOnIdenticalCollection
         ? !isSameCollection
         : true
 
@@ -373,7 +332,7 @@ export class Station extends TypedEmitter<StationEvents> {
       }
     }
 
-    if (this.followCrateAfterRequestTrack && !track.collection.options.noFollowOnRequest) {
+    if (followCrateAfterRequestTrack && !track.collection.options.noFollowOnRequest) {
       if (!this.isLatchActive) {
         const indices = this.#boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
 
@@ -385,7 +344,7 @@ export class Station extends TypedEmitter<StationEvents> {
         const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
 
         if (located) {
-          this.setCrateIndex(located.index);
+          this.#boombox.setCrateIndex(located.index);
         }
       }
     }
@@ -454,9 +413,12 @@ export class Station extends TypedEmitter<StationEvents> {
       return;
     }
 
+    const { intros } = this.#profile;
+
+    // TODO: This should be done when a profile was just selected
     if (this.playState === PlayState.Idle && this.queue.length === 0) {
-      if (this.intros) {
-        const intro = this.intros.shift();
+      if (intros) {
+        const intro = intros.shift();
         if (intro) {
           if (intro.extra?.kind === undefined) {
             intro.extra = {
@@ -469,7 +431,8 @@ export class Station extends TypedEmitter<StationEvents> {
             ...intro,
             disableNextLeadIn: true
           });
-          this.intros.push(intro);
+
+          intros.push(intro);
         }
       }
     }
@@ -507,6 +470,9 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 
   //#region Collection
+  hasCollection(id: string): boolean {
+    return this.#library.has(id);
+  }
 
   async addCollection(descriptor: MusicCollectionDescriptor) {
     const result = await this.#library.addCollection(descriptor);
@@ -520,7 +486,7 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 
   removeCollection(id: string): boolean {
-    if (!this.#library.has(id)) {
+    if (!this.hasCollection(id)) {
       return false;
     }
 
@@ -536,7 +502,7 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 
   updateCollectionOptions(id: MusicCollectionDescriptor['id'], options: TrackCollectionBasicOptions) {
-    if (!this.#library.has(id)) {
+    if (!this.hasCollection(id)) {
       return false;
     }
 
@@ -553,52 +519,47 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.all();
   }
 
-  //#endregion
+  forcefullySelectCollection(id: string): boolean {
+    const collection = this.getCollection(id);
 
-  updateSequence(sequences: SequenceConfig[]) {
-    const crates = sequences
-      .map(config => this.#createCrate(config))
-      .filter((c): c is Crate<StationTrack> => c !== undefined);
+    if (!collection) {
+      return false;
+    }
 
-    this.addCrates(...crates);
+    return this.#boombox.forcefullySelectCollection(collection);
   }
 
-  #createCrate({ crateId, collections, chance, limit }: SequenceConfig) {
-    const validCollections = collections.filter(col => this.#library.has(col.id));
+  //#endregion
 
-    if (validCollections.length === 0) {
+  hasProfile(profile: StationProfile | string) {
+    return this.#boombox.hasProfile(profile);
+  }
+
+  addProfile(profile: StationProfile) {
+    return this.#boombox.addProfile(profile);
+  }
+
+  removeProfile(profile: StationProfile | string) {
+    return this.#boombox.removeProfile(profile);
+  }
+
+  getProfile(id: string) {
+    return this.#boombox.getProfile(id);
+  }
+
+  changeProfile(id: string) {
+    const profile = this.#boombox.changeProfile(id);
+
+    if (!profile) {
       return;
     }
 
-    const existing = this.#boombox.crates.find(c => c.id === crateId);
-
-    return new Crate({
-      id: crateId,
-      sources: validCollections.map(({ id, weight = 1 }) => ({ collection: this.#library.get(id)!, weight })),
-      chance: createChanceable(chance),
-      limit: crateLimitFromSequenceLimit(limit),
-      max: (existing as any)?._max
-    });
-  }
-
-  addCrates(...crates: Crate<StationTrack>[]) {
-    this.#boombox.addCrates(...crates);
-  }
-
-  removeCrates(...cratesOrIds: Array<Crate<StationTrack>['id'] | Crate<StationTrack>>) {
-    this.#boombox.removeCrates(...cratesOrIds);
-  }
-
-  moveCrates(newPosition: number, ...cratesOrIds: Array<Crate<StationTrack>['id'] | Crate<StationTrack>>) {
-    this.#boombox.moveCrates(newPosition, ...cratesOrIds);
+    this.#profile = profile;
+    this.#boombox.sweeperInsertionRules = profile.sweeperRules;
   }
 
   get crates() {
     return this.#boombox.crates;
-  }
-
-  set sweeperInsertionRules(rules: SweeperInsertionRule[]) {
-    this.#boombox.sweeperInsertionRules = rules;
   }
 
   findTrackById(id: StationTrack['id']) {
@@ -625,7 +586,7 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
-  async request(trackId: StationTrack['id'], requestedBy: Audience) {
+  async request(trackId: StationTrack['id'], requestedBy: Audience, noSweep?: boolean) {
     const track = this.findTrackById(trackId);
 
     if (!track) {
@@ -637,6 +598,7 @@ export class Station extends TypedEmitter<StationEvents> {
     }
 
     const requestedTrack = this.#boombox.request(track, requestedBy);
+    (requestedTrack.track as StationRequestedTrack).disallowSweepers = noSweep;
 
     this.emit('requestTrackAdded', requestedTrack);
 
@@ -683,14 +645,6 @@ export class Station extends TypedEmitter<StationEvents> {
     }
 
     return result;
-  }
-
-  getCrateIndex() {
-    return this.#boombox.getCrateIndex();
-  }
-
-  setCrateIndex(newIndex: number) {
-    this.#boombox.setCrateIndex(newIndex);
   }
 
   addAudience(groupId: AudienceGroupId, audienceId: string) {
@@ -785,91 +739,25 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#boombox.isLatchActive;
   }
 
-  get allLatches(): LatchSession<StationTrack, BoomBoxTrackExtra>[] {
+  get allLatches(): ReadonlyArray<LatchSession<StationTrack, BoomBoxTrackExtra>> {
     return this.#boombox.allLatches;
   }
 }
 
-const randomChance = () => random() === 1;
-const always = () => true;
-
-function createChanceable(def: SequenceChance | undefined): Chanceable {
-  if (def === 'random') {
-    return { next: randomChance };
-  }
-
-  if (isFunction(def)) {
-    return { next: def };
-  }
-
-  if (def !== undefined) {
-    return chanceOf([def.yes, def.no]);
-  }
-
-  return {
-    next: always,
-    chances: () => [true]
-  }
-}
-
-function chanceOf(n: [yes: number, no: number]): Chanceable {
-  const [yes, no] = n;
-
-  let all = shuffle(
-    Array(yes).fill(true)
-      .concat(Array(no).fill(false))
-  );
-
-  let count = 0;
-
-  return {
-    next: function chanceOf() {
-      const v = all.shift();
-      all.push(v);
-
-      if (count >= all.length) {
-        count = 0;
-        all = shuffle(all);
-      }
-
-      return v ?? false;
-    },
-    chances: () => all
-  }
-}
-
-function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit  {
-  if (typeof limit === 'number') {
-    return limit;
-  }
-
-  if (limit === 'entirely') {
-    return limit;
-  }
-
-  const { by } = limit;
-
-  if (by === 'upto') {
-    const upto = () => random(1, limit.upto);
-    return upto;
-  }
-
-  if (by === 'range') {
-    const [min, max] = sortBy(limit.range);
-    const range = () => random(min, max);
-    return range;
-  }
-
-  if (by === 'sample' || by === 'one-of') {
-    const oneOf = () => sample(limit.list) ?? 0;
-    return oneOf;
-  }
-
-  return 0;
-}
-
 export class StationRegistry<S extends Station> extends Library<S, S['id']> {
 
+}
+
+export class StationProfile extends CrateProfile<StationTrack> {
+  intros?: BoomBoxTrackCollection;
+
+  sweeperRules: Array<SweeperInsertionRule> = [];
+
+  requestSweepers?: BoomBoxTrackCollection;
+
+  noRequestSweeperOnIdenticalCollection: boolean = true;
+
+  followCrateAfterRequestTrack: boolean = true;
 }
 
 export function makeAudienceGroupId(type: AudienceType.Discord, automatonId: string, guildId: string): DiscordAudienceGroupId;
@@ -906,3 +794,4 @@ export function makeAudience(type: AudienceType, group: string |  DiscordAudienc
     id
   }
 }
+

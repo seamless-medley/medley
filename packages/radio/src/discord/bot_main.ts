@@ -1,19 +1,20 @@
-import { createLogger, scanDir, Medley, Station, StationRegistry, TrackCollection, WatchTrackCollection } from "@seamless-medley/core";
+import { createLogger, Medley } from "@seamless-medley/core";
 import { Client, GatewayIntentBits } from "discord.js";
 import { Command } from '@commander-js/extra-typings';
-import { shuffle } from "lodash";
 import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton } from "./automaton";
 import { loadConfig } from "../config";
 import { ZodError } from "zod";
-import normalizePath from "normalize-path";
+import { createAutomaton, createStation } from "../helper";
+
+const logger = createLogger({ name: 'main' });
 
 process.on('uncaughtException', (e) => {
-  console.error('Exception', e, e.stack);
+  logger.error('Exception', e, e.stack);
 });
 
 process.on('unhandledRejection', (e) => {
-  console.error('Rejection', e);
+  logger.error('Rejection', e);
 });
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -27,8 +28,6 @@ function getVersionLine() {
 }
 
 async function main() {
-  const logger = createLogger({ name: 'main' });
-
   const program = new Command()
     .name('medley-discord')
     .argument('<config-file>')
@@ -103,88 +102,26 @@ async function main() {
   });
 
   const stations = await Promise.all(
-    Object.entries(configs.stations).map(([stationId, stationConfig]) => new Promise<Station>(async (resolve) => {
-      const { intros, requestSweepers, musicCollections, sequences, sweeperRules, ...config } = stationConfig;
-
+    Object.entries(configs.stations).map(async ([stationId, stationConfig]) => {
       logger.info('Constructing station:', stationId);
 
-      const introCollection = intros ? (() => {
-        const collection = new TrackCollection('$_intros', undefined, { logPrefix: stationId });
-        collection.add(shuffle(intros));
-        return collection;
-      })() : undefined;
-
-      const requestSweeperCollection = requestSweepers ? (() => {
-        const collection = new TrackCollection('$_req_sweepers', undefined, { logPrefix: stationId });
-        collection.add(shuffle(requestSweepers));
-        return collection;
-      })() : undefined;
-
-      const station = new Station({
+      const station = await createStation({
+        ...stationConfig,
         id: stationId,
-        ...config,
-        intros: introCollection,
-        requestSweepers: requestSweeperCollection,
-        musicDb,
+        musicDb
       });
 
-      for (const [id, desc] of Object.entries(musicCollections)) {
-        if (!desc.auxiliary) {
-          await station.addCollection({
-            id,
-            ...desc,
-            logPrefix: stationId
-          });
-        }
-      }
-
-      station.updateSequence(sequences.map((s, index) => ({
-        crateId: `${stationId}/${index}`,
-        ...s
-      })));
-
-      station.sweeperInsertionRules = (sweeperRules ?? []).map((rule) => ({
-        from: rule.from,
-        to: rule.to,
-        collection: (() => {
-          const c = new WatchTrackCollection(rule.path, undefined, { logPrefix: stationId, scanner: scanDir });
-          c.watch(normalizePath(rule.path));
-
-          return c;
-        })()
-      }));
-
-      resolve(station);
-
-      for (const [id, desc] of Object.entries(musicCollections)) {
-        if (desc.auxiliary) {
-          station.addCollection({
-            id,
-            ...desc,
-            logPrefix: stationId
-          });
-        }
-      }
-    }))
+      return station;
+    })
   );
 
   logger.info('Completed stations construction');
 
-  const automatons = await Promise.all(Object.entries(configs.automatons).map(
-    ([id, { botToken, clientId, baseCommand, ...config }]) => new Promise<MedleyAutomaton>(async (resolve) => {
-      const allowedStations = config.stations?.length ? stations.filter(s => config.stations!.includes(s.id)) : stations;
-      const stationRepo = new StationRegistry(...allowedStations);
-      const automaton = new MedleyAutomaton(stationRepo, {
-        id,
-        botToken,
-        clientId,
-        baseCommand,
-        guilds: config.guilds
-      });
-
-      automaton.once('ready', () => resolve(automaton));
-
-      await automaton.login();
+  const automatons = await Promise.all(
+    Object.entries(configs.automatons).map(([id, config]) => createAutomaton({
+      ...config,
+      id,
+      createdStations: stations
     }))
   );
 

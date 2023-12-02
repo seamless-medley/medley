@@ -1,8 +1,5 @@
-import { shuffle } from "lodash";
-import normalizePath from "normalize-path";
-import { MusicDb, Station, StationEvents, StationRegistry, TrackCollection, WatchTrackCollection, createLogger, scanDir } from "@seamless-medley/core";
+import { MusicDb, Station, StationEvents, createLogger } from "@seamless-medley/core";
 import { MongoMusicDb } from "../musicdb/mongo";
-import { MedleyAutomaton } from "../discord/automaton";
 //
 import type { Config } from "../config";
 //
@@ -16,6 +13,7 @@ import { ExposedDeck } from "./expose/core/deck";
 import { AudioWebSocketServer } from "./audio/ws/server";
 import { RTCTransponder } from "./audio/rtc/transponder";
 import { ExposedTransponder } from "./expose/rtc/transponder";
+import { createAutomaton, createStation } from "../helper";
 
 const logger = createLogger({ name: 'medley-server' });
 
@@ -52,92 +50,30 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     }
 
     const stations = await Promise.all(
-      Object.entries(this.#configs.stations).map(([stationId, stationConfig]) => new Promise<Station>(async (resolve) => {
-        const { intros, requestSweepers, musicCollections, sequences, sweeperRules, ...config } = stationConfig;
-
+      Object.entries(this.#configs.stations).map(async ([stationId, stationConfig]) => {
         logger.info('Constructing station:', stationId);
 
-        const introCollection = intros ? (() => {
-          const collection = new TrackCollection('$_intros', undefined, { logPrefix: stationId });
-          collection.add(shuffle(intros));
-          return collection;
-        })() : undefined;
-
-        const requestSweeperCollection = requestSweepers ? (() => {
-          const collection = new TrackCollection('$_req_sweepers', undefined, { logPrefix: stationId });
-          collection.add(shuffle(requestSweepers));
-          return collection;
-        })() : undefined;
-
-        const station = new Station({
+        const station = await createStation({
+          ...stationConfig,
           id: stationId,
-          ...config,
-          intros: introCollection,
-          requestSweepers: requestSweeperCollection,
           musicDb: this.musicDb
         });
-
-        for (const [id, desc] of Object.entries(musicCollections)) {
-          if (!desc.auxiliary) {
-            await station.addCollection({
-              id,
-              ...desc,
-              logPrefix: stationId
-            });
-          }
-        }
-
-        station.updateSequence(sequences.map((s, index) => ({
-          crateId: `${stationId}/${index}`,
-          ...s
-        })));
-
-        station.sweeperInsertionRules = (sweeperRules ?? []).map((rule) => ({
-          from: rule.from,
-          to: rule.to,
-          collection: (() => {
-            const c = new WatchTrackCollection(rule.path, undefined, { logPrefix: stationId, scanner: scanDir });
-            c.watch(normalizePath(rule.path));
-
-            return c;
-          })()
-        }));
 
         this.registerStation(station);
         this.#audioServer.publish(station);
         this.#rtcTransponder?.publish(station);
 
-        resolve(station);
-
-        for (const [id, desc] of Object.entries(musicCollections)) {
-          if (desc.auxiliary) {
-            station.addCollection({
-              id,
-              ...desc,
-              logPrefix: stationId
-            });
-          }
-        }
-      }))
+        return station;
+      })
     );
 
     logger.info('Completed stations construction');
 
-    const automatons = await Promise.all(Object.entries(this.#configs.automatons).map(
-      ([id, { botToken, clientId, baseCommand, ...config }]) => new Promise<MedleyAutomaton>(async (resolve) => {
-        const allowedStations = config.stations?.length ? stations.filter(s => config.stations!.includes(s.id)) : stations;
-        const stationRepo = new StationRegistry(...allowedStations);
-        const automaton = new MedleyAutomaton(stationRepo, {
-          id,
-          botToken,
-          clientId,
-          baseCommand,
-          guilds: config.guilds
-        });
-
-        automaton.once('ready', () => resolve(automaton));
-
-        await automaton.login();
+    const automatons = await Promise.all(
+      Object.entries(this.#configs.automatons).map(([id, config]) => createAutomaton({
+        ...config,
+        id,
+        createdStations: stations
       }))
     );
 
