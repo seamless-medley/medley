@@ -20,10 +20,6 @@ async function combine() {
           return false;
         }
 
-        if (/^fixtures.js/.test(basename(src))) {
-          return false;
-        }
-
         return true
       }
     })
