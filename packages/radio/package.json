@@ -19,7 +19,7 @@
     "rebuild-opus-electron": "tsx scripts/rebuild-opus-electron",
     "dev:react": "vite --port 9586 --host",
     "dev:server-electron": "cross-env DEBUG=1 ELECTRON_RUN_AS_NODE=1 electron --require ts-node/register -- src/server/main.ts",
-    "dev:server": "cross-env DEBUG=1 tsx src/server/main.ts",
+    "dev:server": "cross-env DEBUG=1 ts-node src/server/main.ts",
     "dev:bot": "cross-env DEBUG=1 ts-node src/discord/bot_main.ts",
     "dev:bot-electron": "cross-env DEBUG=1 ELECTRON_RUN_AS_NODE=1 electron --require ts-node/register -- src/discord/bot_main.ts",
     "debug:bot": "cross-env DEBUG=1 tsx --inspect --trace-warnings src/discord/bot_main.ts",

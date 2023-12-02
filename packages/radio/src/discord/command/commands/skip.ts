@@ -26,11 +26,6 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
     return;
   }
 
-  if (!state.hasVoiceChannel()) {
-    await deny(interaction, 'Not in a voice channel');
-    return;
-  }
-
   const { trackPlay } = station;
 
   if (trackPlay && isRequestTrack<StationTrack, Audience>(trackPlay.track)) {

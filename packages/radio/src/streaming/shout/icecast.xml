@@ -129,9 +129,15 @@
 
     <!-- Default settings for all mounts that don't have a specific <mount type="normal">.
     -->
-    <!--
     <mount type="default">
-        <public>0</public>
+        <username>othersource</username>
+        <password>hackmemore</password>
+
+        <burst-size>65536</burst-size>
+        <hidden>1</hidden>
+        <public>1</public>
+
+        <!-- <public>0</public>
         <intro>/server-wide-intro.ogg</intro>
         <max-listener-duration>3600</max-listener-duration>
         <authentication type="url">
@@ -139,9 +145,8 @@
         </authentication>
         <http-headers>
                 <header name="foo" value="bar" />
-        </http-headers>
+        </http-headers> -->
     </mount>
-    -->
 
     <!-- Normal mounts -->
 

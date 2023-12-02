@@ -27,9 +27,7 @@ export class RingBuffer {
     this.channels = channels;
 
     const chanelList = Array(channels).fill(0);
-    this.channelData = chanelList.map<Float32Array>(() => new Float32Array(
-      new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
-    ));
+
     this.channelData = chanelList.map(() => createTypedSharedArrayBuffer(Float32Array, this.bufferLength));
 
     this.magnitudeData = chanelList.map<Float32Array>(() => new Float32Array(

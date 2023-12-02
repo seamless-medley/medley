@@ -1,4 +1,4 @@
-import { basename, join, sep } from 'path';
+import { join, sep } from 'path';
 import { emptyDir, copy, outputJson, outputFile } from 'fs-extra';
 import type { PackageJson } from 'type-fest';
 import { chain } from 'lodash';
