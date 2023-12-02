@@ -4,7 +4,7 @@ FROM node:18.16.0 as builder
 ENV TZ="Asia/Bangkok"
 
 # install build dependencies
-RUN apt update && apt install git g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev -y && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install git g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev python3-pip -y && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm
 
 RUN mkdir /app /musics /node_modules
