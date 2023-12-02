@@ -238,13 +238,15 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   }
 
   async #scan(dir: string, fn: () => any = () => noop) {
+    const done = once(fn);
+
     const scanners = [this.#extScanner, this.#globScanner];
 
     for (const scanner of scanners) {
       const files = await scanner.call(this, dir);
 
       if (files !== false) {
-        await this.add(shuffle(files), undefined, once(fn));
+        await this.add(shuffle(files), undefined, done);
         break;
       }
     }

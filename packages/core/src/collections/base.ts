@@ -174,6 +174,11 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
       .uniq()
       .value();
 
+    if (!validPaths?.length) {
+      fn([]);
+      return [];
+    }
+
     const immediateTracks: T[] = [];
 
     for (const group of chunk(validPaths, 25 * os.cpus().length)) {
