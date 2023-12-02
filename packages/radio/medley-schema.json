@@ -194,34 +194,6 @@
           "maximum": 1,
           "description": "A fraction from 0 to 1 which indicates the degree of similarity between the two artists"
         },
-        "followCrateAfterRequestTrack": {
-          "type": "boolean",
-          "description": "Whether to follow crate on a requested track",
-          "default": true
-        },
-        "noRequestSweeperOnIdenticalCollection": {
-          "type": "boolean",
-          "description": "When enabled, a request sweeper will not be inserted\nif the consecutive tracks are from the same collection",
-          "default": true
-        },
-        "intros": {
-          "title": "Intros",
-          "description": "List of files to play randomly before starting a station",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "requestSweepers": {
-          "title": "Request Sweepers",
-          "type": "array",
-          "description": "List of files to play randomly before transiting into a new request session",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
         "musicCollections": {
           "title": "Music Collections",
           "type": "object",
@@ -232,24 +204,19 @@
             }
           }
         },
-        "sequences": {
-          "title": "Sequences",
-          "description": "List of crate containing rules for selecting music track to play",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/sequence"
-          }
-        },
-        "sweeperRules": {
-          "title": "Sweeper Rules",
-          "description": "List of rules for inserting jingle track while transiting between music collections",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/sweeperRule"
-          }
+        "profiles": {
+          "title": "Station profiles",
+          "type": "object",
+          "description": "Map of station profile profile, at least the default profile must be defined",
+          "patternProperties": {
+            "^.+$": {
+              "$ref": "#/$defs/stationProfile"
+            }
+          },
+          "required": ["default"]
         }
       },
-      "required": ["name", "description", "musicCollections", "sequences"],
+      "required": ["name", "description", "musicCollections", "profiles"],
       "additionalProperties": false
     },
     "automaton": {
@@ -476,6 +443,55 @@
       "required": ["collections", "limit"],
       "additionalProperties": false
     },
+    "stationProfile": {
+      "type": "object",
+      "properties": {
+        "intros": {
+          "title": "Intros",
+          "description": "List of directories for picking up a file to play randomly before starting this profile",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "sweeperRules": {
+          "title": "Sweeper Rules",
+          "description": "List of rules for inserting jingle track while transiting between music collections",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sweeperRule"
+          }
+        },
+        "requestSweepers": {
+          "title": "Request Sweepers",
+          "type": "array",
+          "description": "List of directories for picking up a file to play randomly before transiting into a new request session",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "followCrateAfterRequestTrack": {
+          "type": "boolean",
+          "description": "Whether to follow crate on a requested track",
+          "default": true
+        },
+        "noRequestSweeperOnIdenticalCollection": {
+          "type": "boolean",
+          "description": "When enabled, a request sweeper will not be inserted\nif the consecutive tracks are from the same collection",
+          "default": true
+        },
+        "sequences": {
+          "title": "Sequences",
+          "description": "List of crates containing rules for selecting music track to play",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sequence"
+          }
+        }
+      }
+    },
     "sweeperRule": {
       "title": "Sweeper Rule",
       "oneOf": [
@@ -584,6 +600,14 @@
               "type": "string",
               "description": "Text channel id for sending track message",
               "minLength": 1
+            },
+            "retainOnReaction": {
+              "type": "boolean",
+              "description": "Keep the message if a reaction has been added to it"
+            },
+            "always": {
+              "type": "boolean",
+              "description": "Always received track messages even if there aren't any audiences"
             }
           },
           "additionalProperties": false
