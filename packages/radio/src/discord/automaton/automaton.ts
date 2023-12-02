@@ -756,39 +756,43 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     for (const guildId of guildIds) {
       const state = this.#guildStates.get(guildId);
 
-      if (state?.tunedStation === station) {
-        const guild = this.client.guilds.cache.get(guildId);
-
-        if (guild && state.hasVoiceChannel()) {
-          const textChannel = this.#getTextChannel(guildId);
-
-          if (!textChannel) {
-            state.textChannelId = undefined;
-            continue;
-          }
-
-          const positions = station.getDeckPositions(deck);
-          const trackMsg = await state.trackMessageCreator.create({
-            guildId,
-            station,
-            trackPlay,
-            positions
-          });
-
-          const options = trackMessageToMessageOptions({
-            ...trackMsg,
-            buttons: {
-              lyric: trackMsg.buttons.lyric,
-              more: undefined,
-              skip: undefined,
-            }
-          });
-
-          const d = textChannel?.send(options).catch(e => void this.#logger.error(e));
-
-          results.push([guildId, trackMsg, d]);
-        }
+      if (state?.tunedStation !== station) {
+        continue;
       }
+
+      const guild = this.client.guilds.cache.get(guildId);
+
+      if (!guild) {
+        continue;
+      }
+
+      const textChannel = this.#getTextChannel(guildId);
+
+      if (!textChannel) {
+        state.textChannelId = undefined;
+        continue;
+      }
+
+      const positions = station.getDeckPositions(deck);
+      const trackMsg = await state.trackMessageCreator.create({
+        guildId,
+        station,
+        trackPlay,
+        positions
+      });
+
+      const options = trackMessageToMessageOptions({
+        ...trackMsg,
+        buttons: {
+          lyric: trackMsg.buttons.lyric,
+          more: undefined,
+          skip: undefined,
+        }
+      });
+
+      const d = textChannel?.send(options).catch(e => void this.#logger.error(e));
+
+      results.push([guildId, trackMsg, d]);
     }
 
     return results;
