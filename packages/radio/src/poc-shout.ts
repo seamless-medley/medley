@@ -1,55 +1,97 @@
-import { Station } from "@seamless-medley/core";
+import { Station, createLogger } from "@seamless-medley/core";
 import { MongoMusicDb } from "./musicdb/mongo";
 import { ShoutAdapter } from "./streaming/shout/adapter";
-import { musicCollections, sequences, sweeperRules } from "./fixtures";
+import { Command } from "@commander-js/extra-typings";
+import { loadConfig } from "./config";
+import { ZodError } from "zod";
+import { createStation } from "./helper";
+
+const logger = createLogger({ name: 'main' });
 
 process.on('uncaughtException', (e) => {
-  console.log('Exception', e);
+  logger.error('Exception', e, e.stack);
+});
+
+process.on('unhandledRejection', (e) => {
+  logger.error('Rejection', e);
 });
 
 async function main() {
-  const musicDb = await new MongoMusicDb().init({
-    url: 'mongodb://root:example@localhost:27017',
-    database: 'medley',
-    ttls: [60 * 60 * 24 * 7, 60 * 60 * 24 * 12]
-  });
+  const program = new Command()
+    .name('poc-shout')
+    .argument('<config-file>')
+    .parse(process.argv);
 
-  const station = new Station({
-    id: 'default',
-    name: 'Default station',
-    useNullAudioDevice: true,
-    musicDb
-  });
+  const configFile = (program.args[0] || '').trim();
 
-  for (const desc of musicCollections) {
-    if (!desc.auxiliary) {
-      await station.addCollection(desc);
-    }
+  if (!configFile) {
+    logger.fatal('No configuration file specified');
+    return;
   }
 
-  station.updateSequence(sequences);
-  station.sweeperInsertionRules = sweeperRules;
+  const configs = await loadConfig(configFile, false);
 
-  const source = new ShoutAdapter(station, {
-    // ffmpegPath: 'D:\\Tools\\ffmpeg\\bin\\ffmpeg',
-    outputFormat: 'he-aac',
-    bitrate: 256,
-    icecast: {
-      host: 'localhost',
-      mountpoint: '/test',
-      username: 'othersource',
-      password: 'hackmemore',
-      userAgent: 'Medley/0.0',
-      genre: 'Pop',
-      url: 'https://google.com',
-      description: 'Hello',
-      name: 'My Stream'
+  if (configs instanceof Error) {
+    logger.fatal('Error loading configurations:');
+
+    if (configs instanceof ZodError) {
+      for (const issue of configs.issues) {
+        const path = issue.path.join('.') || 'root';
+        logger.fatal(`Issue: ${path} - ${issue.message}`)
+      }
+
+      return;
     }
+
+    logger.fatal(configs.message);
+    return;
+  }
+
+  logger.info('Initializing');
+
+  const musicDb = await new MongoMusicDb().init({
+    url: configs.db.url,
+    database: configs.db.database,
+    connectionOptions: configs.db.connectionOptions,
+    ttls: [
+      configs.db.metadataTTL?.min ?? 60 * 60 * 24 * 7,
+      configs.db.metadataTTL?.max ?? 60 * 60 * 24 * 12,
+    ]
   });
 
-  await source.init();
+  const stations = await Promise.all(
+    Object.entries(configs.stations).map(async ([stationId, stationConfig]) => {
+      logger.info('Constructing station:', stationId);
 
-  station.start();
+      const station = await createStation({
+        ...stationConfig,
+        id: stationId,
+        musicDb
+      });
+
+      return station;
+    })
+  );
+
+  for (const station of stations) {
+    const adapter = new ShoutAdapter(station, {
+      outputFormat: 'he-aac',
+      bitrate: 256,
+      icecast: {
+        host: 'localhost',
+        mountpoint: `/${station.id}`,
+        username: 'othersource',
+        password: 'hackmemore',
+        userAgent: 'Medley/0.0',
+        url: 'https://github.com/seamless-medley/medley',
+        name: station.name,
+        description: station.description
+      }
+    });
+
+    station.start();
+    await adapter.init();
+  };
 }
 
 main();

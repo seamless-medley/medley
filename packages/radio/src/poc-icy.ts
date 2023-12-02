@@ -1,58 +1,107 @@
-import { Station } from "@seamless-medley/core";
+import { Station, createLogger } from "@seamless-medley/core";
 import http from 'http';
 import express from 'express';
 import { IcyAdapter } from "./streaming";
 import { MongoMusicDb } from "./musicdb/mongo";
-import { musicCollections, sequences, sweeperRules } from "./fixtures";
+import { Command } from "@commander-js/extra-typings";
+import { loadConfig } from "./config";
+import { ZodError } from "zod";
+import { createStation } from "./helper";
+
+const logger = createLogger({ name: 'main' });
 
 process.on('uncaughtException', (e) => {
+  logger.error('Exception', e, e.stack);
+});
 
+process.on('unhandledRejection', (e) => {
+  logger.error('Rejection', e);
 });
 
 async function main() {
-  const app = express();
+  const program = new Command()
+    .name('poc-icy')
+    .argument('<config-file>')
+    .parse(process.argv);
 
-  const port = +(process.env.PORT || 4000);
-  const server = http.createServer(app);
+  const configFile = (program.args[0] || '').trim();
+
+  if (!configFile) {
+    logger.fatal('No configuration file specified');
+    return;
+  }
+
+  const configs = await loadConfig(configFile, false);
+
+  if (configs instanceof Error) {
+    logger.fatal('Error loading configurations:');
+
+    if (configs instanceof ZodError) {
+      for (const issue of configs.issues) {
+        const path = issue.path.join('.') || 'root';
+        logger.fatal(`Issue: ${path} - ${issue.message}`)
+      }
+
+      return;
+    }
+
+    logger.fatal(configs.message);
+    return;
+  }
+
+  logger.info('Initializing');
 
   const musicDb = await new MongoMusicDb().init({
-    url: 'mongodb://root:example@localhost:27017',
-    database: 'medley',
-    ttls: [60 * 60 * 24 * 7, 60 * 60 * 24 * 12]
+    url: configs.db.url,
+    database: configs.db.database,
+    connectionOptions: configs.db.connectionOptions,
+    ttls: [
+      configs.db.metadataTTL?.min ?? 60 * 60 * 24 * 7,
+      configs.db.metadataTTL?.max ?? 60 * 60 * 24 * 12,
+    ]
   });
 
-  const station = new Station({
-    id: 'default',
-    name: 'Default station',
-    useNullAudioDevice: true,
-    musicDb
-  });
+  const stations = await Promise.all(
+    Object.entries(configs.stations).map(async ([stationId, stationConfig]) => {
+      logger.info('Constructing station:', stationId);
 
-  for (const desc of musicCollections) {
-    if (!desc.auxiliary) {
-      await station.addCollection(desc);
+      const station = await createStation({
+        ...stationConfig,
+        id: stationId,
+        musicDb
+      });
+
+      return station;
+    })
+  );
+
+  const adapters = await Promise.all(stations.map(async (station) => {
+    const adapter = new IcyAdapter(station, {
+      outputFormat: 'mp3',
+      bitrate: 128,
+      sampleRate: 48000
+    });
+
+    await adapter.init();
+
+    return adapter;
+  }));
+
+  if (adapters.length) {
+    const app = express();
+
+    const port = +(process.env.PORT || 4000);
+    const server = http.createServer(app);
+
+    for (const adapter of adapters) {
+      app.get(`/${adapter.station.id}`, adapter.handler);
+      adapter.station.start();
     }
-  }
-
-  station.updateSequence(sequences);
-  station.sweeperInsertionRules = sweeperRules;
-
-  const source = new IcyAdapter(station, {
-    outputFormat: 'mp3',
-    bitrate: 128,
-    sampleRate: 48000
-  });
-
-  if (source) {
-    await source.init();
-    app.get('/test', source.handler);
 
     server.listen(port, () => {
-      console.log('Listening on', port);
+      logger.info('Listening on', port);
     });
   }
-
-  station.playIfHasAudiences();
 }
 
 main();
