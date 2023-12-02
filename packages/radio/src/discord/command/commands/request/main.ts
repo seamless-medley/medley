@@ -48,6 +48,8 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
   const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f));
 
+  const noSweep = interaction.options.getBoolean('no-sweep') ?? undefined;
+
   if (options.every(isNull)) {
     const preview = await makeRequestPreview(station, { guildId, count: 20 });
 
@@ -235,7 +237,8 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
           AudienceType.Discord,
           { automatonId: automaton.id, guildId },
           interaction.user.id
-        )
+        ),
+        noSweep
       );
 
       if (ok === false || ok.index < 0) {

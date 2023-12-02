@@ -24,6 +24,11 @@ const declaration: SubCommandLikeOption = {
       name: 'title',
       description: 'Song title',
       autocomplete: true
+    },
+    {
+      type: OptionType.Boolean,
+      name: 'no-sweep',
+      description: 'Disable sweeping while transiting into a new request session'
     }
   ]
 }

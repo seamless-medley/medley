@@ -134,7 +134,10 @@ export type Audience = DiscordAudience | IcyAudience | WebAudience;
 export type StationTrack = MusicTrack<Station>;
 export type StationTrackPlay = TrackPlay<StationTrack>;
 export type StationTrackCollection = MusicTrackCollection<Station>;
-export type StationRequestedTrack = TrackWithRequester<StationTrack, Audience>;
+export type StationRequestedTrack = TrackWithRequester<StationTrack, Audience> & {
+  disallowSweepers?: boolean;
+}
+
 export type StationCrate = Crate<StationTrack>;
 
 export type StationEvents = {
@@ -338,8 +341,8 @@ export class Station extends TypedEmitter<StationEvents> {
     const currentTrack =  this.#boombox.trackPlay?.track;
     let isSameCollection = currentTrack?.collection.id === track.collection.id;
 
-    if (requestSweepers) {
       const shouldSweep = this.noRequestSweeperOnIdenticalCollection
+    if (requestSweepers && !track.disallowSweepers) {
         ? !isSameCollection
         : true
 
