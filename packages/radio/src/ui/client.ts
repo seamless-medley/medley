@@ -2,7 +2,7 @@ import { isFunction, mapValues, noop, pickBy, uniqueId, } from "lodash";
 import { EventEmitter } from "eventemitter3";
 import { io, Socket } from "socket.io-client";
 import msgpackParser from 'socket.io-msgpack-parser';
-import { Duplex, PassThrough } from 'readable-stream';
+import { PassThrough } from 'readable-stream';
 import { ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents, RemoteObserveOptions } from '../socket/events';
 import { isProperty } from "../socket/utils";
 import { Stub } from "../socket/stub";
