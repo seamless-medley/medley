@@ -6,6 +6,7 @@ export const TrackMessageConfig = z.object({
   max: z.number().nonnegative().optional(),
   channel: z.string().optional(),
   retainOnReaction: z.boolean().optional(),
+  always: z.boolean().optional()
 });
 
 export const GuildSpecificConfig = z.object({

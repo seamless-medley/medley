@@ -53,6 +53,11 @@ export type GuildSpecificConfig = {
     channel?: string;
 
     retainOnReaction?: boolean;
+
+    /**
+     * Always received track messages even if there aren't any audiences.
+     */
+    always?: boolean;
   }
 
   /**
@@ -415,7 +420,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       for (const [guildId, trackMsg, maybeMessage] of sentMessages) {
         const state = this.#guildStates.get(guildId);
 
-        if (!state?.voiceChannelId) {
+        if (!state) {
           continue;
         }
 
@@ -851,7 +856,13 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   async #sendTrackPlayForStation(trackPlay: StationTrackPlay, deck: DeckIndex, station: Station) {
     const results: [guildId: string, trackMsg: TrackMessage, maybeMessage: Promise<Message<boolean> | undefined> | undefined][] = [];
 
-    const guildIds = this.#getAudienceGuildsForStation(station);
+    const guildIds = new Set([
+      ...this.#getAudienceGuildsForStation(station),
+      // Allow sending trackPlay to the guild that is interested in receiving it even if there aren't any audiences
+      ...[...this.#guildStates.values()]
+        .filter(state => (state.tunedStation === station) && this.#guildConfigs[state.guildId].trackMessage?.always)
+        .map((state => state.guildId))
+    ]);
 
     for (const guildId of guildIds) {
       const state = this.#guildStates.get(guildId);
