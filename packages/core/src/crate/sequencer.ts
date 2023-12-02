@@ -118,8 +118,8 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
         for (const source of crate.sources) {
           scanned += source.length;
-          for (let i = 0; i < source.length; i++) {
 
+          for (let i = 0; i < source.length; i++) {
             const latchSession = (() => {
               const session = this.getActiveLatch();
 
@@ -137,7 +137,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             // Check the _playCounter only if the latching is not active
             if (latchSession === undefined && (this.#playCounter + 1) > crate.max) {
               // Stop searching for next track and flow to the next crate
-              // With _lastCrate being undefined will cause the selection process to kick in again
+              // With #lastCrate being undefined will cause the selection process to kick in again
               this.#lastCrate = undefined;
               break;
             }

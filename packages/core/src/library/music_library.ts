@@ -196,8 +196,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
       this.add(newCollection);
 
       for (const path of paths) {
-        const normalizedPath = normalizePath(path);
-        newCollection.watch(normalizedPath);
+        newCollection.watch(normalizePath(path));
       }
     });
   }

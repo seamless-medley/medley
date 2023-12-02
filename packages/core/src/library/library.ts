@@ -71,7 +71,7 @@ export class BaseLibrary<T extends { id: ID }, ID = IDOf<T>> extends EventEmitte
   }
 }
 
-export class Library<T extends { id: ID }, ID> extends BaseLibrary<T, ID> implements IReadonlyLibrary<T, ID> {
+export class Library<T extends { id: ID }, ID = IDOf<T>> extends BaseLibrary<T, ID> implements IReadonlyLibrary<T, ID> {
   get size() {
     return super.size;
   }
