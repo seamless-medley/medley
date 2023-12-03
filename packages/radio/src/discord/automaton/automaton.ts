@@ -81,7 +81,7 @@ export type MedleyAutomatonOptions = {
   /**
    * Guild specific settings
    */
-  guilds?: Record<string, GuildSpecificConfig>;
+  guilds?: Partial<Record<string, GuildSpecificConfig>>;
 }
 
 export type UpdateTrackMessageOptions = {
@@ -860,7 +860,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       ...this.#getAudienceGuildsForStation(station),
       // Allow sending trackPlay to the guild that is interested in receiving it even if there aren't any audiences
       ...[...this.#guildStates.values()]
-        .filter(state => (state.tunedStation === station) && this.#guildConfigs[state.guildId].trackMessage?.always)
+        .filter(state => (state.tunedStation === station) && this.#guildConfigs[state.guildId]?.trackMessage?.always)
         .map((state => state.guildId))
     ]);
 

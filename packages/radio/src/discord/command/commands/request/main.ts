@@ -46,7 +46,7 @@ const logger = createLogger({ name: 'command/request' });
 export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
-  const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f));
+  const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f) ?? undefined);
 
   const noSweep = interaction.options.getBoolean('no-sweep') ?? undefined;
 
@@ -312,14 +312,14 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
       collector.resetTimer({ time: ttl });
 
-      const paginationNavigation: Record<string, number> = {
+      const paginationNavigation: Partial<Record<string, number>> = {
         'request:back': 0,
         'request:prevPage': -1,
         'request:nextPage': 1
       };
 
       if (customId in paginationNavigation) {
-        const increment = paginationNavigation[customId];
+        const increment = paginationNavigation[customId] ?? 0;
 
         currentPage = clamp(currentPage + increment, 0, totalPages - 1);
 

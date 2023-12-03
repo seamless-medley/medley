@@ -180,7 +180,7 @@ export const Play: React.FC = () => {
       'font-size': 'calc(100vh / 30)'
     }
 
-    const saved: Record<string, string> = {};
+    const saved: Partial<Record<string, string>> = {};
 
     for (const [prop, value] of Object.entries(overrides)) {
       saved[prop] = document.body.style[prop as any];
@@ -189,7 +189,11 @@ export const Play: React.FC = () => {
 
     return () => {
       for (const prop of Object.keys(overrides)) {
-        document.body.style[prop as any] = saved[prop];
+        const value = saved[prop];
+
+        if (value !== undefined) {
+          document.body.style[prop as any] = value;
+        }
       }
     }
   }, []);

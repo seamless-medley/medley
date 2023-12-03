@@ -18,7 +18,7 @@ export type SearchQueryField = 'artist' | 'title';
 
 export type SearchQueryKey = SearchQueryField | 'query';
 
-export type SearchQuery = Record<SearchQueryKey, string | null>;
+export type SearchQuery = Partial<Record<SearchQueryKey, string>>;
 
 export type TrackDocument = {
   /**

@@ -444,11 +444,11 @@ function bindDescInstance(instance: object, name: string, desc: TypedPropertyDes
 }
 
 export class ObjectObserver<T extends object> {
-  readonly #methods: Record<string, TypedPropertyDescriptorOf>;
+  readonly #methods: Partial<Record<string, TypedPropertyDescriptorOf>>;
 
-  readonly #exposingProps: Record<string, TypedPropertyDescriptorOf>;
+  readonly #exposingProps: Partial<Record<string, TypedPropertyDescriptorOf>>;
 
-  readonly #declaredProps: Record<string, TypedPropertyDescriptorOf>;
+  readonly #declaredProps: Partial<Record<string, TypedPropertyDescriptorOf>>;
 
   constructor(readonly instance: T, private readonly notify: ObservedPropertyHandler<T>) {
     const exposingInstance = this.#getExposing();
@@ -481,6 +481,10 @@ export class ObjectObserver<T extends object> {
     });
 
     for (const [prop, desc] of Object.entries(this.#exposingProps)) {
+      if (!desc) {
+        continue;
+      }
+
       Object.defineProperty(desc.instance, prop, {
         get: () => {
           return desc.get ? desc.get.call(desc.instance) : desc.value;

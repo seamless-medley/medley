@@ -195,8 +195,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     this.emit('connect');
   }
 
-  private handleSocketDisconnect = (reason: Socket.DisconnectReason, description?: DisconnectDescription) => {
-    const reasonMap: Record<Socket.DisconnectReason, DisconnectReason> = {
+  private handleSocketDisconnect = (reason: Socket.DisconnectReason) => {
+    const reasonMap: Partial<Record<Socket.DisconnectReason, DisconnectReason>> = {
       'io client disconnect': DisconnectReason.ByClient,
       'io server disconnect': DisconnectReason.ByServer,
       'ping timeout': DisconnectReason.Timeout,

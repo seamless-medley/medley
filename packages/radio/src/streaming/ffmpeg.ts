@@ -60,7 +60,7 @@ export type ProgressValue = {
   /**
    * Other values
    */
-  values: Record<string, string>;
+  values: Partial<Record<string, string>>;
 }
 
 export type ProgressLine = {
@@ -107,7 +107,7 @@ function parseStdErr(line: string): FFMpegLine | undefined {
     const tokens = line.replace(/=\s+/g,'=').trim().split(' ');
 
     const progress = tokens.map(e => e.split('=', 2))
-      .reduce<Record<string, string>>((r, [k, v]) => {
+      .reduce<Partial<Record<string, string>>>((r, [k, v]) => {
         if (k && v) {
           r[k.trim()] = v.trim();
         }
@@ -115,7 +115,7 @@ function parseStdErr(line: string): FFMpegLine | undefined {
       }, {});
 
     if (Object.keys(progress).length > 0) {
-      const { size: s, time, bitrate: b, speed: sp, ...rest } = progress;
+      const { size: s = '', time = '', bitrate: b = '', speed: sp = '', ...rest } = progress;
 
       const [size, speed, bitrate] = [s, sp, b].map(s => +s.replace(/[^\d.]+/,''));
       const duration = [...time.matchAll(/(\d{2})/g)].slice(0, 4).map(([, v], i) => +v * [60**2, 60**1 , 60**0, 1/100][i]).reduce((a, v) => a+v, 0);

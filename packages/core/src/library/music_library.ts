@@ -226,7 +226,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
   }
 
-  async search(q: Record<'artist' | 'title' | 'query', string | null>, limit?: number): Promise<Array<MusicTrack<O>>> {
+  async search(q: Partial<Record<'artist' | 'title' | 'query', string>>, limit?: number): Promise<Array<MusicTrack<O>>> {
     const { artist, title, query } = q;
 
     const mainQueries: Array<Query> = [];
@@ -285,18 +285,14 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
       if (field === 'title' && narrowBy === 'artist') {
         // Start showing title suggestion for a known artist
         tracks = await this.search({
-          artist: narrowTerm,
-          title: null,
-          query: null
+          artist: narrowTerm
         });
       }
 
       if (field === 'artist' && narrowBy === 'title') {
         // Start showing artist suggestion for a known title
         tracks = await this.search({
-          title: narrowTerm,
-          artist: null,
-          query: null
+          title: narrowTerm
         });
       }
 
