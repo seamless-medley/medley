@@ -197,7 +197,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
               if (session && session.count>= session.max) {
                 // Ends latching
                 this.#logger.debug(`Removing latch for ${session.collection.id}: count (${session.count}) >= max (${session.max})`)
-                this.#removeLatch(session);
+                this.removeLatch(session);
 
                 return;
               }
@@ -252,8 +252,6 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
                 }
 
                 track.extra = this.#isExtra(extra) ? extra : undefined;
-
-                this.#logger.debug('Next track (', this.#playCounter, '/', crate.max, ') =>', track.path);
 
                 return track as unknown as SequencedTrack<T>;
               }
@@ -325,8 +323,12 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     return [...this.#latchSessions];
   }
 
-  #removeLatch(session: number | LatchSession<T, E>) {
-    const index = typeof session === 'number' ? session : this.#latchSessions.indexOf(session);
+  removeLatch(session: number | string | LatchSession<T, E>) {
+    const index = typeof session === 'number'
+      ? session
+      : typeof session === 'string'
+        ? this.#latchSessions.findIndex(s => s.uuid === session)
+        : this.#latchSessions.indexOf(session);
 
     if (index > -1) {
       const removingSession = this.#latchSessions[index];
@@ -380,7 +382,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     }
 
     if (options.increase === false && options.length === 0) {
-      return this.#removeLatch(0);
+      return this.removeLatch(0);
     }
 
     const collection = options.collection
@@ -403,7 +405,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     }
 
     if (session.max === 0) {
-      return this.#removeLatch(session);
+      return this.removeLatch(session);
     }
 
     return session;

@@ -11,7 +11,7 @@ import {
   UpdateAudioStreamOptions
 } from "@seamless-medley/medley";
 
-import { TrackCollection, TrackCollectionBasicOptions, TrackIndex } from "./collections";
+import { TrackCollectionBasicOptions, TrackIndex } from "./collections";
 import { Crate, LatchOptions, LatchSession } from "./crate";
 import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "./library";
 import { createLogger, Logger, type ILogObj } from "./logging";
@@ -519,6 +519,10 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.all();
   }
 
+  get knownCollections() {
+    return this.collections.filter(collection => this.#boombox.isKnownCollection(collection));
+  }
+
   forcefullySelectCollection(id: string): boolean {
     const collection = this.getCollection(id);
 
@@ -729,6 +733,10 @@ export class Station extends TypedEmitter<StationEvents> {
 
   latch(options?: LatchOptions<StationTrack>) {
     return this.#boombox.latch(options) as LatchSession<StationTrack, NonNullable<StationTrack['extra']>>;
+  }
+
+  removeLatch(session: number | string | LatchSession<BoomBoxTrack, BoomBoxTrackExtra>) {
+    return this.#boombox.removeLatch(session);
   }
 
   isCollectionLatchable(collection: StationTrackCollection): boolean {

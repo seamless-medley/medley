@@ -633,6 +633,10 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     return this.#sequencer.latch(options);
   }
 
+  removeLatch(session: number | string | LatchSession<BoomBoxTrack, BoomBoxTrackExtra>) {
+    return this.#sequencer.removeLatch(session);
+  }
+
   isKnownCollection(collection: BoomBoxTrackCollection): boolean {
     return this.#sequencer.isKnownCollection(collection);
   }
