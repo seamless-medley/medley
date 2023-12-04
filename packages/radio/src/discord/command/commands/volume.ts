@@ -6,10 +6,10 @@ import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLik
 import { declare, deny, guildIdGuard, makeAnsiCodeBlock, warn } from "../utils";
 
 /*
-This file is DEPRECATED, keep for referencing only.
+This file is DEPRECATED, kept for referencing only.
 
 As setting volume for each Automaton requires separating Exciter and thus requires more CPU power.
-Removing this allow an Exciter for a station to be shared with multiple Automaton
+Removing this allow an Exciter for a station to be shared with multiple Automatons
 */
 
 const dbToEmoji = (db: number) => {

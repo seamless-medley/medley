@@ -54,7 +54,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       });
     }
 
-    socket.on('disconnect', () => this.#removeSocket(socket))
+    socket.on('disconnect', () => this.#removeSocket(socket));
   }
 
   #removeSocket(socket: Socket) {

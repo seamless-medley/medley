@@ -8,7 +8,6 @@ import { isProperty } from "../socket/utils";
 import { Stub } from "../socket/stub";
 import { $AnyProp, AnyProp, ObservedPropertyChange, PickMethod, PickProp, Remotable } from "../socket/types";
 import { Callable, ParametersOf, ReturnTypeOf } from "../types";
-import { DisconnectDescription } from "socket.io-client/build/esm/socket";
 import { waitFor } from "@seamless-medley/utils";
 import { getRemoteTimeout } from "../socket/decorator";
 import { IAudioTransport, type AudioTransportEvents } from "./audio/transport";

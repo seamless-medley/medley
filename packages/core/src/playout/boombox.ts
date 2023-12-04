@@ -506,8 +506,6 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
     // clean up memory holding the cover, lyrics and extra
     if (trackIsActuallyUnloaded && trackPlay.track?.extra) {
-      this.#logger.debug('Removing maybeCoverAndLyrics for', { deckIndex, track: trackPlay.track.path });
-
       trackPlay.track.extra.maybeCoverAndLyrics = undefined;
 
       if (isRequestTrack(trackPlay.track) && trackPlay.track.original.extra?.maybeCoverAndLyrics) {

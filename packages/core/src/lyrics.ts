@@ -75,7 +75,7 @@ export type ParseLyricOptions = {
   bpm?: number;
 }
 
-export function parseLyrics(s: string, { bpm = 0 }: ParseLyricOptions = {}): Lyrics {
+export function parseLyrics(s: string, { bpm = 90 }: ParseLyricOptions = {}): Lyrics {
   const lines = s.replace(/\r\n/g, "\n").split(/\n/).map(parseLine);
 
   const infos = chain(lines)
