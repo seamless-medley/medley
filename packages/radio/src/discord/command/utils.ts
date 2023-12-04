@@ -17,18 +17,22 @@ import { castArray, isString, maxBy, padStart } from "lodash";
 import { MedleyAutomaton } from "../automaton";
 import { ansi, Colors, ColorsAndFormat, Formats, simpleFormat } from "../format/ansi";
 import { formatMention, MentionType } from "../format/format";
-import { CommandError } from "./type";
+import { CommandError, Strings } from "./type";
 
 export const maxSelectMenuOptions = 25;
 
 type ReplyableInteraction = CommandInteraction | MessageComponentInteraction;
 
-type Strings = (string | undefined)[];
-
 export function makeCodeBlockMessage(s: string | Strings, lang: string): Strings {
+  const items = castArray(s);
+
+  if (!items.length) {
+    return [];
+  }
+
   return [
     '```' + lang,
-    ...castArray(s),
+    ...items,
     '```'
   ]
 }

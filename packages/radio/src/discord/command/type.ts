@@ -108,3 +108,5 @@ export type CommandDescriptor = {
 }
 
 export class CommandError extends Error { };
+
+export type Strings = (string | undefined)[];

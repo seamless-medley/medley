@@ -5,6 +5,7 @@ import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLik
 import { guildStationGuard, reply, makeColoredMessage, makeAnsiCodeBlock, joinStrings } from "../utils";
 import { AudienceType, isRequestTrack, makeAudience } from '@seamless-medley/core';
 import { ansi } from '../../format/ansi';
+import { interact } from '../interactor';
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -17,9 +18,13 @@ const onGoing = new Set<string>();
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
-  await interaction.deferReply();
-
-  const requests = station.getRequestsOf(makeAudience(AudienceType.Discord, { automatonId: automaton.id, guildId }, interaction.user.id));
+  const requests = station.getRequestsOf(
+    makeAudience(
+      AudienceType.Discord,
+      { automatonId: automaton.id, guildId },
+      interaction.user.id
+    )
+  );
 
   if (requests.length < 1) {
     reply(interaction, {
@@ -29,14 +34,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     return;
   }
 
-  const issuer = interaction.user.id;
-
-  const runningKey = `${guildId}:${issuer}`;
-
-  if (onGoing.has(runningKey)) {
-    reply(interaction, 'Finish the earlier `unrequest` command, please');
-    return;
-  }
+  await interaction.deferReply();
 
   const selections = requests.slice(0, 25).map(request => ({
     label: truncate(request.extra?.tags?.title || parsePath(request.path).name, { length: 100 }),
@@ -44,16 +42,20 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     value: request.rid.toString(36),
   }));
 
-  const selector = await reply(interaction, {
-    // ephemeral,
-    fetchReply: true,
-    content: 'Requests:',
-    components: [
+  await interact({
+    commandName: declaration.name,
+    automaton,
+    interaction,
+    onGoing,
+    ttl: 90_000,
+
+    makeCaption: () => ['Requests:'],
+    makeComponents: () => [
       new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
           new StringSelectMenuBuilder()
             .setCustomId('unrequest')
-            .setPlaceholder('Select tracks to cancel')
+            .setPlaceholder('Select tracks to remove')
             .setMinValues(0)
             .setMaxValues(selections.length)
             .addOptions(selections)
@@ -67,86 +69,36 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
             .setStyle(ButtonStyle.Secondary)
             .setEmoji('❌')
         )
-    ]
-  });
+    ],
 
-  if (selector instanceof Message) {
-    onGoing.add(runningKey);
-
-    let done = false;
-
-    const collector = selector.createMessageComponentCollector({
-      componentType: ComponentType.SelectMenu,
-      time: 90_000
-    });
-
-    collector.on('collect', async i => {
-      if (i.user.id !== issuer) {
-        i.reply({
-          content: `Sorry, this selection is for${userMention(issuer)} only`,
-          ephemeral: true
-        })
+    async onCollect({ collected, done }) {
+      if (!collected.isStringSelectMenu()) {
         return;
       }
 
-      done = true;
-      collector.stop();
-      onGoing.delete(runningKey);
+      await done(false);
 
-      const requestIds = i.values.map(v => parseInt(v, 36));
+      const requestIds = collected.values.map(v => parseInt(v, 36));
       const unrequested = station.unrequest(requestIds);
 
-      let alreadyLoaded = false;
+      // TODO: test this
+      const alreadyLoaded = unrequested
+        ? [0, 1, 2]
+            .map(i => station.getDeckInfo(i).trackPlay?.track)
+            .filter(isRequestTrack)
+            .some(t => requestIds.includes(t.rid))
+        : false;
 
-      if (unrequested.invalid) {
-        alreadyLoaded = [0, 1, 2]
-          .map(i => station.getDeckInfo(i).trackPlay?.track)
-          .filter(isRequestTrack)
-          .some(t => requestIds.includes(t.rid))
-      }
-
-      i.update({
+      // TODO: Print the details
+      collected.update({
         components: [],
         content: joinStrings(makeAnsiCodeBlock([
           ansi`{{green}}OK{{reset}}, {{pink}}${unrequested.removed.length}{{reset}} track(s) canceled`,
           alreadyLoaded ? '{{pink|b}}{{bgDarkBlue}}Some tracks are loaded and cannot be canceled' : undefined
         ]))
       });
-    });
-
-    collector.on('end', x => {
-      if (!done && selector.editable) {
-        onGoing.delete(runningKey);
-
-        selector.edit({
-          content: makeColoredMessage('yellow', 'Timed out, please try again'),
-          components: []
-        });
-      }
-    });
-
-    await selector.awaitMessageComponent({
-      componentType: ComponentType.Button,
-      filter: i => {
-        i.deferUpdate();
-        return i.customId === 'cancel_unrequest' && i.user.id === issuer;
-      },
-      idle: 90_000
-    })
-    .then(i => {
-      if (!done) {
-        done = true;
-        collector.stop();
-
-        onGoing.delete(runningKey);
-
-        if (selector.deletable) {
-          selector.delete();
-        }
-      }
-    })
-    .catch(() => onGoing.delete(runningKey));
-  }
+    }
+  });
 }
 
 const descriptor: CommandDescriptor = {

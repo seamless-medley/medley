@@ -1,30 +1,25 @@
 import {
   AudienceType,
-  createLogger,
   getTrackBanner,
   makeAudience,
   StationTrack
 } from "@seamless-medley/core";
 
 import {
-  Message,
   ActionRowBuilder,
   ButtonBuilder,
   ChatInputCommandInteraction,
   ButtonStyle,
   SelectMenuComponentOptionData,
   MessageActionRowComponentBuilder,
-  InteractionReplyOptions,
   StringSelectMenuBuilder,
-  StringSelectMenuInteraction,
   PermissionsBitField,
   bold,
   inlineCode,
-  userMention,
-  time as formatTime
+  MessageComponentInteraction
 } from "discord.js";
 
-import { chain, chunk, clamp, Dictionary, groupBy, identity, isNull, noop, sample, sortBy, truncate, upperFirst, zip } from "lodash";
+import { chain, chunk, clamp, Dictionary, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
@@ -32,16 +27,24 @@ import { InteractionHandlerFactory } from "../../type";
 import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
 import { ansi } from "../../../format/ansi";
 import { getVoteMessage } from "../vote";
+import { interact } from "../../interactor";
 
-export type Selection = {
+type Selection = {
   title: string;
   artist?: string;
   track: StationTrack;
 };
 
+type SelectionsWithChunk = Selection[] & { fromChunk?: boolean };
+
 const onGoing = new Set<string>();
 
-const logger = createLogger({ name: 'command/request' });
+type State = {
+  menu: 'results' | 'pick';
+  totalPages: number;
+  page: number;
+  choices: SelectionsWithChunk;
+}
 
 export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
@@ -50,7 +53,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
   const noSweep = interaction.options.getBoolean('no-sweep') ?? undefined;
 
-  if (options.every(isNull)) {
+  if (options.every(isUndefined)) {
     const preview = await makeRequestPreview(station, { guildId, count: 20 });
 
     if (preview) {
@@ -64,22 +67,17 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
   await interaction.deferReply();
 
-  const issuer = interaction.user.id;
-
-  const runningKey = `${guildId}:${issuer}`;
-
-  if (onGoing.has(runningKey)) {
-    reply(interaction, 'Finish the previous `request` command, please');
-    return;
-  }
-
   const [artist, title, query] = options;
 
-  const results = await station.search({
-    artist,
-    title,
-    query
-  }, maxSelectMenuOptions * 10); // 10 pages
+  const results = await station.search(
+    {
+      artist,
+      title,
+      query
+    },
+    // 10 pages
+    maxSelectMenuOptions * 10
+  );
 
   if (results.length < 1) {
     const highlight = (n: string, v: string)  => ansi`({{yellow}}${n} {{cyan}}~ {{pink}}{{bgDarkBlue|b}}${v}{{reset}})`
@@ -128,9 +126,8 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         d[pagedGroupKey] = chunk;
         d[pagedGroupKey].fromChunk = true;
       }
-    }, {} as Dictionary<(Selection[]) & { fromChunk?: boolean }>)
+    }, {} as Dictionary<SelectionsWithChunk>)
     .value();
-
 
   const [isGrouped, resultSelectionChunks] = ((): [grouped: boolean, data: SelectMenuComponentOptionData[][]] => {
     const entries = Object.entries(groupedSelections);
@@ -159,254 +156,243 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     ];
   })();
 
-  const totalPages = resultSelectionChunks.length;
-  let currentPage = 0;
+  const state: State = {
+    menu: 'results',
+    totalPages: resultSelectionChunks.length,
+    page: 0,
+    choices: []
+  }
 
   const cancelButtonBuilder = new ButtonBuilder()
-    .setCustomId('request:cancel')
+    .setCustomId('request_cancel')
     .setLabel('Cancel')
     .setStyle(ButtonStyle.Secondary)
     .setEmoji('❌');
 
   const prevPageButtonBuilder = new ButtonBuilder()
-    .setCustomId('request:prevPage')
+    .setCustomId('request_prevPage')
     .setStyle(ButtonStyle.Secondary)
 
-    const nextPageButtonBuilder = new ButtonBuilder()
-    .setCustomId('request:nextPage')
+  const nextPageButtonBuilder = new ButtonBuilder()
+    .setCustomId('request_nextPage')
+    .setStyle(ButtonStyle.Secondary);
+
+  const backButtonBuilder = new ButtonBuilder()
+    .setCustomId('request:back')
+    .setLabel('Back')
     .setStyle(ButtonStyle.Secondary)
+    .setEmoji('↩');
 
-  const ttl = 90_000;
+  const trackPickerBuilder = new StringSelectMenuBuilder()
+    .setCustomId('request:pick')
+    .setPlaceholder('Select a track')
 
-  const getTimeout = () => `Request Timeout: ${formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')}`;
+  const makeRequest = async (trackId: string, interaction: MessageComponentInteraction, runningKey: string, done: () => Promise<void>) => {
+    const ok = await station.request(
+      trackId,
+      makeAudience(
+        AudienceType.Discord,
+        { automatonId: automaton.id, guildId },
+        interaction.user.id
+      ),
+      noSweep
+    );
 
-  const buildSearchResultMenu = (page: number): InteractionReplyOptions => {
-    const components: MessageActionRowComponentBuilder[] = [cancelButtonBuilder];
+    if (ok === false || ok.index < 0) {
+      onGoing.delete(runningKey);
 
-    if (page > 0) {
-      components.push(prevPageButtonBuilder.setLabel(`⏮ Page ${page}`));
-    }
-
-    if (page < totalPages - 1) {
-      components.push(nextPageButtonBuilder.setLabel(`Page ${page + 2} ⏭`));
-    }
-
-    return {
-      content: joinStrings([
-        getTimeout(),
-        (isGrouped && totalPages > 1) ? `Search result, page ${page + 1}/${totalPages}:` : `Select a track:`
-      ]),
-      components: [
-        new ActionRowBuilder<MessageActionRowComponentBuilder>()
-          .addComponents(
-            new StringSelectMenuBuilder()
-              .setCustomId(isGrouped ? 'request' : 'request:pick')
-              .setPlaceholder(isGrouped ? 'Select a result' : 'Select a track')
-              .addOptions(resultSelectionChunks[page])
-          ),
-        new ActionRowBuilder<MessageActionRowComponentBuilder>()
-          .addComponents(components),
-      ]
-    }
-  }
-
-  const selector = await reply(interaction, { ...buildSearchResultMenu(currentPage), fetchReply: true });
-
-  if (selector instanceof Message) {
-    const collector = selector.createMessageComponentCollector({ dispose: true, time: ttl });
-    let done = false;
-
-    const stop = async (shouldDelete: boolean = true) => {
-      done = true;
-
-      if (onGoing.has(runningKey)) {
-        onGoing.delete(runningKey);
-
-        collector.stop();
-
-        if (shouldDelete && selector.deletable) {
-          await selector.delete();
-        }
-      }
-    }
-
-    const makeRequest = async (interaction: StringSelectMenuInteraction, trackId: string) => {
-      const ok = await station.request(
-        trackId,
-        makeAudience(
-          AudienceType.Discord,
-          { automatonId: automaton.id, guildId },
-          interaction.user.id
-        ),
-        noSweep
-      );
-
-      if (ok === false || ok.index < 0) {
-        onGoing.delete(runningKey);
-
-        interaction.update({
-          content: makeColoredMessage('red', 'Track could not be requested for some reasons'),
-          components: []
-        });
-        return;
-      }
-
-      const preview = await makeRequestPreview(station, {
-        bottomIndex: ok.index,
-        focusIndex: ok.index,
-        guildId
-      });
-
-      await interaction.update({
-        content: `Request accepted: ${bold(inlineCode(getTrackBanner(ok.track)))}`,
+      interaction.update({
+        content: makeColoredMessage('red', 'Track could not be requested for some reasons'),
         components: []
       });
 
-      const peekings = peekRequestsForGuild(station, 0, 20, guildId);
-
-      const canVote = interaction.appPermissions?.any([PermissionsBitField.Flags.AddReactions]);
-
-      if (preview) {
-        interaction.followUp({
-          content: joinStrings(preview),
-          components: canVote && (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
-            ? [
-              new ActionRowBuilder<MessageActionRowComponentBuilder>()
-                .addComponents(
-                  new ButtonBuilder()
-                    .setLabel('Vote')
-                    .setEmoji(sample(['✋🏼', '🤚🏼', '🖐🏼', '🙋🏼‍♀️', '🙋🏼‍♂️'])!)
-                    .setStyle(ButtonStyle.Secondary)
-                    .setCustomId(`vote:-`)
-                )
-            ]
-            : undefined
-        })
-      }
-
-      await stop(false);
+      return;
     }
 
-    onGoing.add(runningKey);
+    const preview = await makeRequestPreview(station, {
+      bottomIndex: ok.index,
+      focusIndex: ok.index,
+      guildId
+    });
 
-    collector.on('collect', async (collected) => {
-      const { customId, user } = collected;
+    await interaction.update({
+      content: `Request accepted: ${bold(inlineCode(getTrackBanner(ok.track)))}`,
+      components: []
+    });
 
-      if (user.id !== issuer) {
-        collected.reply({
-          content: `Sorry, this selection is for ${userMention(issuer)} only`,
-          ephemeral: true
-        });
-        return;
+    const peekings = peekRequestsForGuild(station, 0, 20, guildId);
+
+    const canVote = interaction.appPermissions?.any([PermissionsBitField.Flags.AddReactions]);
+
+    if (preview) {
+      interaction.followUp({
+        content: joinStrings(preview),
+        components: canVote && (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
+          ? [
+            new ActionRowBuilder<MessageActionRowComponentBuilder>()
+              .addComponents(
+                new ButtonBuilder()
+                  .setLabel('Vote')
+                  .setEmoji(sample(['✋🏼', '🤚🏼', '🖐🏼', '🙋🏼‍♀️', '🙋🏼‍♂️'])!)
+                  .setStyle(ButtonStyle.Secondary)
+                  .setCustomId(`vote:-`)
+              )
+          ]
+          : undefined
+      })
+    }
+
+    await done();
+  }
+
+  await interact({
+    commandName: 'request',
+    automaton,
+    interaction,
+    onGoing,
+    ttl: 90_000,
+    formatTimeout: time => `Request Timeout: ${time}`,
+
+    makeCaption() {
+      switch (state.menu) {
+        case 'results':
+          if (isGrouped && state.totalPages > 1) {
+            return [`Search result, page ${state.page + 1}/${state.totalPages}:`]
+          }
+
+        case 'pick':
+          return ['Select a track']
+      }
+    },
+
+    makeComponents() {
+      const rows: Array<ActionRowBuilder<MessageActionRowComponentBuilder>> = [];
+
+      const { page, totalPages, choices } = state;
+
+      switch (state.menu) {
+        case 'results': {
+          const components: MessageActionRowComponentBuilder[] = [cancelButtonBuilder];
+
+          if (page > 0) {
+            components.push(prevPageButtonBuilder.setLabel(`⏮ Page ${page}`));
+          }
+
+          if (page < totalPages - 1) {
+            components.push(nextPageButtonBuilder.setLabel(`Page ${page + 2} ⏭`));
+          }
+
+          rows.push(
+            new ActionRowBuilder<MessageActionRowComponentBuilder>()
+            .addComponents(
+              new StringSelectMenuBuilder()
+                .setCustomId(isGrouped ? 'request' : 'request:pick')
+                .setPlaceholder(isGrouped ? 'Select a result' : 'Select a track')
+                .addOptions(resultSelectionChunks[page])
+            ),
+            new ActionRowBuilder<MessageActionRowComponentBuilder>()
+              .addComponents(components),
+          )
+
+          break;
+        }
+
+        case 'pick':
+          rows.push(
+            new ActionRowBuilder<MessageActionRowComponentBuilder>()
+              .addComponents(trackPickerBuilder.addOptions(makeTrackSelections(choices))),
+
+            new ActionRowBuilder<MessageActionRowComponentBuilder>()
+              .addComponents(cancelButtonBuilder, backButtonBuilder)
+          );
       }
 
+      return rows;
+    },
+
+    async onCollect({ runningKey, collected, buildMessage, resetTimer, done }) {
+      const { customId } = collected;
+
       // Cancel button
-      if (customId === 'request:cancel') {
-        await stop(false);
+      if (customId === 'request_cancel') {
+        await done(false);
+
         collected.update({
           content: makeColoredMessage('yellow', 'Canceled'),
           components: []
-        })
+        });
+
         return;
       }
 
-      collector.resetTimer({ time: ttl });
+      resetTimer();
 
+      // Paginate
       const paginationNavigation: Partial<Record<string, number>> = {
         'request:back': 0,
-        'request:prevPage': -1,
-        'request:nextPage': 1
+        'request_prevPage': -1,
+        'request_nextPage': 1
       };
 
       if (customId in paginationNavigation) {
         const increment = paginationNavigation[customId] ?? 0;
 
-        currentPage = clamp(currentPage + increment, 0, totalPages - 1);
+        state.menu = 'results';
+        state.page = clamp(state.page + increment, 0, state.totalPages - 1);
 
-        const menu = buildSearchResultMenu(currentPage);
-
-        collected.update({
-          content: menu.content,
-          components: menu.components
-        });
+        collected.update(buildMessage());
 
         return;
       }
 
-      const isSelectMenu = collected.isStringSelectMenu();
+      if (collected.isStringSelectMenu()) {
+        const doneMakingRequest = () => done(false);
 
-      if (customId === 'request' && isSelectMenu) {
-        const [key] = collected.values;
-        const choices = groupedSelections[key];
-
-        if (!choices?.length) {
-          collected.update({
-            content: makeColoredMessage('red', 'Invalid request selection'),
-            components: []
-          });
+        // A track was picked
+        if (customId === 'request:pick') {
+          makeRequest(
+            collected.values[0],
+            collected,
+            runningKey,
+            doneMakingRequest
+          );
 
           return;
         }
 
-        if (choices.length === 1 && !choices.fromChunk) {
-          makeRequest(collected, choices[0].track.id);
+        if (customId === 'request') {
+          const [key] = collected.values;
+          const choices = groupedSelections[key];
+
+          if (!choices?.length) {
+            collected.update({
+              content: makeColoredMessage('red', 'Invalid request selection'),
+              components: []
+            });
+
+            return;
+          }
+
+          if (choices.length === 1 && !choices.fromChunk) {
+            makeRequest(
+              choices[0].track.id,
+              collected,
+              runningKey,
+              doneMakingRequest
+            );
+            return;
+          }
+
+          state.menu = 'pick';
+          state.choices = choices;
+
+          collected.update(buildMessage());
+
           return;
         }
-
-        const trackSelections = makeTrackSelections(choices);
-
-        collected.update({
-
-          content: joinStrings([
-            getTimeout(),
-            'Select a track']
-          ),
-          components: [
-            new ActionRowBuilder<MessageActionRowComponentBuilder>()
-              .addComponents(
-                new StringSelectMenuBuilder()
-                  .setCustomId('request:pick')
-                  .setPlaceholder('Select a track')
-                  .addOptions(trackSelections)
-              ),
-            new ActionRowBuilder<MessageActionRowComponentBuilder>()
-              .addComponents(
-                cancelButtonBuilder,
-                new ButtonBuilder()
-                  .setCustomId('request:back')
-                  .setLabel('Back')
-                  .setStyle(ButtonStyle.Secondary)
-                  .setEmoji('↩')
-              )
-          ]
-        });
-
-        return;
       }
-
-      if (customId === 'request:pick' && isSelectMenu) {
-        makeRequest(collected, collected.values[0]);
-        return;
-      }
-
-      collected.reply({
-        content: makeColoredMessage('red', 'Invalid request interaction'),
-        ephemeral: true
-      });
-    });
-
-    collector.on('end', async () => {
-      if (!done && selector.editable) {
-        await selector.edit({
-          content: makeColoredMessage('yellow', 'Timed out, please try again'),
-          components: []
-        })
-        .catch(noop);
-      }
-
-      await stop(false);
-    });
-  }
+    }
+  });
 }
 
 const isExtensionLossless = (ext: string) => /(flac|wav)/i.test(ext);
@@ -439,7 +425,7 @@ const trackSelectionProcessors: ClarificationProcessor[] = [
   }
 ];
 
-export const makeTrackSelections = (choices: Selection[]) => chain(choices)
+const makeTrackSelections = (choices: Selection[]) => chain(choices)
   .groupBy(selectionOrder)
   .values()
   .flatMap(g => clarifySelection(g, trackSelectionProcessors))
@@ -503,4 +489,3 @@ function clarifySelection(selections: Selection[], processors: ClarificationProc
 
   return result;
 }
-

@@ -1,17 +1,14 @@
 import {
   CommandInteraction,
-  Message,
   ActionRowBuilder,
   ButtonBuilder,
   EmbedBuilder,
   PermissionsBitField,
   ButtonStyle,
-  ComponentType,
   MessageActionRowComponentBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuInteraction,
   SelectMenuComponentOptionData,
-  userMention,
   hyperlink
 } from "discord.js";
 import { stubTrue } from "lodash";
@@ -19,6 +16,7 @@ import { stubTrue } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { reply, deny, guildIdGuard, permissionGuard, makeColoredMessage } from "../utils";
+import { interact } from "../interactor";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -86,6 +84,8 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
   return false;
 }
 
+const onGoing = new Set<string>();
+
 export async function createStationSelector(automaton: MedleyAutomaton, interaction: CommandInteraction, onDone?: (ok: boolean) => Promise<any>) {
   const stations = automaton.stations.all();
 
@@ -94,80 +94,58 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     return;
   }
 
-  const preferredStation = interaction.guildId ? automaton.getGuildState(interaction.guildId)?.preferredStation : undefined;
+  const preferredStation = interaction.guildId
+    ? automaton.getGuildState(interaction.guildId)?.preferredStation
+    : undefined;
 
-  const issuer = interaction.user.id;
+  await interact({
+    commandName: declaration.name,
+    automaton,
+    interaction,
+    onGoing,
+    makeCaption: () => [],
+    makeComponents() {
+      const listing = stations.map<SelectMenuComponentOptionData>(station => ({
+        label: station.name,
+        value: station.id,
+        description: station.description,
+        default: station.id === preferredStation?.id
+      }));
 
-  const listing = stations.map<SelectMenuComponentOptionData>(station => ({
-    label: station.name,
-    value: station.id,
-    description: station.description,
-    default: station.id === preferredStation?.id
-  }));
-
-  const selector = await reply(interaction, {
-    content: 'Select a station:',
-    components: [
-      new ActionRowBuilder<MessageActionRowComponentBuilder>()
-        .addComponents(
-          new StringSelectMenuBuilder()
-            .setCustomId('tune')
-            .setPlaceholder('Select a station')
-            .addOptions(listing)
-        ),
-      new ActionRowBuilder<MessageActionRowComponentBuilder>()
+      return [
+        new ActionRowBuilder<MessageActionRowComponentBuilder>()
           .addComponents(
-            new ButtonBuilder()
-              .setCustomId('cancel_tune')
-              .setLabel('Cancel')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('❌')
-        )
-    ],
-    fetchReply: true
-  });
+            new StringSelectMenuBuilder()
+              .setCustomId('tune')
+              .setPlaceholder('Select a station')
+              .addOptions(listing)
+          ),
+        new ActionRowBuilder<MessageActionRowComponentBuilder>()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('cancel_tune')
+                .setLabel('Cancel')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('❌')
+          )
+      ];
+    },
 
-  if (selector instanceof Message) {
-    let done = false;
+    async onCollect({ collected, done }) {
+      const { customId } = collected;
 
-    const collector = selector.createMessageComponentCollector({ time: 30_000 });
-
-    collector.on('collect', async i => {
-      if (i.user.id !== issuer) {
-        reply(i, {
-          content: `Sorry, this selection is for ${userMention(issuer)} only`,
-          ephemeral: true
-        })
+      if (customId === 'cancel_tune') {
+        await done();
         return;
       }
 
-      done = true;
-      collector.stop();
-
-      if (i.customId === 'tune' && i.componentType === ComponentType.StringSelect) {
-        const ok = await handleStationSelection(automaton, i).catch(stubTrue);
+      if (customId === 'tune' && collected.isStringSelectMenu()) {
+        const ok = await handleStationSelection(automaton, collected).catch(stubTrue);
         await onDone?.(ok);
         return;
       }
-
-      if (i.customId === 'cancel_tune') {
-        if (selector.deletable) {
-          selector.delete();
-        }
-
-        return;
-      }
-    });
-
-    collector.on('end', () => {
-      if (!done && selector.editable) {
-        selector.edit({
-          content: makeColoredMessage('yellow', 'Timed out, please try again'),
-          components: []
-        });
-      }
-    });
-  }
+    }
+  })
 }
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => (interaction) => {
