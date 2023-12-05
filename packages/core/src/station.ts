@@ -602,6 +602,7 @@ export class Station extends TypedEmitter<StationEvents> {
     }
 
     const requestedTrack = this.#boombox.request(track, requestedBy);
+
     (requestedTrack.track as StationRequestedTrack).disallowSweepers = noSweep;
 
     this.emit('requestTrackAdded', requestedTrack);

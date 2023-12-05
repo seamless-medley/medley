@@ -348,8 +348,6 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
         t => scopedBy(t).includes(scope),
         index === scopes.length - 1
       );
-
-      console.groupEnd();
     }
   }
 

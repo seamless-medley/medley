@@ -150,7 +150,6 @@ class AudioWebSocket {
   }
 
   #handleMessage = (m: Buffer) => {
-    console.log('handleMessage', m);
     const command = m.readUint8(0) as AudioSocketCommand;
     const data = decode(m.subarray(1));
 

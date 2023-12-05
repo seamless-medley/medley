@@ -4,7 +4,9 @@ import {
   Station
 } from "@seamless-medley/core";
 
+import { retryable } from "@seamless-medley/utils";
 import { Logger } from "@seamless-medley/logging";
+
 import {
   BaseGuildVoiceChannel,
   ChannelType,
@@ -24,7 +26,6 @@ import { DiscordAudioPlayer } from "../voice/audio/player";
 import { GuildSpecificConfig, MedleyAutomaton } from "./automaton";
 import { TrackMessageCreator } from "../trackmessage/creator/base";
 import { makeCreator } from "../trackmessage/creator";
-import { retryable } from "@seamless-medley/utils";
 
 export type GuildStateAdapter = {
   getAutomaton(): MedleyAutomaton;
