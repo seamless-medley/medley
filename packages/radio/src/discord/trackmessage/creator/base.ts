@@ -48,9 +48,9 @@ export abstract class TrackMessageCreator {
 
     // Find the best track object by looking up the maybeCoverAndLyrics in which is already defined
     // If none was found, fallback to the track object from StationTrackPlay
-    const track = [requested?.original, trackPlay.track]
+    const track = [requested, requested?.original, trackPlay.track]
         .find((t): t is StationTrack => t?.extra?.maybeCoverAndLyrics !== undefined)
-        ?? requested?.original ?? trackPlay.track;
+        ?? requested?.original ?? requested ?? trackPlay.track;
 
     const playDuration = positions.last! - positions.first!;
 
