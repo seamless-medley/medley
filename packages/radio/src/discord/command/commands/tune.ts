@@ -141,6 +141,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
 
       if (customId === 'tune' && collected.isStringSelectMenu()) {
         const ok = await handleStationSelection(automaton, collected).catch(stubTrue);
+        await done(false);
         await onDone?.(ok);
         return;
       }

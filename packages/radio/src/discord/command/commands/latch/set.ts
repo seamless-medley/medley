@@ -124,7 +124,7 @@ export async function set(options: SubCommandHandlerOptions) {
       ]
     },
 
-    async onCollect({ selector, collected, collector, buildMessage, resetTimer, done }) {
+    async onCollect({ selector, collected, buildMessage, resetTimer, done }) {
       const { customId } = collected;
       error.text = undefined;
 
@@ -146,7 +146,6 @@ export async function set(options: SubCommandHandlerOptions) {
             components: []
           });
 
-          await done(false);
         } else {
           collected.reply({
             content: makeColoredMessage('red|b', latching),
@@ -154,6 +153,7 @@ export async function set(options: SubCommandHandlerOptions) {
           });
         }
 
+        await done(false);
         return;
       }
 

@@ -59,10 +59,12 @@ export async function remove(options: SubCommandHandlerOptions) {
         )
     ],
 
-    onCollect({ collected }) {
+    async onCollect({ collected, done }) {
       if (!collected.isStringSelectMenu()) {
         return;
       }
+
+      await done(false);
 
       const removed = collected.values.map(uuid => station.removeLatch(uuid)).filter(session => session !== undefined).length;
       const listing = getLatchSessionsListing(station);
