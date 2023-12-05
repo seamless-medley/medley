@@ -1,4 +1,6 @@
-import { MusicDb, Station, StationEvents, createLogger } from "@seamless-medley/core";
+import { MusicDb, Station, StationEvents } from "@seamless-medley/core";
+import { createLogger } from "@seamless-medley/logging";
+
 import { MongoMusicDb } from "../musicdb/mongo";
 //
 import type { Config } from "../config";
@@ -51,7 +53,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
     const stations = await Promise.all(
       Object.entries(this.#configs.stations).map(async ([stationId, stationConfig]) => {
-        logger.info('Constructing station:', stationId);
+        logger.info(`Constructing station: ${stationId}`);
 
         const station = await createStation({
           ...stationConfig,
@@ -88,7 +90,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
   protected override addSocket(socket: Socket) {
     super.addSocket(socket);
-    logger.debug('Adding socket', socket.id);
+    logger.debug({ id: socket.id }, 'Adding socket');
   }
 
   async #connectMongoDB() {

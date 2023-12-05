@@ -1,6 +1,6 @@
 import { curry, sample, sortBy } from "lodash";
 import { basename } from "path";
-import { createLogger, Logger, type ILogObj } from "../logging";
+import { createLogger, Logger } from "@seamless-medley/logging";
 import { BoomBox, BoomBoxEvents, BoomBoxTrackCollection, TrackKind } from "./boombox";
 
 export type SweeperInsertionRule = {
@@ -67,12 +67,12 @@ export const findRule = (from: string, to: string, rules: SweeperInsertionRule[]
 }
 
 export class SweeperInserter {
-  #logger: Logger<ILogObj>;
+  #logger: Logger;
 
   #boombox: BoomBox<any>
 
   constructor(boombox: BoomBox<any>, public rules: SweeperInsertionRule[] = []) {
-    this.#logger = createLogger({ name: `sweeper-inserter/${boombox.id}` });
+    this.#logger = createLogger({ name: 'sweeper-inserter', id: boombox.id });
     this.#boombox = boombox;
     boombox.on('collectionChange', this.#handler);
   }
@@ -117,7 +117,7 @@ export class SweeperInserter {
 
     const insertion = this.#pick(matched.collection);
     if (insertion) {
-      this.#logger.info('Inserting', insertion.path);
+      this.#logger.info(`Inserting ${insertion.path}`);
       // ensure track kind
       if (insertion.extra?.kind === undefined) {
         insertion.extra = {

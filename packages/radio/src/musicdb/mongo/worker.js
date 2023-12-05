@@ -2,7 +2,7 @@ const workerpool = require('workerpool');
 const { threadId } = require('node:worker_threads');
 const { MongoClient, Db, Collection } = require('mongodb');
 const { random, omitBy } = require('lodash');
-const { Logger } = require('tslog');
+const { createLogger } = require('@seamless-medley/logging');
 
 /** @typedef {import('@seamless-medley/core').MusicDb} MusicDb */
 /** @typedef {import('@seamless-medley/core').MusicDbTrack} MusicDbTrack */
@@ -35,34 +35,17 @@ let ttls = [
   60 * 60 * 36
 ];
 
-const logger = new Logger({
-  name: `musicdb/mongo/${threadId}`,
-  type: 'pretty',
-  minLevel: !!process.env.DEBUG ? 2 : 3,
-  stylePrettyLogs: true,
-  prettyLogTimeZone: 'local',
-  prettyLogTemplate: '{{yyyy}}.{{mm}}.{{dd}} {{hh}}:{{MM}}:{{ss}}:{{ms}} {{logLevelName}} [{{name}}] ',
-  prettyLogStyles: {
-    name: 'blue',
-    logLevelName: {
-      "*": ["bold", "black", "bgWhiteBright", "dim"],
-      SILLY: ["bold", "white"],
-      TRACE: ["bold", "whiteBright"],
-      DEBUG: ["bold", "green"],
-      INFO: ["bold", "blue"],
-      WARN: ["bold", "yellow"],
-      ERROR: ["bold", "red"],
-      FATAL: ["bold", "redBright"],
-    }
-  }
+const logger = createLogger({
+  name: 'musicdb:mongo',
+  id: threadId
 });
 
 process.on('uncaughtException', (e) => {
-  logger.error('Uncaught exception', e);
+  logger.error(e, 'Uncaught exception');
 });
 
 process.on('unhandledRejection', (e) => {
-  logger.error('Unhandled rejection', e);
+  logger.error(e, 'Unhandled rejection');
 });
 
 /**
@@ -85,7 +68,7 @@ async function configure(options) {
   });
 
   client.on('connectionCreated', (e) => {
-    logger.info('connection created, connectionId:', e.connectionId);
+    logger.info(`connection created, connectionId: ${e.connectionId}`);
   });
 
   client.on('connectionClosed', ({ connectionId, reason }) => {
@@ -153,7 +136,7 @@ async function find(value, by) {
     expires: { $gte: Date.now() }
   }, { projection: { _id: 0 }})
   .catch((e) => {
-    logger.error('Error in find', e);
+    logger.error(e, 'Error in find');
   });
 
   if (!found) {
@@ -175,7 +158,7 @@ const update = async (trackId, fields) => {
     }
   }, { upsert: true })
   .catch((e) => {
-    logger.error('Error in update', e);
+    logger.error(e, 'Error in update');
   });
 }
 
@@ -185,7 +168,7 @@ const update = async (trackId, fields) => {
 const _delete = async (trackId) => {
   await musics.deleteOne({ trackId })
   .catch((e) => {
-    logger.error('Error in delete', e);
+    logger.error(e, 'Error in delete');
   });
 }
 
@@ -199,7 +182,7 @@ const search_add = async (stationId, query) => {
     timestamp: new Date
   })
   .catch((e) => {
-    logger.error('Error in insert', e);
+    logger.error(e, 'Error in insert');
   });
 }
 
@@ -279,7 +262,7 @@ const search_recentItems = async(stationId, key, $limit) => {
     }
 
   } catch(e) {
-    logger.error('Error in recent search', e);
+    logger.error(e, 'Error in recent search');
   }
   return result;
 }
@@ -323,7 +306,7 @@ const search_unmatchedItems = async(stationId) => {
     }
   }
   catch (e) {
-    logger.error('Error in unmatched items', e);
+    logger.error(e, 'Error in unmatched items');
   }
 
   return result;
@@ -342,12 +325,12 @@ const search_unmatchedItems = async(stationId) => {
     ...record
   })
   .catch((e) => {
-    logger.error('Error in TrackHistory::add, while inserting', e);
+    logger.error(e, 'Error in TrackHistory::add, while inserting');
   });
 
   const count = await trackHistory.countDocuments({ stationId })
   .catch((e) => {
-    logger.error('Error in TrackHistory::add, while counting', e);
+    logger.error(e, 'Error in TrackHistory::add, while counting');
     return 0;
   });
 
@@ -360,7 +343,7 @@ const search_unmatchedItems = async(stationId) => {
       .map(doc => doc._id)
       .toArray()
       .catch((e) => {
-        logger.error('Error in TrackHistory::add, while getting result', e);
+        logger.error(e, 'Error in TrackHistory::add, while getting result');
         return [];
       });
 
@@ -378,7 +361,7 @@ const search_unmatchedItems = async(stationId) => {
     .map(({ _id, ...record }) => record)
     .toArray()
     .catch((e) => {
-      logger.error('Error in getAll', e);
+      logger.error(e, 'Error in getAll');
       return [];
     });
 

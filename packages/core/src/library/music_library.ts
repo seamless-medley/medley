@@ -1,7 +1,7 @@
 import { castArray, chain, isString, noop } from 'lodash';
 import normalizePath from 'normalize-path';
 import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents } from '../collections';
-import { ILogObj, Logger, createLogger } from '../logging';
+import { Logger, createLogger } from '@seamless-medley/logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
 import { SearchEngine, Query, TrackDocumentFields } from './search';
@@ -33,7 +33,7 @@ type IndexInfo<O> = {
 }
 
 export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
-  #logger: Logger<ILogObj>;
+  #logger: Logger;
 
   #searchEngine = new SearchEngine();
 
@@ -44,7 +44,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
   ) {
     super();
 
-    this.#logger = createLogger({ name: `library/${this.id}` });
+    this.#logger = createLogger({ name: 'library', id: this.id });
   }
 
   #trackCreator: TrackCreator<MusicTrack<O>> = async (path) => {
@@ -147,7 +147,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
           });
       }
       catch (e) {
-        this.#logger.error('Error while indexing a track: ', (e as any).message);
+        this.#logger.error('Error while indexing a track: %s', (e as any).message);
         throw e;
       }
     }

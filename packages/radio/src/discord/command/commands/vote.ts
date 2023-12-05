@@ -1,4 +1,5 @@
-import { Audience, AudienceType, createLogger, getTrackBanner, makeAudience, RequestTrackLockPredicate, StationRequestedTrack, TrackIndex, TrackPeek } from "@seamless-medley/core";
+import { createLogger } from "@seamless-medley/logging";
+import { Audience, AudienceType, getTrackBanner, makeAudience, RequestTrackLockPredicate, StationRequestedTrack, TrackIndex, TrackPeek } from "@seamless-medley/core";
 import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, PermissionsBitField, userMention, time as formatTime, quote, } from "discord.js";
 import { chain, isEqual, keyBy, noop, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
@@ -18,7 +19,7 @@ type Nominatee = StationRequestedTrack & {
   emoji: string;
 }
 
-const logger = createLogger({ name: 'command/vote' });
+const logger = createLogger({ name: 'command', id: 'vote' });
 
 const guildVoteMessage = new Map<string, Message>();
 

@@ -4,7 +4,8 @@ import express from 'express';
 import { ZodError } from "zod";
 import { Command } from '@commander-js/extra-typings';
 import { Client, GatewayIntentBits } from "discord.js";
-import { createLogger, Medley } from '@seamless-medley/core';
+import { createLogger } from '@seamless-medley/logging';
+import { Medley } from '@seamless-medley/core';
 import { SocketServer as SocketIOServer } from '../socket';
 import { MedleyServer } from './medley-server';
 import { AudioWebSocketServer } from './audio/ws/server';
@@ -15,11 +16,11 @@ import { RTCTransponder } from './audio/rtc/transponder';
 const logger = createLogger({ name: 'main' });
 
 process.on('uncaughtException', (e) => {
-  logger.error('Exception', e, e.stack);
+  logger.error(e, 'Exception');
 });
 
 process.on('unhandledRejection', (e) => {
-  logger.error('Rejection', e);
+  logger.error(e, 'Rejection');
 });
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -81,7 +82,7 @@ async function startServer(configs: Config) {
         .once('error', listenErrorHandler)
         .listen(listeningPort, listeningAddr, () => {
           httpServer.off('error', listenErrorHandler);
-          logger.info('Listening on port', listeningPort);
+          logger.info(`Listening on port ${listeningPort}`);
 
           resolve([server, httpServer]);
         });
@@ -106,8 +107,8 @@ async function main() {
   const info = Medley.getInfo();
 
   logger.info(getVersionLine());
-  logger.info('node-medley runtime:', Object.entries(info.runtime).map(([p, v]) => `${p}=${v}`).join('; '));
-  logger.info('node-medley version:', `${info.version.major}.${info.version.minor}.${info.version.patch}`);
+  logger.info('node-medley runtime: %s', Object.entries(info.runtime).map(([p, v]) => `${p}=${v}`).join('; '));
+  logger.info('node-medley version: %s', `${info.version.major}.${info.version.minor}.${info.version.patch}`);
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
 
   const configs = await loadConfig(configFile, false);
@@ -142,7 +143,7 @@ async function main() {
       await MedleyAutomaton.registerGuildCommands({
         botToken,
         clientId,
-        logger: createLogger({ name: `automaton/${id}` }),
+        logger: createLogger({ name: 'automaton', id }),
         baseCommand: baseCommand || 'medley',
         guilds: [...(await client.guilds.fetch()).values()]
       });
@@ -155,7 +156,7 @@ async function main() {
 
   const [medleyServer, httpServer] = await startServer(configs)
     .catch(e => {
-      logger.error('Error starting server,', e.message);
+      logger.error(e, 'Error starting server');
       process.exit(1);
     });
 

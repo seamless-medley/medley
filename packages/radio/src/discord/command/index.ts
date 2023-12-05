@@ -1,6 +1,6 @@
 import { map } from "lodash";
 import { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Interaction, InteractionType } from "discord.js";
-import { createLogger } from "@seamless-medley/core";
+import { createLogger } from "@seamless-medley/logging";
 import join from "./commands/join";
 import skip from './commands/skip';
 import lyrics from "./commands/lyrics";

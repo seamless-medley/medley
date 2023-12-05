@@ -1,19 +1,20 @@
-import { Station, createLogger } from "@seamless-medley/core";
+import { Station } from "@seamless-medley/core";
 import { MongoMusicDb } from "./musicdb/mongo";
 import { ShoutAdapter } from "./streaming/shout/adapter";
 import { Command } from "@commander-js/extra-typings";
 import { loadConfig } from "./config";
 import { ZodError } from "zod";
 import { createStation } from "./helper";
+import { createLogger } from "@seamless-medley/logging";
 
 const logger = createLogger({ name: 'main' });
 
 process.on('uncaughtException', (e) => {
-  logger.error('Exception', e, e.stack);
+  logger.error(e, 'Exception');
 });
 
 process.on('unhandledRejection', (e) => {
-  logger.error('Rejection', e);
+  logger.error(e, 'Rejection');
 });
 
 async function main() {
@@ -61,7 +62,7 @@ async function main() {
 
   const stations = await Promise.all(
     Object.entries(configs.stations).map(async ([stationId, stationConfig]) => {
-      logger.info('Constructing station:', stationId);
+      logger.info(`Constructing station: ${stationId}`);
 
       const station = await createStation({
         ...stationConfig,

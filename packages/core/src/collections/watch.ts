@@ -72,7 +72,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     if (error) {
       const normalized = normalizePath(dir);
 
-      this.logger.error('Error in subscription for dir:', normalized, 'marking it for re-subscribing, the error was:', error);
+      this.logger.error(error, 'Error in subscription for dir: %s marking it for re-subscribing', normalized);
 
       const info = this.#watchInfos.get(normalized);
 
@@ -175,7 +175,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       await this.#subscribeToPath(normalizePath(dir))
 
       if (info.subscription) {
-        this.logger.info('Resume subscription for', dir);
+        this.logger.info(`Resume subscription for ${dir}`);
         this.#scan(dir);
       }
     }
@@ -196,7 +196,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       return;
     }
 
-    this.logger.info('Watching', normalized);
+    this.logger.info(`Watching ${normalized}`);
 
     await this.#scan(normalized, async () => {
       await this.#subscribeToPath(normalized);

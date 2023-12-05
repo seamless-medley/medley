@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@parcel/watcher": "^2.3.0",
+    "@seamless-medley/logging": "../logging",
     "@seamless-medley/medley": "0.3.4",
     "@seamless-medley/utils": "../utils",
     "axios": "1.6.0",
@@ -21,7 +22,6 @@
     "normalize-path": "^3.0.0",
     "string-similarity": "^4.0.4",
     "tiny-typed-emitter": "^2.1.0",
-    "tslog": "^4.9.2",
     "which": "^4.0.0",
     "workerpool": "^8.0.0"
   },

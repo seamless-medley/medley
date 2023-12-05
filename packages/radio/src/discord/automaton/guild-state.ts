@@ -1,11 +1,10 @@
 import {
   AudienceGroupId,
-  ILogObj,
   IReadonlyLibrary,
-  Logger,
   Station
 } from "@seamless-medley/core";
 
+import { Logger } from "@seamless-medley/logging";
 import {
   BaseGuildVoiceChannel,
   ChannelType,
@@ -32,7 +31,7 @@ export type GuildStateAdapter = {
   getClient(): Client;
   getChannel(id: string): GuildBasedChannel | undefined;
   getStations(): IReadonlyLibrary<Station>;
-  getLogger(): Logger<ILogObj>;
+  getLogger(): Logger;
   getAudioDispatcher(): AudioDispatcher;
   getConfig(guildId: string): GuildSpecificConfig | undefined;
   makeAudienceGroup(guildId: string): AudienceGroupId;

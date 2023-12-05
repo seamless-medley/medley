@@ -8,7 +8,7 @@ import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, Trac
 import { Track, TrackExtra } from "../track";
 import { TrackCollection, TrackIndex } from "../collections";
 import { SweeperInserter } from "./sweeper";
-import { createLogger, Logger, type ILogObj } from '../logging';
+import { createLogger, Logger } from '@seamless-medley/logging';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from '../library/music_db';
 import { CrateProfile, CrateProfileBook } from '../crate/profile';
@@ -160,14 +160,15 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
   artistHistory: Array<string[]> = [];
 
-  #logger: Logger<ILogObj>;
+  #logger: Logger;
 
   constructor(options: BoomBoxOptions<BoomBoxTrack, R>) {
     super();
     //
     this.id = options.id;
     this.#logger = createLogger({
-      name: `boombox/${this.id}`
+      name: 'boombox',
+      id: this.id
     });
 
     this.options = {
@@ -196,7 +197,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     this.#sequencer.on('change', (crate: BoomBoxCrate, oldCrate?: BoomBoxCrate) => this.emit('sequenceChange', crate, oldCrate));
     this.#sequencer.on('rescue', (scanned, ignored) => {
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
-      this.#logger.debug('Rescue, removing', n, 'artist history entries');
+      this.#logger.debug(`Rescue, removing ${n} artist history entries`);
       this.artistHistory = this.artistHistory.slice(n);
     });
 
@@ -278,7 +279,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
       }
     }
     catch (e: unknown) {
-      this.#logger.debug('Error in verifyTrack()', (e as Error).message);
+      this.#logger.debug(e, 'Error in verifyTrack()');
     }
 
     return {
@@ -415,6 +416,19 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
     try {
       const addToQueue = (track: BoomBoxTrack) => {
+        this.#logger.debug(
+          {
+            p: track.path,
+            c: track.sequencing?.crate?.id,
+            o: track.sequencing?.playOrder,
+            l: track.sequencing?.latch?.session ? {
+              cl: track.sequencing.latch.session.collection?.id,
+              ct: [track.sequencing.latch.session.count, track.sequencing.latch.session.max]
+            } : undefined
+          },
+          'Track queued',
+        );
+
         this.queue.add(track);
         this.emit('trackQueued', track);
         done(true);

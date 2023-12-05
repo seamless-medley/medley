@@ -108,8 +108,7 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
   const state = automaton.getGuildState(guildId);
 
   if (!state) {
-    console.error('No guild state found for:', interaction.guild?.name);
-    throw new CommandError('Unknown guild');
+    throw new CommandError('Unknown guild ' + interaction.guild?.name);
   }
 
   const station = state.tunedStation;

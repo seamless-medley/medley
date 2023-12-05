@@ -1,6 +1,6 @@
 import { isFunction, random, sample, shuffle, sortBy, sumBy } from "lodash";
 import { Track } from "../track";
-import { createLogger, Logger, type ILogObj } from '../logging';
+import { createLogger, Logger } from '@seamless-medley/logging';
 import { weightedSample } from "@seamless-medley/utils";
 
 export type CrateSourceWithWeight<T extends Track<any>> = {
@@ -139,7 +139,7 @@ export class Crate<T extends Track<any>> {
 
   #max: number | (() => number);
 
-  #logger: Logger<ILogObj>;
+  #logger: Logger;
 
   constructor(options: CrateOptions<T>) {
     this.id = options.id
@@ -150,7 +150,8 @@ export class Crate<T extends Track<any>> {
     this.#max = options.max ?? 0;
 
     this.#logger = createLogger({
-      name: `crate/${this.id}`
+      name: 'crate',
+      id: this.id
     });
 
     this.updateSources(options.sources);
@@ -173,7 +174,10 @@ export class Crate<T extends Track<any>> {
     const { chance, limit } = this;
 
     if (!force && chance) {
-      this.#logger.debug('Select by', chance.next, 'chances', JSON.stringify(chance.chances?.()));
+      this.#logger.debug(
+        { selection: { func: chance.next.name, chances: chance.chances?.() } },
+        'Select by'
+      );
       const selected = await chance.next();
 
       if (!selected) {
@@ -185,14 +189,14 @@ export class Crate<T extends Track<any>> {
 
     const result = isFunction(limit) ? limit() : limit;
 
-    this.#logger.debug('Select limit from', limit, 'as', result);
+    this.#logger.debug(`Select limit from ${limit} as ${result}`);
 
     this.#max = (result === 'entirely')
       ? () => sumBy(this.#sources, s => s.length)
       : (isFinite(result) && (result > 0) ? result : 0)
       ;
 
-    this.#logger.debug('Limit', this.#max);
+    this.#logger.debug(`Limit ${this.#max}`);
 
     return true;
   }

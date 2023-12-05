@@ -1,4 +1,4 @@
-import { createLogger, Medley } from "@seamless-medley/core";
+import { Medley } from "@seamless-medley/core";
 import { Client, GatewayIntentBits } from "discord.js";
 import { Command } from '@commander-js/extra-typings';
 import { MongoMusicDb } from "../musicdb/mongo";
@@ -6,15 +6,16 @@ import { MedleyAutomaton } from "./automaton";
 import { loadConfig } from "../config";
 import { ZodError } from "zod";
 import { createAutomaton, createStation } from "../helper";
+import { createLogger } from "@seamless-medley/logging";
 
 const logger = createLogger({ name: 'main' });
 
 process.on('uncaughtException', (e) => {
-  logger.error('Exception', e, e.stack);
+  logger.error(e, 'Exception');
 });
 
 process.on('unhandledRejection', (e) => {
-  logger.error('Rejection', e);
+  logger.error(e, 'Rejection');
 });
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -44,8 +45,8 @@ async function main() {
   const info = Medley.getInfo();
 
   logger.info(getVersionLine());
-  logger.info('node-medley runtime:', Object.entries(info.runtime).map(([p, v]) => `${p}=${v}`).join('; '));
-  logger.info('node-medley version:', `${info.version.major}.${info.version.minor}.${info.version.patch}`);
+  logger.info('node-medley runtime: %s', Object.entries(info.runtime).map(([p, v]) => `${p}=${v}`).join('; '));
+  logger.info('node-medley version: %s', `${info.version.major}.${info.version.minor}.${info.version.patch}`);
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
 
   const configs = await loadConfig(configFile, true);
@@ -80,7 +81,7 @@ async function main() {
       await MedleyAutomaton.registerGuildCommands({
         botToken,
         clientId,
-        logger: createLogger({ name: `automaton/${id}` }),
+        logger: createLogger({ name: 'automaton', id }),
         baseCommand: baseCommand || 'medley',
         guilds: [...(await client.guilds.fetch()).values()]
       });
@@ -103,7 +104,7 @@ async function main() {
 
   const stations = await Promise.all(
     Object.entries(configs.stations).map(async ([stationId, stationConfig]) => {
-      logger.info('Constructing station:', stationId);
+      logger.info(`Constructing station: ${stationId}`);
 
       const station = await createStation({
         ...stationConfig,

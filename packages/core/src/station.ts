@@ -14,7 +14,7 @@ import {
 import { TrackCollectionBasicOptions, TrackIndex } from "./collections";
 import { Crate, LatchOptions, LatchSession } from "./crate";
 import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "./library";
-import { createLogger, Logger, type ILogObj } from "./logging";
+import { createLogger, Logger } from "@seamless-medley/logging";
 import {
   BoomBox,
   BoomBoxEvents,
@@ -149,7 +149,7 @@ export class Station extends TypedEmitter<StationEvents> {
 
   #audiences: Map<AudienceGroupId, Set<string>> = new Map();
 
-  #logger: Logger<ILogObj>;
+  #logger: Logger;
 
   constructor(options: StationOptions) {
     super();
@@ -162,7 +162,7 @@ export class Station extends TypedEmitter<StationEvents> {
 
     this.maxTrackHistory = options.maxTrackHistory || 50;
 
-    this.#logger = createLogger({ name: `station/${this.id}`});
+    this.#logger = createLogger({ name: 'station', id: this.id });
     this.#logger.info('Creating station');
 
     this.queue = new Queue();
@@ -449,7 +449,7 @@ export class Station extends TypedEmitter<StationEvents> {
   pause(reason?: string) {
     if (!this.medley.paused) {
       this.medley.togglePause(false);
-      this.#logger.info('Playing paused', { reason });
+      this.#logger.info({ reason }, 'Playing paused');
     }
 
     this.playState = PlayState.Paused;

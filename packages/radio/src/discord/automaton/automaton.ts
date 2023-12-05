@@ -17,9 +17,6 @@ import {
   extractAudienceGroupFromId,
   DeckIndex,
   StationEvents,
-  Logger,
-  ILogObj,
-  createLogger,
   StationTrack,
   StationTrackPlay,
 } from "@seamless-medley/core";
@@ -34,6 +31,7 @@ import { trackMessageToMessageOptions } from "../trackmessage";
 import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
 import { AudioDispatcher } from "../../audio/exciter";
 import { CreatorNames } from "../trackmessage/creator";
+import { Logger, createLogger } from "@seamless-medley/logging";
 
 export type GuildSpecificConfig = {
   autotune?: string;
@@ -97,7 +95,7 @@ export type RegisterOptions = {
   clientId: string;
   botToken: string;
   baseCommand: string;
-  logger: Logger<ILogObj>
+  logger: Logger;
 }
 
 export type AutomatonEvents = {
@@ -123,7 +121,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #guildStates: Map<Guild['id'], GuildState> = new Map();
 
-  #logger: Logger<ILogObj>;
+  #logger: Logger;
 
   #rejoining = false;
 
@@ -134,7 +132,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   constructor(readonly stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
     super();
 
-    this.#logger = createLogger({ name: `automaton/${options.id}` });
+    this.#logger = createLogger({ name: 'automaton', id: options.id });
 
     this.id = options.id;
     this.botToken = options.botToken;
@@ -156,21 +154,21 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     });
 
     this.#client.on('warn', message => {
-      this.#logger.warn('Automaton Warning', message);
+      this.#logger.warn(`Automaton Warning ${message}`);
     });
 
     this.#client.on('error', (error) => {
-      this.#logger.error('Automaton Error', error);
+      this.#logger.error(error, 'Automaton Error');
     });
 
     this.#client.on('shardError', this.#handleShardError);
 
     this.#client.on('shardReconnecting', (shardId) => {
-      this.#logger.debug('Shard', shardId, 'reconnecting');
+      this.#logger.debug(`Shard ${shardId}, reconnecting`);
     })
 
     this.#client.on('shardResume', (shardId) => {
-      this.#logger.debug('Shard', shardId, 'resume');
+      this.#logger.debug(`Shard ${shardId}, resume`);
 
       if (!this.#shardReady) {
         this.#rejoinVoiceChannels(30);
@@ -181,7 +179,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     this.#client.on('shardReady', (shardId) => {
       this.#shardReady = true;
-      this.#logger.debug('Shard', shardId, 'ready');
+      this.#logger.debug(`Shard ${shardId}, ready`);
       this.#rejoinVoiceChannels(30);
     })
 
@@ -205,7 +203,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       station.on('collectionChange', this.#handleCollectionChange(station));
     }
 
-    this.#logger.info('OAUthURL', this.oAuth2Url.toString());
+    this.#logger.info('OAUthURL: %s', this.oAuth2Url.toString());
 
     this.#client.once('ready', async () => {
       for (const guildId of Object.keys(this.#guildConfigs)) {
@@ -223,7 +221,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   #handleShardError = (error: Error, shardId: number) => {
-    this.#logger.error('Shard', shardId, 'error', error.message);
+    this.#logger.error(error, `Shard ${shardId} error`);
 
     this.#shardReady = false;
     this.#rejoining = false;
@@ -261,7 +259,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     const voiceChannel = guild.channels.cache.get(config.autojoin);
     if (voiceChannel?.isVoiceBased()) {
       const { status } = await this.ensureGuildState(guildId).join(voiceChannel, 5_000, 5);
-      this.#logger.debug('Auto join result:', { status, guild: guild.name, channel: voiceChannel.name })
+      this.#logger.debug(
+        { status, guild: guild.name, channel: voiceChannel.name },
+        'Auto join result'
+      )
     }
   }
 
@@ -306,7 +307,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         }
 
         this.#rejoining = false;
-        this.#logger.info('Rejoined', { guild: channel.guild.name, channel: channel.name });
+        this.#logger.info({ guild: channel.guild.name, channel: channel.name }, 'Rejoined');
 
         return result;
       }, { retries, wait: 1000 }).then(() => state.preferredStation?.updatePlayback());
@@ -329,7 +330,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
         return this.client.login(this.botToken)
           .catch(e => {
-            this.#logger.error('Error login', e);
+            this.#logger.error(e, 'Error login');
             throw e;
           });
       }, { wait: 5000, signal: this.#loginAbortController.signal });
@@ -339,7 +340,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       }
     }
     catch (e) {
-      this.#logger.error('Error logging in', e);
+      this.#logger.error(e, 'Error logging in');
     }
   }
 
@@ -697,7 +698,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
             sentMessage.edit({ embeds, components })
               .then(resolve)
               .catch((error) => {
-                this.#logger.error('Error updating track message in guild', sentMessage.guild?.name, error);
+                this.#logger.error(error, 'Error updating track message in guild %s', sentMessage.guild?.name);
               });
           });
         })
@@ -925,7 +926,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     const { logger, guild, clientId, botToken, baseCommand } = options;
     try {
       if (guild) {
-        logger.info('Registering commands with guild id:', guild.id, `(${guild.name})`);
+        logger.info(`Registering commands with guild id: ${guild.id} (${guild.name})`);
       } else {
         logger.info('Registering commands');
       }
@@ -944,10 +945,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         }
       )
 
-      logger.debug('Registered', guild?.id, guild?.name);
+      logger.debug({ id: guild?.id, name: guild?.name }, 'Registered');
     }
     catch (e) {
-      logger.error('Error registering command', e);
+      logger.error(e, 'Error registering command');
     }
   }
 

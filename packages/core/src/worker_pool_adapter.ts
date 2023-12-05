@@ -1,5 +1,5 @@
 import workerpool, { WorkerPool, WorkerPoolOptions } from "workerpool";
-import { createLogger } from "./logging";
+import { createLogger } from "@seamless-medley/logging";
 
 export abstract class WorkerPoolAdapter<Methods extends { [name: string]: any }> {
   protected logger = createLogger({
@@ -25,7 +25,7 @@ export abstract class WorkerPoolAdapter<Methods extends { [name: string]: any }>
           worker.postMessage(message);
         }
         catch (e: any) {
-          this.logger.error('Error posting', e);
+          this.logger.error(e, 'Error posting');
         }
       }
 

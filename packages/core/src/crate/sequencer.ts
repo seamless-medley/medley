@@ -3,7 +3,7 @@ import { debounce, isObjectLike } from "lodash";
 import { TrackCollection } from "../collections";
 import { SequencedTrack, Track, TrackExtra, TrackSequencing } from "../track";
 import { Crate } from "./base";
-import { ILogObj, Logger, createLogger } from "../logging";
+import { Logger, createLogger } from "@seamless-medley/logging";
 import { randomUUID } from "crypto";
 import { CrateProfile } from "./profile";
 
@@ -64,13 +64,14 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
   #lastCrate: Crate<T> | undefined;
   #currentCollection: T['collection'] | undefined;
 
-  #logger: Logger<ILogObj>;
+  #logger: Logger;
 
   constructor(readonly id: string, public options: CrateSequencerOptions<E> = {}) {
     super();
 
     this.#logger = createLogger({
-      name: `sequencer/${this.id}`
+      name: 'sequencer',
+      id: this.id
     });
   }
 
@@ -92,7 +93,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     this.#playCounter = 0;
 
     const crateIndex = currentCollectionId ? this.#findCrateIndexContainingCollection(currentCollectionId) : 0;
-    this.#logger.debug('Change to profile', { id: newProfile.id, crateIndex });
+    this.#logger.debug({ id: newProfile.id, crateIndex }, 'Change to profile');
     this.#crateIndex = crateIndex > -1 ? this.#ensureCrateIndex(crateIndex) : 0;
 
     return true;
@@ -179,7 +180,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             continue;
           }
 
-          this.#logger.debug('Changed to crate', crate.id);
+          this.#logger.debug(`Changed to crate ${crate.id}`);
 
           this.emit('change',
             crate,
@@ -218,7 +219,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             const latchingCollection = latchSession?.collection;
 
             if (latchingCollection) {
-              this.#logger.debug('Using collection', latchingCollection.id, 'for latching');
+              this.#logger.debug(`Using collection ${latchingCollection.id} for latching`);
             }
 
             const intendedCollection = latchingCollection ?? this.#temporalCollection;
@@ -291,7 +292,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
     this.setCrateIndex(this.#crateIndex + 1);
     //
-    this.#logger.debug('next', this.currentCrate?.id);
+    this.#logger.debug('next ' + this.currentCrate?.id);
   }
 
   get crates(): ReadonlyArray<Crate<T>> {
