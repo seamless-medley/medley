@@ -310,6 +310,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     // This is a shallow copy
     const requested: TrackWithRequester<BoomBoxTrack, R> = {
       ...track,
+      sequencing: undefined,
       original: track,
       rid: ++this.#lastRequestId,
       priority: 0,
