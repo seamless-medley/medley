@@ -17,7 +17,7 @@ function createCrateFromSequence(id: string, station: Station, sequence: Sequenc
   }
 
   return new Crate({
-    id: `${station.id}/${id}`,
+    id,
     sources: validCollections.map(({ id, weight = 1 }) => ({ collection: station.getCollection(id)!, weight })),
     chance: createChanceable(sequence.chance),
     limit: crateLimitFromSequenceLimit(sequence.limit)
