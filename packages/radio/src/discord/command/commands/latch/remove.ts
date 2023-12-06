@@ -60,6 +60,11 @@ export async function remove(options: SubCommandHandlerOptions) {
     ],
 
     async onCollect({ collected, done }) {
+      if (collected.customId === 'cancel_latch_remove') {
+        await done(true);
+        return;
+      }
+
       if (!collected.isStringSelectMenu()) {
         return;
       }
