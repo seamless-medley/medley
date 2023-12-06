@@ -23,10 +23,15 @@ const Config = z.object({
   required_error: 'Configuration file is empty or malformed'
 }).strict();
 
+
 const DiscordOnlyConfig = Config.omit({
   server: true,
   webrtc: true
-});
+}).extend({
+  server: ServerConfig.optional(),
+  webrtc: WebRtcConfig.optional()
+})
+
 
 export type Config = z.infer<typeof Config>;
 
