@@ -77,6 +77,8 @@ export type BoomBoxEvents = {
    */
   collectionChange: (oldCollection: BoomBoxTrackCollection | undefined, newCollection: BoomBoxTrackCollection, transitingFromRequestTrack: boolean) => void;
 
+  profileChange: (oldProfile: BoomBoxProfile | undefined, newProfile: BoomBoxProfile) => void;
+
   /**
    * Emit when an active crate was changed by any means during track queuing phase
    *
@@ -448,8 +450,14 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
       const currentTrack = this.#currentTrackPlay?.track;
       const currentCollection = currentTrack?.collection;
+
       const nextCollection = nextTrack.collection;
       const collectionChange = currentCollection?.id !== nextCollection.id;
+
+      if (this.#currentCrate?.profile !== nextTrack.sequencing.crate.profile) {
+        this.emit('profileChange', this.#currentCrate?.profile, nextTrack.sequencing.crate.profile)
+        this.#logger.debug('Play profile changed to %s', nextTrack.sequencing.crate.profile?.id);
+      }
 
       if (collectionChange && nextCollection) {
         const transitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
