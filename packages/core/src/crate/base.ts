@@ -1,7 +1,7 @@
 import { isFunction, random, sample, shuffle, sortBy, sumBy } from "lodash";
 import { Track } from "../track";
 import { createLogger, Logger } from '@seamless-medley/logging';
-import { weightedSample } from "@seamless-medley/utils";
+import { createNamedFunc, weightedSample } from "@seamless-medley/utils";
 import { CrateProfile } from "./profile";
 
 export type CrateSourceWithWeight<T extends Track<any>> = {
@@ -63,25 +63,24 @@ export function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit  {
   const { by } = limit;
 
   if (by === 'upto') {
-    const upto = () => random(1, limit.upto);
+    const upto = createNamedFunc(`upto_${limit.upto}`, () => random(1, limit.upto));
     return upto;
   }
 
   if (by === 'range') {
     const [min, max] = sortBy(limit.range);
-    const range = () => random(min, max);
+    const range = createNamedFunc(`range_${min}_${max}`, () => random(min, max));
     return range;
   }
 
   if (by === 'sample' || by === 'one-of') {
-    const oneOf = () => sample(limit.list) ?? 0;
-    return oneOf;
+    return function oneOf() { return sample(limit.list) ?? 0; }
   }
 
   return 0;
 }
 
-const randomChance = () => random() === 1;
+const randomChance = function randomChance() { return random() === 1; }
 const always = () => true;
 
 export function createChanceable(def: SequenceChance | undefined): Chanceable {
