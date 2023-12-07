@@ -644,6 +644,14 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     this.#sequencer.setCrateIndex(newIndex, true);
   }
 
+  /**
+   *
+   * @see {@link CrateSequencer.locateCrate}
+   */
+  locateCrate(collectionId: string) {
+    return this.#sequencer.locateCrate(collectionId);
+  }
+
   increasePlayCount() {
     return this.#sequencer.increasePlayCount();
   }

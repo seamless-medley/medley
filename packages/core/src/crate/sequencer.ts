@@ -144,6 +144,20 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     }
   }
 
+  /**
+   * Locate the nearest crate index having the spcified collectionId
+   */
+  locateCrate(collectionId: string) {
+    const indices = this.#crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
+
+    const a = indices.slice(0, this.#crateIndex);
+    const b = indices.slice(this.#crateIndex);
+
+    const located = [...b, ...a].find(({ ids }) => ids.has(collectionId));
+
+    return located?.index;
+  }
+
   #isCrate(o: any): o is Crate<T> {
     return isObjectLike(o) && ((o as Crate<T>).sources[0] instanceof TrackCollection);
   }

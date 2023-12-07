@@ -364,17 +364,18 @@ export class Station extends TypedEmitter<StationEvents> {
 
     if (followCrateAfterRequestTrack && !track.collection.options.noFollowOnRequest) {
       if (!this.isLatchActive) {
-        const indices = this.#boombox.crates.map((crate, index) => ({ ids: new Set(crate.sources.map(s => s.id)), index }));
+        const located = this.#boombox.locateCrate(track.collection.id);
+        const oldCrateIndex = this.#boombox.getCrateIndex();
 
-        const crateIndex = this.#boombox.getCrateIndex();
-
-        const a = indices.slice(0, crateIndex);
-        const b = indices.slice(crateIndex);
-
-        const located = [...b, ...a].find(({ ids }) => ids.has(track.collection.id));
-
-        if (located) {
-          this.#boombox.setCrateIndex(located.index);
+        if (located !== undefined && located !== oldCrateIndex) {
+          this.#logger.debug(
+            {
+              old: this.#boombox.crates[oldCrateIndex].id,
+              new: this.#boombox.crates[located].id
+            },
+            'Follow crate after a request track'
+          );
+          this.#boombox.setCrateIndex(located);
         }
       }
     }
