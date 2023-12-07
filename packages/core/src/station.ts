@@ -207,6 +207,7 @@ export class Station extends TypedEmitter<StationEvents> {
     boombox.on('trackFinished', this.#handleTrackFinished);
     boombox.on('collectionChange', this.#handleCollectionChange);
     boombox.on('crateChange', this.#handleCrateChange);
+    boombox.on('profileChange', this.#handleProfileChange);
 
     this.#musicDb.trackHistory
       .getAll(this.id)
@@ -288,6 +289,35 @@ export class Station extends TypedEmitter<StationEvents> {
 
   #handleCrateChange: BoomBoxEvents['crateChange'] = (oldCrate, newCrate) => {
     this.emit('crateChange', oldCrate, newCrate);
+  }
+
+  #handleProfileChange: BoomBoxEvents['profileChange'] = (oldProfile, newProfile) => {
+    if (newProfile instanceof StationProfile) {
+      const { intros } = this.#profile;
+
+      if (!intros) {
+        return;
+      }
+
+      const intro = intros.shift();
+      if (!intro) {
+        return;
+      }
+
+      if (intro.extra?.kind === undefined) {
+        intro.extra = {
+          ...intro.extra,
+          kind: TrackKind.Insertion
+        }
+      }
+
+      this.queue.add({
+        ...intro,
+        disableNextLeadIn: true
+      });
+
+      intros.push(intro);
+    }
   }
 
   #handleRequestTrack = async (track: StationRequestedTrack) => {
@@ -411,30 +441,6 @@ export class Station extends TypedEmitter<StationEvents> {
   start() {
     if (this.#starting) {
       return;
-    }
-
-    const { intros } = this.#profile;
-
-    // TODO: This should be done when a profile was just selected
-    if (this.playState === PlayState.Idle && this.queue.length === 0) {
-      if (intros) {
-        const intro = intros.shift();
-        if (intro) {
-          if (intro.extra?.kind === undefined) {
-            intro.extra = {
-              ...intro.extra,
-              kind: TrackKind.Insertion
-            }
-          }
-
-          this.queue.add({
-            ...intro,
-            disableNextLeadIn: true
-          });
-
-          intros.push(intro);
-        }
-      }
     }
 
     if (this.playState !== PlayState.Playing) {
