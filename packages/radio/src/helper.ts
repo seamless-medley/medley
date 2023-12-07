@@ -46,7 +46,7 @@ export function createStationProfile(station: Station, config: StationProfileCon
   const stationId = station.id;
 
   const crates = sequences
-    .map((seq, index) => createCrateFromSequence(`${id}/${index}`, station, seq))
+    .map((seq, index) => createCrateFromSequence(`${id}/${index}-${seq.collections.map(c => c.id)}`, station, seq))
     .filter((c): c is Crate<StationTrack> => c !== undefined);
 
   const profile = new StationProfile(id, crates);
