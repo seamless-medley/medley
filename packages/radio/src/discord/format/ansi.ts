@@ -8,14 +8,14 @@ const colors = {
   pink: 35,
   cyan: 36,
   white: 37,
-  bgDarkBlue:40,
-  bgOrange:41,
-  bgMarbleBlue:42,
-  bgGrey:43,
-  bgGray:44,
-  bgIndigo:45,
-  bgLightGray:46,
-  bgWhite:47
+  bgDarkBlue: 40,
+  bgOrange: 41,
+  bgMarbleBlue: 42,
+  bgGrey: 43,
+  bgGray: 44,
+  bgIndigo: 45,
+  bgLightGray: 46,
+  bgWhite: 47
 }
 
 export type Colors = keyof typeof colors;

@@ -102,7 +102,7 @@ export async function createStation(stationConfig: StationConfig & { id: string;
     }
 
     for (const [id, config] of Object.entries(profiles)) {
-      station.addProfile(createStationProfile(station,{
+      station.addProfile(createStationProfile(station, {
         id,
         ...config
       }));
