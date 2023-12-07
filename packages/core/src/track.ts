@@ -24,6 +24,9 @@ export type TrackSequencingLatch<T extends Track<E>, E extends TrackExtra> = {
    * Track order in this latch
    */
   order: number;
+
+  max: number;
+
   session: LatchSession<T, E>;
 }
 

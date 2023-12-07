@@ -180,6 +180,24 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     let ignored = 0;
     let count = this.#crates.length;
     while (count-- > 0) {
+      const latchSession = this.getActiveLatch();
+
+      if (latchSession) {
+        const located = this.locateCrate(latchSession.collection.id);
+
+        if (located !== undefined && located !== this.#crateIndex) {
+          this.#logger.debug(
+            {
+              old: this.#crates[this.#crateIndex].id,
+              new: this.#crates[located].id,
+            },
+            'A latch session is active, moving crate index'
+          );
+
+          this.setCrateIndex(located, true);
+        }
+      }
+
       const crate = this.currentCrate;
 
       if (this.#isCrate(crate)) {
@@ -206,21 +224,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
           scanned += source.length;
 
           for (let i = 0; i < source.length; i++) {
-            const latchSession = (() => {
-              const session = this.getActiveLatch();
-
-              if (session && session.count>= session.max) {
-                // Ends latching
-                this.#logger.debug(`Removing latch for ${session.collection.id}: count (${session.count}) >= max (${session.max})`)
-                this.removeLatch(session);
-
-                return;
-              }
-
-              return session;
-            })();
-
-            // Check the _playCounter only if the latching is not active
+            // Check the #playCounter only if the latching is not active
             if (latchSession === undefined && (this.#playCounter + 1) > crate.max) {
               // Stop searching for next track and flow to the next crate
               // With #lastCrate being undefined will cause the selection process to kick in again
@@ -256,7 +260,13 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
                   latch = {
                     session: latchSession,
-                    order: latchSession.count
+                    order: latchSession.count,
+                    max: latchSession.max
+                  }
+
+                  if (latchSession.count>= latchSession.max) {
+                    // Ends latching
+                    this.removeLatch(latchSession);
                   }
                 }
 

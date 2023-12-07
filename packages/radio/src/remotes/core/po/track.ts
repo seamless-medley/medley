@@ -116,10 +116,12 @@ export const toTrackSequencing = ({ playOrder, crate, latch }: Sequencing): Trac
 export const toTrackSequencingLatch = (
   {
     order,
+    max,
     session
   }: SequencingLatch
 ): TrackSequencingLatch => ({
   order,
+  max,
   session: toLatchSession(session)
 });
 
