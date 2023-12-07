@@ -21,8 +21,8 @@ export type WatchTrackCollectionOptions<T extends Track<any>> = TrackCollectionO
   scanner?: (dir: string) => Promise<false | string[]>;
 }
 
-export class WatchTrackCollection<T extends Track<any>, Extra = any> extends TrackCollection<T, Extra> {
-  constructor(id: string, extra: Extra, public options: WatchTrackCollectionOptions<T> = {}) {
+export class WatchTrackCollection<T extends Track<any>, Extra = any> extends TrackCollection<T, Extra, WatchTrackCollectionOptions<T>> {
+  constructor(id: string, extra: Extra, options: WatchTrackCollectionOptions<T> = {}) {
     super(id, extra, {
       tracksMapper: async (tracks) => shuffle(tracks),
       ...options

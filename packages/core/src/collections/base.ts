@@ -62,7 +62,7 @@ export const supportedExts = ['mp3', 'flac', 'wav', 'ogg', 'aiff'];
 
 export const knownExtRegExp = new RegExp(`\\.(${supportedExts.join('|')})$`, 'i')
 
-export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmitter<TrackCollectionEvents<T>> {
+export class TrackCollection<T extends Track<any>, Extra = any, Options extends TrackCollectionOptions<T> = TrackCollectionOptions<T>> extends TypedEmitter<TrackCollectionEvents<T>> {
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];
@@ -72,7 +72,7 @@ export class TrackCollection<T extends Track<any>, Extra = any> extends TypedEmi
 
   protected logger!: Logger;
 
-  constructor(readonly id: string, extra: Extra, public options: TrackCollectionOptions<T> = {}) {
+  constructor(readonly id: string, extra: Extra, public options: Options) {
     super();
 
     this.logger = createLogger({
