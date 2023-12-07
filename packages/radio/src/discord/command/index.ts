@@ -121,7 +121,9 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
       }
     }
     catch (e) {
-      logger.error(e);
+      if (!(e instanceof CommandError)) {
+        logger.error(e);
+      }
 
       if (isReplyable(interaction)) {
         if (e instanceof CommandError) {

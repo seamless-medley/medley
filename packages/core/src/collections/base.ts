@@ -235,7 +235,7 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
     }
 
     const indexes = mapped.map(t => this.indexOf(t));
-    this.logger.info(`New tracks added: ${mapped.length}`);
+    this.logger.info(`${mapped.length} track(s) added`);
     this.emit('tracksAdd', mapped, indexes);
   }
 
@@ -244,7 +244,7 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
       const existing = updated.filter(it => this.trackIdMap.has(it.id));
 
       if (existing.length > 0) {
-        this.logger.debug(`Track updated: ${existing.length}`);
+        this.logger.info(`${existing.length} track(s) updated`);
         this.emit('tracksUpdate', existing);
       }
     });

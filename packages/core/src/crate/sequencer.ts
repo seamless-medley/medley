@@ -93,8 +93,8 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     this.#playCounter = 0;
 
     const crateIndex = currentCollectionId ? this.#findCrateIndexContainingCollection(currentCollectionId) : 0;
-    this.#logger.debug({ id: newProfile.id, crateIndex }, 'Change to profile');
     this.#crateIndex = crateIndex > -1 ? this.#ensureCrateIndex(crateIndex) : 0;
+    this.#logger.debug({ id: newProfile.id, crateIndex: this.#crateIndex }, 'Change to profile');
 
     return true;
   }
@@ -212,7 +212,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             continue;
           }
 
-          this.#logger.debug(`Changed to crate ${crate.id}`);
+          this.#logger.info(`Changed to crate ${crate.id}`);
 
           this.emit('change',
             crate,
@@ -237,7 +237,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             const latchingCollection = latchSession?.collection;
 
             if (latchingCollection) {
-              this.#logger.debug(`Using collection ${latchingCollection.id} for latching`);
+              this.#logger.info(`Using collection ${latchingCollection.id} for latching`);
             }
 
             const intendedCollection = latchingCollection ?? this.#temporalCollection;
@@ -281,10 +281,13 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
                 return track as unknown as SequencedTrack<T>;
               }
               // track should be skipped, go to next track
+              this.#logger.info(`Skip loading a track: ${track.path}`);
             }
             // track is neither valid nor defined, go to next track
             ignored++;
           }
+
+          // no tracks loaded, go to next source in this crate
         }
         // no more track
       }
@@ -296,7 +299,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     // no valid track in any crates
     if (ignored === scanned && scanned > 0) {
       // Rescue, tracks were found but none was allowed to play
-      this.#logger.debug('Tracks were found but none were allowed to play, rescuing...');
+      this.#logger.warn('Tracks were found but none were allowed to play, rescuing...');
       this.emit('rescue', scanned, ignored);
     }
 
@@ -316,7 +319,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
     this.setCrateIndex(this.#crateIndex + 1);
     //
-    this.#logger.debug('next ' + this.currentCrate?.id);
+    this.#logger.info('Move to next crate: ' + this.currentCrate?.id);
   }
 
   get crates(): ReadonlyArray<Crate<T>> {
@@ -357,8 +360,20 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
     if (index > -1) {
       const removingSession = this.#latchSessions[index];
+
+      this.#logger.info(
+        {
+          uuid: removingSession.uuid,
+          collection: removingSession.collection.id,
+          count: removingSession.count,
+          max: removingSession.max
+        },
+        `Removing latch`
+      );
+
       this.#latchSessions.splice(index, 1);
       removingSession.max = 0;
+
       return removingSession;
     }
   }
@@ -387,6 +402,11 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
       max: 0,
       collection
     }
+
+    this.#logger.info(
+      { uuid: newSession.uuid, collection: newSession.collection.id, max: newSession.max },
+      'Created a new latch session'
+    )
 
     if (this.#currentCollection?.id !== collection.id) {
       this.#playCounter = 0;

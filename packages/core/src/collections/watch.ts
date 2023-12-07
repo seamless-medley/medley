@@ -121,6 +121,8 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       this.#removedIds.add(await this.getTrackId(path));
     }
 
+    this.logger.info('%d track(s) deleted', this.#removedIds.size);
+
     this.#handleFilesRemoval();
   }
 

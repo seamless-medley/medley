@@ -113,8 +113,8 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     }
   }
   catch (e) {
-    console.error(e);
     deny(interaction, 'Could not join, something went wrong');
+    throw e;
   }
 }
 

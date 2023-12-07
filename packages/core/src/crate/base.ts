@@ -192,25 +192,28 @@ export class Crate<T extends Track<any>> {
         { selection: { func: chance.next.name, chances: chance.chances?.() } },
         'Select by'
       );
+
       const selected = await chance.next();
 
       if (!selected) {
-        this.#logger.debug('Not selected');
+        this.#logger.info('Not selected');
         this.#max = 0;
         return false;
       }
+
+      this.#logger.info('Selected');
     }
 
     const result = isFunction(limit) ? limit() : limit;
 
-    this.#logger.debug(`Select limit from ${limit} as ${result}`);
+    this.#logger.debug(`Select limit from ${(limit as any).name} as ${result}`);
 
     this.#max = (result === 'entirely')
       ? () => sumBy(this.#sources, s => s.length)
       : (isFinite(result) && (result > 0) ? result : 0)
       ;
 
-    this.#logger.debug(`Limit ${this.#max}`);
+    this.#logger.info(`Limit ${this.#max}`);
 
     return true;
   }

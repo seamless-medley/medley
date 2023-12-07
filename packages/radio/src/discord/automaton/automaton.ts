@@ -259,7 +259,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     const voiceChannel = guild.channels.cache.get(config.autojoin);
     if (voiceChannel?.isVoiceBased()) {
       const { status } = await this.ensureGuildState(guildId).join(voiceChannel, 5_000, 5);
-      this.#logger.debug(
+      this.#logger.info(
         { status, guild: guild.name, channel: voiceChannel.name },
         'Auto join result'
       )
@@ -326,21 +326,17 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     try {
       const result = await retryable(async () => {
-        this.#logger.info('Logging in');
+        this.#logger.info('Login');
 
-        return this.client.login(this.botToken)
-          .catch(e => {
-            this.#logger.error(e, 'Error login');
-            throw e;
-          });
+        return this.client.login(this.botToken);
       }, { wait: 5000, signal: this.#loginAbortController.signal });
 
       if (result !== undefined) {
-        this.#logger.debug('Logging in done');
+        this.#logger.info('Login OK');
       }
     }
     catch (e) {
-      this.#logger.error(e, 'Error logging in');
+      this.#logger.error(e, 'Login error');
     }
   }
 
@@ -739,28 +735,28 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
   }
 
-  skipCurrentSong(id: Guild['id']) {
-    const station = this.getGuildState(id)?.tunedStation;
+  skipCurrentSong(guildId: Guild['id']) {
+    const station = this.getGuildState(guildId)?.tunedStation;
 
     if (!station) {
-      this.#logger.debug('Deny skipping: no station');
+      this.#logger.warn({ guildId }, 'Deny skipping: no station');
       return false;
     }
 
     if (station.paused || !station.playing) {
-      this.#logger.debug('Deny skipping: not playing');
+      this.#logger.warn({ guildId }, 'Deny skipping: not playing');
       return false;
     }
 
     const { trackPlay } = station;
 
     if (!trackPlay) {
-      this.#logger.debug('Deny skipping: no track play');
+      this.#logger.warn({ guildId }, 'Deny skipping: no track play');
       return false;
     }
 
     if (!station.skip()) {
-      this.#logger.debug('Deny skipping: denied by engine');
+      this.#logger.warn({ guildId }, 'Deny skipping: denied by engine');
       return false;
     }
 
@@ -945,7 +941,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         }
       )
 
-      logger.debug({ id: guild?.id, name: guild?.name }, 'Registered');
+      logger.info({ id: guild?.id, name: guild?.name }, 'Registered');
     }
     catch (e) {
       logger.error(e, 'Error registering command');

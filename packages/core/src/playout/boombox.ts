@@ -6,7 +6,7 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track, TrackExtra } from "../track";
-import { TrackCollection, TrackIndex } from "../collections";
+import { TrackCollection, TrackIndex, WatchTrackCollection } from "../collections";
 import { SweeperInserter } from "./sweeper";
 import { createLogger, Logger } from '@seamless-medley/logging';
 import { MetadataHelper } from '../metadata';
@@ -42,7 +42,7 @@ export type BoomBoxTrackExtra = TrackExtra & {
 export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
 export type BoomBoxTrackPlay = TrackPlay<BoomBoxTrack>;
 export type BoomBoxCrate = Crate<BoomBoxTrack>;
-export type BoomBoxTrackCollection = TrackCollection<BoomBoxTrack>;
+export type BoomBoxTrackCollection = TrackCollection<BoomBoxTrack, any>;
 
 export type Requester = any;
 
@@ -199,7 +199,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     this.#sequencer.on('change', (crate: BoomBoxCrate, oldCrate?: BoomBoxCrate) => this.emit('sequenceChange', crate, oldCrate));
     this.#sequencer.on('rescue', (scanned, ignored) => {
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
-      this.#logger.debug(`Rescue, removing ${n} artist history entries`);
+      this.#logger.warn(`Rescue, removing ${n} artist history entries`);
       this.artistHistory = this.artistHistory.slice(n);
     });
 
@@ -275,13 +275,17 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
       const currentArtists = getArtistStrings(boomboxExtra).map(toLower);
       const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));
 
+      if (dup) {
+        this.#logger.info('Duplicated artist, deny playing track %s', track.path);
+      }
+
       return {
         shouldPlay: !dup,
         extra: !dup ? boomboxExtra : undefined
       }
     }
     catch (e: unknown) {
-      this.#logger.debug(e, 'Error in verifyTrack()');
+      this.#logger.error(e, 'Error in verifyTrack()');
     }
 
     return {
@@ -419,12 +423,20 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
         this.#logger.debug(
           {
             p: track.path,
-            c: track.sequencing?.crate?.id,
+            co: track.collection.id,
+            cr: track.sequencing?.crate
+              ? {
+                id: track.sequencing.crate.id,
+                sources: track.sequencing.crate.sources?.map(s => s.id)
+              }
+              : undefined,
             o: track.sequencing?.playOrder,
-            l: track.sequencing?.latch?.session ? {
-              cl: track.sequencing.latch.session.collection?.id,
-              ct: [track.sequencing.latch.session.count, track.sequencing.latch.session.max]
-            } : undefined
+            l: track.sequencing?.latch
+              ?  [
+                track.sequencing.latch.order,
+                track.sequencing.latch.max
+              ]
+              : undefined
           },
           'Track queued',
         );
@@ -465,7 +477,6 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
       }
 
       if (this.#currentCrate !== nextTrack.sequencing.crate) {
-
         if (nextTrack.sequencing.crate) {
           this.emit('crateChange', this.#currentCrate, nextTrack.sequencing.crate);
         }
@@ -477,6 +488,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
       return;
     }
     catch (e) {
+      this.#logger.error(e, 'Error enqueuing');
       this.emit('error', e as Error);
     }
 
@@ -522,7 +534,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     const trackIsActuallyUnloaded = this.#decks.find((deck) => deck.trackPlay?.track.id === trackPlay.track.id) === undefined;
 
     if (!trackIsActuallyUnloaded) {
-      this.#logger.debug('Deck unloaded, but the track is being loaded by some other decks');
+      this.#logger.warn('Deck unloaded, but the track is being loaded by some other decks');
     }
 
     // clean up memory holding the cover, lyrics and extra

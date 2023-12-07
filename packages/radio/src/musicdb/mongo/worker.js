@@ -37,7 +37,7 @@ let ttls = [
 
 const logger = createLogger({
   name: 'musicdb:mongo',
-  id: threadId
+  id: `${threadId}`
 });
 
 process.on('uncaughtException', (e) => {
