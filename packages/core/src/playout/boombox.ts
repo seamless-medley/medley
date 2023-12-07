@@ -255,7 +255,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     return index !== -1 ? index : undefined;
   }
 
-  #requests: TrackCollection<TrackWithRequester<BoomBoxTrack, R>> = new TrackCollection('$_requests', undefined);
+  #requests: TrackCollection<TrackWithRequester<BoomBoxTrack, R>> = new WatchTrackCollection('$_requests', undefined);
 
   #isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path);
 
