@@ -2,6 +2,7 @@ import { isFunction, random, sample, shuffle, sortBy, sumBy } from "lodash";
 import { Track } from "../track";
 import { createLogger, Logger } from '@seamless-medley/logging';
 import { weightedSample } from "@seamless-medley/utils";
+import { CrateProfile } from "./profile";
 
 export type CrateSourceWithWeight<T extends Track<any>> = {
   collection: T['collection'];
@@ -128,8 +129,14 @@ function chanceOf(n: [yes: number, no: number]): Chanceable {
   }
 }
 
+export interface CreatePrivate<T extends Track<any>> {
+  setProfile(profile: CrateProfile<T>): void;
+}
+
 export class Crate<T extends Track<any>> {
   readonly id: string;
+
+  #profile!: CrateProfile<T>;
 
   #sources: T['collection'][] = [];
   #sourceWeights: number[] = [];
@@ -155,6 +162,14 @@ export class Crate<T extends Track<any>> {
     });
 
     this.updateSources(options.sources);
+  }
+
+  private setProfile(profile: CrateProfile<T>): void {
+    this.#profile = profile;
+  }
+
+  get profile() {
+    return this.#profile;
   }
 
   get sources() {

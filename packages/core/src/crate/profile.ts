@@ -1,6 +1,6 @@
 import { chain, isString } from "lodash";
 import { Track } from "../track";
-import { Crate } from "./base";
+import { Crate, CreatePrivate as CratePrivates } from "./base";
 import { CrateSequencer } from "./sequencer";
 import { moveArrayIndexes } from "@seamless-medley/utils";
 import { Library } from "../library";
@@ -12,6 +12,10 @@ export class CrateProfile<T extends Track<any>> {
 
   constructor(readonly id: string, crates?: Array<Crate<T>>) {
     this.#crates = crates ?? [];
+
+    for (const crate of this.#crates) {
+      (crate as unknown as CratePrivates<T>).setProfile(this);
+    }
   }
 
   /**
