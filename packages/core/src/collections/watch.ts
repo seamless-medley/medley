@@ -11,6 +11,7 @@ import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@par
 
 import { TrackCollection, TrackCollectionOptions } from "./base";
 import { Track } from "../track";
+import { breath } from '@seamless-medley/utils';
 
 type WatchInfo = {
   subscription?: AsyncSubscription;
@@ -34,9 +35,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   }
 
   protected override becomeReady(): void {
-    if (!this._ready) {
-      setInterval(this.#resubscribe, 5000);
-    }
+    WatchTrackCollection.#monitor(this);
 
     super.becomeReady();
   }
@@ -165,21 +164,18 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     info.subscription = await watch(normalizedPath, info.handler);
   }
 
-  /**
-   * Re-subscribe all broken subscriptions
-   */
-  #resubscribe = async () => {
-    for (const [dir, info] of this.#watchInfos) {
-      if (info.subscription !== undefined) {
-        continue;
-      }
+  #createResumeSubscriptionTasks() {
+    return [...this.#watchInfos.entries()]
+      .filter(([, { subscription }]) => subscription === undefined)
+      .map(([dir, info]) => this.#createResumeSubscriptionTask(dir, info));
+  }
 
-      await this.#subscribeToPath(normalizePath(dir))
+  #createResumeSubscriptionTask = (dir: string, info: WatchInfo): ResumeSubscriptionTask => async () => {
+    await this.#subscribeToPath(normalizePath(dir));
 
-      if (info.subscription) {
-        this.logger.info(`Resume subscription for ${dir}`);
-        this.#scan(dir);
-      }
+    if (info.subscription) {
+      this.logger.info(`Resume subscription for ${dir}`);
+      this.#scan(dir);
     }
   }
 
@@ -273,7 +269,54 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       this.watch(dir);
     }
   }
+
+  static #monitorTimer?: NodeJS.Timer;
+
+  static #monitorings: Array<WatchTrackCollection<any>> = [];
+
+  static #monitor(w: WatchTrackCollection<any>) {
+    if (this.#monitorings.indexOf(w) !== -1) {
+      return;
+    }
+
+    this.#monitorings.push(w);
+
+    if (this.#monitorTimer === undefined) {
+      this.#scheduleMonitor(2000);
+    }
+  }
+
+  static async #doMonitor() {
+    const w = this.#monitorings.shift();
+
+    if (w) {
+      this.#monitorings.push(w);
+
+      const tasks = w.#createResumeSubscriptionTasks();
+
+      if (tasks.length) {
+        for (const task of tasks) {
+          await task().then(breath);
+        }
+
+        this.#scheduleMonitor(2000);
+        return;
+      }
+    }
+
+    this.#scheduleMonitor(200);
+  }
+
+  static #scheduleMonitor(delay: number) {
+    if (this.#monitorTimer) {
+      clearTimeout(this.#monitorTimer);
+    }
+
+    this.#monitorTimer = setTimeout(() => this.#doMonitor(), delay);
+  }
 }
+
+type ResumeSubscriptionTask = () => Promise<void>;
 
 const glob = (pattern: string) => fg(pattern, {
   absolute: true,
