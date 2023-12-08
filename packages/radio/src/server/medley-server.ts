@@ -5,7 +5,7 @@ import { MongoMusicDb } from "../musicdb/mongo";
 //
 import type { Config } from "../config";
 //
-import { Socket, SocketServer, SocketServerController } from "../socket";
+import { Socket, SocketServer, SocketServerController } from "./socket";
 import type { RemoteTypes } from "../remotes";
 import type { Unpacked } from "../types";
 //

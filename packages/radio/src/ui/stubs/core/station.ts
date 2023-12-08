@@ -1,5 +1,5 @@
 import { noop } from "lodash";
-import { StubOf } from "../../../socket/stub";
+import { StubOf } from "../../../socket";
 import { type Station } from "../../../remotes/core/station";
 
 class StubbingStation {

@@ -6,7 +6,7 @@ import { Command } from '@commander-js/extra-typings';
 import { Client, GatewayIntentBits } from "discord.js";
 import { createLogger } from '@seamless-medley/logging';
 import { Medley } from '@seamless-medley/core';
-import { SocketServer as SocketIOServer } from '../socket';
+import { SocketServer as SocketIOServer } from './socket';
 import { MedleyServer } from './medley-server';
 import { AudioWebSocketServer } from './audio/ws/server';
 import { Config, loadConfig } from '../config';

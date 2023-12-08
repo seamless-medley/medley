@@ -1,6 +1,5 @@
 import { type types } from 'mediasoup';
-import { $Exposing, Exposable } from "../../../socket/expose";
-import { MixinEventEmitterOf } from "../../../socket/types";
+import { $Exposing, Exposable, MixinEventEmitterOf } from "../../../socket";
 import { type RTCTransponder as RemoteRTCTransponder } from '../../../remotes/rtc/transponder';
 import type { ClientTransportInfo, RTCTransponder, ClientConsumerInfo } from "../../audio/rtc/transponder";
 import { type Station } from '@seamless-medley/core';

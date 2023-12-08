@@ -4,7 +4,7 @@ import http, { IncomingMessage } from "http";
 import { decode } from "notepack.io";
 import { Duplex } from "stream";
 import { WebSocket, WebSocketServer } from "ws";
-import { AudioSocketCommand, AudioSocketReply } from "../../../socket/audio";
+import { AudioSocketCommand, AudioSocketReply } from "../../../socket";
 import { AudioDispatcher } from "../../../audio/exciter/dispatcher";
 import { WebSocketExciter } from "./exciter";
 

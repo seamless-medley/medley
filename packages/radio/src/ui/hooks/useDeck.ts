@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { type Deck } from "../../remotes/core/deck";
 import { type TrackPlay } from "../../remotes/core/po/track";
 import { StubDeck } from "../stubs/core/deck";
-import { $AnyProp } from "../../socket/types";
+import { $AnyProp } from "../../socket";
 import { useSurrogate } from "./surrogate";
 import { useSetState } from "@mantine/hooks";
 

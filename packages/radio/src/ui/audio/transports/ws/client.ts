@@ -6,7 +6,7 @@
  */
 
 import { decode, encode } from "notepack.io";
-import { AudioSocketCommand, AudioSocketCommandMap, AudioSocketReply } from "../../../../socket/audio";
+import { AudioSocketCommand, AudioSocketCommandMap, AudioSocketReply } from "../../../../socket";
 import Decoder from "./decoder?worker";
 import type { Decoder as DecoderInft } from "./decoder";
 import type { AudioTransportExtraPayload } from "../../../../audio/types";

@@ -4,7 +4,7 @@ import { stubFalse } from 'lodash';
 import { Device as MediaSoupDevice, type types } from 'mediasoup-client';
 import type { AudioTransportEvents, AudioTransportPlayResult, AudioTransportState, IAudioTransport } from "../../transport";
 import { type RTCTransponder } from '../../../../remotes/rtc/transponder';
-import { type Remotable } from '../../../../socket/types';
+import { type Remotable } from '../../../../socket';
 import type { AudioTransportExtra, AudioTransportExtraPayload } from '../../../../audio/types';
 
 export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> implements IAudioTransport {

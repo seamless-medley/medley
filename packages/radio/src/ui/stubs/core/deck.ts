@@ -1,4 +1,4 @@
-import { StubOf } from "../../../socket/stub";
+import { StubOf } from "../../../socket";
 import { type Deck } from "../../../remotes/core/deck";
 
 export const StubDeck = StubOf<Deck>(class StubbingDeck {

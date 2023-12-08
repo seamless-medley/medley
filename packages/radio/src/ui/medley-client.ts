@@ -1,7 +1,7 @@
 import { Device as MediaSoupDevice } from 'mediasoup-client';
 import type { RemoteTypes } from "../remotes";
 import type { RTCTransponder } from "../remotes/rtc/transponder";
-import type { Remotable } from "../socket/types";
+import type { Remotable } from "../socket";
 import { WebSocketAudioTransport } from "./audio/transports/ws/transport";
 import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
 import { Client } from "./client";

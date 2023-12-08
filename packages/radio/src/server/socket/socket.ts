@@ -6,11 +6,12 @@ import { Server as IOServer, Socket as IOSocket } from "socket.io";
 import msgpackParser from 'socket.io-msgpack-parser';
 import { ConditionalKeys } from "type-fest";
 import { TypedEmitter } from "tiny-typed-emitter";
-import { getDependents } from "./decorator";
-import { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "./events";
-import { $Exposing } from "./expose";
-import { isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf } from "./utils";
-import { ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents } from "./types";
+import {
+  $Exposing, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents,
+  ClientEvents, RemoteCallback, RemoteResponse, ServerEvents,
+  isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf,
+  getDependents
+} from "../../socket";
 
 export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
   constructor(httpServer: http.Server, path: string) {
@@ -23,7 +24,7 @@ export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
   }
 }
 
-export type Socket = IOSocket<ClientEvents, ServerEvents>;
+export type Socket<Data = any> = IOSocket<ClientEvents, ServerEvents, {}, Data>;
 
 type Handlers = {
   [key in keyof ClientEvents]: (socket: Socket, ...args: Parameters<ClientEvents[key]>) => any;
@@ -178,6 +179,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
             message: `${e.message || e}`
           }
 
+          // TODO: Logger
           console.error(e);
         }
       } else {
