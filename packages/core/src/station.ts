@@ -508,13 +508,15 @@ export class Station extends TypedEmitter<StationEvents> {
     return true;
   }
 
-  updateCollectionOptions(id: MusicCollectionDescriptor['id'], options: TrackCollectionBasicOptions) {
+  updateCollectionOptions(id: MusicCollectionDescriptor['id'], fn: (options: TrackCollectionBasicOptions) => TrackCollectionBasicOptions) {
     if (!this.hasCollection(id)) {
       return false;
     }
 
-    const collection = this.#library.get(id)!
-    collection.options = { ...options };
+    const collection = this.#library.get(id)!;
+
+    collection.options = fn(collection.options);
+
     this.emit('collectionUpdated', collection);
   }
 

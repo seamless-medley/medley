@@ -167,7 +167,7 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
     return knownExtRegExp.test(filename);
   }
 
-  async #transform(paths: string[], fn: (tracks: T[]) => Promise<any>) {
+  async #transform(paths: string[], onChunkCreated: (tracks: T[]) => Promise<any>) {
     const validPaths = chain(paths)
       .castArray()
       .map(p => normalizePath(p))
@@ -176,7 +176,7 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
       .value();
 
     if (!validPaths?.length) {
-      fn([]);
+      onChunkCreated([]);
       return [];
     }
 
@@ -184,17 +184,17 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
 
     for (const group of chunk(validPaths, 25 * os.cpus().length)) {
       const created = await Promise.all(group.map(async p => await this.createTrack(p, await this.getTrackId(p))));
-      await fn(created).then(breath);
+      await onChunkCreated(created).then(breath);
       immediateTracks.push(...created);
     }
 
     return immediateTracks;
   }
 
-  async add(paths: string[], mode?: TrackAddingMode, fn?: () => any): Promise<T[]> {
+  async add(paths: string[], mode?: TrackAddingMode, onChunkAdded?: () => any): Promise<T[]> {
     return this.#transform(paths, async created => {
       await this.#addTracks(created, mode);
-      await fn?.();
+      await onChunkAdded?.();
     });
   }
 

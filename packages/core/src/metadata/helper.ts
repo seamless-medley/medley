@@ -76,7 +76,10 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   }
 
   async metadata(path: string) {
-    const m = await this.#runIfNeeded(`metadata:${path}`, async () => this.exec('metadata', path).then(omitBy(falsy)));
+    const m = await this.#runIfNeeded(
+      `metadata:${path}`,
+      async () => this.exec('metadata', path).then(omitBy(falsy))
+    );
     return (m ?? {}) as Metadata;
   }
 
