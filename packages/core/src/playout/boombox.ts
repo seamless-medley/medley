@@ -296,7 +296,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
   #lastRequestId = 0;
 
-  request(track: BoomBoxTrack, requestedBy?: R): TrackIndex<TrackWithRequester<BoomBoxTrack, R>> {
+  async request(track: BoomBoxTrack, requestedBy?: R): Promise<TrackIndex<TrackWithRequester<BoomBoxTrack, R>> | undefined> {
     const existing = this.#requests.fromId(track.id);
 
     if (existing) {
@@ -312,6 +312,13 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
         index: this.#requests.indexOf(existing),
         track: existing
       }
+    }
+
+    const loadable = await this.#isTrackLoadable(track.path);
+
+    if (!loadable) {
+      this.#logger.warn({ path: track.path }, 'Could not make a request, track is not loadable');
+      return;
     }
 
     // This is a shallow copy
@@ -390,6 +397,8 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
       if (await this.#isTrackLoadable(track.path)) {
         return track;
       }
+
+      this.#logger.warn({ path: track.path }, 'Skipping request, track is unloadable');
     }
 
     return undefined;
@@ -445,8 +454,16 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
       const requestedTrack = await this.#fetchRequestTrack();
       if (requestedTrack) {
+        const loadable = await this.#isTrackLoadable(requestedTrack.path);
+
+        if (!loadable) {
+          this.#logger.warn({ path: requestedTrack.path }, 'The request is invalid');
+          return;
+        }
+
         await this.#onInsertRequestTrack?.(requestedTrack);
         addToQueue(requestedTrack);
+
         return;
       }
 

@@ -188,7 +188,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     .setPlaceholder('Select a track')
 
   const makeRequest = async (trackId: string, interaction: MessageComponentInteraction, runningKey: string, done: () => Promise<void>) => {
-    const ok = await station.request(
+    const result = await station.request(
       trackId,
       makeAudience(
         AudienceType.Discord,
@@ -198,11 +198,18 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       noSweep
     );
 
-    if (ok === false || ok.index < 0) {
-      onGoing.delete(runningKey);
+    if (typeof result === 'string' || result.index < 0) {
+      await done();
+
+      const reason = typeof result === 'string'
+        ? result
+        : 'invalid';
 
       interaction.update({
-        content: makeColoredMessage('red', 'Track could not be requested for some reasons'),
+        content: makeColoredMessage(
+          'red',
+          `The track could not be requested: ${reason}`
+        ),
         components: []
       });
 
@@ -210,13 +217,13 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     }
 
     const preview = await makeRequestPreview(station, {
-      bottomIndex: ok.index,
-      focusIndex: ok.index,
+      bottomIndex: result.index,
+      focusIndex: result.index,
       guildId
     });
 
     await interaction.update({
-      content: `Request accepted: ${bold(inlineCode(getTrackBanner(ok.track)))}`,
+      content: `Request accepted: ${bold(inlineCode(getTrackBanner(result.track)))}`,
       components: []
     });
 

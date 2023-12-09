@@ -597,18 +597,18 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
-  async request(trackId: StationTrack['id'], requestedBy: Audience, noSweep?: boolean) {
+  async request(trackId: StationTrack['id'], requestedBy: Audience, noSweep?: boolean): Promise<TrackIndex<StationRequestedTrack> | string> {
     const track = this.findTrackById(trackId);
 
     if (!track) {
-      return false;
+      return 'Unknown track';
     }
 
-    if (!MetadataHelper.isTrackLoadable(track.path)) {
-      return false;
-    }
+    const requestedTrack = await this.#boombox.request(track, requestedBy);
 
-    const requestedTrack = this.#boombox.request(track, requestedBy);
+    if (!requestedTrack) {
+      return 'Track could not be loaded';
+    }
 
     (requestedTrack.track as StationRequestedTrack).disallowSweepers = noSweep;
 
@@ -625,7 +625,7 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#boombox.allRequests;
   }
 
-  peekRequests(bottomIndex: number, n: number, filterFn?: (track: TrackWithRequester<BoomBoxTrack, Audience>) => boolean) {
+  peekRequests(bottomIndex: number, n: number, filterFn?: (track: StationRequestedTrack) => boolean) {
     return this.#boombox.allRequests.peek(bottomIndex, n, filterFn ?? (() => true));
   }
 
