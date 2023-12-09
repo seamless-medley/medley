@@ -5,7 +5,7 @@ import {
   Client, Guild,
   GatewayIntentBits, Message,
   OAuth2Guild,
-  Snowflake, ChannelType, PermissionsBitField, PartialMessage, GuildBasedChannel, TextChannel, MessageReaction, PartialMessageReaction, ReactionEmoji, Emoji
+  Snowflake, ChannelType, PermissionsBitField, PartialMessage, TextChannel, MessageReaction, PartialMessageReaction, Emoji
 } from "discord.js";
 
 import {

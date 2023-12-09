@@ -12,6 +12,9 @@ import {
   isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf,
   getDependents
 } from "../../socket";
+import { createLogger } from '@seamless-medley/logging';
+
+const logger = createLogger({ name: 'socket-server' });
 
 export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
   constructor(httpServer: http.Server, path: string) {
@@ -179,8 +182,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
             message: `${e.message || e}`
           }
 
-          // TODO: Logger
-          console.error(e);
+          logger.error({ err: e, kind, id, key }, `Error inreracting`);
         }
       } else {
         resp = {
