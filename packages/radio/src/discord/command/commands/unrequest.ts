@@ -1,9 +1,9 @@
 import { parse as parsePath } from 'path';
 import { CommandInteraction, Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageActionRowComponentBuilder, StringSelectMenuBuilder, userMention } from "discord.js";
-import { truncate } from "lodash";
+import { chain, truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, reply, makeColoredMessage, makeAnsiCodeBlock, joinStrings } from "../utils";
-import { AudienceType, isRequestTrack, makeAudience } from '@seamless-medley/core';
+import { AudienceType, BoomBoxTrack, TrackWithRequester, getTrackBanner, isRequestTrack, makeAudience } from '@seamless-medley/core';
 import { ansi } from '../../format/ansi';
 import { interact } from '../interactor';
 
@@ -81,21 +81,27 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       const requestIds = collected.values.map(v => parseInt(v, 36));
       const unrequested = station.unrequest(requestIds);
 
-      // TODO: test this
-      const alreadyLoaded = unrequested
-        ? [0, 1, 2]
-            .map(i => station.getDeckInfo(i).trackPlay?.track)
-            .filter(isRequestTrack)
-            .some(t => requestIds.includes(t.rid))
-        : false;
+      const banners = unrequested.removed.map(getTrackBanner);
+      const loadedRequests = chain([0, 1, 2])
+        .map(i => station.getDeckInfo(i).trackPlay?.track)
+        .filter((t): t is TrackWithRequester<BoomBoxTrack, any> => isRequestTrack(t) && requestIds.includes(t.rid))
+        .value();
 
-      // TODO: Print the details
       collected.update({
         components: [],
-        content: joinStrings(makeAnsiCodeBlock([
-          ansi`{{green}}OK{{reset}}, {{pink}}${unrequested.removed.length}{{reset}} track(s) canceled`,
-          alreadyLoaded ? '{{pink|b}}{{bgDarkBlue}}Some tracks are loaded and cannot be canceled' : undefined
-        ]))
+        content: joinStrings([
+          ...makeAnsiCodeBlock([
+            ansi`{{green}}OK{{reset}}, {{pink}}${banners.length}{{reset}} track(s) canceled`,
+            ...banners
+          ]),
+          ...(loadedRequests.length
+            ? makeAnsiCodeBlock([
+              'The following track(s) are already loaded and cannot be cancelled',
+              ...loadedRequests.map(getTrackBanner)
+            ])
+            : []
+          )
+        ])
       });
     }
   });
