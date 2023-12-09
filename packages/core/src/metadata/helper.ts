@@ -5,6 +5,7 @@ import { WorkerPoolAdapter } from '../worker_pool_adapter';
 import { MusicDb } from '../library/music_db';
 import { omitBy, negate } from 'lodash/fp';
 import { BoomBoxCoverAnyLyrics } from '../playout';
+import { stubFalse } from 'lodash';
 
 let instance: MetadataHelper;
 
@@ -117,7 +118,12 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   }
 
   async isTrackLoadable(path: string) {
-    return this.#runIfNeeded(`isTrackLoadable:${path}`, async () => this.exec('isTrackLoadable', path), 500);
+    return this.#runIfNeeded(
+      `isTrackLoadable:${path}`,
+      async () => this.exec('isTrackLoadable', path),
+      { ttl: 500, timeout: 500 }
+    )
+    .catch(stubFalse);
   }
 
   async searchLyrics(artist: string, title: string) {
