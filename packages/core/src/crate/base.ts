@@ -1,4 +1,4 @@
-import { isFunction, random, sample, shuffle, sortBy, sumBy } from "lodash";
+import { isFunction, random, sample, shuffle, sortBy, stubFalse, sumBy } from "lodash";
 import { Track } from "../track";
 import { createLogger, Logger } from '@seamless-medley/logging';
 import { createNamedFunc, weightedSample } from "@seamless-medley/utils";
@@ -233,7 +233,13 @@ export class Crate<T extends Track<any>> {
 
     source.push(item);
 
-    const isValid = validator ? await validator(item.path) : true;
-    return isValid ? item as T : undefined;
+    const isValid = validator ? await validator(item.path).catch(stubFalse) : true;
+
+    if (!isValid) {
+      this.#logger.warn('Invalid track: %s', item.path);
+      return undefined;
+    }
+
+    return item as T;
   }
 }
