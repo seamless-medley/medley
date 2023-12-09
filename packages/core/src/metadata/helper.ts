@@ -29,6 +29,18 @@ interface Methods {
   searchLyrics(artist: string, title: string): { lyrics: string[], source: BoomBoxCoverAnyLyrics['lyricsSource'] } | undefined;
 }
 
+type RunIfNeededOptions = {
+  ttl?: number;
+  timeout?: number;
+}
+
+class TaskTimeoutError extends Error {
+  constructor(cause: Error) {
+    super('Task timed out');
+    this.cause = cause;
+  }
+}
+
 export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   constructor(workerType?: WorkerPoolOptions['workerType']) {
     super(__dirname + '/worker.js', { workerType });
@@ -36,20 +48,30 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
 
   #ongoingTasks = new Map<string, Promise<any>>();
 
-  async #runIfNeeded<E extends () => Promise<any>, R = E extends () => Promise<infer R> ? R : unknown>(key: string, executor: E, ttl: number = 1000): Promise<R> {
+  async #runIfNeeded<E extends () => Promise<any>, R = E extends () => Promise<infer R> ? R : unknown>(
+    key: string,
+    executor: E,
+    { ttl = 1000, timeout }: RunIfNeededOptions = {}
+  ): Promise<R>
+  {
     const ongoingTasks = this.#ongoingTasks;
 
     if (ongoingTasks.has(key)) {
       return ongoingTasks.get(key) as Promise<R>;
     }
 
-    const promise = new Promise<R>((resolve, reject) => void executor()
-      .then(resolve)
-      .catch(reject))
-      .finally(() => void setTimeout(() => ongoingTasks.delete(key), ttl));
+    const promise = new Promise<R>(async (resolve, reject) => {
+      if (timeout) {
+        const cause = new Error();
+        setTimeout(() => reject(new TaskTimeoutError(cause)), timeout);
+      }
 
+      executor().then(resolve).catch(reject);
+    });
+
+    const removeOnGoing = () => void setTimeout(() => ongoingTasks.delete(key), ttl);
     ongoingTasks.set(key, promise);
-    return promise;
+    return promise.finally(removeOnGoing);
   }
 
   async metadata(path: string) {
