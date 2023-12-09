@@ -63,8 +63,8 @@ export class Normal extends TrackMessageCreator {
 
 
     if (data.latch) {
-      const { order, session } = data.latch;
-      embed.addFields({ name: 'Latch', value: `${order} of ${session.max}` });
+      const { order: [count, max] } = data.latch;
+      embed.addFields({ name: 'Latch', value: `${count} of ${max}` });
     }
 
     const requesters = extractRequestersForGuild(guildId, requestedBy || []);

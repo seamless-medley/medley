@@ -432,10 +432,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
               : undefined,
             o: track.sequencing?.playOrder,
             l: track.sequencing?.latch
-              ?  [
-                track.sequencing.latch.order,
-                track.sequencing.latch.max
-              ]
+              ? track.sequencing.latch.order
               : undefined
           },
           'Track queued',

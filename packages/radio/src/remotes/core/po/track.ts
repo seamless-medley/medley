@@ -116,12 +116,10 @@ export const toTrackSequencing = ({ playOrder, crate, latch }: Sequencing): Trac
 export const toTrackSequencingLatch = (
   {
     order,
-    max,
     session
   }: SequencingLatch
 ): TrackSequencingLatch => ({
   order,
-  max,
   session: toLatchSession(session)
 });
 
@@ -129,12 +127,12 @@ export const toLatchSession = (
   {
     uuid,
     count,
-    max,
+    max: max,
     collection
   } : NonNullable<SequencingLatch['session']>
 ): LatchSession => ({
   uuid,
   count,
-  max,
+  max: max,
   collection: pickId(collection)
 })

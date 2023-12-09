@@ -180,7 +180,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     let ignored = 0;
     let count = this.#crates.length;
     while (count-- > 0) {
-      const latchSession = this.getActiveLatch();
+      let latchSession = this.getActiveLatch();
 
       if (latchSession) {
         const located = this.locateCrate(latchSession.collection.id);
@@ -224,6 +224,13 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
           scanned += source.length;
 
           for (let i = 0; i < source.length; i++) {
+            if (latchSession && latchSession.count>= latchSession.max) {
+              // Ends latching
+              this.#logger.info('End latch session for %s', latchSession.collection.id);
+              this.removeLatch(latchSession);
+              latchSession = undefined;
+            }
+
             // Check the #playCounter only if the latching is not active
             if (latchSession === undefined && (this.#playCounter + 1) > crate.max) {
               // Stop searching for next track and flow to the next crate
@@ -260,13 +267,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
                   latch = {
                     session: latchSession,
-                    order: latchSession.count,
-                    max: latchSession.max
-                  }
-
-                  if (latchSession.count>= latchSession.max) {
-                    // Ends latching
-                    this.removeLatch(latchSession);
+                    order: [latchSession.count, latchSession.max]
                   }
                 }
 
@@ -404,7 +405,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     }
 
     this.#logger.info(
-      { uuid: newSession.uuid, collection: newSession.collection.id, max: newSession.max },
+      { uuid: newSession.uuid, collection: newSession.collection.id },
       'Created a new latch session'
     )
 
