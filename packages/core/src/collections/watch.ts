@@ -175,7 +175,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
 
     if (info.subscription) {
       this.logger.info(`Resume subscription for ${dir}`);
-      this.#scan(dir);
+      await this.#scan(dir);
     }
   }
 
