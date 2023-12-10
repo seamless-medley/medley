@@ -41,7 +41,7 @@ public:
 
     void mainDeckChanged(medley::Deck& sender, medley::TrackPlay& track) override;
 
-    void log(medley::LogLevel level, std::string& name, std::string& msg) const override;
+    void log(medley::LogLevel level, juce::String& name, juce::String& msg) const override;
 
     void audioDeviceChanged() override;
 

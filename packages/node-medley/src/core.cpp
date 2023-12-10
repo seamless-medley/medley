@@ -373,14 +373,14 @@ void Medley::audioDeviceChanged() {
     });
 }
 
-void Medley::log(medley::LogLevel level, std::string& name, std::string& msg) const {
+void Medley::log(medley::LogLevel level, juce::String& name, juce::String& msg) const {
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function emitFn) {
         try {
             emitFn.Call(self.Value(), {
                 Napi::String::New(env, "log"),
                 Napi::Number::New(env, static_cast<int8_t>(level)),
-                Napi::String::New(env, name),
-                Napi::String::New(env, msg)
+                Napi::String::New(env, name.toRawUTF8()),
+                Napi::String::New(env, msg.toRawUTF8())
             });
         } catch (...) {
 
