@@ -4,7 +4,7 @@ import { stubFalse } from 'lodash';
 
 async function main() {
   if (!existsSync('out')) {
-    console.error('Invoke `pnpm run build` first');
+    console.error('Invoke `pnpm build` first');
     process.exit(1);
   };
 
