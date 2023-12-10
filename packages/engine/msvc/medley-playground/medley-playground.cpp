@@ -5,32 +5,12 @@
 #include <algorithm>
 
 #include "Medley.h"
+#include "ConsoleLogWriter.h"
 
 #include <juce_opengl/juce_opengl.h>
 
 using namespace juce;
 using namespace medley;
-
-class ConsoleLogger : public Logger {
-public:
-    ConsoleLogger()
-    {
-        out = GetStdHandle(STD_OUTPUT_HANDLE);
-    }
-protected:
-    void logMessage(const String& message) override {
-        String line(message + "\n");
-        if (out != NULL && out != INVALID_HANDLE_VALUE) {
-            DWORD written = 0;
-            WriteConsole(out, line.toWideCharPointer(), line.length(), &written, nullptr);
-        }
-        else {
-            OutputDebugString(line.toWideCharPointer());
-        }
-    }
-
-    HANDLE out = INVALID_HANDLE_VALUE;
-};
 
 class Track : public medley::ITrack {
 public:
@@ -70,16 +50,14 @@ class MedleyApp : public JUCEApplication {
 public:
     void initialise(const String& commandLine) override
     {
-        logger = std::make_unique<ConsoleLogger>();
-
-        ConsoleLogger::setCurrentLogger(logger.get());
-        myMainWindow.reset(new MainWindow());
+        logWriter = std::make_unique<ConsoleLogWriter>();        
+        myMainWindow.reset(new MainWindow(logWriter.get()));
         myMainWindow->setVisible(true);
     }
 
     void shutdown() override {
         myMainWindow = nullptr;
-        logger.release();
+        logWriter.release();
     }
 
     const juce::String getApplicationName() override { return "Medley Playground"; }
@@ -88,7 +66,7 @@ public:
 
 private:
 
-    std::unique_ptr<ConsoleLogger> logger;
+    std::unique_ptr<ConsoleLogWriter> logWriter;
 
     class PlayHead : public Component, public ChangeListener {
     public:
@@ -938,10 +916,10 @@ private:
         public medley::Medley::Callback,
         public PlayHead::Callback {
     public:
-        MainContentComponent() :
+        MainContentComponent(ILoggerWriter* logWriter) :
             Component(),
             model(queue),
-            medley(queue),
+            medley(queue, logWriter),
             queueListBox(model),
             btnShuffle("Shuffle"),
             btnAdd("Add"),
@@ -1297,11 +1275,11 @@ private:
 
     class MainWindow : public DocumentWindow {
     public:
-        explicit MainWindow()
+        explicit MainWindow(ILoggerWriter* logWriter)
             : DocumentWindow("Medley Playground", Colours::white, DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar(true);
-            setContentOwned(new MainContentComponent(), true);
+            setContentOwned(new MainContentComponent(logWriter), true);
             setBounds(100, 50, 800, 830);
             setResizable(true, false);
             setVisible(true);

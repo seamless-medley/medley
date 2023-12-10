@@ -9,7 +9,7 @@
 
 namespace medley {
 
-Medley::Medley(IQueue& queue)
+Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
     :
     mixer(*this),
     queue(queue),
@@ -20,6 +20,8 @@ Medley::Medley(IQueue& queue)
 #if JUCE_WINDOWS
     static_cast<void>(::CoInitialize(nullptr));
 #endif
+    logger = std::make_unique<medley::Logger>(std::string( "medley"), logWriter);
+
     updateFadingFactor();
 
     auto error = deviceMgr.initialiseWithDefaultDevices(0, 2);
@@ -36,7 +38,7 @@ Medley::Medley(IQueue& queue)
     deviceMgr.addChangeListener(&mixer);
 
     for (int i = 0; i < numDecks; i++) {
-        decks[i] = new Deck(i, "Deck " + String(i), formatMgr, loadingThread, readAheadThread);
+        decks[i] = new Deck(i, "Deck " + String(i), logWriter, formatMgr, loadingThread, readAheadThread);
         decks[i]->addListener(this);
         mixer.addInputSource(decks[i], false);
     }
@@ -127,7 +129,7 @@ void Medley::updateTransition(Deck* deck) {
         auto pState = &decksTransition[d->index].state;
 
         if (*pState == DeckTransitionState::TransitToNext) {
-            d->log("Update Transition");
+            d->log(LogLevel::Debug, "Update Transition");
 
             auto position = d->getPosition();
             auto transitionStartPos = d->getTransitionStartPosition();
@@ -224,12 +226,12 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
     auto nextDeck = getNextDeck(currentDeck);
 
     if (nextDeck == nullptr) {
-        currentDeck->log("Could not find another deck");
+        currentDeck->log(LogLevel::Error, "Could not find another deck");
         return;
     }
 
     if (nextDeck->isTrackLoading) {
-        nextDeck->log("is busy loading some track");
+        nextDeck->log(LogLevel::Error, "Busy loading some track");
         nextDeck->unloadTrack();
     }
 
@@ -339,7 +341,7 @@ inline String Medley::getDeckName(Deck& deck) {
 }
 
 void Medley::deckStarted(Deck& sender, TrackPlay& trackPlay) {
-    sender.log("Started");
+    sender.log(LogLevel::Debug, "Started");
 
     auto markedAsMain = false;
 
@@ -380,7 +382,7 @@ void Medley::deckLoaded(Deck& sender, TrackPlay& trackPlay)
 }
 
 void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
-    sender.log("Unloaded");
+    sender.log(LogLevel::Debug, "Unloaded");
 
     auto nextDeck = getNextDeck(&sender);
 
@@ -389,7 +391,7 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
         decksTransition[sender.index].fader.resetTime();
 
         if (nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
-            sender.log("Stopped before transition would happen, try starting next deck");
+            sender.log(LogLevel::Warn, "Stopped before transition would happen, try starting next deck");
             nextDeck->start();
         }
     }
@@ -480,6 +482,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                                 if (keepPlaying && !isDeckPlaying()) {
                                     // Playing has stopped during enqueuing phase and caused the timing to stop either
                                     // re-trigger timing
+                                    logger->warn(std::string("Enqueuing had been stalled and could not provide track in time"));
                                     deckPosition(*_sender, cuePos + 0.1);
                                     pTransition->state = DeckTransitionState::Idle;
                                     return;
@@ -555,7 +558,7 @@ void Medley::doTransition(Deck* deck, double position) {
 
         if (position > nextDeckStart) {
             if (pTransition->state == DeckTransitionState::NextIsReady) {
-                nextDeck->log("Transiting to this deck");
+                nextDeck->log(LogLevel::Debug, "Transiting to this deck");
 
                 pTransition->state = DeckTransitionState::TransitToNext;
 
@@ -602,7 +605,7 @@ void Medley::doTransition(Deck* deck, double position) {
             }
 
             if (newVolume != nextDeck->getVolume()) {
-                //nextDeck->log(String::formatted("Fading in: %.2f", newVolume));
+                nextDeck->log(LogLevel::Trace, String::formatted("Fading in: %.2f", newVolume).toStdString());
                 nextDeck->setVolume(newVolume);
             }
         }
@@ -616,7 +619,7 @@ void Medley::doTransition(Deck* deck, double position) {
 
             auto newVolume = position >= pTransition->fader.getTimeStart() ? pTransition->fader.update(position) : 1.0f;
             if (newVolume != currentVolume) {
-                deck->log(String::formatted("Fading out: %.2f", newVolume));
+                deck->log(LogLevel::Trace, String::formatted("Fading out: %.2f", newVolume).toStdString());
                 deck->setVolume(newVolume);
             }
         }
@@ -779,9 +782,8 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
 
     if (!outputStarted) {
         outputStarted = true;
-#ifdef DEBUG
-        Logger::writeToLog("Output started");
-#endif
+
+        medley.logger->info(std::string("Output started"));
     }
 
     if (!stalled) {

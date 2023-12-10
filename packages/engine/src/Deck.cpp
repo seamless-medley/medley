@@ -19,7 +19,7 @@ namespace medley {
 
 using namespace medley::utils;
 
-Deck::Deck(uint8_t index, const String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
+Deck::Deck(uint8_t index, const String& name, ILoggerWriter* logWriter, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
     formatMgr(formatMgr),
     loadingThread(loadingThread),
@@ -30,6 +30,8 @@ Deck::Deck(uint8_t index, const String& name, AudioFormatManager& formatMgr, Tim
     scanner(*this),
     playhead(*this)
 {
+    logger = std::make_unique<medley::Logger>(name.toStdString(), logWriter);
+
     readAheadThread.setPriority(8);
     readAheadThread.addTimeSliceClient(&playhead);
 }
@@ -39,15 +41,8 @@ Deck::~Deck() {
     unloadTrackInternal();
 }
 
-String Deck::tagName() const
-{
-    return "[" + name + "]";
-}
-
-void Deck::log(const String& s) {
-#ifdef DEBUG
-    Logger::writeToLog(tagName() + " " + s);
-#endif
+void Deck::log(medley::LogLevel level, const String& s) {
+    logger->log(level, s.toStdString());
 }
 
 double Deck::getDuration() const
@@ -90,11 +85,11 @@ void Deck::unloadTrack()
 
 bool Deck::loadTrackInternal(const ITrack::Ptr track)
 {
-    log("Loading: " + track->getFile().getFullPathName());
+    logger->debug(("Loading: " + track->getFile().getFullPathName()).toStdString());
     auto newReader = utils::createAudioReaderFor(formatMgr, track);
 
     if (!newReader) {
-        log("Could not create format reader");
+        logger->warn(std::string("Could not create format reader"));
         isTrackLoading = false;
         return false;
     }
@@ -109,7 +104,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
         m_metadata.readFromTrack(track);
     }
     catch (std::exception& e) {
-        log("Error reading metadata: " + track->getFile().getFullPathName() + " " + e.what());
+        logger->error(("Error reading metadata: " + track->getFile().getFullPathName() + " " + e.what()).toStdString());
     }
 
     auto mid = reader->lengthInSamples / 2;
@@ -207,10 +202,10 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     scanner.scan(track);
     loadingThread.addTimeSliceClient(&scanner);
 
-    log(String::formatted("Loaded - leading@%.2f duration=%.2f", leadingSamplePosition / reader->sampleRate, leadingDuration));
+    logger->debug(String::formatted("Loaded - leading@%.2f duration=%.2f", leadingSamplePosition / reader->sampleRate, leadingDuration).toStdString());
 
     setReplayGain(m_metadata.getTrackGain());
-    log(String::formatted("Gain correction: %.2fdB", Decibels::gainToDecibels(gainCorrection)));
+    logger->debug(String::formatted("Gain correction: %.2fdB", Decibels::gainToDecibels(gainCorrection)).toStdString());
 
     this->reader = reader;
 
@@ -373,13 +368,13 @@ int64 Deck::findFadingPosition(AudioFormatReader* reader, int64 startSample, int
     }
 
     if (result > startPosition) {
-        log(String::formatted("Fading out at %.2f", result / reader->sampleRate));
+        logger->debug(String::formatted("Fading out at %.2f", result / reader->sampleRate).toStdString());
     }
 
     auto boring = findBoring(reader, lastFadingPosition, endPosition);
     if (boring > lastFadingPosition && boring < result) {
         result = boring;
-        log(String::formatted("Boring at %.2f", boring / reader->sampleRate));
+        logger->debug(String::formatted("Boring at %.2f", boring / reader->sampleRate).toStdString());
     }
 
     return result;
@@ -393,7 +388,7 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
         return;
     }
 
-    log("Scanning");
+    logger->debug(std::string("Scanning"));
 
     listeners.call([this](Callback& cb) {
         cb.deckTrackScanning(*this);
@@ -463,14 +458,14 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
     disableNextTrackLeadIn = trackToScan->getDisableNextTrackLeadIn();
 
     if (trailingDuration > 0) {
-        log(String::formatted(
+        logger->debug(String::formatted(
             "Scanned - trailing@%.2f/%.2f duration=%.2f",
             trailingSamplePosition / scanningReader->sampleRate,
             totalSourceSamplesToPlay / scanningReader->sampleRate,
             trailingDuration
-        ));
+        ).toStdString());
     } else {
-        log("Scanned - no trailing found");
+        logger->debug(std::string("Scanned - no trailing found"));
     }
 
     listeners.call([this](Callback& cb) {
@@ -644,7 +639,7 @@ bool Deck::isLooping() const
 
 bool Deck::start()
 {
-    log("Try to start playing");
+    logger->debug(std::string("Try to start playing"));
     if ((!playing || internallyPaused) && resamplerSource != nullptr)
     {
         if (!internallyPaused) {
@@ -681,7 +676,7 @@ void Deck::fireFinishedCallback()
         return;
     }
 
-    log("Finished");
+    logger->debug(std::string("Finished"));
 
     listeners.call([this](Callback& cb) {
         cb.deckFinished(*this, this->trackPlay);

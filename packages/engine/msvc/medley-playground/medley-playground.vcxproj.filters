@@ -105,6 +105,9 @@
     <ClCompile Include="..\..\src\NullAudioDevice.cpp">
       <Filter>Engine Source</Filter>
     </ClCompile>
+    <ClCompile Include="ConsoleLogWriter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h">
@@ -157,6 +160,12 @@
     </ClInclude>
     <ClInclude Include="..\..\src\NullAudioDevice.h">
       <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ILogger.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ConsoleLogWriter.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

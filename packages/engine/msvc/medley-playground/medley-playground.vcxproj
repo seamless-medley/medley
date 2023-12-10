@@ -207,12 +207,14 @@
     <ClCompile Include="..\..\src\PostProcessor.cpp" />
     <ClCompile Include="..\..\src\ReductionCalculator.cpp" />
     <ClCompile Include="..\..\src\utils.cpp" />
+    <ClCompile Include="ConsoleLogWriter.cpp" />
     <ClCompile Include="medley-playground.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h" />
     <ClInclude Include="..\..\src\Deck.h" />
     <ClInclude Include="..\..\src\Fader.h" />
+    <ClInclude Include="..\..\src\ILogger.h" />
     <ClInclude Include="..\..\src\ITrack.h" />
     <ClInclude Include="..\..\src\LevelSmoother.h" />
     <ClInclude Include="..\..\src\LevelTracker.h" />
@@ -227,6 +229,7 @@
     <ClInclude Include="..\..\src\ReductionCalculator.h" />
     <ClInclude Include="..\..\src\RingBuffer.h" />
     <ClInclude Include="..\..\src\utils.h" />
+    <ClInclude Include="ConsoleLogWriter.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

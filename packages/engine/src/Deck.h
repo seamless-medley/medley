@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include "ITrack.h"
 #include "Metadata.h"
+#include "ILogger.h"
 
 using namespace juce;
 
@@ -29,7 +30,7 @@ public:
 
     typedef std::function<void(bool)> OnLoadingDone;
 
-    Deck(uint8_t index, const juce::String& name, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
+    Deck(uint8_t index, const juce::String& name, ILoggerWriter* logWriter, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread);
 
     ~Deck() override;
 
@@ -199,9 +200,7 @@ private:
         main = mark;
     }
 
-    juce::String tagName() const;
-
-    void log(const juce::String& s);
+    void log(medley::LogLevel level, const juce::String& s);
 
     void fadeOut(bool force = false);
 
@@ -281,6 +280,8 @@ private:
     bool fading = false;
 
     Metadata m_metadata;
+
+    std::unique_ptr<Logger> logger;
 };
 
 }

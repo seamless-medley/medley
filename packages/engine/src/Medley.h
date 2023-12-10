@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 
+#include "ILogger.h"
 #include "Deck.h"
 #include "PostProcessor.h"
 #include "LevelTracker.h"
@@ -45,7 +46,7 @@ public:
 
     static constexpr int numDecks = 3;
 
-    Medley(IQueue& queue);
+    Medley(IQueue& queue, ILoggerWriter* logWriter);
 
     virtual ~Medley();
 
@@ -331,6 +332,9 @@ private:
 
     CriticalSection audioCallbackLock;
     AudioCallback* audioCallback = nullptr;
+
+    ILoggerWriter* logWriter;
+    std::unique_ptr<Logger> logger;
 };
 
 }
