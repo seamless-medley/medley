@@ -186,7 +186,7 @@ setInterval(() => {
 
 ## Normalizing tracks audio level
 
-[ReplayGain](https://en.wikipedia.org/wiki/ReplayGain) can be use to analyze for the adjustment to the perceived loudness of audio tracks.
+[ReplayGain](https://en.wikipedia.org/wiki/ReplayGain) can be used to analyze for the adjustment to the perceived loudness of audio tracks.
 
 `node-medley` supports reading ReplayGain `Track-gain` metadata embeded in audio files.
 
@@ -278,10 +278,13 @@ See also:
 This is the main class, the constructor accepts an instance of [Queue](#queue-class) class.
 
 ```ts
-new Medley(queue)
+new Medley(queue, options)
 ```
 
 > **NOTE**: JavaScript `Array` cannot be used as a queue.
+
+#### Options?
+- `logging` *(boolean?)* - Enable logging, See [*log* event](#log)
 
 **Methods**
 ### `play(shouldFade = true)`
@@ -565,6 +568,26 @@ See [Dynamic quque](#dynamic-queue)
 
 Emits when the audio device has changed, use [getAudioDevice](#getaudiodevice) method to get the audio device.
 
+## `log`
+Emits when a log message has been pushed from the native module.
+
+> Logging must be enabled when constructing the Medley instance, see [Medley class options](#options)
+
+*Parameter:*
+- `level` *(number)* - Log level
+
+    | name |value|
+    |------|-----|
+    |trace | -1  |
+    |------|-----|
+    |debug |  0  |
+    |info  |  1  |
+    |warn  |  2  |
+    |error |  3  |
+    |fatal |  4  |
+
+- `name` *(string)* - The logger's name
+- `msg` *(string)* - Log message
 
 **Static methods**
 
