@@ -19,6 +19,7 @@ jobs:
         with:
           node-version: 18
           architecture: x64
+          registry-url: https://registry.npmjs.org
 
       - uses: pnpm/action-setup@v2
         with:
@@ -76,6 +77,6 @@ jobs:
       - name: Publish
         working-directory: ${{ env.NODE_MEDLEY_DIR }}
         run: |
-          pnpm publish ./dist --no-git-checks --dry-run
+          pnpm publish ./dist --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
