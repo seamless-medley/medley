@@ -218,20 +218,33 @@ Medley::Medley(const CallbackInfo& info)
         return;
     }
 
+    bool logging = false;
+
+    auto arg2 = info[1];
+    if (arg2.IsObject()) {
+        auto options = arg2.ToObject();
+        if (options.Has("logging")) {
+            auto l = options.Get("logging");
+            if (l.IsBoolean()) {
+                logging = l.ToBoolean().Value();
+            }
+        }
+    }
+
     self = Persistent(info.This());
     queueJS = Persistent(obj);
 
     try {
-        queue = Queue::Unwrap(obj);
-        engine = new Engine(*queue);
-        engine->addListener(this);
-        engine->setAudioCallback(this);
-
         threadSafeEmitter = ThreadSafeFunction::New(
             env, info.This().ToObject().Get("emit").As<Function>(),
             "Medley Emitter",
             0, 1
         );
+
+        queue = Queue::Unwrap(obj);
+        engine = new Engine(*queue, logging ? this : nullptr);
+        engine->addListener(this);
+        engine->setAudioCallback(this);
     }
     catch (std::exception const& e) {
         throw Napi::Error::New(info.Env(), e.what());
@@ -360,6 +373,21 @@ void Medley::audioDeviceChanged() {
     });
 }
 
+void Medley::log(medley::LogLevel level, std::string& name, std::string& msg) const {
+    threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function emitFn) {
+        try {
+            emitFn.Call(self.Value(), {
+                Napi::String::New(env, "log"),
+                Napi::Number::New(env, static_cast<int8_t>(level)),
+                Napi::String::New(env, name),
+                Napi::String::New(env, msg)
+            });
+        } catch (...) {
+
+        }
+    });
+}
+
 /**
  * Called from Medley
  */
@@ -373,7 +401,7 @@ void Medley::enqueueNext(EnqueueNextDone done) {
 
             emitFn.Call(self.Value(), { Napi::String::New(env, "enqueueNext"), callback });
         } catch (...) {
-            done(Napi::Boolean::New(env, false));
+            done(false);
         }
     });
 }

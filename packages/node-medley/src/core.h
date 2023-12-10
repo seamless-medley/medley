@@ -6,6 +6,7 @@
 #include <RingBuffer.h>
 #include <ITrack.h>
 #include <Fader.h>
+#include <ILogger.h>
 #include "version.h"
 #include "audio/SecretRabbitCode.h"
 #include "track.h"
@@ -15,7 +16,7 @@ using namespace Napi;
 
 using Engine = medley::Medley;
 
-class Medley : public ObjectWrap<Medley>, public Engine::Callback, public Engine::AudioCallback {
+class Medley : public ObjectWrap<Medley>, public Engine::Callback, public Engine::AudioCallback, public medley::ILoggerWriter {
 public:
 
     static void Initialize(Object& exports);
@@ -39,6 +40,8 @@ public:
     void deckUnloaded(medley::Deck& sender, medley::TrackPlay& track) override;
 
     void mainDeckChanged(medley::Deck& sender, medley::TrackPlay& track) override;
+
+    void log(medley::LogLevel level, std::string& name, std::string& msg) const override;
 
     void audioDeviceChanged() override;
 

@@ -112,9 +112,14 @@ export type Listener<T = void> = () => T;
 export type DeckListener<T extends TrackInfo> = (deckIndex: DeckIndex, trackPlay: TrackPlay<T>) => void;
 export type EnqueueCallback = (result: boolean) => void;
 export type EnqueueListener = (done: EnqueueCallback) => void;
+export type LogListener = (level: any, name: string, msg: string) => void;
+
+export type MedleyOptions = {
+  logging?: boolean;
+}
 
 export declare class Medley<T extends TrackInfo = TrackInfo> {
-  constructor(queue: Queue<T>);
+  constructor(queue: Queue<T>, options?: MedleyOptions);
 
   on(event: DeckEvent, listener: DeckListener<T>): this;
   once(event: DeckEvent, listener: DeckListener<T>): this;
@@ -127,6 +132,10 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
   on(event: NormalEvent, listener: Listener): this;
   once(event: NormalEvent, listener: Listener): this;
   off(event: NormalEvent, listener: Listener): this;
+
+  on(event: 'log', listener: LogListener): this;
+  once(event: 'log', listener: LogListener): this;
+  off(event: 'log', listener: LogListener): this;
 
   /**
    * @returns `AudioLevels`
