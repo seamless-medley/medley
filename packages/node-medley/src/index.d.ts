@@ -112,7 +112,7 @@ export type Listener<T = void> = () => T;
 export type DeckListener<T extends TrackInfo> = (deckIndex: DeckIndex, trackPlay: TrackPlay<T>) => void;
 export type EnqueueCallback = (result: boolean) => void;
 export type EnqueueListener = (done: EnqueueCallback) => void;
-export type LogListener = (level: any, name: string, msg: string) => void;
+export type LogListener = (level: number, name: string, msg: string) => void;
 
 export type MedleyOptions = {
   logging?: boolean;
