@@ -20,7 +20,7 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
 #if JUCE_WINDOWS
     static_cast<void>(::CoInitialize(nullptr));
 #endif
-    logger = std::make_unique<medley::Logger>(std::string( "medley"), logWriter);
+    logger = std::make_unique<medley::Logger>("medley", logWriter);
 
     updateFadingFactor();
 
@@ -482,7 +482,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                                 if (keepPlaying && !isDeckPlaying()) {
                                     // Playing has stopped during enqueuing phase and caused the timing to stop either
                                     // re-trigger timing
-                                    logger->warn(std::string("Enqueuing had been stalled and could not provide track in time"));
+                                    logger->warn("Enqueuing had been stalled and could not provide track in time");
                                     deckPosition(*_sender, cuePos + 0.1);
                                     pTransition->state = DeckTransitionState::Idle;
                                     return;
@@ -783,7 +783,7 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
     if (!outputStarted) {
         outputStarted = true;
 
-        medley.logger->info(std::string("Output started"));
+        medley.logger->info("Output started");
     }
 
     if (!stalled) {

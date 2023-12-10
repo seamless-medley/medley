@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <JuceHeader.h>
 
 namespace medley {
 
@@ -15,90 +15,90 @@ enum class LogLevel : int8_t {
 
 class ILoggerWriter {
 public:
-    ILoggerWriter::ILoggerWriter()
+    ILoggerWriter()
     {
 
     }
 
-    virtual void log(medley::LogLevel level, std::string& name, std::string& msg) const = 0;
+    virtual void log(medley::LogLevel level, juce::String& name, juce::String& msg) const = 0;
 
-    inline void trace(std::string& name, std::string& msg) const {
+    inline void trace(juce::String& name, juce::String& msg) const {
         log(LogLevel::Trace, name, msg);
     }
 
-    inline void debug(std::string& name, std::string& msg) const {
+    inline void debug(juce::String& name, juce::String& msg) const {
         log(LogLevel::Debug, name, msg);
     }
 
-    inline void info(std::string& name, std::string& msg) const {
+    inline void info(juce::String& name, juce::String& msg) const {
         log(LogLevel::Info, name, msg);
     }
 
-    inline void warn(std::string& name, std::string& msg) const {
+    inline void warn(juce::String& name, juce::String& msg) const {
         log(LogLevel::Warn, name, msg);
     }
 
-    inline void error(std::string& name, std::string& msg) const {
+    inline void error(juce::String& name, juce::String& msg) const {
         log(LogLevel::Error, name, msg);
     }
 
-    inline void fatal(std::string& name, std::string& msg) const {
+    inline void fatal(juce::String& name, juce::String& msg) const {
         log(LogLevel::Fatal, name, msg);
     }
 };
 
 class Logger {
 public:
-    Logger::Logger(std::string& name, ILoggerWriter* writer)
+    Logger(juce::String name, ILoggerWriter* writer)
         : name(name), impl(writer)
     {
 
     }
 
-    void log(medley::LogLevel level, std::string& msg) {
+    void log(medley::LogLevel level, juce::String msg) {
         if (impl) {
             impl->log(level, name, msg);
         }
     }
 
-    void trace(std::string& msg) {
+    void trace(juce::String msg) {
         if (impl) {
             impl->trace(name, msg);
         }
     }
 
-    void debug(std::string& msg) {
+    void debug(juce::String msg) {
         if (impl) {
             impl->debug(name, msg);
         }
     }
 
-    void info(std::string& msg) {
+    void info(juce::String msg) {
         if (impl) {
             impl->info(name, msg);
         }
     }
 
-    void warn(std::string& msg) {
+    void warn(juce::String msg) {
         if (impl) {
             impl->warn(name, msg);
         }
     }
 
-    void error(std::string& msg) {
+    void error(juce::String msg) {
         if (impl) {
             impl->error(name, msg);
         }
     }
 
-    void fatal(std::string& msg) {
+    void fatal(juce::String msg) {
         if (impl) {
             impl->fatal(name, msg);
         }
     }
 
 private:
-    std::string name;
+    juce::String name;
     ILoggerWriter* impl;
 };
 
