@@ -15,7 +15,7 @@ enum class LogLevel : int8_t {
 
 class ILoggerWriter {
 public:
-    ILoggerWriter::ILoggerWriter()
+    ILoggerWriter()
     {
 
     }
