@@ -72,8 +72,8 @@ importers:
         specifier: ../logging
         version: link:../logging
       '@seamless-medley/medley':
-        specifier: 0.3.4
-        version: 0.3.4
+        specifier: ../node-medley
+        version: link:../node-medley
       '@seamless-medley/utils':
         specifier: ../utils
         version: link:../utils
@@ -2267,12 +2267,6 @@ packages:
   /@sapphire/snowflake@3.5.2:
     resolution: {integrity: sha512-FTm9RdyELF21PQN5dS/HLRs90XqWclHa+p0gkonc+BA2X2QKfFySHSjUbO65rmArd/ghR9Ahj2fMfedTZEqzOw==}
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
-    dev: false
-
-  /@seamless-medley/medley@0.3.4:
-    resolution: {integrity: sha512-zm1Q6OkjmPX8f7EtTnThYPQ+UkQbtMue+ix77fYAt/Ks7JB+pn0Cl5e85k9+84U45DmcGxBfOW1W30uUt5+uOA==}
-    dependencies:
-      node-gyp-build: 4.6.1
     dev: false
 
   /@sindresorhus/is@4.6.0:
