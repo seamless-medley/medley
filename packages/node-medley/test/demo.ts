@@ -2,7 +2,7 @@ import { Medley, Queue } from '..';
 
 async function main() {
   const queue = new Queue();
-  const medley = new Medley(queue);
+  const medley = new Medley(queue, { logging: true });
 
   let index = 0;
 
@@ -36,6 +36,10 @@ async function main() {
   medley.on('finished', (deck) => {
     console.log('Finished', deck);
   });
+
+  medley.on('log', (level, name, string) => {
+    console.log(`[${name}]: ${string}`)
+  })
 
   medley.play();
 }
