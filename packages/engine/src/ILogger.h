@@ -49,7 +49,7 @@ public:
 
 class Logger {
 public:
-    Logger::Logger(std::string& name, ILoggerWriter* writer)
+    Logger(std::string& name, ILoggerWriter* writer)
         : name(name), impl(writer)
     {
 
