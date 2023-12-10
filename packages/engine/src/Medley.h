@@ -171,6 +171,8 @@ public:
     float getReplayGainBoost() const { return decks[0]->getReplayGainBoost(); }
 
 private:
+    friend class Deck;
+
     void loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone done = [](bool) {});
 
     void deckTrackScanning(Deck& sender) override;

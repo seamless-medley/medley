@@ -344,7 +344,8 @@ void Medley::deckStarted(Deck& sender, TrackPlay& trackPlay) {
     auto markedAsMain = false;
 
     auto prevDeck = getPreviousDeck(&sender);
-    if (decksTransition[prevDeck->index].state == DeckTransitionState::Idle) {
+
+    if (!prevDeck->track || decksTransition[prevDeck->index].state == DeckTransitionState::Idle) {
         sender.markAsMain(true);
         markedAsMain = true;
     }
@@ -419,7 +420,6 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
     // Just in case
     if (keepPlaying && !isDeckPlaying()) {
         auto shouldContinuePlaying = (nextDeck->getTrack() != nullptr) || (queue.count() > 0);
-        keepPlaying = shouldContinuePlaying;
 
         if (shouldContinuePlaying) {
             auto deck = &sender;
@@ -471,12 +471,19 @@ void Medley::deckPosition(Deck& sender, double position) {
                     pTransition->state = DeckTransitionState::Enqueue;
                     ScopedLock sl(callbackLock);
 
-
-                    listeners.call([=](Callback& cb) {
+                    auto pSender = &sender;
+                    listeners.call([=, _sender = pSender](Callback& cb) {
                         cb.enqueueNext([=](bool done) {
-
                             if (done) {
                                 pTransition->state = DeckTransitionState::CueNext;
+
+                                if (keepPlaying && !isDeckPlaying()) {
+                                    // Playing has stopped during enqueuing phase and caused the timing to stop either
+                                    // re-trigger timing
+                                    deckPosition(*_sender, cuePos + 0.1);
+                                    pTransition->state = DeckTransitionState::Idle;
+                                    return;
+                                }
                             }
                             else {
                                 pTransition->state = DeckTransitionState::Idle; // Move back to the previous state, this will cause a retry
@@ -495,7 +502,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                 pTransition->state = DeckTransitionState::NextIsLoading;
 
                 auto currentDeck = &sender;
-                loadNextTrack(currentDeck, false, [&, _pTransition = pTransition, _pNextTransition = pNextTransition, _position = position, tsp = transitionStartPos, tep = transitionEndPos, cd = currentDeck, nd = nextDeck](bool loaded) {
+                loadNextTrack(currentDeck, keepPlaying && !isDeckPlaying(), [&, _pTransition = pTransition, _pNextTransition = pNextTransition, _position = position, tsp = transitionStartPos, tep = transitionEndPos, cd = currentDeck, nd = nextDeck](bool loaded) {
                     if (loaded) {
                         _pTransition->state = DeckTransitionState::NextIsReady;
                         transitingFromDeck = cd;
