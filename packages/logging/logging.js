@@ -18,7 +18,7 @@ function createStream() {
 
 const root = pino({
   base: undefined,
-  level: process.env.DEBUG ? 'debug' : 'info',
+  level: process.env.DEBUG ? 'trace' : 'info',
 }, createStream());
 
 /**

@@ -3,6 +3,8 @@ const { default: pp } = require('pino-pretty');
 const { makeCube, reset } = require('./color');
 
 const white = makeCube(254);
+const lemonBg = makeCube(190, true);
+const dark = makeCube(234)
 
 const levelColored = {
   60: makeCube(160, true),
@@ -10,7 +12,7 @@ const levelColored = {
   40: makeCube(227),
   30: makeCube(77),
   20: makeCube(33),
-  10: makeCube(248),
+  10: (s) => lemonBg(dark(s))
 }
 
 const tagColors = [
@@ -108,6 +110,11 @@ const dimmedSep = makeCube(239);
 const msgColor = makeCube(249);
 const tagSep = dimmedSep('-');
 const dateMarker = makeCube(91)('>');
+const nsColor = makeCube(202);
+
+function formatNamespace(ns) {
+  return nsColor(ns);
+}
 
 /**
  * @param {Record<string, unknown>} log
@@ -162,8 +169,9 @@ module.exports = () => {
     ignore: '$L',
 
     customPrettifiers: {
+      time: formatTime,
       level: formatLevel,
-      time: formatTime
+      name: formatNamespace
     },
     messageFormat: formatMessage
   }
