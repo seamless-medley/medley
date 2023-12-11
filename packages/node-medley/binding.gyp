@@ -203,6 +203,7 @@
                         'libraries': [
                             "<!@(pkg-config taglib --libs)",
                             "<!@(pkg-config samplerate --libs)",
+                            "<!@(pkg-config freetype2 --libs)",
                             "-lasound"
                         ],
                         "cflags_cc": [
