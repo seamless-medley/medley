@@ -18,7 +18,7 @@ cd taglib \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_BUILD_TYPE=Release \
         . \
-    && make -j "$(nproc)" \
+    && make -j 2 \
     && ${SUDO} make install
 
 # shellcheck disable=SC2181
@@ -33,7 +33,7 @@ tar xvf libsamplerate.tar.gz
 mv libsamplerate-* libsamplerate
 cd libsamplerate \
     && cmake . \
-    && make -j "$(nproc)" \
+    && make -j 2 \
     && ${SUDO} make install
 
 # shellcheck disable=SC2181
