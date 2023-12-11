@@ -259,7 +259,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
   #requests: TrackCollection<TrackWithRequester<BoomBoxTrack, R>> = new WatchTrackCollection('$_requests', undefined);
 
-  #isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path);
+  #isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path, 1000);
 
   #verifyTrack: TrackVerifier<BoomBoxTrackExtra> = async (track): Promise<TrackVerifierResult<BoomBoxTrackExtra>> => {
     try {
