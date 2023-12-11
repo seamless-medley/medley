@@ -3,7 +3,7 @@ name: Build and publish a docker image
 on:
   push:
     branches:
-      - develop
+      - combine-discord
 
 env:
   REGISTRY: ghcr.io
