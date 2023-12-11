@@ -1,7 +1,14 @@
 FROM node:18.16.0
 
-RUN apt update && apt install git g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev -y
-RUN npm install -g pnpm
+RUN corepack enable
+
+RUN apt -y update \
+    && apt -y install \
+        g++ \
+        make \
+        cmake \
+        pkg-config \
+        libasound2-dev
 
 ENV PKG_JUCE=packages/juce
 ENV PKG_MINIMP3=packages/minimp3
@@ -15,6 +22,10 @@ COPY ./${PKG_JUCE} /src/${PKG_JUCE}
 COPY ./${PKG_MINIMP3} /src/${PKG_MINIMP3}
 COPY ./${PKG_ENGINE} /src/${PKG_ENGINE}
 COPY ./${PKG_MEDLEY} /src/${PKG_MEDLEY}
+
+RUN mkdir /build-deps
+WORKDIR /build-deps
+RUN sh /src/${PKG_MEDLEY}/scripts/install-deps.sh --no-sudo
 
 WORKDIR /src
 
