@@ -120,11 +120,11 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     return { hit: false, metadata: fresh };
   }
 
-  async isTrackLoadable(path: string) {
+  async isTrackLoadable(path: string, timeout = 500) {
     return this.#runIfNeeded(
       `isTrackLoadable:${path}`,
       async () => this.exec('isTrackLoadable', path),
-      { ttl: 500, timeout: 500 }
+      { ttl: 500, timeout }
     )
     .catch(stubFalse);
   }
@@ -153,8 +153,8 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     return this.getDefaultInstance().fetchMetadata(track, musicDb, refresh);
   }
 
-  static isTrackLoadable(path: string) {
-    return this.getDefaultInstance().isTrackLoadable(path);
+  static isTrackLoadable(path: string, timeout?: number) {
+    return this.getDefaultInstance().isTrackLoadable(path, timeout);
   }
 
   static searchLyrics(artist: string, title: string) {
