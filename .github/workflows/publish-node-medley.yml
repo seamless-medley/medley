@@ -5,7 +5,6 @@ on:
       - node-medley native module
     branches:
       - main
-      - native-prerelease
     types:
       - completed
 env:
