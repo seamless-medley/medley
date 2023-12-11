@@ -55,10 +55,7 @@
                 'JUCE_MODULE_AVAILABLE_juce_core=1',
                 'JUCE_MODULE_AVAILABLE_juce_data_structures=1',
                 'JUCE_MODULE_AVAILABLE_juce_dsp=1',
-                'JUCE_MODULE_AVAILABLE_juce_events=1',
-                'JUCE_MODULE_AVAILABLE_juce_graphics=1',
-                'JUCE_MODULE_AVAILABLE_juce_gui_basics=1',
-                'JUCE_MODULE_AVAILABLE_juce_gui_extra=1',
+                'JUCE_MODULE_AVAILABLE_juce_events=1'
                 'TAGLIB_STATIC'
             ],
             'conditions': [
@@ -81,6 +78,9 @@
                         ],
                         'defines': [
                             'JUCE_STRING_UTF_TYPE=16',
+                            'JUCE_MODULE_AVAILABLE_juce_graphics=1',
+                            'JUCE_MODULE_AVAILABLE_juce_gui_basics=1',
+                            'JUCE_MODULE_AVAILABLE_juce_gui_extra=1',
                         ],
                         'cflags': [
                             '/GR',
@@ -152,10 +152,7 @@
                             "../engine/juce/include_juce_core_mac.mm",
                             "../engine/juce/include_juce_data_structures_mac.mm",
                             "../engine/juce/include_juce_dsp_mac.mm",
-                            "../engine/juce/include_juce_events_mac.mm",
-                            "../engine/juce/include_juce_graphics_mac.mm",
-                            "../engine/juce/include_juce_gui_basics_mac.mm",
-                            "../engine/juce/include_juce_gui_extra_mac.mm",
+                            "../engine/juce/include_juce_events_mac.mm"
                         ],
                         "link_settings": {
                             "libraries": [
@@ -202,8 +199,6 @@
                         ],
                         'libraries': [
                             "<!@(pkg-config taglib --libs)",
-                            "<!@(pkg-config freetype2 --libs)",
-                            "<!@(pkg-config libcurl --libs)",
                             "<!@(pkg-config samplerate --libs)",
                             "-lasound"
                         ],
@@ -219,12 +214,10 @@
                             "../engine/juce/include_juce_core.cpp",
                             "../engine/juce/include_juce_data_structures.cpp",
                             "../engine/juce/include_juce_dsp.cpp",
-                            "../engine/juce/include_juce_events.cpp",
-                            "../engine/juce/include_juce_graphics.cpp",
-                            "../engine/juce/include_juce_gui_basics.cpp",
-                            "../engine/juce/include_juce_gui_extra.cpp",
+                            "../engine/juce/include_juce_events.cpp"
                         ],
                         'defines': [
+                            'JUCE_USE_CURL=0',
                             'JUCE_USE_XRANDR=0',
                             'JUCE_USE_XINERAMA=0',
                             'JUCE_USE_XRENDER=0',
