@@ -207,6 +207,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     this.#client.once('ready', async () => {
       for (const guildId of Object.keys(this.#guildConfigs)) {
+        this.#autoTuneStation(guildId);
         this.#autoJoinVoiceChannel(guildId);
       }
     });
@@ -240,6 +241,22 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       if (closeConnection) {
         state.destroyVoiceConnector();
       }
+    }
+  }
+
+  async #autoTuneStation(guildId: string) {
+    const config = this.#guildConfigs[guildId];
+
+    if (!config?.autotune) {
+      return;
+    }
+
+    const state = this.ensureGuildState(guildId);
+
+    state.preferredStation = this.stations.get(config?.autotune);
+
+    if (state.preferredStation) {
+      await state.createStationLink();
     }
   }
 
