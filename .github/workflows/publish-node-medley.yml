@@ -3,6 +3,9 @@ on:
   workflow_run:
     workflows:
       - node-medley native module
+    branches:
+      - main
+      - native-prerelease
     types:
       - completed
 env:
