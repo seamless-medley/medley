@@ -5,13 +5,29 @@ import { CrateSequencer } from "./sequencer";
 import { moveArrayIndexes } from "@seamless-medley/utils";
 import { Library } from "../library";
 
+export type CrateProfileOptions<T extends Track<any>> = {
+  id: string;
+  name: string;
+  description?: string;
+  crates?: Array<Crate<T>>;
+}
+
 export class CrateProfile<T extends Track<any>> {
+  readonly id: string;
+
+  name: string;
+
+  description?: string;
+
   #crates: Array<Crate<T>>;
 
   #sequencer?: CrateSequencer<T, any>;
 
-  constructor(readonly id: string, crates?: Array<Crate<T>>) {
-    this.#crates = crates ?? [];
+  constructor(options: CrateProfileOptions<T>) {
+    this.id = options.id;
+    this.name = options.name;
+    this.description = options.description;
+    this.#crates = options.crates ?? [];
 
     for (const crate of this.#crates) {
       (crate as unknown as CratePrivates<T>).setProfile(this);

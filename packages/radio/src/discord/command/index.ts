@@ -11,6 +11,7 @@ import message from './commands/message';
 import history from './commands/history';
 import tune from './commands/tune';
 import latch from './commands/latch';
+import profile from './commands/profile';
 
 import { Command, CommandError, CommandType, GuildHandler, InteractionHandler, SubCommandLikeOption } from "./type";
 import { deny, isReplyable } from "./utils";
@@ -26,7 +27,8 @@ const descriptors = {
   message,
   history,
   tune,
-  latch
+  latch,
+  profile
 }
 
 export const createCommandDeclarations = (name: string = 'medley', description: string = 'Medley'): Command => {

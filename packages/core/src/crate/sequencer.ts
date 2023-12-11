@@ -57,7 +57,7 @@ interface CrateProfilePrivate<T extends Track<any>> {
 }
 
 export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends TypedEmitter<CrateSequencerEvents<T>> {
-  #profile = new CrateProfile<T>('$empty');
+  #profile = new CrateProfile<T>({ id: '$empty', name: '' });
 
   #playCounter = 0;
   #crateIndex = 0;

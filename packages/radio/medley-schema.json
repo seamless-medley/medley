@@ -446,6 +446,15 @@
     "stationProfile": {
       "type": "object",
       "properties": {
+        "name": {
+          "type": "string",
+          "description": "Profile name",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "Profile description"
+        },
         "intros": {
           "title": "Intros",
           "description": "List of directories for picking up a file to play randomly before starting this profile",
@@ -490,7 +499,8 @@
             "$ref": "#/$defs/sequence"
           }
         }
-      }
+      },
+      "required": ["name", "sequences"]
     },
     "sweeperRule": {
       "title": "Sweeper Rule",

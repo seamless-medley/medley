@@ -81,6 +81,8 @@ export const SweeperRule = z.object({
 export type SweeperRule = z.infer<typeof SweeperRule>;
 
 export const StationProfile = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1).optional(),
   intros: z.string().array().optional(),
   sweeperRules: z.array(SweeperRule).optional(),
   requestSweepers: z.string().array().optional(),

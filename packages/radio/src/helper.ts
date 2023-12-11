@@ -37,6 +37,8 @@ function createTrackCollection(id: string, paths: string[] = [], logPrefix: stri
 export function createStationProfile(station: Station, config: StationProfileConfig & { id: string }) {
   const {
     id,
+    name,
+    description,
     intros,
     sweeperRules,
     requestSweepers,
@@ -49,7 +51,12 @@ export function createStationProfile(station: Station, config: StationProfileCon
     .map((seq, index) => createCrateFromSequence(`${id}/${index}-${seq.collections.map(c => c.id)}`, station, seq))
     .filter((c): c is Crate<StationTrack> => c !== undefined);
 
-  const profile = new StationProfile(id, crates);
+  const profile = new StationProfile({
+    id,
+    name,
+    description,
+    crates
+  });
 
   profile.noRequestSweeperOnIdenticalCollection = config.noRequestSweeperOnIdenticalCollection ?? true;
   profile.followCrateAfterRequestTrack = config.followCrateAfterRequestTrack ?? true;

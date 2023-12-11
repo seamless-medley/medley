@@ -482,7 +482,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
       if (this.#currentCrate?.profile !== nextTrack.sequencing.crate.profile) {
         this.emit('profileChange', this.#currentCrate?.profile, nextTrack.sequencing.crate.profile)
-        this.#logger.debug('Play profile changed to %s', nextTrack.sequencing.crate.profile?.id);
+        this.#logger.debug('Play profile changed to: %s', nextTrack.sequencing.crate.profile?.id);
       }
 
       if (collectionChange && nextCollection) {
@@ -628,6 +628,14 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     if (kind !== TrackKind.Insertion) {
       this.emit('trackActive', deck, trackPlay);
     }
+  }
+
+  get profile() {
+    return this.#sequencer.profile as P;
+  }
+
+  get profiles() {
+    return this.profileBook.all();
   }
 
   hasProfile(profile: P | string) {

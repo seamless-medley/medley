@@ -143,7 +143,7 @@ export class Station extends TypedEmitter<StationEvents> {
 
   readonly #library: MusicLibrary<Station>;
 
-  #profile = new StationProfile('$empty');
+  #profile = new StationProfile({ id: '$empty', name: '' });
 
   maxTrackHistory: number = 50;
 
@@ -544,6 +544,14 @@ export class Station extends TypedEmitter<StationEvents> {
 
   //#endregion
 
+  get profile() {
+    return this.#boombox.profile;
+  }
+
+  get profiles() {
+    return this.#boombox.profiles;
+  }
+
   hasProfile(profile: StationProfile | string) {
     return this.#boombox.hasProfile(profile);
   }
@@ -569,6 +577,7 @@ export class Station extends TypedEmitter<StationEvents> {
 
     this.#profile = profile;
     this.#boombox.sweeperInsertionRules = profile.sweeperRules;
+    return profile;
   }
 
   get crates() {
