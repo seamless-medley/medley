@@ -11,7 +11,6 @@ on:
       - packages/node-medley/scripts/**
       - packages/node-medley/binding.gyp
       - packages/node-medley/package.json
-      - scripts/brew.sh
 jobs:
   build:
     strategy:
@@ -41,6 +40,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     env:
       BUILD_ARCH: ${{ matrix.build-arch }}
+      DEPS_INSTALL: ./packages/node-medley/scripts/install-deps.sh
     steps:
       - name: Install Node
         uses: actions/setup-node@v3
@@ -79,30 +79,15 @@ jobs:
       - name: Dependencies (Linux)
         if: contains(matrix.build-arch, 'linux')
         run: |
-          sudo apt -y update
-          sudo apt -y install g++ make pkg-config libtag1-dev libsamplerate0-dev libfreetype6-dev libcurl4-openssl-dev libasound2-dev libx11-dev libxrandr-dev
+          sudo apt -y update && sudo apt -y install g++ make cmake pkg-config libasound2-dev
 
-      - name: Get brew directory
-        id: brew-cache
-        if: contains(matrix.build-arch, 'darwin')
-        shell: bash
+      - name: Dependencies
+        if: contains(matrix.build-arch, 'darwin') || contains(matrix.build-arch, 'linux')
         run: |
-          echo "STORE_PATH=$(brew --prefix)/Cellar" >> $GITHUB_OUTPUT
-
-      - name: Cache brew deps
-        if: contains(matrix.build-arch, 'darwin')
-        uses: actions/cache@v3
-        with:
-          path: |
-            ${{ steps.brew-cache.outputs.STORE_PATH }}/taglib
-            ${{ steps.brew-cache.outputs.STORE_PATH }}/libsamplerate
-
-          key: macos-build-cache-${{ runner.arch }}-${{ hashFiles('./scripts/brew.sh') }}
-
-      - name: Dependencies (macOS)
-        if: contains(matrix.build-arch, 'darwin')
-        run: |
-          bash ./scripts/brew.sh
+          mkdir -p ./build/deps
+          cp ${{ env.DEPS_INSTALL }} ./build/deps/
+          cd ./build/deps
+          sh install-deps.sh
 
       - name: Cache vcpkg
         if: contains(matrix.build-arch, 'win32')
