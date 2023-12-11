@@ -260,11 +260,12 @@ export type MedleyInfo = {
     libc?: string;
   },
   juce: {
-    version: Record<'major' | 'minor' | 'build', number> & { prerelease?:  string };
+    version: Record<'major' | 'minor' | 'build', number>;
     cpu: Partial<Record<'intel' | 'arm' | 'arm64', 'aarch64' | 'sse' | 'neon' | 'vdsp', true>>;
   };
 
-  version: Record<'major' | 'minor' | 'patch', number>;
+  version: Record<'major' | 'minor' | 'patch', number> & { prerelease?:  string };
+  versionString: string;
 }
 
 declare const audioFormats = ['Int16LE', 'Int16BE', 'FloatLE', 'FloatBE'] as const;

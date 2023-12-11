@@ -922,6 +922,13 @@ Napi::Value Medley::static_getInfo(const Napi::CallbackInfo& info) {
     }
 
     {
+        auto versionString = juce::String::formatted(
+            "%d.%d.%d",
+            MEDLEY_VERSION_MAJOR,
+            MEDLEY_VERSION_MINOR,
+            MEDLEY_VERSION_PATCH
+        );
+
         auto version = Object::New(env);
         version.Set("major", Napi::Number::New(env, MEDLEY_VERSION_MAJOR));
         version.Set("minor", Napi::Number::New(env, MEDLEY_VERSION_MINOR));
@@ -929,9 +936,11 @@ Napi::Value Medley::static_getInfo(const Napi::CallbackInfo& info) {
 
 #ifdef MEDLEY_VERSION_PRE_RELEASE
         version.Set("prerelease", Napi::String::New(env, MEDLEY_VERSION_PRE_RELEASE));
+        versionString += juce::String("." MEDLEY_VERSION_PRE_RELEASE);
 #endif
 
         result.Set("version", version);
+        result.Set("versionString", Napi::String::New(env, versionString.toRawUTF8()));
     }
 
     {
