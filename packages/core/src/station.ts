@@ -165,8 +165,28 @@ export class Station extends TypedEmitter<StationEvents> {
     this.#logger = createLogger({ name: 'station', id: this.id });
     this.#logger.info('Creating station');
 
+    const logMedley = process.env.DEBUG !== undefined;
+
     this.queue = new Queue();
-    this.medley = new Medley(this.queue);
+    this.medley = new Medley(this.queue, { logging: logMedley });
+
+    if (logMedley) {
+      const medleyLogger = createLogger({ name: 'medley', id: this.id });
+      const { trace, debug, info, warn, error, fatal } = medleyLogger;
+
+      const logFns: (Function | undefined)[] = [
+        process.env.MEDLEY_DEV !== undefined ? trace : undefined,
+        debug,
+        info,
+        warn,
+        error,
+        fatal
+      ];
+
+      this.medley.on('log', (level, name, msg) => {
+        logFns[level + 1]?.call(medleyLogger, { name: 'Engine', '$L': { type: this.id, id: name } }, msg);
+      });
+    }
 
     if (options.useNullAudioDevice ?? true) {
       const dev = this.getCurrentAudioDevice();
