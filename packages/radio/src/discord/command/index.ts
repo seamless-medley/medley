@@ -14,7 +14,7 @@ import latch from './commands/latch';
 import profile from './commands/profile';
 
 import { Command, CommandError, CommandType, GuildHandler, InteractionHandler, SubCommandLikeOption } from "./type";
-import { deny, isReplyable } from "./utils";
+import { deny, isReplyable, makeColoredMessage } from "./utils";
 import { MedleyAutomaton } from "../automaton";
 
 const descriptors = {
@@ -94,7 +94,21 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
 
         const handlers = commandHandlers.get(groupOrCommand);
 
-        return await handlers?.command?.(interaction);
+        if (handlers?.command) {
+          return await handlers?.command?.(interaction);
+        }
+
+        logger.warn(
+          {
+            group: interaction.options.getSubcommandGroup(),
+            command: interaction.options.getSubcommand()
+          },
+          'Unknown command'
+        );
+
+        interaction.reply({
+          content: makeColoredMessage('red', `Sorry I don't understand that`)
+        })
       }
 
       if (interaction.isButton()) {

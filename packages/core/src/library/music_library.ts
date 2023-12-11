@@ -147,7 +147,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
           });
       }
       catch (e) {
-        this.#logger.error('Error while indexing a track: %s', (e as any).message);
+        this.#logger.error(e, 'Error while indexing a track');
         throw e;
       }
     }

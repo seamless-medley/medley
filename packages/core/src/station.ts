@@ -336,6 +336,8 @@ export class Station extends TypedEmitter<StationEvents> {
         disableNextLeadIn: true
       });
 
+      this.#logger.info('Inserting intro: %s', intro.path);
+
       intros.push(intro);
     }
   }

@@ -94,7 +94,16 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
     const crateIndex = currentCollectionId ? this.#findCrateIndexContainingCollection(currentCollectionId) : 0;
     this.#crateIndex = crateIndex > -1 ? this.#ensureCrateIndex(crateIndex) : 0;
-    this.#logger.debug({ id: newProfile.id, crateIndex: this.#crateIndex }, 'Change to profile');
+    this.#logger.debug(
+      {
+        id: newProfile.id,
+        crate: {
+          index: this.#crateIndex,
+          id: this.crates[this.#crateIndex]?.id
+        }
+      },
+      'Change to profile'
+    );
 
     return true;
   }

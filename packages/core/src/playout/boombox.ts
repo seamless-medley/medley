@@ -429,23 +429,27 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
     try {
       const addToQueue = (track: BoomBoxTrack) => {
-        this.#logger.debug(
-          {
-            p: track.path,
-            co: track.collection.id,
-            cr: track.sequencing?.crate
-              ? {
-                id: track.sequencing.crate.id,
-                sources: track.sequencing.crate.sources?.map(s => s.id)
-              }
-              : undefined,
-            o: track.sequencing?.playOrder,
-            l: track.sequencing?.latch
-              ? track.sequencing.latch.order
-              : undefined
-          },
-          'Track queued',
-        );
+        if (process.env.DEBUG) {
+          this.#logger.debug(
+            {
+              p: track.path,
+              co: track.collection.id,
+              cr: track.sequencing?.crate
+                ? {
+                  id: track.sequencing.crate.id,
+                  sources: track.sequencing.crate.sources?.map(s => s.id)
+                }
+                : undefined,
+              o: track.sequencing?.playOrder,
+              l: track.sequencing?.latch
+                ? track.sequencing.latch.order
+                : undefined
+            },
+            'Track queued',
+          );
+        } else {
+          this.#logger.info('Track queued: collection: %s, path: %s', track.collection.id, track.path);
+        }
 
         this.queue.add(track);
         this.emit('trackQueued', track);
