@@ -1,0 +1,29 @@
+version: "3"
+services:
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+
+  radio:
+    image: ghcr.io/seamless-medley/medley:latest
+    restart: always
+    depends_on:
+      - mongo
+    environment:
+      MEDLEY_MUSIC_PATH: /data/musics
+      MEDLEY_DROP_PATH: /data/drops
+      MEDLEY_MONGO_DB_HOST: mongo
+      MEDLEY_MONGO_DB_PORT: 27017
+      MEDLEY_MONGO_DB_USER: root
+      MEDLEY_MONGO_DB_PASSWORD: example
+      MEDLEY_MONGO_DB_DATABASE: medley
+      # MEDLEY_DISCORD_BOT_TOKEN: discord-bot-token
+      # MEDLEY_DISCORD_CLIENT_ID: discord-client-id
+      MEDLEY_DISCORD_BASE_COMMAND: medley
+      LOG_PRETTY: hide-date,use-colors
+    volumes:
+      - /Music-Station/musics:/data/musics
+      - /Music-Station/medley-drops:/data/medley-drops
