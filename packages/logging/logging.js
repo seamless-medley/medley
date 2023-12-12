@@ -3,14 +3,16 @@ const { pino } = require('pino');
 /** @typedef {import('pino').pino} pino */
 
 function createPrettyPrint() {
-  return pino.transport({ target: './pp' });
+  const configs = (process.env.LOG_PRETTY ?? '').split(',');
+  return pino.transport({ target: './pp', options: { configs } });
 }
 
-function createStream() {
+
+function createStream(usePretty) {
   const streams = [
-    !process.env.DEBUG
-      ? pino.destination()
-      : createPrettyPrint()
+    !!(process.env.LOG_PRETTY || process.env.DEBUG)
+      ? createPrettyPrint()
+      : pino.destination()
   ];
 
   return (streams.length > 1) ? pino.multistream(streams) : streams[0];

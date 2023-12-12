@@ -2,7 +2,7 @@ const tty = require('tty');
 
 const { env = {} } = typeof process === "undefined" ? {} : process;
 
-const isCompatibleTerminal = tty && tty.isatty && tty.isatty(1) && env.TERM;
+const isCompatibleTerminal = tty && tty.isatty && tty.isatty(1) && !!env.TERM;
 const isCI = "CI" in env && ("GITHUB_ACTIONS" in env || "GITLAB_CI" in env || "CIRCLECI" in env);
 
 const isColorSupported = isCompatibleTerminal || isCI;
@@ -65,46 +65,61 @@ function filterEmpty(open, close, replace = open, at = open.length + 1) {
       : ""
 }
 
-/**
- *
- * @param {*} open
- * @param {*} close
- * @param {string} [replace]
- */
-function makeEscape(open, close, replace) {
-  return filterEmpty(`\u001b[${open}m`, `\u001b[${close}m`, replace);
-}
 
-/**
- *
- * @param {number} color
- * @param {boolean} bg
- */
-const makeCube = (color, bg = false) => {
-  if (!isColorSupported) {
-    /**
-     * @param {*} s
-     */
-    return s => s;
+
+function createColor(useColors = isColorSupported) {
+  /**
+   *
+   * @param {*} open
+   * @param {*} close
+   * @param {string} [replace]
+   */
+  function makeEscape(open, close, replace) {
+    if (!useColors) {
+      /**
+       * @param {*} s
+       */
+      return s => s;
+    }
+
+    return filterEmpty(`\u001b[${open}m`, `\u001b[${close}m`, replace);
   }
 
-  const code = bg ? 48 : 38;
-  return makeEscape(`${code};5;${color}`, code + 1)
+  /**
+   *
+   * @param {number} color
+   * @param {boolean} bg
+   */
+  const makeCube = (color, bg = false) => {
+    if (!useColors) {
+      /**
+       * @param {*} s
+       */
+      return s => s;
+    }
+
+    const code = bg ? 48 : 38;
+    return makeEscape(`${code};5;${color}`, code + 1)
+  }
+
+  const reset = makeEscape(0, 0);
+  const bold = makeEscape(1, 22, "\u001b[22m\u001b[1m");
+  const italic = makeEscape(3, 23);
+  const underline = makeEscape(4, 24);
+  const strikethrough = makeEscape(9, 29);
+
+  return {
+    makeCube,
+    reset,
+    bold,
+    italic,
+    underline,
+    strikethrough
+  }
 }
 
-const reset = makeEscape(0, 0);
-const bold = makeEscape(1, 22, "\u001b[22m\u001b[1m");
-const italic = makeEscape(3, 23);
-const underline = makeEscape(4, 24);
-const strikethrough = makeEscape(9, 29);
-
 module.exports = {
-  makeEscape,
-  makeCube,
-  reset,
-  bold,
-  italic,
-  underline,
-  strikethrough
+  isColorSupported,
+  createColor
 }
 
