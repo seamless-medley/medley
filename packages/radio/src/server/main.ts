@@ -34,7 +34,7 @@ function getVersionLine() {
 }
 
 function isPortAvailable(port: number, address?: string) {
-  return new Promise<boolean>((resolve, reject) => {
+  return new Promise<boolean>((resolve) => {
     const probe = createServer()
       .once('error', () => resolve(false))
       .once('listening', () => {
@@ -108,7 +108,7 @@ async function main() {
 
   logger.info(getVersionLine());
   logger.info('node-medley runtime: %s', Object.entries(info.runtime).map(([p, v]) => `${p}=${v}`).join('; '));
-  logger.info('node-medley version: %s', `${info.version.major}.${info.version.minor}.${info.version.patch}`);
+  logger.info('node-medley version: %s', `${info.versionString}`);
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
 
   const configs = await loadConfig(configFile, false);

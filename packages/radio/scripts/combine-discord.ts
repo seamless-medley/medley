@@ -57,7 +57,7 @@ async function combine() {
 
   await outputFile(join(combinePath, 'README.md'), [
     '```sh',
-    'npm i --omit=optional',
+    'npm i',
     '```'
   ].join('\n'));
 }

@@ -103,6 +103,7 @@
       }
     }
   },
+  "required": ["server", "db", "stations"],
   "additionalProperties": false,
   "$defs": {
     "db": {
