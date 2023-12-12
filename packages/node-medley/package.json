@@ -25,7 +25,7 @@
     "clean": "rimraf build out dist",
     "build": "tsc",
     "prebuild": "cross-env JOBS=max prebuildify -t 16.0.0 --tag-libc --napi --strip",
-    "prebuild:docker": "cd ../.. && docker build -f packages/node-medley/docker/Dockerfile -t node-medley-prebuild . && docker container create --name node-medley-prebuild-cp node-medley-prebuild && docker cp node-medley-prebuild-cp:/src/packages/node-medley/prebuilds ./packages/node-medley && docker rm node-medley-prebuild-cp",
+    "prebuild:linux": "docker build -f ./docker/Dockerfile -t node-medley-prebuild ../.. && docker container create --name node-medley-prebuild-cp node-medley-prebuild && docker cp node-medley-prebuild-cp:/src/packages/node-medley/prebuilds ./ && docker rm node-medley-prebuild-cp",
     "package": "tsx scripts/package.ts",
     "bump-version": "tsx scripts/bump.ts",
     "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts",
