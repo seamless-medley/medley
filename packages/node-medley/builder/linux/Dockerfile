@@ -1,3 +1,6 @@
+# This is for bulding linux native module using docker
+# Usage: pnpm prebuild:docker
+
 FROM node:18.16.0
 
 RUN corepack enable
