@@ -102,6 +102,8 @@ export type StationRequestedTrack = TrackWithRequester<StationTrack, Audience> &
   disallowSweepers?: boolean;
 }
 
+export type StationTrackIndex = TrackIndex<StationRequestedTrack>;
+
 export type StationCrate = Crate<StationTrack>;
 
 export type StationEvents = {
@@ -117,7 +119,7 @@ export type StationEvents = {
   collectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, transitingFromRequestTrack: boolean) => void;
   crateChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
 
-  requestTrackAdded: (track: TrackIndex<StationRequestedTrack>) => void;
+  requestTrackAdded: (track: StationTrackIndex) => void;
   requestTracksRemoved: (tracks: StationRequestedTrack[]) => void;
   //
   collectionAdded: (collection: StationTrackCollection) => void;
@@ -175,7 +177,7 @@ export class Station extends TypedEmitter<StationEvents> {
       const { trace, debug, info, warn, error, fatal } = medleyLogger;
 
       const logFns: (Function | undefined)[] = [
-        process.env.MEDLEY_DEV !== undefined ? trace : undefined,
+        process.env.MEDLEY_DEV !== undefined && !process.env.MEDLEY_DEV_NO_TRACE ? trace : undefined,
         debug,
         info,
         warn,
@@ -456,7 +458,16 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 
   skip() {
-    return this.isInTransition ? false : this.medley.fadeOut();
+    if (this.isInTransition) {
+      return false;
+    }
+
+    const ok = this.medley.fadeOut();
+    if (ok) {
+      this.#logger.info('Skipping track: %s', this.trackPlay?.track?.path);
+    }
+
+    return ok;
   }
 
   #starting = false;
@@ -630,22 +641,30 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
-  async request(trackId: StationTrack['id'], requestedBy: Audience, noSweep?: boolean): Promise<TrackIndex<StationRequestedTrack> | string> {
+  async request(trackId: StationTrack['id'], requestedBy: Audience, noSweep?: boolean): Promise<StationTrackIndex | string> {
     const track = this.findTrackById(trackId);
 
     if (!track) {
       return 'Unknown track';
     }
 
-    const requestedTrack = await this.#boombox.request(track, requestedBy);
+    const requestedTrack = await this.#boombox.request(track, requestedBy) as StationTrackIndex;
 
     if (!requestedTrack) {
       return 'Track could not be loaded';
     }
 
-    (requestedTrack.track as StationRequestedTrack).disallowSweepers = noSweep;
+    requestedTrack.track.disallowSweepers = noSweep;
 
     this.emit('requestTrackAdded', requestedTrack);
+
+    this.#logger.info(
+      {
+        path: requestedTrack.track.path,
+        by: requestedTrack.track.requestedBy
+      },
+      'Added a requested track'
+    );
 
     return requestedTrack;
   }

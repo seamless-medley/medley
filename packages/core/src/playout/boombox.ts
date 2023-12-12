@@ -513,8 +513,8 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     done(false);
   }
 
-  #deckLoaded: DeckListener<BoomBoxTrack> = async (deck, trackPlay) => {
-    this.#decks[deck] = {
+  #deckLoaded: DeckListener<BoomBoxTrack> = async (deckIndex, trackPlay) => {
+    this.#decks[deckIndex] = {
       trackPlay,
       playing: false,
       active: false
@@ -538,8 +538,8 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
         };
       }
     }
-
-    this.emit('deckLoaded', deck, trackPlay);
+    this.#logger.info('Deck %d> Loaded: %s', deckIndex, trackPlay.track.path);
+    this.emit('deckLoaded', deckIndex, trackPlay);
   }
 
   #deckUnloaded: DeckListener<BoomBoxTrack> = async (deckIndex, trackPlay) => {
@@ -564,17 +564,20 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
       }
     }
 
+    this.#logger.info('Deck %d> Unloaded', deckIndex);
     this.emit('deckUnloaded', deckIndex, trackPlay);
   }
 
-  #deckStarted: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
-    this.#decks[deck].playing = true;
+  #deckStarted: DeckListener<BoomBoxTrack> = (deckIndex, trackPlay) => {
+    this.#decks[deckIndex].playing = true;
+
+    this.#logger.info('Deck %d> Started', deckIndex);
 
     const kind = trackPlay.track.extra?.kind;
 
     this.#inTransition = kind === TrackKind.Insertion;
 
-    this.emit('deckStarted', deck, trackPlay);
+    this.emit('deckStarted', deckIndex, trackPlay);
 
     if (kind === TrackKind.Insertion) {
       return;
@@ -591,7 +594,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     const lastTrack = this.#currentTrackPlay;
     this.#currentTrackPlay = trackPlay;
 
-    this.emit('trackStarted', deck, trackPlay, lastTrack);
+    this.emit('trackStarted', deckIndex, trackPlay, lastTrack);
 
     const { artistBacklog } = this.options;
 
@@ -604,15 +607,17 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     }
   }
 
-  #deckFinished: DeckListener<BoomBoxTrack> = (deck, trackPlay) => {
-    this.#decks[deck].playing = false;
+  #deckFinished: DeckListener<BoomBoxTrack> = (deckIndex, trackPlay) => {
+    this.#decks[deckIndex].playing = false;
 
-    this.emit('deckFinished', deck, trackPlay);
+    this.#logger.info('Deck %d> Finished', deckIndex);
+
+    this.emit('deckFinished', deckIndex, trackPlay);
 
     const kind = trackPlay.track.extra?.kind;
 
     if (kind !== TrackKind.Insertion) {
-      this.emit('trackFinished', deck, trackPlay);
+      this.emit('trackFinished', deckIndex, trackPlay);
       return;
     }
   }

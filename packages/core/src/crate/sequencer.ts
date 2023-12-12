@@ -477,6 +477,16 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
       return this.removeLatch(session);
     }
 
+    this.#logger.info(
+      {
+        uuid: session.uuid,
+        collection: session.collection.id,
+        count: session.count,
+        max: session.max
+      },
+      'Update latch session'
+    )
+
     return session;
   }
 }
