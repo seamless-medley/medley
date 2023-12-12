@@ -90,10 +90,25 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     const currentCollectionId = this.#currentCollection?.id;
 
     this.#profile = newProfile;
-    this.#playCounter = 0;
 
-    const crateIndex = currentCollectionId ? this.#findCrateIndexContainingCollection(currentCollectionId) : 0;
-    this.#crateIndex = crateIndex > -1 ? this.#ensureCrateIndex(crateIndex) : 0;
+    // Find the crate index in the new profile that is having the same collection id
+    let crateIndex = currentCollectionId
+      ? this.#findCrateIndexContainingCollection(currentCollectionId)
+      : -1;
+
+    // if the collection is found in the new profile, countinue playing without resetting the play counter
+    if (crateIndex === -1) {
+      // not a seamless crate playing, reset the play counter
+      this.#playCounter = 0;
+      this.#logger.debug('Reset play counter');
+    } else {
+      this.#logger.debug({ collection: currentCollectionId }, 'Continue playing collection');
+    }
+
+    this.#crateIndex = crateIndex > -1
+      ? this.#ensureCrateIndex(crateIndex)
+      : 0;
+
     this.#logger.debug(
       {
         id: newProfile.id,
@@ -188,6 +203,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     let scanned = 0;
     let ignored = 0;
     let count = this.#crates.length;
+
     while (count-- > 0) {
       let latchSession = this.getActiveLatch();
 
@@ -243,8 +259,6 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             // Check the #playCounter only if the latching is not active
             if (latchSession === undefined && (this.#playCounter + 1) > crate.max) {
               // Stop searching for next track and flow to the next crate
-              // With #lastCrate being undefined will cause the selection process to kick in again
-              this.#lastCrate = undefined;
               break;
             }
 
