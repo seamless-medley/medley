@@ -36,7 +36,7 @@ function createTrackCollection(id: string, paths: string[] = [], logPrefix: stri
 
 export function createStationProfile(station: Station, config: StationProfileConfig & { id: string }) {
   const {
-    id,
+    id: profileId,
     name,
     description,
     intros,
@@ -48,11 +48,11 @@ export function createStationProfile(station: Station, config: StationProfileCon
   const stationId = station.id;
 
   const crates = sequences
-    .map((seq, index) => createCrateFromSequence(`${id}/${index}-${seq.collections.map(c => c.id)}`, station, seq))
+    .map((seq, index) => createCrateFromSequence(`${profileId}/${index}-${seq.collections.map(c => c.id)}`, station, seq))
     .filter((c): c is Crate<StationTrack> => c !== undefined);
 
   const profile = new StationProfile({
-    id,
+    id: profileId,
     name,
     description,
     crates
@@ -64,23 +64,23 @@ export function createStationProfile(station: Station, config: StationProfileCon
   profile.intros = createTrackCollection(
     '$_intros',
     intros,
-    stationId
+    `${stationId}/${profileId}`
   );
 
   profile.requestSweepers = createTrackCollection(
     '$_req_sweepers',
     requestSweepers,
-    stationId
+    `${stationId}/${profileId}`
   );
 
   if (sweeperRules?.length) {
-    profile.sweeperRules = sweeperRules.map(({ from, to, path }) => ({
+    profile.sweeperRules = sweeperRules.map(({ from, to, path }, index) => ({
       from,
       to,
       collection: createTrackCollection(
-        `$_sweepers/${path}`,
+        `$_sweepers/${index}`,
         [path],
-        stationId
+        `${stationId}/${profileId}`
       )
     }))
   }
