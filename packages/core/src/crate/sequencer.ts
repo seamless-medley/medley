@@ -100,9 +100,6 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     if (crateIndex === -1) {
       // not a seamless crate playing, reset the play counter
       this.#playCounter = 0;
-      this.#logger.debug('Reset play counter');
-    } else {
-      this.#logger.debug({ collection: currentCollectionId }, 'Continue playing collection');
     }
 
     this.#crateIndex = crateIndex > -1
@@ -265,12 +262,12 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             const { trackValidator, trackVerifier } = this.options;
 
             const latchingCollection = latchSession?.collection;
+            const intendedCollection = latchingCollection ?? this.#temporalCollection;
 
-            if (latchingCollection) {
-              this.#logger.info(`Using collection ${latchingCollection.id} for latching`);
+            if (intendedCollection) {
+              this.#logger.info(`Forcibly using collection ${intendedCollection.id}`);
             }
 
-            const intendedCollection = latchingCollection ?? this.#temporalCollection;
             const track = await crate.next(trackValidator, intendedCollection);
 
             if (track) {

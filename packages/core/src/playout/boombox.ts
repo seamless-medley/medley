@@ -707,6 +707,9 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     return this.#sequencer.removeLatch(session);
   }
 
+  /**
+   * Is the specified collection known by the sequencer for the current profile
+   */
   isKnownCollection(collection: BoomBoxTrackCollection): boolean {
     return this.#sequencer.isKnownCollection(collection);
   }

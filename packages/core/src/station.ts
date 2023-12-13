@@ -561,6 +561,9 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.all();
   }
 
+  /**
+   * Get all collections currently known by the current profile
+   */
   get knownCollections() {
     return this.collections.filter(collection => this.#boombox.isKnownCollection(collection));
   }
@@ -621,6 +624,10 @@ export class Station extends TypedEmitter<StationEvents> {
 
   get crates() {
     return this.#boombox.crates;
+  }
+
+  get currentCrate() {
+    return this.#boombox.currentCrate;
   }
 
   findTrackById(id: StationTrack['id']) {
