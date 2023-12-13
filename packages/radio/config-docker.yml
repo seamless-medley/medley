@@ -1,4 +1,3 @@
-# yaml-language-server: $schema=medley-schema.json
 # yaml-language-server: $schema=https://raw.githubusercontent.com/vittee/medley/develop/packages/radio/medley-schema.json
 
 server:
