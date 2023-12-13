@@ -3,12 +3,14 @@ import {
   ButtonBuilder,
   ButtonStyle,
   MessageActionRowComponentBuilder,
+  PermissionsBitField,
   SelectMenuComponentOptionData,
   StringSelectMenuBuilder,
 } from "discord.js";
 
 import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, reply } from "../../utils";
 import { isString, range } from "lodash";
+import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply } from "../../utils";
 import { ansi } from "../../../format/ansi";
 import { onGoing } from "./on-going";
 import { interact } from "../../interactor";
@@ -16,6 +18,17 @@ import { SubCommandHandlerOptions } from "./type";
 
 export async function set(options: SubCommandHandlerOptions) {
   const { automaton, interaction } = options;
+
+  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+
+  if (!isOwnerOverride) {
+    permissionGuard(interaction.memberPermissions, [
+      PermissionsBitField.Flags.ManageChannels,
+      PermissionsBitField.Flags.ManageGuild,
+      PermissionsBitField.Flags.MuteMembers,
+      PermissionsBitField.Flags.MoveMembers
+    ]);
+  }
 
   const { station } = guildStationGuard(automaton, interaction);
 
