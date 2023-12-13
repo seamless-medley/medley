@@ -1,35 +1,11 @@
 import { map } from "lodash";
 import { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Interaction, InteractionType } from "discord.js";
 import { createLogger } from "@seamless-medley/logging";
-import join from "./commands/join";
-import skip from './commands/skip';
-import lyrics from "./commands/lyrics";
-import request from "./commands/request";
-import unrequest from './commands/unrequest';
-import vote from './commands/vote';
-import message from './commands/message';
-import history from './commands/history';
-import tune from './commands/tune';
-import latch from './commands/latch';
-import profile from './commands/profile';
 
+import { all as descriptors  } from './commands';
 import { Command, CommandError, CommandType, GuildHandler, InteractionHandler, SubCommandLikeOption } from "./type";
 import { deny, isReplyable, makeColoredMessage } from "./utils";
 import { MedleyAutomaton } from "../automaton";
-
-const descriptors = {
-  join,
-  skip,
-  lyrics,
-  request,
-  unrequest,
-  vote,
-  message,
-  history,
-  tune,
-  latch,
-  profile
-}
 
 export const createCommandDeclarations = (name: string = 'medley', description: string = 'Medley'): Command => {
   const options: SubCommandLikeOption[] = map(descriptors, desc => desc.declaration).filter((decl): decl is SubCommandLikeOption => !!decl);
