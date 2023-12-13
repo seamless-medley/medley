@@ -12,6 +12,7 @@ import { AudioWebSocketServer } from './audio/ws/server';
 import { Config, loadConfig } from '../config';
 import { MedleyAutomaton } from '../discord/automaton';
 import { RTCTransponder } from './audio/rtc/transponder';
+import { showVersionBanner } from '../helper';
 
 const logger = createLogger({ name: 'main' });
 
@@ -103,6 +104,8 @@ async function main() {
     logger.fatal('No configuration file specified');
     return;
   }
+
+  await showVersionBanner('banner.txt');
 
   const info = Medley.getInfo();
 

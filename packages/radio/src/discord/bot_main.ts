@@ -5,7 +5,7 @@ import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton } from "./automaton";
 import { loadConfig } from "../config";
 import { ZodError } from "zod";
-import { createAutomaton, createStation } from "../helper";
+import { createAutomaton, createStation, showVersionBanner } from "../helper";
 import { createLogger } from "@seamless-medley/logging";
 
 const logger = createLogger({ name: 'main' });
@@ -41,6 +41,8 @@ async function main() {
     logger.fatal('No configuration file specified');
     return;
   }
+
+  await showVersionBanner('banner.txt');
 
   const info = Medley.getInfo();
 

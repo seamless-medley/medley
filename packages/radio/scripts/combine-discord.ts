@@ -2,7 +2,7 @@ import { join, sep } from 'path';
 import { emptyDir, copy, outputJson, outputFile } from 'fs-extra';
 import type { PackageJson } from 'type-fest';
 import { chain } from 'lodash';
-
+import simpleGit  from 'simple-git';
 
 async function combine() {
   const combinePath = './combine/discord';
@@ -35,7 +35,7 @@ async function combine() {
 
   const deps = chain({})
     .extend(loggingDeps, utilsDeps, coreDeps, mainPackage.dependencies)
-    .omitBy((_, name) => /^(@emotion|socket\.io|react|express|valtio|@mantine|framer-motion|ffmpeg|jotai|reflect-metadata|notepack.io|opus-decoder|mediasoup)/.test(name ?? ''))
+    .omitBy((_, name) => /^(@emotion|socket\.io|react|express|valtio|@mantine|framer-motion|ffmpeg|jotai|reflect-metadata|notepack.io|opus-decoder|mediasoup|polished|@tanstack)/.test(name ?? ''))
     .transform((o, value, key) => {
       if (key.startsWith('@seamless-medley/') && value?.startsWith('..')) {
         o[key] = value.substring(1);
@@ -54,6 +54,17 @@ async function combine() {
     .value();
 
   await outputJson(join(combinePath, 'package.json'), result, { spaces: 2 });
+
+  const git = simpleGit();
+
+  const branch = await git.revparse(['--abbrev-ref', 'HEAD']);
+  const shortHash = await git.revparse(['--short', 'HEAD']);
+
+  await outputFile(join(combinePath, 'banner.txt'), [
+    'Medley (Discord)',
+    `Version: ${branch}:${shortHash}`,
+    `Build date: ${Date()}`
+  ].join('\n'));
 
   await outputFile(join(combinePath, 'README.md'), [
     '```sh',
