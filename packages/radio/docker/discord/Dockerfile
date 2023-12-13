@@ -38,8 +38,6 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app /app
-# TODO: Remove this
-COPY --from=builder /build/packages/radio/config-docker.yml /app
 
 RUN mkdir -p /data/musics /data/drops
 
@@ -51,5 +49,6 @@ ENTRYPOINT ["/tini", "--"]
 
 WORKDIR /app
 
-# TODO: The config file is meant to be mounted and must be named `config.yml`
-CMD ["node", ".", "config-docker.yml"]
+# The config file is meant to be mounted as volume from docker-compose.yml
+# and must be named `config.yml` (absolute path: /app/config.yml)
+CMD ["node", ".", "config.yml"]
