@@ -1,5 +1,6 @@
 import { Crate, MusicDb, Station, StationProfile, StationRegistry, StationTrack, WatchTrackCollection, crateLimitFromSequenceLimit, createChanceable, scanDir } from "@seamless-medley/core";
 import normalizePath from "normalize-path";
+import { readFile } from 'fs/promises';
 
 import {
   type StationConfig,
@@ -151,4 +152,35 @@ export async function createAutomaton(cfg: AutomatonConfig & { id: string; creat
 
     await automaton.login();
   });
+}
+
+export async function showVersionBanner(file: string) {
+  const info = await readFile(file)
+    .then(s => s.toString().split(/\r?\n/).map(l => l.trim()).filter(l => l !== ''))
+    .catch(() => false as const);
+
+  if (!info) {
+    return;
+  }
+
+  const gradient = ['#961cb9', '#07d569', '#1c92f6'];
+
+  require('cfonts').say('Medley', {
+    font: 'slick',
+    gradient,
+    transitionGradient: true
+  });
+
+  function centered(s: string) {
+    const pad = ' '.repeat(48 - (s.length / 2));
+    return `${pad}${s}${pad}`;
+  }
+
+  const gs = require('gradient-string')(gradient);
+  const hr = '-'.repeat(96);
+  [
+    hr,
+    ...info.map(centered),
+    hr
+  ].forEach(l => console.log(gs(l)));
 }
