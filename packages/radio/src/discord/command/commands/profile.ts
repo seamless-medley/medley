@@ -37,6 +37,8 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     automaton,
     interaction,
     onGoing,
+    ttl: 90_000,
+
     makeCaption: () => [],
     makeComponents() {
       const listing = profiles.map<SelectMenuComponentOptionData>(p => ({
