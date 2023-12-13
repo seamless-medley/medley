@@ -1,6 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, CommandInteraction, MessageActionRowComponentBuilder, PermissionsBitField, SelectMenuComponentOptionData, StringSelectMenuBuilder } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply } from "../utils";
+import { guildStationGuard, joinStrings, makeAnsiCodeBlock, permissionGuard, warn } from "../utils";
 import { interact } from "../interactor";
 import { ansi } from "../../format/ansi";
 
@@ -28,7 +28,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   const { profiles } = station;
 
   if (profiles.length <= 1) {
-    reply(interaction, makeColoredMessage('yellow', `${station.name} has no profiles other than the default one`));
+    warn(interaction, `${station.name} has no profiles other than the default one`);
     return;
   }
 
