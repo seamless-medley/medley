@@ -565,14 +565,20 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.collections.filter(collection => this.#boombox.isKnownCollection(collection));
   }
 
-  forcefullySelectCollection(id: string): boolean {
+  forcefullySelectCollection(id: string): true | string {
+    if (this.isLatchActive) {
+      return 'A latch session is currently active';
+    }
+
     const collection = this.getCollection(id);
 
     if (!collection) {
-      return false;
+      return 'Unknown collection';
     }
 
-    return this.#boombox.forcefullySelectCollection(collection);
+    return this.#boombox.forcefullySelectCollection(collection)
+      ? true
+      : 'Invalid collection';
   }
 
   //#endregion
