@@ -8,9 +8,8 @@ import {
   StringSelectMenuBuilder,
 } from "discord.js";
 
-import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, reply } from "../../utils";
-import { isString, range } from "lodash";
 import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply } from "../../utils";
+import { chain, isString, range, startCase } from "lodash";
 import { ansi } from "../../../format/ansi";
 import { onGoing } from "./on-going";
 import { interact } from "../../interactor";
@@ -88,7 +87,7 @@ export async function set(options: SubCommandHandlerOptions) {
 
     makeComponents() {
       const listing = collections.map<SelectMenuComponentOptionData>(c => ({
-        label: c.extra.description,
+        label: c.extra.description ?? startCase(c.id),
         description: `${c.length} track(s)`,
         value: c.id,
         default: c.id === selections.collection
