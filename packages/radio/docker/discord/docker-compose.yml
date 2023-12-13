@@ -24,6 +24,7 @@ services:
       # MEDLEY_DISCORD_CLIENT_ID: discord-client-id
       MEDLEY_DISCORD_BASE_COMMAND: medley
       LOG_PRETTY: hide-date,use-colors
+      FORCE_COLOR: 3
     volumes:
       - /Music-Station/musics:/data/musics
       - /Music-Station/medley-drops:/data/medley-drops
