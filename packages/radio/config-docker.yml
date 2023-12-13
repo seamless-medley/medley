@@ -1,6 +1,9 @@
 # yaml-language-server: $schema=medley-schema.json
 # yaml-language-server: $schema=https://raw.githubusercontent.com/vittee/medley/develop/packages/radio/medley-schema.json
 
+server:
+  port: 3001
+
 db:
   driver: mongodb
   url: mongodb://${MEDLEY_MONGO_DB_HOST}:${MEDLEY_MONGO_DB_PORT}
@@ -63,6 +66,7 @@ stations:
 
     profiles:
       default:
+        name: Default profile
         followCrateAfterRequestTrack: true
         requestSweepers:
           - ${MEDLEY_DROP_PATH}/your
