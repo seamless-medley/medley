@@ -19,7 +19,8 @@ export async function set(options: SubCommandHandlerOptions) {
 
   const { station } = guildStationGuard(automaton, interaction);
 
-  const collections = station.knownCollections.filter(c => c.length && !c.latchDisabled);
+  // All collections from station's library
+  const collections = station.collections.filter(c => c.length > 0 && !c.latchDisabled);
 
   if (collections.length <= 1) {
     reply(interaction, 'Nothing to latch');
