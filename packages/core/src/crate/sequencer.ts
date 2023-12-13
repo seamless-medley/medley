@@ -362,7 +362,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
 
     this.#temporalCollection = collection;
     this.setCrateIndex(crateIndex, true);
-    return false;
+    return true;
   }
 
   #latchSessions: Array<LatchSession<T, E>> = [];
