@@ -271,14 +271,14 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
             }
 
             const intendedCollection = latchingCollection ?? this.#temporalCollection;
-            this.#temporalCollection = undefined;
-
             const track = await crate.next(trackValidator, intendedCollection);
 
             if (track) {
               const { shouldPlay, extra } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, extra: undefined };
 
               if (shouldPlay) {
+                this.#temporalCollection = undefined;
+
                 this.increasePlayCount();
 
                 this.#currentCollection = track.collection;
