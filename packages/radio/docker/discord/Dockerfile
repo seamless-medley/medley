@@ -43,8 +43,13 @@ COPY --from=builder /build/packages/radio/config-docker.yml /app
 
 RUN mkdir -p /data/musics /data/drops
 
+# Add Tini
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--"]
+
 WORKDIR /app
 
-# TODO: Remove this and use command for starting radio bot
 # TODO: The config file is meant to be mounted and must be named `config.yml`
-CMD node radio/discord/bot_main.js config-docker.yml
+CMD ["node", ".", "config-docker.yml"]
