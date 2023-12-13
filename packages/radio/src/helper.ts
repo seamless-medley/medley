@@ -155,14 +155,6 @@ export async function createAutomaton(cfg: AutomatonConfig & { id: string; creat
 }
 
 export async function showVersionBanner(file: string) {
-  const info = await readFile(file)
-    .then(s => s.toString().split(/\r?\n/).map(l => l.trim()).filter(l => l !== ''))
-    .catch(() => false as const);
-
-  if (!info) {
-    return;
-  }
-
   const gradient = ['#961cb9', '#07d569', '#1c92f6'];
 
   require('cfonts').say('Medley', {
@@ -170,6 +162,14 @@ export async function showVersionBanner(file: string) {
     gradient,
     transitionGradient: true
   });
+
+  const info = await readFile(file)
+    .then(s => s.toString().split(/\r?\n/).map(l => l.trim()).filter(l => l !== ''))
+    .catch(() => false as const);
+
+  if (!info) {
+    return;
+  }
 
   function centered(s: string) {
     const pad = ' '.repeat(48 - (s.length / 2));
