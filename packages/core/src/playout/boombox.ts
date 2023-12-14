@@ -62,14 +62,16 @@ export function isRequestTrack<T extends BoomBoxTrack, R extends Requester>(o: a
 
 export type BoomBoxProfile = CrateProfile<BoomBoxTrack>;
 
-export type BoomBoxEvents = {
+export type BoomBoxEvents<P extends BoomBoxProfile = BoomBoxProfile> = {
   /**
-   * Emit when an active crate is changed by the sequencer during the sequencing phase
+   * Emit when the active crate was changed by the sequencer during the sequencing phase
    */
   sequenceChange: (activeCrate: BoomBoxCrate, oldCrate?: BoomBoxCrate) => void;
 
+  sequenceProfileChange: (oldProfile: P | undefined, newProfile: P) => void;
+
   /**
-   * Emit when an active collection was changed by any means during track queuing phase
+   * Emit when the active collection was changed by any means during track queuing phase
    *
    * This event is triggered by node-medley itself
    *
@@ -77,10 +79,15 @@ export type BoomBoxEvents = {
    */
   collectionChange: (oldCollection: BoomBoxTrackCollection | undefined, newCollection: BoomBoxTrackCollection, transitingFromRequestTrack: boolean) => void;
 
-  profileChange: (oldProfile: BoomBoxProfile | undefined, newProfile: BoomBoxProfile) => void;
+  /**
+   * Emit when the active profile was changed during track queuing phase
+   */
+  profileChange: (oldProfile: P | undefined, newProfile: P) => void;
+
+  latchCreated: (session: LatchSession<BoomBoxTrack, BoomBoxTrackExtra>) => void;
 
   /**
-   * Emit when an active crate was changed by any means during track queuing phase
+   * Emit when the active crate was changed by any means during track queuing phase
    *
    * Note that this is not the same as `sequenceChange` event
    * This event is triggered by node-medley itself
@@ -141,10 +148,10 @@ export type DeckInfoWithPositions = DeckInfo & {
 
 export type RequestTrackLockPredicate<R extends Requester> = (t: TrackWithRequester<BoomBoxTrack, R>) => boolean;
 
-export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfile<BoomBoxTrack>> extends TypedEmitter<BoomBoxEvents> {
+export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfile<BoomBoxTrack>> extends TypedEmitter<BoomBoxEvents<P>> {
   readonly id: string;
 
-  readonly #sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>;
+  readonly #sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra, P>;
   readonly #sweeperInserter: SweeperInserter;
 
   options: Required<Pick<BoomBoxOptions<BoomBoxTrack, R>, 'artistBacklog' | 'duplicationSimilarity'>>;
@@ -191,12 +198,14 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     this.#onInsertRequestTrack = options.onInsertRequestTrack;
 
     //
-    this.#sequencer = new CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra>(this.id, {
+    this.#sequencer = new CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra, P>(this.id, {
       trackValidator: this.#isTrackLoadable,
       trackVerifier: this.#verifyTrack
     });
 
     this.#sequencer.on('change', (crate: BoomBoxCrate, oldCrate?: BoomBoxCrate) => this.emit('sequenceChange', crate, oldCrate));
+    this.#sequencer.on('profileChange', (oldProfile, newProfile) => this.emit('sequenceProfileChange', oldProfile, newProfile));
+    this.#sequencer.on('latchCreated', session => this.emit('latchCreated', session));
     this.#sequencer.on('rescue', (scanned, ignored) => {
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
       this.#logger.warn(`Rescue, removing ${n} artist history entries`);
@@ -478,28 +487,30 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
         return;
       }
 
-      const currentTrack = this.#currentTrackPlay?.track;
-      const currentCollection = currentTrack?.collection;
+      if (nextTrack.sequencing.latch === undefined) {
+        const currentTrack = this.#currentTrackPlay?.track;
+        const currentTrackCollection = currentTrack?.collection;
 
-      const nextCollection = nextTrack.collection;
-      const collectionChange = currentCollection?.id !== nextCollection.id;
+        const nextCollection = nextTrack.collection;
+        const collectionChange = currentTrackCollection?.id !== nextCollection.id;
 
-      if (this.#currentCrate?.profile !== nextTrack.sequencing.crate.profile) {
-        this.emit('profileChange', this.#currentCrate?.profile, nextTrack.sequencing.crate.profile)
-        this.#logger.debug('Play profile changed to: %s', nextTrack.sequencing.crate.profile?.id);
-      }
-
-      if (collectionChange && nextCollection) {
-        const transitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
-        this.emit('collectionChange', currentCollection, nextCollection, transitingFromRequestTrack);
-      }
-
-      if (this.#currentCrate !== nextTrack.sequencing.crate) {
-        if (nextTrack.sequencing.crate) {
-          this.emit('crateChange', this.#currentCrate, nextTrack.sequencing.crate);
+        if (this.#currentCrate?.profile !== nextTrack.sequencing.crate.profile) {
+          this.emit('profileChange', this.#currentCrate?.profile as (P | undefined), nextTrack.sequencing.crate.profile as P)
+          this.#logger.debug('Play profile changed to: %s', nextTrack.sequencing.crate.profile?.id);
         }
 
-        this.#currentCrate = nextTrack.sequencing.crate;
+        if (collectionChange && nextCollection) {
+          const transitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
+          this.emit('collectionChange', currentTrackCollection, nextCollection, transitingFromRequestTrack);
+        }
+
+        if (this.#currentCrate !== nextTrack.sequencing.crate) {
+          if (nextTrack.sequencing.crate) {
+            this.emit('crateChange', this.#currentCrate, nextTrack.sequencing.crate);
+          }
+
+          this.#currentCrate = nextTrack.sequencing.crate;
+        }
       }
 
       addToQueue(nextTrack);
@@ -712,6 +723,10 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
    */
   isKnownCollection(collection: BoomBoxTrackCollection): boolean {
     return this.#sequencer.isKnownCollection(collection);
+  }
+
+  get currentSequenceCollection() {
+    return this.#sequencer.currentCollection;
   }
 
   forcefullySelectCollection(collection: BoomBoxTrackCollection): boolean {

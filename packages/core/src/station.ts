@@ -118,6 +118,9 @@ export type StationEvents = {
   trackFinished: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
   collectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, transitingFromRequestTrack: boolean) => void;
   crateChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
+  sequenceProfileChange: (oldProfile: StationProfile | undefined, newProfile: StationProfile) => void;
+  profileChange: (oldProfile: StationProfile | undefined, newProfile: StationProfile) => void;
+  latchCreated: (session: LatchSession<StationTrack, any>) => void;
 
   requestTrackAdded: (track: StationTrackIndex) => void;
   requestTracksRemoved: (tracks: StationRequestedTrack[]) => void;
@@ -126,6 +129,8 @@ export type StationEvents = {
   collectionRemoved: (collection: StationTrackCollection) => void;
   collectionUpdated: (collection: StationTrackCollection) => void;
 }
+
+type BoomBoxEventsForStation = BoomBoxEvents<StationProfile>;
 
 export class Station extends TypedEmitter<StationEvents> {
   readonly id: string;
@@ -230,6 +235,8 @@ export class Station extends TypedEmitter<StationEvents> {
     boombox.on('collectionChange', this.#handleCollectionChange);
     boombox.on('crateChange', this.#handleCrateChange);
     boombox.on('profileChange', this.#handleProfileChange);
+    boombox.on('sequenceProfileChange', (o, n) => this.emit('sequenceProfileChange', o, n));
+    boombox.on('latchCreated', session => this.emit('latchCreated', session));
 
     this.#musicDb.trackHistory
       .getAll(this.id)
@@ -262,32 +269,32 @@ export class Station extends TypedEmitter<StationEvents> {
     }
   }
 
-  #handleTrackQueued: BoomBoxEvents['trackQueued'] = (track: StationTrack) => {
+  #handleTrackQueued: BoomBoxEventsForStation['trackQueued'] = (track: StationTrack) => {
     this.emit('trackQueued', track);
   }
 
-  #handleDeckLoaded: BoomBoxEvents['deckLoaded'] = (deck, trackPlay: StationTrackPlay) => {
+  #handleDeckLoaded: BoomBoxEventsForStation['deckLoaded'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckLoaded', deck, trackPlay);
   }
 
-  #handleDeckUnloaded: BoomBoxEvents['deckUnloaded'] = (deck, trackPlay: StationTrackPlay) => {
+  #handleDeckUnloaded: BoomBoxEventsForStation['deckUnloaded'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckUnloaded', deck, trackPlay);
   }
 
-  #handleDeckStarted: BoomBoxEvents['deckStarted'] = (deck, trackPlay: StationTrackPlay) => {
+  #handleDeckStarted: BoomBoxEventsForStation['deckStarted'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckStarted', deck, trackPlay);
   }
 
-  #handleDeckActive: BoomBoxEvents['deckActive'] = (deck, trackPlay: StationTrackPlay) => {
+  #handleDeckActive: BoomBoxEventsForStation['deckActive'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckActive', deck, trackPlay);
     this.activeDeck = deck;
   }
 
-  #handleDeckFinished: BoomBoxEvents['deckFinished'] = (deck, trackPlay: StationTrackPlay) => {
+  #handleDeckFinished: BoomBoxEventsForStation['deckFinished'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('deckFinished', deck, trackPlay);
   }
 
-  #handleTrackStarted: BoomBoxEvents['trackStarted'] = (deck, trackPlay: StationTrackPlay, lastTrackPlay?: StationTrackPlay) => {
+  #handleTrackStarted: BoomBoxEventsForStation['trackStarted'] = (deck, trackPlay: StationTrackPlay, lastTrackPlay?: StationTrackPlay) => {
     this.#starting = false;
     this.emit('trackStarted', deck, trackPlay, lastTrackPlay);
 
@@ -297,23 +304,25 @@ export class Station extends TypedEmitter<StationEvents> {
     }, this.maxTrackHistory);
   }
 
-  #handleTrackActive: BoomBoxEvents['trackActive'] = (deck, trackPlay: StationTrackPlay) => {
+  #handleTrackActive: BoomBoxEventsForStation['trackActive'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('trackActive', deck, trackPlay);
   }
 
-  #handleTrackFinished: BoomBoxEvents['trackFinished'] = (deck, trackPlay: StationTrackPlay) => {
+  #handleTrackFinished: BoomBoxEventsForStation['trackFinished'] = (deck, trackPlay: StationTrackPlay) => {
     this.emit('trackFinished', deck, trackPlay);
   }
 
-  #handleCollectionChange: BoomBoxEvents['collectionChange'] = (oldCollection, newCollection, transitingFromRequestTrack) => {
+  #handleCollectionChange: BoomBoxEventsForStation['collectionChange'] = (oldCollection, newCollection, transitingFromRequestTrack) => {
     this.emit('collectionChange', oldCollection as StationTrackCollection | undefined, newCollection as StationTrackCollection, transitingFromRequestTrack);
   }
 
-  #handleCrateChange: BoomBoxEvents['crateChange'] = (oldCrate, newCrate) => {
+  #handleCrateChange: BoomBoxEventsForStation['crateChange'] = (oldCrate, newCrate) => {
     this.emit('crateChange', oldCrate, newCrate);
   }
 
-  #handleProfileChange: BoomBoxEvents['profileChange'] = (oldProfile, newProfile) => {
+  #handleProfileChange: BoomBoxEventsForStation['profileChange'] = (oldProfile, newProfile) => {
+    this.emit('profileChange', oldProfile, newProfile);
+
     if (newProfile instanceof StationProfile) {
       const { intros } = this.#profile;
 
@@ -584,6 +593,10 @@ export class Station extends TypedEmitter<StationEvents> {
       : 'Invalid collection';
   }
 
+  get currentSequenceCollection() {
+    return this.#boombox.currentSequenceCollection;
+  }
+
   //#endregion
 
   get profile() {
@@ -812,6 +825,7 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#boombox.removeLatch(session);
   }
 
+  /** @deprecated */
   isCollectionLatchable(collection: StationTrackCollection): boolean {
     return !collection.latchDisabled && this.#boombox.isKnownCollection(collection);
   }

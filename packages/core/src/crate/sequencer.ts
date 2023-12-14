@@ -7,9 +7,11 @@ import { Logger, createLogger } from "@seamless-medley/logging";
 import { randomUUID } from "crypto";
 import { CrateProfile } from "./profile";
 
-export type CrateSequencerEvents<T extends Track<any>> = {
+export type CrateSequencerEvents<T extends Track<any>, E extends TrackExtra, P extends CrateProfile<T>> = {
   change: (crate: Crate<T>, oldCrate?: Crate<T>) => void;
   rescue: (scanned: number, ignore: number) => void;
+  profileChange: (oldProfile: P | undefined, newProfile: P) => void;
+  latchCreated: (session: LatchSession<T, E>) => void;
 }
 
 export type TrackValidator = {
@@ -51,13 +53,13 @@ export type LatchOptions<T extends Track<any>> = (LatchWithLength | LatchIncreme
   important?: boolean;
 }
 
-interface CrateProfilePrivate<T extends Track<any>> {
-  attachSequencer(sequencer: CrateSequencer<T, any>): void;
+interface CrateProfilePrivate<T extends Track<any>, P extends CrateProfile<T>> {
+  attachSequencer(sequencer: CrateSequencer<T, any ,P>): void;
   detachSequencer(): void;
 }
 
-export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends TypedEmitter<CrateSequencerEvents<T>> {
-  #profile = new CrateProfile<T>({ id: '$empty', name: '' });
+export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends CrateProfile<any>> extends TypedEmitter<CrateSequencerEvents<T, E, P>> {
+  #profile: P = new CrateProfile<T>({ id: '$empty', name: '' }) as any;
 
   #playCounter = 0;
   #crateIndex = 0;
@@ -75,17 +77,23 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     });
   }
 
+  get currentCollection() {
+    return this.#currentCollection;
+  }
+
   get profile() {
     return this.#profile;
   }
 
-  changeProfile(newProfile: CrateProfile<T>) {
+  changeProfile(newProfile: P) {
     if (newProfile === this.#profile) {
       return false;
     }
 
-    (this.#profile as unknown as CrateProfilePrivate<T>)?.detachSequencer();
-    (newProfile as unknown as CrateProfilePrivate<T>).attachSequencer(this);
+    const oldProfile = this.#profile;
+
+    (oldProfile as unknown as CrateProfilePrivate<T, P>)?.detachSequencer();
+    (newProfile as unknown as CrateProfilePrivate<T, P>).attachSequencer(this);
 
     const currentCollectionId = this.#currentCollection?.id;
 
@@ -105,6 +113,8 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     this.#crateIndex = crateIndex > -1
       ? this.#ensureCrateIndex(crateIndex)
       : 0;
+
+    this.emit('profileChange', oldProfile, newProfile);
 
     this.#logger.debug(
       {
@@ -438,6 +448,8 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra> extends Ty
     } else {
       this.#latchSessions.push(newSession);
     }
+
+    this.emit('latchCreated', newSession);
 
     return newSession;
   }

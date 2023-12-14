@@ -21,7 +21,7 @@ export class CrateProfile<T extends Track<any>> {
 
   #crates: Array<Crate<T>>;
 
-  #sequencer?: CrateSequencer<T, any>;
+  #sequencer?: CrateSequencer<T, any,  CrateProfile<T>>;
 
   constructor(options: CrateProfileOptions<T>) {
     this.id = options.id;
@@ -37,11 +37,11 @@ export class CrateProfile<T extends Track<any>> {
   /**
    * Attach this profile with a sequencer
    */
-  private attachSequencer(sequencer: CrateSequencer<T, any>) {
+  private attachSequencer(sequencer: CrateSequencer<T, any, CrateProfile<T>>) {
     this.#sequencer = sequencer;
   }
 
-  private detachSequencer(sequencer: CrateSequencer<T, any>) {
+  private detachSequencer(sequencer: CrateSequencer<T, any,  CrateProfile<T>>) {
     if (this.#sequencer === sequencer) {
       this.#sequencer = undefined;
     }
