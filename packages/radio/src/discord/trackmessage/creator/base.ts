@@ -78,7 +78,7 @@ export abstract class TrackMessageCreator {
       .setStyle(ButtonStyle.Danger)
       .setCustomId(`skip:${trackPlay.uuid}`);
 
-    const showMoreLikeThis = station.collections.length > 1 && station.isCollectionLatchable(trackPlay.track.collection as StationTrackCollection);
+    const showMoreLikeThis = station.collections.length > 1 && !trackPlay.track.collection.latchDisabled;
 
     const moreButton = showMoreLikeThis
       ? new ButtonBuilder()
