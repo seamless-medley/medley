@@ -398,7 +398,19 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
           return;
         }
       }
-    }
+    },
+
+    hook({ cancel }) {
+      const handleStationChange = () => {
+        cancel('Canceled, the station has been changed');
+      }
+
+      automaton.on('stationTuned', handleStationChange);
+
+      return () => {
+        automaton.off('stationTuned', handleStationChange);
+      }
+    },
   });
 }
 
