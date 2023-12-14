@@ -397,18 +397,31 @@ export class Station extends TypedEmitter<StationEvents> {
 
     if (followCrateAfterRequestTrack && !track.collection.options.noFollowOnRequest) {
       if (!this.isLatchActive) {
-        const located = this.#boombox.locateCrate(track.collection.id);
-        const oldCrateIndex = this.#boombox.getCrateIndex();
+        // const located = this.#boombox.locateCrate(track.collection.id);
+        // const oldCrateIndex = this.#boombox.getCrateIndex();
 
-        if (located !== undefined && located !== oldCrateIndex) {
-          this.#logger.debug(
-            {
-              old: this.#boombox.crates[oldCrateIndex].id,
-              new: this.#boombox.crates[located].id
-            },
-            'Follow crate after a request track'
+        // if (located !== undefined && located !== oldCrateIndex) {
+        //   this.#logger.debug(
+        //     {
+        //       old: this.#boombox.crates[oldCrateIndex].id,
+        //       new: this.#boombox.crates[located].id
+        //     },
+        //     'Follow crate after a request track'
+        //   );
+
+        //   this.#boombox.setCrateIndex(located);
+        // }
+
+        const oldCollection = this.currentSequenceCollection;
+        this.#boombox.forcefullySelectCollection(track.collection);
+
+        if (oldCollection?.id !== track.collection.id) {
+          this.emit(
+            'collectionChange',
+            oldCollection as StationTrackCollection | undefined,
+            track.collection as StationTrackCollection,
+            false
           );
-          this.#boombox.setCrateIndex(located);
         }
       }
     }
@@ -852,6 +865,10 @@ export class StationProfile extends CrateProfile<StationTrack> {
 
   noRequestSweeperOnIdenticalCollection: boolean = true;
 
+  /**
+   * @deprecated will be changed to `followCollectionAfterRequestTrack`
+   * since the sequencer is now cpable of selection certain collection in a crate on demand
+   * */
   followCrateAfterRequestTrack: boolean = true;
 }
 
