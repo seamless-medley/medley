@@ -7,7 +7,7 @@ import { ansi } from "../../format/ansi";
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
   name: 'profile',
-  description: 'Select station profile'
+  description: 'Change station profile'
 }
 
 const onGoing = new Set<string>();
@@ -90,8 +90,20 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
         return;
       }
-    }
-  })
+    },
+
+    hook({ cancel }) {
+      const handleStationChange = () => {
+        cancel('Canceled, the station has been changed');
+      }
+
+      automaton.on('stationTuned', handleStationChange);
+
+      return () => {
+        automaton.off('stationTuned', handleStationChange);
+      }
+    },
+  });
 }
 
 const descriptor: CommandDescriptor = {
