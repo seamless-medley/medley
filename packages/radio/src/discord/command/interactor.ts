@@ -4,7 +4,8 @@ import { guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
 import { noop } from "lodash";
 import { Strings } from "./type";
 
-export type InteractorOnCollectParams = {
+export type InteractorOnCollectParams<D> = {
+  data?: D;
   runningKey: string;
   collected: MessageComponentInteraction;
   collector: InteractionCollector<CollectedMessageInteraction>,
@@ -14,24 +15,34 @@ export type InteractorOnCollectParams = {
   done: (shouldDelete?: boolean) => Promise<any>;
 }
 
-export type InteractorOptions = {
+export type InteractorHookParams = {
+  refresh: (what?: Partial<{ message: boolean, timer: boolean }>) => void;
+  cancel: (reason?: string) => void;
+}
+
+export type InteractorOptions<D = unknown> = {
   automaton: MedleyAutomaton;
   commandName: string;
   interaction: CommandInteraction,
   onGoing?: Set<string>;
   ttl?: number;
+  data?: D;
   //
   formatTimeout?: (time: string) => string;
-  makeCaption: () => Strings;
-  makeComponents: () => Array<ActionRowBuilder<MessageActionRowComponentBuilder>>;
-  onCollect: (params: InteractorOnCollectParams) => any;
+  makeCaption: (data?: D) => Strings;
+  makeComponents: (data?: D) => Array<ActionRowBuilder<MessageActionRowComponentBuilder>>;
+  onCollect: (params: InteractorOnCollectParams<D>) => any;
+
+  hook?: (params: InteractorHookParams) => () => any;
 }
 
 const defaultFunctions = {
   formatTimeout: (time: string) => `Timeout: ${time}`
 }
 
-export async function interact(options: InteractorOptions) {
+export type InteractorMessageBuilder = () => Omit<InteractionReplyOptions, 'flags'>;
+
+export async function interact<D>(options: InteractorOptions<D>): Promise<void> {
   const {
     interaction,
     onGoing,
@@ -52,67 +63,97 @@ export async function interact(options: InteractorOptions) {
 
   const makeTimeout = () => ttl ? (formatTimeout ?? defaultFunctions.formatTimeout)(formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')) : undefined;
 
-  const buildMessage = (): Omit<InteractionReplyOptions, 'flags'> => ({
+  const buildMessage: InteractorMessageBuilder = () => ({
     fetchReply: true,
     content: joinStrings([
       makeTimeout(),
-      ...makeCaption()
+      ...makeCaption(options.data)
     ]),
-    components: makeComponents()
-  })
+    components: makeComponents(options.data)
+  });
 
-  const selector = await reply(interaction, buildMessage());
+  const replyMessage = () => reply(interaction, buildMessage());
 
-  if (selector instanceof Message) {
-    const collector = selector.createMessageComponentCollector({ dispose: true, time: ttl });
+  const selector = await replyMessage();
 
-    let done = false;
-    const stop = async (shouldDelete: boolean = true) => {
-      done = true;
+  if (!(selector instanceof Message)) {
+    return;
+  }
 
-      if (onGoing?.has(runningKey) ?? true) {
-        onGoing?.delete(runningKey);
+  const collector = selector.createMessageComponentCollector({ dispose: true, time: ttl });
 
-        collector.stop();
+  let done = false;
+  const stop = async (shouldDelete: boolean = true) => {
+    done = true;
 
-        if (shouldDelete && selector.deletable) {
-          await selector.delete();
-        }
+    if (onGoing?.has(runningKey) ?? true) {
+      onGoing?.delete(runningKey);
+
+      collector.stop();
+
+      if (shouldDelete && selector.deletable) {
+        await selector.delete();
       }
     }
-
-    onGoing?.add(runningKey);
-
-    collector.on('collect', async (collected) => {
-      if (collected.user.id !== issuer) {
-        collected.reply({
-          content: `Sorry, this selection is for${userMention(issuer)} only`,
-          ephemeral: true
-        })
-        return;
-      }
-
-      options.onCollect({
-        runningKey,
-        collected,
-        collector,
-        selector,
-        buildMessage,
-        done: stop,
-        resetTimer: () => collector.resetTimer({ time: ttl })
-      });
-    });
-
-    collector.on('end', async () => {
-      if (!done && selector.editable) {
-        await selector.edit({
-          content: makeColoredMessage('yellow', 'Timed out, please try again'),
-          components: []
-        })
-        .catch(noop);
-      }
-
-      await stop(false);
-    });
   }
+
+  onGoing?.add(runningKey);
+
+  const resetTimer = () => collector.resetTimer({ time: ttl });
+
+  const cleanup = options.hook?.({
+    refresh: ({ message = true, timer = true } = {}) => {
+      if (message) {
+        replyMessage();
+      }
+
+      if (timer) {
+        resetTimer();
+      }
+    },
+
+    cancel: (reason) => {
+      interaction.editReply({
+        content: makeColoredMessage('yellow', reason ?? 'Canceled'),
+        components: []
+      });
+
+      return stop(false);
+    }
+  })
+
+  collector.on('collect', async (collected) => {
+    if (collected.user.id !== issuer) {
+      collected.reply({
+        content: `Sorry, this selection is for${userMention(issuer)} only`,
+        ephemeral: true
+      })
+      return;
+    }
+
+    options.onCollect({
+      data: options.data,
+      runningKey,
+      collected,
+      collector,
+      selector,
+      buildMessage,
+      resetTimer,
+      done: stop
+    });
+  });
+
+  collector.on('end', async () => {
+    cleanup?.();
+
+    if (!done && selector.editable) {
+      await selector.edit({
+        content: makeColoredMessage('yellow', 'Timed out, please try again'),
+        components: []
+      })
+      .catch(noop);
+    }
+
+    await stop(false);
+  });
 }
