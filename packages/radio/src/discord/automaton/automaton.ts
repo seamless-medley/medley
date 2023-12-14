@@ -103,6 +103,8 @@ export type AutomatonEvents = {
 
   guildCreate: (guild: Guild) => void;
   guildDelete: (guild: Guild) => void;
+
+  stationTuned: (guildId: string, oldStation: Station | undefined, newStation: Station) => void;
 }
 
 export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
@@ -664,6 +666,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         }
       });
     }
+  }
+
+  async tune(guildId: string, station: Station) {
+    return this.ensureGuildState(guildId).tune(station);
   }
 
   async updateTrackMessage(predicate: (msg: TrackMessage) => Promise<UpdateTrackMessageOptions | undefined>) {

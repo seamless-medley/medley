@@ -153,6 +153,9 @@ export class GuildState {
   async tune(station: Station): Promise<Station | undefined> {
     this.preferredStation = station;
 
+    const { guildId, adapter, stationLink } = this;
+    const oldStation = stationLink?.station;
+
     const link = await this.createStationLink();
 
     if (link && this.#voiceConnector) {
@@ -161,7 +164,13 @@ export class GuildState {
 
     this.#updateAudiences();
 
-    return link?.station;
+    const newStation = link?.station;
+
+    if (newStation) {
+      adapter.getAutomaton().emit('stationTuned', guildId, oldStation, newStation);
+    }
+
+    return newStation;
   }
 
   async createStationLink() {
