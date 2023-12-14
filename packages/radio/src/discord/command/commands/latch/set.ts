@@ -177,6 +177,18 @@ export async function set(options: SubCommandHandlerOptions) {
 
         await collected.update(buildMessage());
       }
-    }
+    },
+
+    hook({ cancel }) {
+      const handleStationChange = () => {
+        cancel('Canceled, the station has been changed');
+      }
+
+      automaton.on('stationTuned', handleStationChange);
+
+      return () => {
+        automaton.off('stationTuned', handleStationChange);
+      }
+    },
   });
 }
