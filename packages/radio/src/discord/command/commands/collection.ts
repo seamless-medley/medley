@@ -4,6 +4,7 @@ import { deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, permissionGuar
 import { chain, startCase } from "lodash";
 import { interact } from "../interactor";
 import { ansi } from "../../format/ansi";
+import { StationEvents, StationTrackCollection, TrackCollection, isRequestTrack } from "@seamless-medley/core";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -32,28 +33,40 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     return;
   }
 
-  // Only gets collections from the current profile
-  const collections = chain(station.crates)
+  const getCollections = () => chain(station.crates)
     .flatMap(c => c.sources)
     .uniqBy(c => c.id)
     .value();
 
-  if (collections.length <= 1) {
+  if (getCollections().length <= 1) {
     warn(interaction, `No collections to change`);
     return;
   }
 
-  const currentCollection = station.trackPlay?.track.collection;
-
-  await interact({
+  await interact<TrackCollection<any>>({
     commandName: declaration.name,
     automaton,
     interaction,
     onGoing,
     ttl: 90_000,
+    data: station.currentSequenceCollection,
 
     makeCaption: () => [],
-    makeComponents() {
+    makeComponents(trackingCollection) {
+      const collections = getCollections();
+
+      if (getCollections().length <= 1) {
+        return [];
+      }
+
+      const currentTrack = station.trackPlay?.track;
+
+      const currentCollection = trackingCollection ?? (
+        isRequestTrack(currentTrack)
+          ? currentTrack.collection
+          : station.currentSequenceCollection
+      );
+
       const selectedCollection = currentCollection && collections.find(c => c.id === currentCollection?.id)
         ? currentCollection
         : undefined;
@@ -94,9 +107,12 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
       if (customId === 'collection' && collected.isStringSelectMenu()) {
         await done(false);
 
+        const collections = getCollections();
         const collection = collections.find(c => c.id === collected.values[0]);
 
-        const result = collection ? station.forcefullySelectCollection(collection.id) : false;
+        const result = collection
+          ? station.forcefullySelectCollection(collection.id)
+          : 'Invalid collection';
 
         await collected.update({
           content: joinStrings(makeAnsiCodeBlock(
@@ -109,8 +125,40 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
         return;
       }
-    }
-  })
+    },
+
+    hook({ refresh, cancel }) {
+      const update = () => refresh({
+        message: true,
+        timer: true
+      });
+
+      const handleCollectionChange: StationEvents['collectionChange'] = (oldCollection, newCollection) => {
+        this.data = newCollection;
+        update();
+      }
+
+      const handleLatchCreated = () => {
+        cancel('Canceled, a new latch session has been created');
+      }
+
+      const handleStationChange = () => {
+        cancel('Canceled, the station has been changed');
+      }
+
+      station.on('collectionChange', handleCollectionChange);
+      station.on('sequenceProfileChange', update);
+      station.on('latchCreated', handleLatchCreated);
+      automaton.on('stationTuned', handleStationChange);
+
+      return () => {
+        station.off('collectionChange', handleCollectionChange);
+        station.off('sequenceProfileChange', update);
+        station.off('latchCreated', handleLatchCreated);
+        automaton.off('stationTuned', handleStationChange);
+      }
+    },
+  });
 }
 
 const descriptor: CommandDescriptor = {
