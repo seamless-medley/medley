@@ -8,8 +8,8 @@ import {
   StringSelectMenuBuilder,
 } from "discord.js";
 
-import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply } from "../../utils";
-import { chain, isString, range, startCase } from "lodash";
+import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply, warn } from "../../utils";
+import { isString, range, startCase } from "lodash";
 import { ansi } from "../../../format/ansi";
 import { onGoing } from "./on-going";
 import { interact } from "../../interactor";
@@ -35,7 +35,7 @@ export async function set(options: SubCommandHandlerOptions) {
   const collections = station.collections.filter(c => c.length > 0 && !c.latchDisabled);
 
   if (collections.length <= 1) {
-    reply(interaction, 'Nothing to latch');
+    warn(interaction, 'Nothing to latch');
     return;
   }
 

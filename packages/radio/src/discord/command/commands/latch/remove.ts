@@ -114,5 +114,5 @@ export async function remove(options: SubCommandHandlerOptions) {
         ])
       });
     }
-  })
+  });
 }

@@ -51,7 +51,7 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
       embeds: []
     });
 
-    const ok = await automaton.ensureGuildState(guildId).tune(station);
+    const ok = await automaton.tune(guildId, station);
 
     if (ok) {
       const embed = new EmbedBuilder()
@@ -146,7 +146,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
         return;
       }
     }
-  })
+  });
 }
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => (interaction) => {
