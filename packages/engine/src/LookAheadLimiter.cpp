@@ -36,13 +36,13 @@ void LookAheadLimiter::process(const ProcessContextReplacing<float>& context)
 {
     ScopedNoDenormals noDenormals;
 
-    auto& input = context.getInputBlock();
-    auto& output = context.getOutputBlock();
+    const auto& input = context.getInputBlock();
+    const auto& output = context.getOutputBlock();
 
     auto totalNumInputChannels = input.getNumChannels();
     auto totalNumOutputChannels = output.getNumChannels();
 
-    const int numSamples = input.getNumSamples();
+    const auto numSamples = input.getNumSamples();
 
     // clear not needed output channels
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
@@ -114,8 +114,8 @@ void LookAheadLimiter::Delay::process(const ProcessContextReplacing<float>& cont
 
     if (!bypassed)
     {
-        auto abIn = context.getInputBlock();
-        auto abOut = context.getOutputBlock();
+        const auto& abIn = context.getInputBlock();
+        const auto& abOut = context.getOutputBlock();
         auto L = static_cast<int> (abIn.getNumSamples());
         auto nCh = jmin((int)spec.numChannels, (int)abIn.getNumChannels());
 

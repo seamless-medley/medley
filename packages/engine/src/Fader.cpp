@@ -1,7 +1,7 @@
 #include "Fader.h"
 
-Fader::Fader(float normalGain)
-    : normalGain(normalGain), gain(normalGain)
+Fader::Fader(float normalValue)
+    : normalValue(normalValue), value(normalValue)
 {
 }
 
@@ -14,8 +14,8 @@ void Fader::start(double timeStart, double timeEnd, float from, float to, float 
     this->factor = factor;
     this->callback = callback;
     this->resetTo = resetTo;
-    fadeOut = to < from;
-    gain = from;
+    reversed = to < from;
+    value = from;
     started = true;
 }
 
@@ -27,7 +27,7 @@ float Fader::start(double time, double timeStart, double timeEnd, float from, fl
 
 float Fader::update(double time)
 {
-    auto ng = normalGain != -1.0f ? normalGain : gain;
+    auto ng = normalValue != -1.0f ? normalValue : value;
 
     if (timeStart < 0 || timeEnd < 0) {
         return ng;
@@ -42,15 +42,15 @@ float Fader::update(double time)
         auto progress = juce::jlimit(0.0, 1.0, (time - timeStart) / duration);
 
         if (duration > 0.0) {
-            if (fadeOut) {
-                gain = (float)(pow(1 - progress, factor)) * (from - to) + to;
+            if (reversed) {
+                value = (float)(pow(1 - progress, factor)) * (from - to) + to;
             }
             else {
-                gain = (float)pow(progress, factor) * (to - from) + from;
+                value = (float)pow(progress, factor) * (to - from) + from;
             }
         }
         else {
-            gain = to;
+            value = to;
         }
 
         if (time >= timeEnd) {
@@ -58,7 +58,12 @@ float Fader::update(double time)
         }
     }
 
-    return gain;
+    return value;
+}
+
+bool Fader::shouldUpdate(double time)
+{
+    return started || (time >= timeStart) && (time <= timeEnd);
 }
 
 void Fader::stop()
@@ -66,24 +71,24 @@ void Fader::stop()
     reset(resetTo);
 
     if (started) {
-        callback();
         started = false;
+        callback();        
     }
 }
 
-void Fader::reset(float toGain)
+void Fader::reset(float toValue)
 {
     if (shouldResetTime) {
         resetTime();
     }
 
-    auto g = toGain;
+    auto g = toValue;
     if (g == -1.0f) {
-        g = normalGain;
+        g = normalValue;
     }
 
     if (g != -1.0f) {
-        gain = g;
+        value = g;
     }
 }
 

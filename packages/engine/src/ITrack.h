@@ -48,7 +48,7 @@ public:
 private:
     Uuid uuid;
     ITrack::Ptr track;
-    double duration;
+    double duration = 0.0;
 };
 
 }

@@ -63,7 +63,7 @@ private:
 
     float state = 0.0f;
 
-    float alphaAttack;
-    float alphaRelease;
+    float alphaAttack = 0.0f;
+    float alphaRelease = 0.0f;
 };
 

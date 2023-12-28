@@ -52,16 +52,17 @@ void LevelTracker::prepare(const int channels, const int sampleRate, const int l
     }
 }
 
-double LevelTracker::getLevel(int channel) {
+double LevelTracker::getLevel(int channel) const
+{
     return channel < (int)levels.size() ? levels[channel]->get().level : 0.0;
 }
 
-double LevelTracker::getPeak(int channel)
+double LevelTracker::getPeak(int channel) const
 {
     return channel < (int)levels.size() ? levels[channel]->get().peak : 0.0;
 }
 
-bool LevelTracker::isClipping(int channel)
+bool LevelTracker::isClipping(int channel) const
 {
     return channel < (int)levels.size() ? levels[channel]->get().clip : false;
 }

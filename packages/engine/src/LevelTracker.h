@@ -16,11 +16,11 @@ public:
 
     void prepare(const int channels, const int sampleRate, const int latencyInSamples);
 
-    double getLevel(int channel);
+    double getLevel(int channel) const;
 
-    double getPeak(int channel);
+    double getPeak(int channel) const;
 
-    bool isClipping(int channel);
+    bool isClipping(int channel) const;
 
     void update();
 

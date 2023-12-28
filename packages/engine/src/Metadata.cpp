@@ -176,7 +176,7 @@ namespace {
             return -1;
         }
 
-        return input->read(buf, size);
+        return input->read(buf, (int)size);
     }
 
     static int minimp3_seek_cb(uint64_t position, void* user_data)
