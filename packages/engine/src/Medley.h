@@ -181,7 +181,7 @@ public:
 
     bool isKaraokeEnabled() const override;
 
-    void setKaraokeEnabled(bool enabled, bool dontTransit = false) override;
+    bool setKaraokeEnabled(bool enabled, bool dontTransit = false) override;
 
     float getKaraokeParams(DeFXKaraoke::Param param) const override;
 

@@ -24,7 +24,7 @@ class KaraokeParamController {
 public:
     virtual bool isKaraokeEnabled() const = 0;
 
-    virtual void setKaraokeEnabled(bool enabled, bool dontTransit = false) = 0;
+    virtual bool setKaraokeEnabled(bool enabled, bool dontTransit = false) = 0;
 
     virtual float getKaraokeParams(DeFXKaraoke::Param param) const = 0;
 
@@ -60,7 +60,7 @@ public:
 
     bool isKaraokeEnabled() const override;
 
-    void setKaraokeEnabled(bool enabled, bool dontTransit = false) override;
+    bool setKaraokeEnabled(bool enabled, bool dontTransit = false) override;
 
     float getKaraokeParams(DeFXKaraoke::Param param) const override;
 

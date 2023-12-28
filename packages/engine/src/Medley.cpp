@@ -173,9 +173,9 @@ bool Medley::isKaraokeEnabled() const
     return mixer.processor.isKaraokeEnabled();
 }
 
-void Medley::setKaraokeEnabled(bool enabled, bool dontTransit)
+bool Medley::setKaraokeEnabled(bool enabled, bool dontTransit)
 {
-    mixer.processor.setKaraokeEnabled(enabled, dontTransit);
+    return mixer.processor.setKaraokeEnabled(enabled, dontTransit);
 }
 
 float Medley::getKaraokeParams(DeFXKaraoke::Param param) const

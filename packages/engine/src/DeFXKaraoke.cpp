@@ -33,7 +33,7 @@ void DeFXKaraoke::prepare(const ProcessSpec& spec)
 
 void DeFXKaraoke::process(const ProcessContextReplacing<float>& context)
 {
-    if (context.isBypassed || mix <= 0.0f) {
+    if (!enabled || (mix <= 0.0f)) {
         return;
     }
 
@@ -91,6 +91,16 @@ void DeFXKaraoke::reset()
     highpassQ = 2.0f;
 
     updateFilter(true);
+}
+
+bool DeFXKaraoke::isEnabled() const
+{
+    return enabled;
+}
+
+void DeFXKaraoke::setEnabled(bool value)
+{
+    enabled = value;
 }
 
 float DeFXKaraoke::getParam(Param index) const

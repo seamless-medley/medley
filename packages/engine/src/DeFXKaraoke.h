@@ -25,9 +25,13 @@ public:
 
     void reset() override;
 
+    bool isEnabled() const;
+
+    void setEnabled(bool value);
+
     float getParam(Param index) const;
 
-    float setParam(Param index, float newValue);    
+    float setParam(Param index, float newValue);
 private:
     void updateFilter(bool force);
 
@@ -36,9 +40,11 @@ private:
 
     double sampleRate = 44100.0;
 
+    bool enabled = false;
+
     float mix = 1.0f;
     float originalBgLevel = 0.4f;
-    
+
     float lowpassCutOff = 100.0f;
     float lowpassQ = 2.0f;
 

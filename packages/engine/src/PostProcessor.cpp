@@ -2,8 +2,9 @@
 
 PostProcessor::PostProcessor()
 {
-    chain.setBypassed<index::DeFX>(true);
+    chain.setBypassed<index::DeFX>(false);
     chain.setBypassed<index::Limiter>(false);
+
     karaokeMix = getKaraokeParams(DeFXKaraoke::Param::Mix);
     karaokeMixFader.alwaysResetTime(true);
 }
@@ -87,37 +88,44 @@ bool PostProcessor::isKaraokeEnabled() const {
     return karaokeEnabled;
 }
 
-void PostProcessor::setKaraokeEnabled(bool enabled, bool dontTransit) {
+bool PostProcessor::setKaraokeEnabled(bool enabled, bool dontTransit) {
     if (karaokeEnabled == enabled) {
-        return;
+        return true;
     }
 
     karaokeEnabled = enabled;
 
     if (dontTransit) {
-        chain.setBypassed<index::DeFX>(!karaokeEnabled);
-        chain.get<index::DeFX>().setParam(DeFXKaraoke::Param::Mix, karaokeMix);
-        return;
+        auto& fx = chain.get<index::DeFX>();
+        fx.setEnabled(karaokeEnabled);
+        fx.setParam(DeFXKaraoke::Param::Mix, karaokeMix);
+        return fx.isEnabled();
     }
 
     auto start = currentTime + 100;
     auto end = start + 600;
 
     if (karaokeEnabled) {
-        chain.setBypassed<index::DeFX>(false);
+        chain.get<index::DeFX>().setEnabled(true);
 
         karaokeMixFader.start(start, end, 0.0f, karaokeMix, 0.7f, karaokeMix, [=] {
             // Ensure resetting to the up-to-date value
             karaokeMixFader.reset(karaokeMix);
             chain.get<index::DeFX>().setParam(DeFXKaraoke::Param::Mix, karaokeMix);
         });
+
+        return chain.get<index::DeFX>().isEnabled();
     }
     else {
         karaokeMixFader.start(start, end, karaokeMix, 0.0f, 0.7f, karaokeMix, [=] {
             karaokeMixFader.reset(0.0f);
-            chain.get<index::DeFX>().setParam(DeFXKaraoke::Param::Mix, 0.0f);
-            chain.setBypassed<index::DeFX>(true);
+
+            auto& fx = chain.get<index::DeFX>();
+            fx.setParam(DeFXKaraoke::Param::Mix, 0.0f);
+            fx.setEnabled(false);
         });
+
+        return true;
     }
 }
 
