@@ -78,7 +78,7 @@ jobs:
         id: check-tag
         working-directory: ${{ env.NODE_MEDLEY_DIR }}
         run: |
-          if [[ grep MEDLEY_VERSION_PRE_RELEASE src\version.h ]]; then
+          if [ grep MEDLEY_VERSION_PRE_RELEASE src\version.h ]; then
             echo "TAG=pre" >> "$GITHUB_OUTPUT"
           else
             echo "TAG=latest" >> "$GITHUB_OUTPUT"
