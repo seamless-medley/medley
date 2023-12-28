@@ -108,6 +108,9 @@
     <ClCompile Include="ConsoleLogWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\DeFXKaraoke.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h">
@@ -166,6 +169,9 @@
     </ClInclude>
     <ClInclude Include="ConsoleLogWriter.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\DeFXKaraoke.h">
+      <Filter>Engine Source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

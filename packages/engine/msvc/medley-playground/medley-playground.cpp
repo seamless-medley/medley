@@ -332,7 +332,7 @@ private:
                 readerPtr->read(&buffer, 0, 512 * 256, numSamplesFinished, true, true);
 
                 if (readerPtr->numChannels > 1) {
-                    for (auto i = 1; i < readerPtr->numChannels; i++) {
+                    for (auto i = 1u; i < readerPtr->numChannels; i++) {
                         buffer.addFrom(0, 0, buffer, i, 0, 512 * 256);
                     }
 
@@ -835,8 +835,8 @@ private:
             auto dst_it = std::find(b, e, to);
 
             if (dst_it != e && src_it != e) {
-                auto src_index = std::distance(b, src_it);
-                auto dst_index = std::distance(b, dst_it);
+                auto src_index = (int)std::distance(b, src_it);
+                auto dst_index = (int)std::distance(b, dst_it);
 
                 queue.tracks.splice(dst_it, queue.tracks, src_it);
                 listbox->selectRow(src_index <= dst_index ? dst_index - 1 : dst_index);
@@ -912,7 +912,6 @@ private:
         public DragAndDropContainer,
         public Timer,
         public Button::Listener,
-        public Slider::Listener,
         public medley::Medley::Callback,
         public PlayHead::Callback {
     public:
@@ -927,7 +926,26 @@ private:
             btnStop("Stop"),
             btnPause("Pause"),
             btnFadeOut("Fade Out"),
+            volumeSlider(Slider::SliderStyle::LinearHorizontal, Slider::NoTextBox),
             volumeText({}, "Volume:"),
+            controlAreaText({}, "Audio Controls"),
+            karaokeOn("Karaoke"),
+            btnKaraokeSet("Set"),
+            btnKaraokeUnset("Unset"),
+            karaokeMix(Slider::LinearBarVertical, Slider::NoTextBox),
+            karaokeMixLabel({}, "Karaoke\nMix"),
+            karaokeBgLevel(Slider::LinearBarVertical, Slider::NoTextBox),
+            karaokeBgLevelLabel({}, "Bg Lvl\nMix"),
+            lowpassLabel({}, "Bg Lvl\nLow Pass"),
+            lowpassCutOff(Slider::RotaryVerticalDrag, Slider::NoTextBox),
+            lowpassCutOffLabel({}, "Cutoff Freq"),
+            lowpassQ(Slider::RotaryVerticalDrag, Slider::NoTextBox),
+            lowpassQLabel({}, "Q"),
+            highpassLabel({}, "Bg Lvl\nHigh Pass"),
+            highpassCutOff(Slider::RotaryVerticalDrag, Slider::NoTextBox),
+            highpassCutOffLabel({}, "Cutoff Freq"),
+            highpassQ(Slider::RotaryVerticalDrag, Slider::NoTextBox),
+            highpassQLabel({}, "Q"),
             backgroundThread("Cover art thread")
         {
             openGLContext.attachTo(*getTopLevelComponent());
@@ -968,14 +986,12 @@ private:
             addAndMakeVisible(btnFadeOut);
 
             addAndMakeVisible(volumeText);
-            volumeText.setColour(Label::textColourId, Colours::black);
-
             addAndMakeVisible(volumeSlider);
-            volumeSlider.setTextBoxStyle(Slider::TextEntryBoxPosition::NoTextBox, "", 0, 0);
-            volumeSlider.setTextValueSuffix("dB");
             volumeSlider.setRange(0.0, 1.0);
             volumeSlider.setValue(medley.getVolume());
-            volumeSlider.addListener(this);
+            volumeSlider.onValueChange = [this] {
+                medley.setVolume((float)volumeSlider.getValue());
+            };
 
             playhead = new PlayHead(*this, backgroundThread);
             addAndMakeVisible(playhead);
@@ -1001,6 +1017,154 @@ private:
 
             queueListBox.setColour(ListBox::outlineColourId, Colours::grey);
             addAndMakeVisible(queueListBox);
+
+            controlAreaText.getFont().setBold(true);
+            addAndMakeVisible(controlAreaText);
+
+            karaokeOn.setToggleState(medley.isKaraokeEnabled(), NotificationType::dontSendNotification);
+            karaokeOn.onClick = [this] {
+                medley.setKaraokeEnabled(karaokeOn.getToggleState());
+            };
+            addAndMakeVisible(karaokeOn);
+
+            btnKaraokeSet.onClick = [this] {
+                medley.setKaraokeEnabled(true);
+                karaokeOn.setToggleState(true, NotificationType::dontSendNotification);
+            };
+            addAndMakeVisible(btnKaraokeSet);
+
+            btnKaraokeUnset.onClick = [this] {
+                medley.setKaraokeEnabled(false);
+                karaokeOn.setToggleState(false, NotificationType::dontSendNotification);
+            };
+            addAndMakeVisible(btnKaraokeUnset);
+
+            karaokeMix.onValueChange = [this] {
+                auto value = (float)karaokeMix.getValue();
+                karaokeMixValueLabel.setText(String::formatted("%.0f%%", value * 100), NotificationType::dontSendNotification);
+                medley.setKaraokeParams(DeFXKaraoke::Param::Mix, value);
+            };
+
+            karaokeMix.setRange(0.0f, 1.0f);
+            karaokeMix.setValue((double)medley.getKaraokeParams(DeFXKaraoke::Param::Mix));
+            addAndMakeVisible(karaokeMix);
+
+            auto smallFont = juce::Font(10.0f);
+
+            karaokeMixValueLabel.setFont(smallFont);
+            karaokeMixValueLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(karaokeMixValueLabel);
+            karaokeMixLabel.setFont(smallFont);
+            karaokeMixLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(karaokeMixLabel);
+
+            karaokeBgLevel.onValueChange = [this] {
+                auto value = (float)karaokeBgLevel.getValue();
+                karaokeBgLevelValueLabel.setText(String::formatted("%.0f%%", value * 100), NotificationType::dontSendNotification);
+                medley.setKaraokeParams(DeFXKaraoke::Param::OriginalBgLevel, value);
+            };
+
+            karaokeBgLevel.setRange(0.0f, 1.0f);
+            karaokeBgLevel.setValue((double)medley.getKaraokeParams(DeFXKaraoke::Param::OriginalBgLevel));
+            addAndMakeVisible(karaokeBgLevel);
+
+            karaokeBgLevelValueLabel.setFont(smallFont);
+            karaokeBgLevelValueLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(karaokeBgLevelValueLabel);
+            karaokeBgLevelLabel.setFont(smallFont);
+            karaokeBgLevelLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(karaokeBgLevelLabel);
+
+            lowpassRect.setFill(Colours::transparentWhite);
+            lowpassRect.setStrokeThickness(0.4f);
+            lowpassRect.setStrokeFill(FillType(Colours::white));
+            addAndMakeVisible(lowpassRect);
+
+            lowpassLabel.setFont(smallFont);
+            lowpassLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(lowpassLabel);
+            
+            lowpassCutOff.onValueChange = [this] {
+                auto value = (float)lowpassCutOff.getValue();
+                lowpassCutOffValueLabel.setText(String::formatted("%.0f Hz", value), NotificationType::dontSendNotification);
+                medley.setKaraokeParams(DeFXKaraoke::Param::LowPassCutOff, value);
+            };
+            lowpassCutOff.setRange(10, 20000, 1);
+            lowpassCutOff.setSkewFactor(0.18);
+            lowpassCutOff.setValue((double)medley.getKaraokeParams(DeFXKaraoke::Param::LowPassCutOff));
+            addAndMakeVisible(lowpassCutOff);
+
+            lowpassCutOffValueLabel.setFont(smallFont);
+            lowpassCutOffValueLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(lowpassCutOffValueLabel);
+
+            lowpassCutOffLabel.setFont(smallFont);
+            lowpassCutOffLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(lowpassCutOffLabel);
+
+            lowpassQ.onValueChange = [this] {
+                auto value = (float)lowpassQ.getValue();
+                lowpassQValueLabel.setText(String::formatted("%.2f", value), NotificationType::dontSendNotification);
+                medley.setKaraokeParams(DeFXKaraoke::Param::LowPassQ, value);
+            };
+            lowpassQ.setRange(0.01, 10.0f, 0.01);
+            lowpassQ.setSkewFactor(0.5);
+            lowpassQ.setValue((double)medley.getKaraokeParams(DeFXKaraoke::Param::LowPassQ));
+            addAndMakeVisible(lowpassQ);
+
+            lowpassQValueLabel.setFont(smallFont);
+            lowpassQValueLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(lowpassQValueLabel);
+
+            lowpassQLabel.setFont(smallFont);
+            lowpassQLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(lowpassQLabel);
+
+            //
+            highpassRect.setFill(Colours::transparentWhite);
+            highpassRect.setStrokeThickness(0.4f);
+            highpassRect.setStrokeFill(FillType(Colours::white));
+            addAndMakeVisible(highpassRect);
+
+            highpassLabel.setFont(smallFont);
+            highpassLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(highpassLabel);
+
+            highpassCutOff.onValueChange = [this] {
+                auto value = (float)highpassCutOff.getValue();
+                highpassCutOffValueLabel.setText(String::formatted("%.0f Hz", value), NotificationType::dontSendNotification);
+                medley.setKaraokeParams(DeFXKaraoke::Param::HighPassCutOff, value);
+            };
+            highpassCutOff.setRange(10, 20000, 1);
+            highpassCutOff.setSkewFactor(0.8);
+            highpassCutOff.setValue((double)medley.getKaraokeParams(DeFXKaraoke::Param::HighPassCutOff));
+            addAndMakeVisible(highpassCutOff);
+
+            highpassCutOffValueLabel.setFont(smallFont);
+            highpassCutOffValueLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(highpassCutOffValueLabel);
+
+            highpassCutOffLabel.setFont(smallFont);
+            highpassCutOffLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(highpassCutOffLabel);
+
+            highpassQ.onValueChange = [this] {
+                auto value = (float)highpassQ.getValue();
+                highpassQValueLabel.setText(String::formatted("%.2f", value), NotificationType::dontSendNotification);
+                medley.setKaraokeParams(DeFXKaraoke::Param::HighPassQ, value);
+            };
+            highpassQ.setRange(0.01, 10.0f, 0.01);
+            highpassQ.setSkewFactor(0.5);
+            highpassQ.setValue((double)medley.getKaraokeParams(DeFXKaraoke::Param::HighPassQ));
+            addAndMakeVisible(highpassQ);
+
+            highpassQValueLabel.setFont(smallFont);
+            highpassQValueLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(highpassQValueLabel);
+
+            highpassQLabel.setFont(smallFont);
+            highpassQLabel.setJustificationType(Justification::centred);
+            addAndMakeVisible(highpassQLabel);
 
             setSize(800, 600);
 
@@ -1051,43 +1215,112 @@ private:
 
         void resized() override {
             auto b = getLocalBounds();
-            auto queueHeight = jmax(b.getHeight() * 0.45, 300.0);
+            auto bottomHeight = jmax(b.getHeight() * 0.45, 300.0);
+            auto bottomArea = b.removeFromBottom((int)bottomHeight);
+            auto bottomLeftArea = bottomArea.removeFromLeft(b.getWidth() / 2).reduced(10);
+
             {
                 auto devicePanelArea = b.removeFromTop(34).reduced(10, 2);
                 comboDeviceTypes.setBounds(devicePanelArea.removeFromLeft(250));
                 comboDeviceNames.setBounds(devicePanelArea.removeFromLeft(250).translated(4, 0));
             }
 
-            {
-                vuMeter->setBounds(b.removeFromTop(50).reduced(10, 2));
-            }
+            vuMeter->setBounds(b.removeFromTop(50).reduced(10, 2));
 
             {
-                queueListBox.setBounds(b.removeFromBottom((int)queueHeight).reduced(10));
-            }
-
-            {
-                auto controlArea = b.removeFromBottom(32).translated(0, 4).reduced(10, 4);
-                btnShuffle.setBounds(controlArea.removeFromLeft(55));
-                btnAdd.setBounds(controlArea.removeFromLeft(55));
-                btnPlay.setBounds(controlArea.removeFromLeft(55));
-                btnStop.setBounds(controlArea.removeFromLeft(55));
-                btnPause.setBounds(controlArea.removeFromLeft(75));
-                btnFadeOut.setBounds(controlArea.removeFromLeft(60));
-                volumeText.setBounds(controlArea.removeFromLeft(60));
-                volumeSlider.setBounds(controlArea.reduced(4, 0));
-            }
-
-            {
-                playhead->setBounds(b.removeFromBottom(50).translated(0, 4).reduced(10, 4));
-            }
-
-            {
-                auto deckPanelArea = b.reduced(20, 2).translated(-10, 0);
+                auto deckPanelArea = b.removeFromTop(b.getHeight() - 50).reduced(20, 2).translated(-10, 0);
                 auto w = deckPanelArea.getWidth() / 3;
                 deckA->setBounds(deckPanelArea.removeFromLeft(w));
                 deckB->setBounds(deckPanelArea.translated(10, 0).removeFromLeft(w));
                 deckC->setBounds(deckPanelArea.translated(20 + w, 0).removeFromLeft(w));
+            }
+
+            playhead->setBounds(b.translated(0, 4).reduced(10, 4));
+          
+            {
+                auto transportArea = bottomLeftArea.removeFromBottom(32).reduced(0, 4);
+                btnShuffle.setBounds(transportArea.removeFromLeft(55).reduced(2, 0));
+                btnAdd.setBounds(transportArea.removeFromLeft(55).reduced(2, 0));
+                btnPlay.setBounds(transportArea.removeFromLeft(55).reduced(2, 0));
+                btnStop.setBounds(transportArea.removeFromLeft(55).reduced(2, 0));
+                btnPause.setBounds(transportArea.removeFromLeft(75).reduced(2, 0));
+                btnFadeOut.setBounds(transportArea.removeFromLeft(60).reduced(2, 0));
+            }
+
+            bottomLeftArea.removeFromBottom(8);
+            
+            queueListBox.setBounds(bottomLeftArea);            
+
+            controlAreaText.setBounds(bottomArea.removeFromTop(32));
+            {
+                auto r = bottomArea.removeFromTop(32);
+                volumeText.setBounds(r.removeFromLeft(60));
+                volumeSlider.setBounds(r.reduced(4, 0));
+            }
+
+            {
+                auto r = bottomArea.removeFromTop(32);                    
+                karaokeOn.setBounds(r.removeFromLeft(85).reduced(2, 0));
+                btnKaraokeSet.setBounds(r.removeFromLeft(60).reduced(2, 0));
+                btnKaraokeUnset.setBounds(r.removeFromLeft(60).reduced(2, 0));
+            }
+
+            {
+                auto r = bottomArea.removeFromLeft(40).reduced(0, 8);
+                karaokeMix.setBounds(r.removeFromTop(r.getHeight() - 48));
+                karaokeMixValueLabel.setBounds(r.removeFromTop(24));
+                karaokeMixLabel.setBounds(r.removeFromTop(24));
+            }
+
+            {
+                auto c = bottomArea.removeFromLeft(80).translated(4, 0).reduced(0, 8);
+                auto r = c.removeFromTop(c.getHeight() - 48);
+                lowpassRect.setRectangle(r.toFloat());
+
+                lowpassLabel.setBounds(c.removeFromTop(48));
+
+                auto knobAreaHeight = r.getHeight() / 2;
+                {
+                    auto knobArea = r.removeFromTop(knobAreaHeight);
+                    lowpassCutOff.setBounds(knobArea.removeFromTop(knobAreaHeight - 36));
+                    lowpassCutOffValueLabel.setBounds(knobArea.removeFromTop(18));
+                    lowpassCutOffLabel.setBounds(knobArea.removeFromTop(18));
+                }
+                {
+                    auto knobArea = r.removeFromTop(knobAreaHeight);
+                    lowpassQ.setBounds(knobArea.removeFromTop(knobAreaHeight - 36));
+                    lowpassQValueLabel.setBounds(knobArea.removeFromTop(18));
+                    lowpassQLabel.setBounds(knobArea.removeFromTop(18));
+                }
+            }
+
+            {
+                auto c = bottomArea.removeFromLeft(80).translated(4, 0).reduced(0, 8);
+                auto r = c.removeFromTop(c.getHeight() - 48);
+                highpassRect.setRectangle(r.toFloat());
+
+                highpassLabel.setBounds(c.removeFromTop(48));
+
+                auto knobAreaHeight = r.getHeight() / 2;
+                {
+                    auto knobArea = r.removeFromTop(knobAreaHeight);
+                    highpassCutOff.setBounds(knobArea.removeFromTop(knobAreaHeight - 36));
+                    highpassCutOffValueLabel.setBounds(knobArea.removeFromTop(18));
+                    highpassCutOffLabel.setBounds(knobArea.removeFromTop(18));
+                }
+                {
+                    auto knobArea = r.removeFromTop(knobAreaHeight);
+                    highpassQ.setBounds(knobArea.removeFromTop(knobAreaHeight - 36));
+                    highpassQValueLabel.setBounds(knobArea.removeFromTop(18));
+                    highpassQLabel.setBounds(knobArea.removeFromTop(18));
+                }
+            }
+
+            {
+                auto r = bottomArea.removeFromLeft(40).translated(8, 0).reduced(0, 8);
+                karaokeBgLevel.setBounds(r.removeFromTop(r.getHeight() - 48));
+                karaokeBgLevelValueLabel.setBounds(r.removeFromTop(24));
+                karaokeBgLevelLabel.setBounds(r.removeFromTop(24));
             }
         }
 
@@ -1172,19 +1405,13 @@ private:
             }
 
             if (source == &btnPause) {
-                medley.togglePause(false);
+                medley.togglePause(true);
                 updatePauseButton();
                 return;
             }
 
             if (source == &btnFadeOut) {
                 medley.fadeOutMainDeck();
-            }
-        }
-
-        void sliderValueChanged(Slider* slider) override {
-            if (slider == &volumeSlider) {
-                medley.setVolume((float)slider->getValue());
             }
         }
 
@@ -1251,6 +1478,37 @@ private:
         Slider volumeSlider;
 
         QueueListBox queueListBox;
+
+        Label controlAreaText;
+        ToggleButton karaokeOn;
+        TextButton btnKaraokeSet;
+        TextButton btnKaraokeUnset;
+
+        Slider karaokeMix;
+        Label karaokeMixValueLabel;
+        Label karaokeMixLabel;
+
+        Slider karaokeBgLevel;
+        Label karaokeBgLevelValueLabel;
+        Label karaokeBgLevelLabel;
+
+        DrawableRectangle lowpassRect;
+        Label lowpassLabel;
+        Slider lowpassCutOff;
+        Label lowpassCutOffValueLabel;
+        Label lowpassCutOffLabel;
+        Slider lowpassQ;
+        Label lowpassQValueLabel;
+        Label lowpassQLabel;
+
+        DrawableRectangle highpassRect;
+        Label highpassLabel;
+        Slider highpassCutOff;
+        Label highpassCutOffValueLabel;
+        Label highpassCutOffLabel;
+        Slider highpassQ;
+        Label highpassQValueLabel;
+        Label highpassQLabel;
 
         PlayHead* playhead = nullptr;
 

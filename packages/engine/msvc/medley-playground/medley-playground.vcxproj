@@ -194,6 +194,7 @@
     <ClCompile Include="..\..\juce\include_juce_gui_extra.cpp" />
     <ClCompile Include="..\..\juce\include_juce_opengl.cpp" />
     <ClCompile Include="..\..\src\Deck.cpp" />
+    <ClCompile Include="..\..\src\DeFXKaraoke.cpp" />
     <ClCompile Include="..\..\src\Fader.cpp" />
     <ClCompile Include="..\..\src\LevelSmoother.cpp" />
     <ClCompile Include="..\..\src\LevelTracker.cpp" />
@@ -213,6 +214,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h" />
     <ClInclude Include="..\..\src\Deck.h" />
+    <ClInclude Include="..\..\src\DeFXKaraoke.h" />
     <ClInclude Include="..\..\src\Fader.h" />
     <ClInclude Include="..\..\src\ILogger.h" />
     <ClInclude Include="..\..\src\ITrack.h" />
