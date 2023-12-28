@@ -12,10 +12,12 @@ namespace medley {
 Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
     :
     mixer(*this),
+    audioInterceptor(*this),
     queue(queue),
     loadingThread("Loading Thread"),
     readAheadThread("Read-ahead-thread"),
-    visualizingThread("Visualizing Thread")
+    visualizationThread("Visualization Thread"),
+    audioInterceptionThread("Audio interception thread")
 {
 #if JUCE_WINDOWS
     static_cast<void>(::CoInitialize(nullptr));
@@ -45,9 +47,11 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
 
     loadingThread.startThread(6);
     readAheadThread.startThread(9);
-    visualizingThread.startThread();
+    visualizationThread.startThread();
+    audioInterceptionThread.startThread(9);
 
-    visualizingThread.addTimeSliceClient(&mixer);
+    visualizationThread.addTimeSliceClient(&mixer);
+    audioInterceptionThread.addTimeSliceClient(&audioInterceptor);
 
     mainOut.setSource(&mixer);
     deviceMgr.addAudioCallback(&mainOut);
@@ -76,7 +80,7 @@ Medley::~Medley() {
 
     loadingThread.stopThread(100);
     readAheadThread.stopThread(100);
-    visualizingThread.stopThread(100);
+    visualizationThread.stopThread(100);
 
     deviceMgr.closeAudioDevice();
 
@@ -155,13 +159,33 @@ void Medley::updateTransition(Deck* deck) {
     }
 }
 
-void Medley::interceptAudio(const AudioSourceChannelInfo& info)
+void Medley::dispatchAudio(const AudioSourceChannelInfo& info, double timestamp)
 {
     ScopedLock sl(audioCallbackLock);
 
     if (!audioCallback) return;
 
-    audioCallback->audioData(info);
+    audioCallback->audioData(info, timestamp);
+}
+
+bool Medley::isKaraokeEnabled() const
+{
+    return mixer.processor.isKaraokeEnabled();
+}
+
+void Medley::setKaraokeEnabled(bool enabled, bool dontTransit)
+{
+    mixer.processor.setKaraokeEnabled(enabled, dontTransit);
+}
+
+float Medley::getKaraokeParams(DeFXKaraoke::Param param) const
+{
+    return mixer.processor.getKaraokeParams(param);
+}
+
+float Medley::setKaraokeParams(DeFXKaraoke::Param param, float newValue)
+{
+    return mixer.processor.setKaraokeParams(param, newValue);
 }
 
 double Medley::getDuration(int deckIndex) const
@@ -613,7 +637,7 @@ void Medley::doTransition(Deck* deck, double position) {
 
     // Fade out current
     if (deck->isMain()) {
-        auto shouldFade = pTransition->fader.isFadeOut() && (forceFadingOut > 0 || pTransition->state >= DeckTransitionState::NextIsReady);
+        auto shouldFade = pTransition->fader.isReversed() && (forceFadingOut > 0 || pTransition->state >= DeckTransitionState::NextIsReady);
         if (shouldFade) {
             auto currentVolume = deck->getVolume();
 
@@ -640,6 +664,20 @@ void Medley::setAudioDeviceByIndex(int index) {
     if (error.isNotEmpty()) {
         throw std::runtime_error(error.toStdString());
     }
+}
+
+int Medley::getOutputLatency()
+{
+    auto device = getCurrentAudioDevice();
+    auto latency = device->getOutputLatencyInSamples();
+
+#ifdef JUCE_WINDOWS
+        if (device->getTypeName() == "DirectSound") {
+            latency *= 16;
+        }
+#endif
+
+    return latency;
 }
 
 Deck* Medley::getMainDeck() const
@@ -746,6 +784,39 @@ void Medley::setReplayGainBoost(float decibels)
     }
 }
 
+int Medley::AudioInterceptor::useTimeSlice()
+{
+    AudioBuffer<float> buffer;
+
+    {
+        ScopedLock sl(lock);
+        if (buffers.empty()) {
+            return 5;
+        }
+
+        buffer = buffers.front();
+        buffers.pop();
+    }
+
+    medley.dispatchAudio(AudioSourceChannelInfo(&buffer, 0, buffer.getNumSamples()), medley.getCurrentTime());
+
+    return 5;
+}
+
+void Medley::AudioInterceptor::addBuffer(AudioBuffer<float>& buffer, int startSample, int numSamples)
+{
+    AudioBuffer<float> newBuffer(buffer.getNumChannels(), numSamples);
+
+    for (int i = buffer.getNumChannels(); --i >= 0;) {
+        newBuffer.copyFrom(i, 0, buffer, i, startSample, numSamples);
+    }
+
+    {
+        ScopedLock sl(lock);
+        buffers.push(newBuffer);
+    }
+}
+
 void Medley::Mixer::setPause(bool p, bool fade) {
     if (!fade) {
         paused = p;
@@ -758,14 +829,14 @@ void Medley::Mixer::setPause(bool p, bool fade) {
 
     if (p) {
         // do pause
-        fader.start(start, end, gain, 0.0f, 2.0f, -1.0f, [=]() {
+        fader.start(start, end, faderGain, 0.0f, 2.0f, -1.0f, [=]() {
             paused = true;
         });
     }
     else {
         // unpause
         paused = false;
-        fader.start(start, end, gain, 1.0f, 2.0f, -1.0f, [=]() {
+        fader.start(start, end, faderGain, 1.0f, 2.0f, -1.0f, [=]() {
 
         });
     }
@@ -810,34 +881,25 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
     }
 
     if (prepared) {
-        // Process Audio
-        {
-            AudioBlock<float> block(
-                info.buffer->getArrayOfWritePointers(),
-                info.buffer->getNumChannels(),
-                (size_t)info.startSample,
-                (size_t)info.numSamples
-            );
-            processor.process(ProcessContextReplacing<float>(block));
-        }
-
-        // Level Measurement
-        {
-            ScopedLock sl(levelTrackerLock);
-            levelTracker.process(info);
-        }
-
         // Main Volume
         {
-            gain = volume * fader.update(currentTime);
+            faderGain = fader.update(currentTime);
             for (int i = info.buffer->getNumChannels(); --i >= 0;) {
-                info.buffer->applyGainRamp(i, info.startSample, info.numSamples, lastGain, gain);
+                info.buffer->applyGainRamp(i, info.startSample, info.numSamples, lastFaderGain, faderGain);
             }
-            lastGain = gain;
+            lastFaderGain = faderGain;
+        }
+
+        for (int i = info.buffer->getNumChannels(); --i >= 0;) {
+            tapBuffer.copyFrom(i, 0, info.buffer->getReadPointer(i), info.buffer->getNumSamples());
+        }
+
+        {
+            processor.process(info, currentTime);
         }
 
         // Tap
-        medley.interceptAudio(info);
+        medley.audioInterceptor.addBuffer(tapBuffer, info.startSample, info.numSamples);
     }
 }
 
@@ -847,41 +909,39 @@ void Medley::Mixer::changeListenerCallback(ChangeBroadcaster* source) {
 
 int Medley::Mixer::useTimeSlice()
 {
-    ScopedLock sl(levelTrackerLock);
-    levelTracker.update();
+    processor.updateLevelTracker();
     return 5;
 }
 
 void Medley::Mixer::fadeOut(double durationMs, Fader::OnDone callback)
 {
-    fader.start(currentTime, currentTime + durationMs, gain, 0.0f, 2.0f, -1.0f, callback);
+    fader.start(currentTime, currentTime + durationMs, faderGain, 0.0f, 2.0f, -1.0f, callback);
 }
 
 void Medley::Mixer::updateAudioConfig()
 {
-    auto& deviceMgr = medley.deviceMgr;
-    if (auto device = deviceMgr.getCurrentAudioDevice()) {
-        auto config = deviceMgr.getAudioDeviceSetup();
+    if (auto device = medley.getCurrentAudioDevice()) {
+        auto config = medley.getAudioDeviceSetup();
 
-        int latencyInSamples = device->getOutputLatencyInSamples();
+        int latencyInSamples = medley.getOutputLatency();
 
-#ifdef JUCE_WINDOWS
-        if (device->getTypeName() == "DirectSound") {
-            latencyInSamples *= 16;
+        {
+            ScopedLock sl(medley.audioCallbackLock);
+
+            if (medley.audioCallback) {
+                medley.audioCallback->audioDeviceUpdate(device, config);
+            }
         }
-#endif
 
         auto numSamples = device->getCurrentBufferSizeSamples();
         numChannels = device->getOutputChannelNames().size();
         sampleRate = (int)config.sampleRate;
 
-        processor.prepare({ config.sampleRate, (uint32)numSamples, (uint32)numChannels });
+        tapBuffer.setSize(numChannels, numSamples);
 
-        levelTracker.prepare(
-            numChannels,
-            sampleRate,
-            latencyInSamples
-        );
+        ProcessSpec audioSpec{ config.sampleRate, (uint32)numSamples, (uint32)numChannels };
+
+        processor.prepare(audioSpec, latencyInSamples);
 
         prepared = true;
     }

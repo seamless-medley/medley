@@ -5,7 +5,6 @@
 #include "ILogger.h"
 #include "Deck.h"
 #include "PostProcessor.h"
-#include "LevelTracker.h"
 #include "Fader.h"
 #include <list>
 
@@ -20,7 +19,7 @@ public:
     virtual ITrack::Ptr fetchNextTrack() = 0;
 };
 
-class Medley : public Deck::Callback, juce::ChangeListener {
+class Medley : public Deck::Callback, juce::ChangeListener, public KaraokeParamController  {
 public:
     class Callback : public Deck::Callback {
     public:
@@ -33,9 +32,12 @@ public:
         virtual void mainDeckChanged(Deck& sender, TrackPlay& track) = 0;
     };
 
+    typedef AudioDeviceManager::AudioDeviceSetup AudioDeviceConfig;
+
     class AudioCallback {
     public:
-        virtual void audioData(const AudioSourceChannelInfo& info) = 0;
+        virtual void audioDeviceUpdate(juce::AudioIODevice* device, const AudioDeviceConfig& config) = 0;
+        virtual void audioData(const AudioSourceChannelInfo& info, double timestamp) = 0;
     };
 
     class SupportedFormats : public AudioFormatManager
@@ -83,6 +85,10 @@ public:
     inline AudioFormatManager& getAudioFormatManager() { return formatMgr; }
 
     inline AudioIODevice* getCurrentAudioDevice() const { return deviceMgr.getCurrentAudioDevice(); }
+
+    inline AudioDeviceManager::AudioDeviceSetup getAudioDeviceSetup() const { return deviceMgr.getAudioDeviceSetup(); }
+
+    int getOutputLatency();
 
     inline Deck& getDeck1() const { return *decks[0]; }
 
@@ -144,23 +150,25 @@ public:
 
     bool fadeOutMainDeck();
 
-    inline double getLevel(int channel) {
-        return mixer.getLevel(channel);
+    double getCurrentTime() const { return mixer.currentTime; }
+
+    double getLevel(int channel) {
+        return mixer.processor.getLevel(channel);
     }
 
-    inline double getPeakLevel(int channel) {
-        return mixer.getPeak(channel);
+    double getPeakLevel(int channel) {
+        return mixer.processor.getPeak(channel);
     }
 
-    inline bool isClipping(int channel) {
-        return mixer.isClipping(channel);
+    bool isClipping(int channel) {
+        return mixer.processor.isClipping(channel);
     }
 
     /**
      * Reduction in dB
      */
-    inline float getReduction() {
-        return mixer.getReduction();
+    float getReduction() {
+        return mixer.processor.getReduction();
     }
 
     void changeListenerCallback(ChangeBroadcaster* source) override;
@@ -170,6 +178,14 @@ public:
     void setReplayGainBoost(float decibels);
 
     float getReplayGainBoost() const { return decks[0]->getReplayGainBoost(); }
+
+    bool isKaraokeEnabled() const override;
+
+    void setKaraokeEnabled(bool enabled, bool dontTransit = false) override;
+
+    float getKaraokeParams(DeFXKaraoke::Param param) const override;
+
+    float setKaraokeParams(DeFXKaraoke::Param param, float newValue) override;
 
 private:
     friend class Deck;
@@ -200,10 +216,31 @@ private:
 
     void updateTransition(Deck* deck);
 
-    void interceptAudio(const AudioSourceChannelInfo& info);
+    void dispatchAudio(const AudioSourceChannelInfo& info, double timestamp);
+
+    class AudioInterceptor : public juce::TimeSliceClient {
+    public:
+        friend class Medley;
+
+        AudioInterceptor(Medley& medley)
+            : medley(medley)
+        {
+
+        }
+
+        int useTimeSlice() override;
+
+        void addBuffer(AudioBuffer<float>& buffer, int startSample, int numSamples);
+    private:
+        Medley& medley;
+        CriticalSection lock;
+        std::queue<AudioBuffer<float>> buffers;
+    };
 
     class Mixer : public MixerAudioSource, public ChangeListener, public TimeSliceClient {
     public:
+        friend class Medley;
+
         Mixer(Medley& medley)
             : MixerAudioSource(), medley(medley)
         {
@@ -223,35 +260,13 @@ private:
 
         void updateAudioConfig();
 
-        double getLevel(int channel) {
-            ScopedLock sl(levelTrackerLock);
-            return levelTracker.getLevel(channel);
-        }
-
-        double getPeak(int channel) {
-            ScopedLock sl(levelTrackerLock);
-            return levelTracker.getPeak(channel);
-        }
-
-        bool isClipping(int channel) {
-            ScopedLock sl(levelTrackerLock);
-            return levelTracker.isClipping(channel);
-        }
-
-        /**
-         * Reduction in dB
-         */
-        float getReduction() const {
-            return processor.getReduction();
-        }
-
         int useTimeSlice() override;
 
         void fadeOut(double durationMs, Fader::OnDone callback);
 
-        float getVolume() const { return volume; }
+        float getVolume() const { return processor.getVolume(); }
 
-        void setVolume(float newVolume) { volume = newVolume; }
+        void setVolume(float newVolume) { processor.setVolume(newVolume); }
 
     private:
         Medley& medley;
@@ -265,24 +280,23 @@ private:
 
         double currentTime = 0;
 
-        float volume = 1.0f;
-        float gain = 1.0f;
-        float lastGain = 1.0f;
+        float faderGain = 1.0f;
+        float lastFaderGain = 1.0f;
 
         Fader fader;
 
-        PostProcessor processor;
-        LevelTracker levelTracker;
-        CriticalSection levelTrackerLock;
-    };
+        AudioBuffer<float> tapBuffer;
 
-    friend class Mixer;
+        PostProcessor processor;
+    };
 
     AudioDeviceManager deviceMgr;
 
     SupportedFormats formatMgr;
 
     Deck* decks[numDecks]{};
+
+    AudioInterceptor audioInterceptor;
 
     Mixer mixer;
     AudioSourcePlayer mainOut;
@@ -291,7 +305,8 @@ private:
 
     TimeSliceThread loadingThread;
     TimeSliceThread readAheadThread;
-    TimeSliceThread visualizingThread;
+    TimeSliceThread visualizationThread;
+    TimeSliceThread audioInterceptionThread;
 
     bool keepPlaying = false;
 

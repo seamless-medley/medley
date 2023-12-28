@@ -2,33 +2,84 @@
 
 #include <JuceHeader.h>
 
+#include "DeFXKaraoke.h"
+#include "Fader.h"
 #include "LookAheadLimiter.h"
+#include "LevelTracker.h"
 
 using namespace juce::dsp;
 
-class PostProcessor {
+namespace medley {
+    namespace processor {
+        namespace index {
+            constexpr auto DeFX = 0;
+            constexpr auto Limiter = 1;
+        }
+    }
+}
+
+using namespace medley::processor;
+
+class KaraokeParamController {
 public:
-    PostProcessor() {
+    virtual bool isKaraokeEnabled() const = 0;
 
-    }
+    virtual void setKaraokeEnabled(bool enabled, bool dontTransit = false) = 0;
 
-    inline void prepare(const ProcessSpec& spec) {
-         chain.prepare(spec);
-    }
+    virtual float getKaraokeParams(DeFXKaraoke::Param param) const = 0;
 
-    inline void process(const ProcessContextReplacing<float>& context) {
-         chain.process(context);
-    }
+    virtual float setKaraokeParams(DeFXKaraoke::Param param, float newValue) = 0;
+};
 
-    inline void reset() {
-         chain.reset();
-    }
+class PostProcessor : public KaraokeParamController {
+public:
+    PostProcessor();
+
+    void prepare(const ProcessSpec& spec, const int latencyInSamples);
+
+    void process(const AudioSourceChannelInfo& info, double timestamp);
+
+    void reset();
+
+    void updateLevelTracker();
+
+    double getLevel(int channel) const;
+
+    double getPeak(int channel) const;
+
+    bool isClipping(int channel) const;
 
     /**
      * Reduction in dB
      */
-    inline float getReduction() const { return chain.get<0>().getReduction(); }
+    inline float getReduction() const { return chain.get<1>().getReduction(); }
+
+    float getVolume() const;
+
+    void setVolume(float value);
+
+    bool isKaraokeEnabled() const override;
+
+    void setKaraokeEnabled(bool enabled, bool dontTransit = false) override;
+
+    float getKaraokeParams(DeFXKaraoke::Param param) const override;
+
+    float setKaraokeParams(DeFXKaraoke::Param param, float newValue) override;
 
 private:
-    ProcessorChain<LookAheadLimiter> chain;
+    double currentTime = 0.0;
+
+    juce::AudioBuffer<float> buffer;
+
+    CriticalSection levelTrackerLock;
+    LevelTracker levelTracker;
+
+    ProcessorChain<DeFXKaraoke, LookAheadLimiter> chain;
+
+    float volume = 1.0f;
+    float lastVolume = 1.0f;
+
+    bool karaokeEnabled = false;
+    Fader karaokeMixFader;
+    float karaokeMix = 0.0f;
 };
