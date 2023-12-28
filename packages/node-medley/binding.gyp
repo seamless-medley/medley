@@ -14,6 +14,9 @@
             ],
             "sources": [
                 "src/audio/SecretRabbitCode.cpp",
+                "src/audio_req/req.cpp",
+                "src/audio_req/processor.cpp",
+                "src/audio_req/consumer.cpp",
                 "src/queue.cpp",
                 "src/core.cpp",
                 "src/module.cpp",
@@ -25,6 +28,7 @@
                 "../engine/src/ReductionCalculator.cpp",
                 "../engine/src/LookAheadReduction.cpp",
                 "../engine/src/LookAheadLimiter.cpp",
+                "../engine/src/DeFXKaraoke.cpp",
                 "../engine/src/PostProcessor.cpp",
                 "../engine/src/Deck.cpp",
                 "../engine/src/Medley.cpp",

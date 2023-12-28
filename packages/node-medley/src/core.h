@@ -3,14 +3,12 @@
 #include <thread>
 #include <napi.h>
 #include <Medley.h>
-#include <RingBuffer.h>
 #include <ITrack.h>
-#include <Fader.h>
 #include <ILogger.h>
-#include "version.h"
-#include "audio/SecretRabbitCode.h"
+#include "audio_req/consumer.h"
 #include "track.h"
 #include "queue.h"
+#include "version.h"
 
 using namespace Napi;
 
@@ -47,7 +45,9 @@ public:
 
     void enqueueNext(Engine::Callback::EnqueueNextDone done) override;
 
-    void audioData(const AudioSourceChannelInfo& info) override;
+    void audioDeviceUpdate(juce::AudioIODevice* device, const medley::Medley::AudioDeviceConfig& config) override;
+
+    void audioData(const AudioSourceChannelInfo& info, double timestamp) override;
 
     Napi::Value play(const CallbackInfo& info);
 
@@ -107,6 +107,18 @@ public:
 
     Napi::Value reqAudioDispose(const CallbackInfo& info);
 
+    Napi::Object getKaraokeParams(KaraokeParamController& ctrl, const CallbackInfo& info);
+
+    void setKaraokeParams(KaraokeParamController& ctrl, const Napi::Object& params);
+
+    Napi::Value getFx(const CallbackInfo& info);
+
+    Napi::Value setFx(const CallbackInfo& info);
+
+    Napi::Value reqAudioGetFx(const CallbackInfo& info);
+
+    Napi::Value reqAudioSetFx(const CallbackInfo& info);
+
     static Napi::Value static_getMetadata(const Napi::CallbackInfo& info);
 
     static Napi::Value static_getCoverAndLyrics(const Napi::CallbackInfo& info);
@@ -114,65 +126,6 @@ public:
     static Napi::Value static_isTrackLoadable(const Napi::CallbackInfo& info);
 
     static Napi::Value static_getInfo(const Napi::CallbackInfo& info);
-
-    struct AudioRequest {
-        AudioRequest(uint32_t id, uint32_t bufferSize, uint32_t buffering, uint8_t numChannels, int inSampleRate, int requestedSampleRate, uint8_t outputBytesPerSample, std::shared_ptr<juce::AudioData::Converter> converter, float preferredGain)
-            :
-            id(id),
-            buffering(buffering),
-            numChannels(numChannels),
-            inSampleRate(inSampleRate),
-            requestedSampleRate(requestedSampleRate),
-            outputBytesPerSample(outputBytesPerSample),
-            buffer(numChannels, bufferSize),
-            converter(converter),
-            preferredGain(preferredGain)
-        {
-            if (inSampleRate != requestedSampleRate) {
-                for (auto i = 0; i < numChannels; i++) {
-                    resamplers.push_back(std::make_unique<SecretRabbitCode>(inSampleRate, requestedSampleRate));
-                }
-            }
-
-            fader.reset(preferredGain);
-        }
-
-        AudioRequest(const AudioRequest& other)
-            :
-            id(other.id),
-            numChannels(other.numChannels),
-            inSampleRate(other.inSampleRate),
-            requestedSampleRate(other.requestedSampleRate),
-            outputBytesPerSample(other.outputBytesPerSample),
-            buffer(other.buffer),
-            converter(other.converter),
-            resamplers(other.resamplers)
-        {
-
-        }
-
-        bool running = true;
-        uint32_t id;
-        uint32_t buffering;
-        uint8_t numChannels;
-        int inSampleRate;
-        int requestedSampleRate;
-        uint8_t outputBytesPerSample;
-        //
-        RingBuffer<float> buffer;
-        std::shared_ptr<juce::AudioData::Converter> converter;
-        //
-        std::vector<std::shared_ptr<SecretRabbitCode>> resamplers;
-        //
-        juce::MemoryBlock scratch;
-        //
-        float lastGain = 1.0f;
-        float preferredGain = 1.0f;
-        //
-        Fader fader;
-        //
-        double currentTime = 0;
-    };
 private:
 
     enum class AudioRequestFormat : uint8_t {
@@ -181,11 +134,11 @@ private:
 
     void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::TrackPlay& track);
 
-    bool registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, double outSampleRate, uint32_t bufferSize, uint32_t buffering, float gain, std::shared_ptr<AudioRequest>& request);
+    std::shared_ptr<audio_req::AudioRequest> registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, double outSampleRate, uint32_t bufferSize, uint32_t buffering, float gain, Napi::Value fx);
 
     static uint32_t audioRequestId;
 
-    std::map<uint32_t, std::shared_ptr<AudioRequest>> audioRequests;
+    std::map<uint32_t, std::shared_ptr<audio_req::AudioRequest>> audioRequests;
 
     using NativeAudioFormat = AudioData::Pointer<
         AudioData::Float32,

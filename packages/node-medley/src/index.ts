@@ -8,10 +8,10 @@ const module_id = process.env.MEDLEY_DEV ? dirname(__dirname) : __dirname;
 
 const medley = nodeGypBuild(module_id);
 
-Object.setPrototypeOf(medley.Medley.prototype, EventEmitter.prototype);
-
 export const Medley = medley.Medley;
 export const Queue = medley.Queue;
+
+Object.setPrototypeOf(Medley.prototype, EventEmitter.prototype);
 
 Medley.getInfo = function() {
   const { runtime = {}, ...rest } = Medley.$getInfo();
@@ -87,7 +87,10 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
 
   const streamResult: RequestAudioStreamResult = {
     stream,
-    ...result
+    ...result,
+    update: options => this.updateAudioStream(streamId, options),
+    getFx: type => this['*$reqAudio$getFx'](streamId, type) as never,
+    setFx: (type, params) => this['*$reqAudio$setFx'](streamId, type, params)
   }
 
   audioStreamResults.set(streamId, streamResult);
@@ -96,13 +99,15 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
 }
 
 Medley.prototype.deleteAudioStream = function(id: number) {
-  const result = audioStreamResults.get(id);
-  if (!result) {
+  const request = audioStreamResults.get(id);
+  if (!request) {
     return;
   }
 
-  this['*$reqAudio$dispose'](id);
+  const result = this['*$reqAudio$dispose'](id);
 
-  result.stream.destroy();
+  request.stream.destroy();
   audioStreamResults.delete(id);
+
+  return result;
 }

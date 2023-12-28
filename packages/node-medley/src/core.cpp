@@ -3,111 +3,6 @@
 using namespace std::chrono_literals;
 
 namespace {
-    class AudioRequestProcessor : public AsyncWorker {
-    public:
-        AudioRequestProcessor(std::shared_ptr<Medley::AudioRequest> request, const Napi::Env& env)
-            : AsyncWorker(env),
-            request(request)
-        {
-
-        }
-
-        AudioRequestProcessor(std::shared_ptr<Medley::AudioRequest> request, const Napi::Function& callback)
-            : AsyncWorker(callback),
-            request(request)
-        {
-
-        }
-
-    protected:
-        void Process(uint64_t requestedNumSamples) {
-            auto outputBytesPerSample = request->outputBytesPerSample;
-            auto numChannels = request->numChannels;
-
-            while (request->buffer.getNumReady() < request->buffering) {
-                std::this_thread::sleep_for(5ms);
-
-                if (!request->running) {
-                    break;
-                }
-            }
-
-            request->currentTime = Time::getMillisecondCounterHiRes();
-
-            auto numSamples = jmin((uint64_t)request->buffer.getNumReady(), requestedNumSamples);
-
-            juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
-            request->buffer.read(tempBuffer, numSamples);
-
-            auto gain = request->fader.update(request->currentTime);
-
-            tempBuffer.applyGainRamp(0, numSamples, request->lastGain, gain);
-            request->lastGain = gain;
-
-            juce::AudioBuffer<float>* sourceBuffer = &tempBuffer;
-            std::unique_ptr<juce::AudioBuffer<float>> resampleBuffer;
-            auto outSamples = numSamples;
-
-            if (request->inSampleRate != request->requestedSampleRate)
-            {
-                outSamples = roundToInt(numSamples * (double)request->requestedSampleRate / (double)request->inSampleRate);
-                resampleBuffer = std::make_unique<juce::AudioBuffer<float>>(numChannels, outSamples);
-
-                long used = 0;
-                int actualSamples = outSamples;
-
-                for (int i = 0; i < numChannels; i++) {
-                    actualSamples = request->resamplers[i]->process(
-                        tempBuffer.getReadPointer(i),
-                        numSamples,
-                        resampleBuffer->getWritePointer(i),
-                        outSamples,
-                        used
-                    );
-                }
-
-                sourceBuffer = resampleBuffer.get();
-                outSamples = actualSamples;
-            }
-
-            bytesReady = outSamples * numChannels * outputBytesPerSample;
-            request->scratch.ensureSize(bytesReady);
-
-            for (int i = 0; i < numChannels; i++) {
-                request->converter->convertSamples(request->scratch.getData(), i, sourceBuffer->getReadPointer(i), 0, outSamples);
-            }
-        }
-
-        std::shared_ptr<Medley::AudioRequest> request;
-        uint64_t bytesReady = 0;
-    };
-
-    class AudioConsumer : public AudioRequestProcessor {
-    public:
-        AudioConsumer(std::shared_ptr<Medley::AudioRequest> request, uint64_t requestedSize, const Promise::Deferred& deferred)
-            :
-            AudioRequestProcessor(request, Napi::Function::New(deferred.Env(), [deferred](const CallbackInfo &cbInfo) {
-                deferred.Resolve(cbInfo[0]); // cbInfo[0] is the buffer returned from GetResult()
-                return cbInfo.Env().Undefined();
-            })),
-            requestedSize(requestedSize)
-        {
-
-        }
-
-        void Execute() override
-        {
-            Process(requestedSize / request->outputBytesPerSample / request->numChannels);
-        }
-
-        std::vector<napi_value> GetResult(Napi::Env env) override {
-            auto result = Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)request->scratch.getData(), bytesReady);
-            return { result };
-        }
-    private:
-        uint64_t requestedSize;
-    };
-
     Napi::Value safeString(Napi::Env env, juce::String s) {
         return s.isNotEmpty() ? Napi::String::New(env, s.toRawUTF8()) : env.Undefined();
     }
@@ -174,6 +69,11 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::reqAudioConsume>("*$reqAudio$consume"),
         InstanceMethod<&Medley::updateAudioStream>("updateAudioStream"),
         InstanceMethod<&Medley::reqAudioDispose>("*$reqAudio$dispose"),
+        InstanceMethod<&Medley::reqAudioGetFx>("*$reqAudio$getFx"),
+        InstanceMethod<&Medley::reqAudioSetFx>("*$reqAudio$setFx"),
+
+        InstanceMethod<&Medley::getFx>("getFx"),
+        InstanceMethod<&Medley::setFx>("setFx"),
         //
         InstanceAccessor<&Medley::level>("level"),
         InstanceAccessor<&Medley::reduction>("reduction"),
@@ -211,9 +111,9 @@ Medley::Medley(const CallbackInfo& info)
         return;
     }
 
-    auto obj = arg1.ToObject();
+    auto queueObj = arg1.ToObject();
 
-    if (!obj.InstanceOf(Queue::ctor.Value())) {
+    if (!queueObj.InstanceOf(Queue::ctor.Value())) {
         TypeError::New(env, "Is not a queue").ThrowAsJavaScriptException();
         return;
     }
@@ -232,7 +132,7 @@ Medley::Medley(const CallbackInfo& info)
     }
 
     self = Persistent(info.This());
-    queueJS = Persistent(obj);
+    queueJS = Persistent(queueObj);
 
     try {
         threadSafeEmitter = ThreadSafeFunction::New(
@@ -241,7 +141,7 @@ Medley::Medley(const CallbackInfo& info)
             0, 1
         );
 
-        queue = Queue::Unwrap(obj);
+        queue = Queue::Unwrap(queueObj);
         engine = new Engine(*queue, logging ? this : nullptr);
         engine->addListener(this);
         engine->setAudioCallback(this);
@@ -637,6 +537,82 @@ Napi::Value Medley::getDeckPositions(const CallbackInfo& info) {
     return result;
 }
 
+void Medley::audioDeviceUpdate(juce::AudioIODevice* device, const medley::Medley::AudioDeviceConfig& config) {
+    auto numSamples = device->getCurrentBufferSizeSamples();
+    auto numChannels = device->getOutputChannelNames().size();
+
+    int latencyInSamples = engine->getOutputLatency();
+    ProcessSpec audioSpec{ config.sampleRate, (uint32)numSamples, (uint32)numChannels };
+
+    for (auto& [id, req] : audioRequests) {
+        req->processor->prepare(audioSpec, latencyInSamples);
+    }
+}
+
+void Medley::audioData(const AudioSourceChannelInfo& originalInfo, double timestamp) {
+    for (auto& [id, req] : audioRequests) {
+        AudioBuffer<float> buffer(originalInfo.buffer->getNumChannels(), originalInfo.buffer->getNumSamples());
+
+        for (int i = originalInfo.buffer->getNumChannels(); --i >= 0;) {
+            buffer.copyFrom(i, 0, originalInfo.buffer->getReadPointer(i), originalInfo.buffer->getNumSamples());
+        }
+
+        AudioSourceChannelInfo info(&buffer, originalInfo.startSample, originalInfo.numSamples);
+        req->processor->process(info, timestamp);
+
+        req->buffer.write(*info.buffer, info.startSample, info.numSamples);
+    }
+}
+
+namespace {
+    typedef struct {
+        char* name;
+        DeFXKaraoke::Param param;
+    } ParamMap;
+
+    ParamMap paramsMap[] = {
+        { "mix",            DeFXKaraoke::Param::Mix },
+        { "lowpassCutoff",  DeFXKaraoke::Param::LowPassCutOff },
+        { "lowpassQ",       DeFXKaraoke::Param::LowPassQ },
+        { "highpassCutoff", DeFXKaraoke::Param::HighPassCutOff },
+        { "highpassQ",      DeFXKaraoke::Param::HighPassQ }
+    };
+}
+
+Napi::Object Medley::getKaraokeParams(KaraokeParamController& ctrl, const CallbackInfo& info) {
+    auto result = Object::New(info.Env());
+    result.Set("enabled", ctrl.isKaraokeEnabled());
+
+    for (auto& p : ::paramsMap) {
+        result.Set(p.name, ctrl.getKaraokeParams(p.param));
+    }
+
+    return result;
+}
+
+void Medley::setKaraokeParams(KaraokeParamController& ctrl, const Napi::Object& params) {
+    for (auto& p : ::paramsMap) {
+        if (params.Has(p.name)) {
+            ctrl.setKaraokeParams(p.param, params.Get(p.name).ToNumber().FloatValue());
+        }
+    }
+
+    if (params.Has("enabled")) {
+        bool enabled = params.Get("enabled").ToBoolean();
+        bool dontTransit = false;
+
+        if (params.Has("dontTransit")) {
+            auto p = params.Get("dontTransit");
+
+            if (!p.IsUndefined()) {
+                dontTransit = p.ToBoolean();
+            }
+        }
+
+        ctrl.setKaraokeEnabled(enabled, dontTransit);
+    }
+}
+
 Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {
     auto env = info.Env();
 
@@ -689,17 +665,16 @@ Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {
 
     auto gainJS = options.Has("gain") ? options.Get("gain") : env.Undefined();
     auto gain = (!gainJS.IsNull() && !gainJS.IsUndefined()) ? gainJS.ToNumber().FloatValue() : 1.0f;
+    auto fx = options.Has("fx") ? options.Get("fx") : env.Undefined();
 
-    std::shared_ptr<AudioRequest> request;
-
-    registerAudioRequest(
+    auto request = registerAudioRequest(
         audioRequestId,
         audioFormat,
         outSampleRate,
         bufferSize,
         buffering,
         gain,
-        request
+        fx
     );
 
     auto result = Object::New(env);
@@ -713,7 +688,7 @@ Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {
     return result;
 }
 
-bool Medley::registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, double outSampleRate, uint32_t bufferSize, uint32_t buffering, float gain, std::shared_ptr<AudioRequest>& request) {
+std::shared_ptr<audio_req::AudioRequest> Medley::registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, double outSampleRate, uint32_t bufferSize, uint32_t buffering, float gain, Napi::Value fx) {
     auto audioConveter = audioConverters.find(audioFormat);
     if (audioConveter == audioConverters.end()) {
         switch (audioFormat) {
@@ -748,9 +723,13 @@ bool Medley::registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, d
             break;
     }
 
+    auto config = engine->getAudioDeviceSetup();
     auto device = engine->getCurrentAudioDevice();
+    auto numSamples = device->getCurrentBufferSizeSamples();
     auto numChannels = device->getOutputChannelNames().size();
     auto deviceSampleRate = device->getCurrentSampleRate();
+
+    int latencyInSamples = engine->getOutputLatency();
 
     if (bufferSize == 0) {
         bufferSize = (uint32_t)(outSampleRate * 0.25f);
@@ -760,7 +739,22 @@ bool Medley::registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, d
         buffering = (uint32_t)(outSampleRate * 0.01f);
     }
 
-    request = std::make_shared<AudioRequest>(
+    std::shared_ptr<PostProcessor> processor = std::make_shared<PostProcessor>();
+    ProcessSpec audioSpec{ config.sampleRate, (uint32)numSamples, (uint32)numChannels };
+
+    processor->prepare(audioSpec, latencyInSamples);
+
+    if (fx.IsObject()) {
+        auto fxObj = fx.ToObject();
+        if (fxObj.Has("karaoke")) {
+            auto karaokeParam = fxObj.Get("karaoke");
+            if (karaokeParam.IsObject()) {
+                setKaraokeParams(*processor.get(), karaokeParam.ToObject());
+            }
+        }
+    }
+
+    auto request = std::make_shared<audio_req::AudioRequest>(
         id,
         bufferSize,
         buffering,
@@ -769,17 +763,12 @@ bool Medley::registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, d
         outSampleRate,
         bytesPerSample,
         audioConverters[audioFormat],
+        processor,
         gain
     );
 
     audioRequests.emplace(id, request);
-    return true;
-}
-
-void Medley::audioData(const AudioSourceChannelInfo& info) {
-    for (auto& [id, req] : audioRequests) {
-        req->buffer.write(*info.buffer, info.startSample, info.numSamples);
-    }
+    return request;
 }
 
 Napi::Value Medley::reqAudioConsume(const CallbackInfo& info) {
@@ -794,7 +783,7 @@ Napi::Value Medley::reqAudioConsume(const CallbackInfo& info) {
     }
 
     auto deferred = Napi::Promise::Deferred::New(env);
-    auto consumer = new AudioConsumer(it->second, size, deferred);
+    auto consumer = new audio_req::AudioConsumer(it->second, size, deferred);
     consumer->Queue();
 
     return deferred.Promise();
@@ -832,6 +821,18 @@ Napi::Value Medley::updateAudioStream(const CallbackInfo& info) {
         request->buffering = options.Get("buffering").ToNumber().Uint32Value();
     }
 
+    if (options.Has("fx")) {
+        auto fx = options.Get("fx");
+
+        auto fxObj = fx.ToObject();
+        if (fxObj.Has("karaoke")) {
+            auto karaokeParam = fxObj.Get("karaoke");
+            if (karaokeParam.IsObject()) {
+                setKaraokeParams(*request->processor.get(), karaokeParam.ToObject());
+            }
+        }
+    }
+
     return Boolean::New(env, true);
 }
 
@@ -847,6 +848,96 @@ Napi::Value Medley::reqAudioDispose(const CallbackInfo& info) {
         return Boolean::From(env, true);
     }
 
+    return Boolean::From(env, false);
+}
+
+Napi::Value Medley::getFx(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto type = juce::String(info[0].ToString().Utf8Value());
+
+    if (type.compareIgnoreCase("karaoke") == 0) {
+        return getKaraokeParams(*engine, info);
+    }
+
+    TypeError::New(env, "Unknown effect type").ThrowAsJavaScriptException();
+    return env.Undefined();
+}
+
+Napi::Value Medley::setFx(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 2) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto type = juce::String(info[0].ToString().Utf8Value());
+    auto params = info[1].ToObject();
+
+    if (type.compareIgnoreCase("karaoke") == 0) {
+        setKaraokeParams(*engine, params);
+        return Boolean::From(env, true);
+    }
+
+    TypeError::New(env, "Unknown effect type").ThrowAsJavaScriptException();
+    return Boolean::From(env, false);
+}
+
+Napi::Value Medley::reqAudioGetFx(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 2) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto streamId = static_cast<uint32_t>(info[0].As<Number>().Int32Value());
+
+    auto it = audioRequests.find(streamId);
+    if (it == audioRequests.end()) {
+        return env.Undefined();
+    }
+
+    auto type = juce::String(info[1].ToString().Utf8Value());
+
+    if (type.compareIgnoreCase("karaoke") == 0) {
+        return getKaraokeParams(*it->second->processor, info);
+    }
+
+    return env.Undefined();
+}
+
+Napi::Value Medley::reqAudioSetFx(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 3) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto streamId = static_cast<uint32_t>(info[0].As<Number>().Int32Value());
+
+    auto it = audioRequests.find(streamId);
+    if (it == audioRequests.end()) {
+        return env.Undefined();
+    }
+
+    auto type = juce::String(info[1].ToString().Utf8Value());
+
+    auto params = info[2].ToObject();
+
+    if (type.compareIgnoreCase("karaoke") == 0) {
+        setKaraokeParams(*it->second->processor, params);
+        return Boolean::From(env, true);
+    }
+
+    TypeError::New(env, "Unknown effect type").ThrowAsJavaScriptException();
     return Boolean::From(env, false);
 }
 

@@ -1,6 +1,5 @@
 /// <reference types="node" />
 
-import type { EventEmitter } from 'node:events';
 import type { Readable } from 'stream';
 
 export interface TrackInfo {
@@ -158,6 +157,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   /**
    * Audio volume in linear scale, `0` = silent, `1` = 0dBFS
+   * This only affact main output
    */
   get volume(): number;
   set volume(value: number);
@@ -240,7 +240,13 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   updateAudioStream(id: RequestAudioResult['id'], options: UpdateAudioStreamOptions): boolean;
 
-  deleteAudioStream(id: number): void;
+  deleteAudioStream(id: number): boolean;
+
+  getFx(type: 'karaoke'): KaraokeParams;
+  getFx(type: any): never;
+
+  setFx(type: 'karaoke', params: KaraokeUpdateParams): boolean;
+  setFx(type: any, params: never): false;
 
   static getMetadata(path: string): Metadata | undefined;
 
@@ -261,7 +267,7 @@ export type MedleyInfo = {
   },
   juce: {
     version: Record<'major' | 'minor' | 'build', number>;
-    cpu: Partial<Record<'intel' | 'arm' | 'arm64', 'aarch64' | 'sse' | 'neon' | 'vdsp', true>>;
+    cpu: Partial<Record<'intel' | 'arm' | 'arm64' | 'aarch64' | 'sse' | 'neon' | 'vdsp', true>>;
   };
 
   version: Record<'major' | 'minor' | 'patch', number> & { prerelease?:  string };
@@ -306,9 +312,13 @@ export type RequestAudioOptions = {
    * @default 1.0 (0dBFS)
    */
   gain?: number;
+
+  fx?: {
+    karaoke?: KaraokeUpdateParams;
+  }
 }
 
-export type UpdateAudioStreamOptions = Partial<Pick<RequestAudioOptions, 'buffering' | 'gain'>>;
+export type UpdateAudioStreamOptions = Partial<Pick<RequestAudioOptions, 'buffering' | 'gain' | 'fx'>>;
 
 export type RequestAudioResult = {
   readonly id: number;
@@ -320,6 +330,14 @@ export type RequestAudioResult = {
 
 export type RequestAudioStreamResult = RequestAudioResult & {
   readonly stream: Readable;
+
+  update(options: UpdateAudioStreamOptions): boolean;
+
+  getFx(type: 'karaoke'): KaraokeParams | undefined;
+  getFx(type: any): never;
+
+  setFx(type: 'karaoke', params: KaraokeUpdateParams): boolean;
+  setFx(type: any, params: never): false;
 }
 
 export type AudioDeviceDescriptor = {
@@ -392,3 +410,16 @@ export type DeckPositions = {
 
   transitionEnd?: number;
 }
+
+export type KaraokeParams = {
+  enabled: boolean;
+  mix: number;
+  lowpassCutoff: number;
+  lowpassQ: number;
+  highpassCutoff: number;
+  highpassQ: number;
+}
+
+export type KaraokeUpdateParams = Partial<KaraokeParams & {
+  dontTransit?: boolean;
+}>;
