@@ -1,5 +1,3 @@
-#pragma once
-
 #include "req.h"
 
 namespace audio_req {
@@ -47,7 +45,7 @@ AudioRequest::AudioRequest(const AudioRequest& other)
     converter(other.converter),
     processor(other.processor),
     resamplers(other.resamplers),
-    preferredGain(preferredGain)
+    preferredGain(other.preferredGain)
 {
 
 }

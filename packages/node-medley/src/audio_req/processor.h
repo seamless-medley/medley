@@ -1,5 +1,6 @@
 #pragma once
 
+#include <thread>
 #include "req.h"
 
 namespace audio_req {

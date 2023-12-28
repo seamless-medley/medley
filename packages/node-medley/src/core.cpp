@@ -34,7 +34,7 @@ namespace {
         auto& metacomments = metadata.getComments();
 
         auto comments = Napi::Array::New(env);
-        for (auto i = 0; i < metacomments.size(); i++) {
+        for (int i = 0; i < (int)metacomments.size(); i++) {
             auto& comment = metacomments.at(i);
 
             auto pair = Napi::Array::New(env);
@@ -571,11 +571,11 @@ namespace {
     } ParamMap;
 
     ParamMap paramsMap[] = {
-        { "mix",            DeFXKaraoke::Param::Mix },
-        { "lowpassCutoff",  DeFXKaraoke::Param::LowPassCutOff },
-        { "lowpassQ",       DeFXKaraoke::Param::LowPassQ },
-        { "highpassCutoff", DeFXKaraoke::Param::HighPassCutOff },
-        { "highpassQ",      DeFXKaraoke::Param::HighPassQ }
+        { (char*)"mix",            DeFXKaraoke::Param::Mix },
+        { (char*)"lowpassCutoff",  DeFXKaraoke::Param::LowPassCutOff },
+        { (char*)"lowpassQ",       DeFXKaraoke::Param::LowPassQ },
+        { (char*)"highpassCutoff", DeFXKaraoke::Param::HighPassCutOff },
+        { (char*)"highpassQ",      DeFXKaraoke::Param::HighPassQ }
     };
 }
 
@@ -706,7 +706,7 @@ std::shared_ptr<audio_req::AudioRequest> Medley::registerAudioRequest(uint32_t i
                 break;
 
             default:
-                return false;
+                return nullptr;
         }
     }
 
