@@ -76,14 +76,14 @@ void LookAheadLimiter::process(const ProcessContextReplacing<float>& context)
 
     // add make-up and convert to linear gain
     const float makeUpGainInDecibels = gainReductionCalculator.getMakeUpGain();
-    for (int i = 0; i < numSamples; ++i)
+    for (int i = 0; i < (int)numSamples; ++i)
         sideChainBuffer.setSample(1, i, Decibels::decibelsToGain(sideChainBuffer.getSample(1, i) + makeUpGainInDecibels));
 
 
     /** STEP 4: apply gain-reduction to all channels */
     auto reduction = 0.0f;
 
-    for (int i = 0; i < numSamples; ++i)
+    for (int i = 0; i < (int)numSamples; ++i)
         reduction += sideChainBuffer.getSample(1, i);
 
     this->reduction = Decibels::gainToDecibels(reduction / numSamples);

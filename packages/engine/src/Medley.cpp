@@ -11,8 +11,8 @@ namespace medley {
 
 Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
     :
-    mixer(*this),
     audioInterceptor(*this),
+    mixer(*this),
     queue(queue),
     loadingThread("Loading Thread"),
     readAheadThread("Read-ahead-thread"),

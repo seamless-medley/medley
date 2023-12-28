@@ -63,7 +63,7 @@ float Fader::update(double time)
 
 bool Fader::shouldUpdate(double time)
 {
-    return started || (time >= timeStart) && (time <= timeEnd);
+    return started || ((time >= timeStart) && (time <= timeEnd));
 }
 
 void Fader::stop()
@@ -72,7 +72,7 @@ void Fader::stop()
 
     if (started) {
         started = false;
-        callback();        
+        callback();
     }
 }
 

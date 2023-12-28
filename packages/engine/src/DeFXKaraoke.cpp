@@ -41,14 +41,12 @@ void DeFXKaraoke::process(const ProcessContextReplacing<float>& context)
     const auto& output = context.getOutputBlock();
 
     auto totalNumInputChannels = jmin(input.getNumChannels(), (size_t)2);
-    auto totalNumOutputChannels = jmin(output.getNumChannels(), (size_t)2);
 
     if (totalNumInputChannels < 2) {
         // Cannot process mono channel input
         return;
     }
 
-    const auto numChannels = input.getNumChannels();
     const auto numSamples = input.getNumSamples();
 
     auto in_left = input.getChannelPointer(0);
@@ -59,7 +57,7 @@ void DeFXKaraoke::process(const ProcessContextReplacing<float>& context)
 
     updateFilter(false);
 
-    for (int i = 0; i < numSamples; ++i) {
+    for (int i = 0; i < (int)numSamples; ++i) {
         auto l = in_left[i];
         auto r = in_right[i];
 

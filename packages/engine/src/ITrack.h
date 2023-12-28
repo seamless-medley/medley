@@ -42,6 +42,14 @@ public:
 
     }
 
+    TrackPlay& operator=(const TrackPlay& other)
+    {
+        uuid = other.uuid;
+        track = other.track;
+        duration = other.duration;
+        return *this;
+    }
+
     const Uuid& getUuid() const { return uuid; }
     ITrack::Ptr getTrack() const { return track; }
     double getDuration() const { return duration; }
