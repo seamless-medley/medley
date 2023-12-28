@@ -74,9 +74,19 @@ jobs:
           pnpm run build
           pnpm run package
 
+      - name: Check Tag
+        id: check-tag
+        working-directory: ${{ env.NODE_MEDLEY_DIR }}
+        run: |
+          if [[ grep MEDLEY_VERSION_PRE_RELEASE src\version.h ]]; then
+            echo "TAG=pre" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAG=latest" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish
         working-directory: ${{ env.NODE_MEDLEY_DIR }}
         run: |
-          pnpm publish ./dist --no-git-checks
+          pnpm publish ./dist --no-git-checks --tag ${{ steps.check-tag.outputs.TAG }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
