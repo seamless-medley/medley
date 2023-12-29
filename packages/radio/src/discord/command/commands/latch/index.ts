@@ -1,6 +1,5 @@
 import { ButtonInteraction, ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../../type";
-import { MedleyAutomaton } from "../../../automaton";
 import { list } from './list';
 import { set } from './set';
 import { remove } from './remove';
