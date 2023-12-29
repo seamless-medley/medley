@@ -270,7 +270,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     }
   }
 
-  static #monitorTimer?: NodeJS.Timer;
+  static #monitorTimer?: NodeJS.Timeout;
 
   static #monitorings: Array<WatchTrackCollection<any>> = [];
 
