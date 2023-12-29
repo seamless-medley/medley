@@ -22,7 +22,7 @@ import {
 
 import { TrackMessage } from "../trackmessage/types";
 import { VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
-import { AudioDispatcher, ICarriableExciter } from "../../audio/exciter";
+import { AudioDispatcher } from "../../audio/exciter";
 import { DiscordAudioPlayer } from "../voice/audio/player";
 import { GuildSpecificConfig, MedleyAutomaton } from "./automaton";
 import { TrackMessageCreator } from "../trackmessage/creator/base";
