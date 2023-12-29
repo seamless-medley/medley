@@ -32,10 +32,10 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
 
   async init(options: Options): Promise<this> {
     const pool = (this.pool as any);
-    for (const worker of pool.workers as any[]) {
-      await worker.exec('configure', [options]);
-    }
-
+    await Promise.all(
+      (pool.workers as any[])
+        .map(worker => worker.exec('configure', [options]))
+    );
     return this;
   }
 
