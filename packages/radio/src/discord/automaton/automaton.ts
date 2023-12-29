@@ -255,10 +255,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     const state = this.ensureGuildState(guildId);
 
-    state.preferredStation = this.stations.get(config?.autotune);
+    const stationToTune = this.stations.get(config?.autotune);
 
-    if (state.preferredStation) {
-      await state.createStationLink();
+    if (stationToTune) {
+      await state.tune(stationToTune)
     }
   }
 
