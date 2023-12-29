@@ -5,7 +5,7 @@ import { Exciter, getExciterFromCache, ICarriableExciter, IExciter, registerExci
 const NUM_CPUS = cpus().length;
 
 export class DiscordAudioPlayer extends Exciter implements ICarriableExciter {
-  private constructor(station: Station, bitrate = 256_000) {
+  constructor(station: Station, bitrate = 256_000) {
     super(
       station,
       DiscordAudioPlayer.requestAudioOptions,
@@ -20,28 +20,5 @@ export class DiscordAudioPlayer extends Exciter implements ICarriableExciter {
     // discord voice only accept 48KHz sample rate, 16 bit per sample
     sampleRate: 48000,
     format: 'Int16LE'
-  }
-
-  static make(station: Station, bitrate: number, onNew?: (exciter: IExciter) => any): DiscordAudioPlayer {
-    const existing = getExciterFromCache({
-      constructor: DiscordAudioPlayer,
-      station,
-      audioOptions: DiscordAudioPlayer.requestAudioOptions,
-      encoderOptions: { bitrate }
-    });
-
-    if (existing && existing.refCount < NUM_CPUS) {
-      return existing as DiscordAudioPlayer;
-    }
-
-    const newExiter = registerExciter(new DiscordAudioPlayer(station, bitrate));
-    onNew?.(newExiter);
-    return newExiter;
-  }
-
-  static destroy(instance: IExciter) {
-    if (instance instanceof DiscordAudioPlayer) {
-      unregisterExciter(instance);
-    }
   }
 }

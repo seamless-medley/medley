@@ -191,9 +191,8 @@ export class GuildState {
     }
 
     const bitrate = (this.adapter.getConfig(this.guildId)?.bitrate ?? 256) * 1000;
-    const exciter = DiscordAudioPlayer.make(preferredStation, bitrate , (newExiter) => {
-      newExiter.start(this.adapter.getAudioDispatcher());
-    });
+    const exciter = new DiscordAudioPlayer(preferredStation, bitrate);
+    await exciter.start(this.adapter.getAudioDispatcher());
 
     const newLink: StationLink = {
       station: preferredStation,
@@ -472,7 +471,7 @@ export type JoinResult = {
 
 export type StationLink = {
   station: Station;
-  exciter: ICarriableExciter;
+  exciter: DiscordAudioPlayer;
 }
 
 export function updateStationAudiences(station: Station, groupId: AudienceGroupId, channel: VoiceBasedChannel) {
