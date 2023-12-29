@@ -1,8 +1,16 @@
 import { Medley, Queue } from '..';
 
 async function main() {
+  console.log(Medley.getInfo());
+
   const queue = new Queue();
   const medley = new Medley(queue, { logging: true });
+
+  const r = await medley.requestAudioStream();
+
+  r.stream.on('data', (pcmData) => {
+    //
+  });
 
   let index = 0;
 
