@@ -129,7 +129,7 @@ async function main() {
     }
 
     logger.fatal(configs.message);
-    return;
+    process.exit(1);
   }
 
   if (program.opts().register) {

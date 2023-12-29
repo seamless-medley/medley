@@ -66,6 +66,7 @@ async function main() {
     }
 
     logger.fatal(configs.message);
+    process.exit(1);
     return;
   }
 
@@ -135,7 +136,8 @@ async function main() {
   }
 
   process.on('SIGINT', () => {
-    process.exit(0);
+    process.exitCode = 0;
+    process.kill(process.pid);
   });
 }
 
