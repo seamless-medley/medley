@@ -399,7 +399,11 @@ Request for PCM audio data stream
 
 - `preFill` *(number)* - Optional number of frames to pre-fill into the stream right after requesting
 
-- `gain` *(number)* - utput gain, a floating point number ranging from 0 to 1
+- `gain` *(number)* - Output gain, a floating point number ranging from 0 to 1
+
+- `fx` *(object)* - Effects parameter:
+
+    - `karaoke`: Parameters for the karaoke effect, see [setFx(type: 'karaoke', params)](#setfxtype-karaoke-params)
 
 Returns a `Promise` of `object` with:
 
@@ -417,6 +421,12 @@ Returns a `Promise` of `object` with:
 
 - `stream` *(Readable)* - Readable stream, use this field to consume PCM data
 
+- `update` *((options) => boolean)* - Update this audio stream, the `options` is the same as [updateAudioStream(id, options)](#updateaudiostreamid-options)
+
+- `getFx` - See [getFx](#getfxtype-karaoke)
+
+- `setFx` - See [setFx](#setfxtype-karaoke-params)
+
 ## `updateAudioStream(id, options)`
 
 Update the requested audio stream specified by `id` returned from [requestAudioStream](#requestaudiostreamoptions) method.
@@ -427,11 +437,55 @@ Update the requested audio stream specified by `id` returned from [requestAudioS
 
 - `buffering` - See [requestAudioStream](#requestaudiostreamoptions)
 
+- `fx` *(object)* - Effects parameter:
+
+    - `karaoke`: Parameters for the karaoke effect, see [setFx(type: 'karaoke', params)](#setfxtype-karaoke-params)
+
 Returns `true` if succeeded.
 
 ## `deleteAudioStream(id)`
 
 Delete the requested audio stream specified by `id` returned from [requestAudioStream](#requestaudiostreamoptions) method.
+
+## `getFx(type: 'karaoke')`
+
+Get all parameter values for the karaoke effect.
+
+Returns an `object` with:
+
+- `enabled` *(boolean)*
+
+- `mix` *(number)* - Dry/Wet for the karaoke effect
+
+- `lowpassCutoff` *(number)* - Cut off frequency for the low pass filter
+
+- `lowpassQ` *(number)* - Quality factor for the low pass filter
+
+- `highpassCutoff` *(number)* - Cut off frequency for the high pass filter
+
+- `highpassQ` *(number)* - Quality factor for the high pass filter
+
+## `setFx(type: 'karaoke', params)`
+
+Set karaoke effect parameters.
+
+The `params` is an `object` with:
+
+- `enabled` *(boolean?)*
+
+- `dontTransit` *(boolean?)* - Do not apply dry/wet mix transition while enabling/disabling the effect. Must be used with the `enabled` property.
+
+- `mix` *(number?)* - Dry/Wet for the karaoke effect
+
+- `lowpassCutoff` *(number?)* - Cut off frequency for the low pass filter
+
+- `lowpassQ` *(number?)* - Quality factor for the low pass filter
+
+- `highpassCutoff` *(number?)* - Cut off frequency for the high pass filter
+
+- `highpassQ` *(number?)* - Quality factor for the high pass filter
+
+Returns `true` if succeeded.
 
 **Properties**
 
@@ -579,7 +633,6 @@ Emits when a log message has been pushed from the native module.
     | name |value|
     |------|-----|
     |trace | -1  |
-    |------|-----|
     |debug |  0  |
     |info  |  1  |
     |warn  |  2  |
