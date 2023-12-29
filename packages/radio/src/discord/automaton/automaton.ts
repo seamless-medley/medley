@@ -208,10 +208,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#logger.info('OAUthURL: %s', this.oAuth2Url.toString());
 
     this.#client.once('ready', async () => {
-      for (const guildId of Object.keys(this.#guildConfigs)) {
-        this.#autoTuneStation(guildId);
-        this.#autoJoinVoiceChannel(guildId);
-      }
+      Object.keys(this.#guildConfigs).map(async (guildId) => {
+        await this.#autoTuneStation(guildId);
+        await this.#autoJoinVoiceChannel(guildId);
+      })
     });
   }
 
