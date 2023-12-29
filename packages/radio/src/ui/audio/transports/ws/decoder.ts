@@ -41,7 +41,7 @@ async function run() {
     const { opus, extra } = e.data;
     const decoded = decoder.decodeFrame(opus);
 
-    // Post the dacoded data out, for other threads to read
+    // Post the decoded data out, for other threads to read
     self.postMessage({
       decoded,
       extra
