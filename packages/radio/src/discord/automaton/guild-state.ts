@@ -1,6 +1,7 @@
 import {
   AudienceGroupId,
   IReadonlyLibrary,
+  KaraokeUpdateParams,
   Station
 } from "@seamless-medley/core";
 
@@ -65,6 +66,8 @@ export class GuildState {
   private stationLink?: StationLink;
 
   #voiceConnector?: VoiceConnector;
+
+  #karaokeEnabled = false;
 
   get maxTrackMessages() {
     const config = this.adapter.getConfig(this.guildId);
@@ -193,6 +196,7 @@ export class GuildState {
     const bitrate = (this.adapter.getConfig(this.guildId)?.bitrate ?? 256) * 1000;
     const exciter = new DiscordAudioPlayer(preferredStation, bitrate);
     await exciter.start(this.adapter.getAudioDispatcher());
+    exciter.setKaraokeParams({ enabled: this.#karaokeEnabled, dontTransit: true });
 
     const newLink: StationLink = {
       station: preferredStation,
@@ -458,6 +462,50 @@ export class GuildState {
         }
       }
     }
+  }
+
+  setKaraokeParams(params: KaraokeUpdateParams): boolean {
+    if (!this.stationLink?.exciter) {
+      return false;
+    }
+
+    if (params.enabled !== undefined) {
+      this.#karaokeEnabled = params.enabled;
+    }
+
+    if (this.stationLink.station.isInTransition) {
+      return true;
+    }
+
+    return this.stationLink.exciter.setKaraokeParams(params);
+  }
+
+  temporarilyDisableKaraoke(): boolean {
+    if (!this.stationLink?.exciter) {
+      return false;
+    }
+
+    if (!this.#karaokeEnabled) {
+      return false;
+    }
+
+    this.adapter.getLogger().debug({ guildId: this.guildId }, 'temporarilyDisableKaraoke');
+
+    return this.stationLink.exciter.setKaraokeParams({ enabled: false });
+  }
+
+  restoreKaraoke(): boolean {
+    if (!this.stationLink?.exciter) {
+      return false;
+    }
+
+    this.adapter.getLogger().debug({ guildId: this.guildId, flag: this.#karaokeEnabled }, 'restoreKaraoke');
+
+    return this.stationLink.exciter.setKaraokeParams({ enabled: this.#karaokeEnabled });
+  }
+
+  get karaokeEnabled() {
+    return this.#karaokeEnabled;
   }
 }
 

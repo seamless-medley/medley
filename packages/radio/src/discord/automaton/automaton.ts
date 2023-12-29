@@ -199,6 +199,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#client.on('messageReactionRemoveAll', this.#handleMessageReactionRemoveAll);
 
     for (const station of stations) {
+      station.on('deckStarted', this.#handleDeckStarted(station))
       station.on('trackStarted', this.#handleTrackStarted(station));
       station.on('trackActive', this.#handleTrackActive);
       station.on('trackFinished', this.#handleTrackFinished);
@@ -428,7 +429,27 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.emit('guildDelete', guild);
   }
 
-  #handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck: DeckIndex, trackPlay, lastTrackPlay) => {
+  #handleDeckStarted = (station: Station): StationEvents['deckStarted'] => (deck, trackPlay) => {
+    if (!trackPlay.track.extra) {
+      return;
+    }
+
+    const guildIds = this.#getAudienceGuildsForStation(station);
+
+    if (trackPlay.track.extra.kind === TrackKind.Insertion) {
+      for (const guildId of guildIds) {
+        this.#guildStates.get(guildId)?.temporarilyDisableKaraoke();
+      }
+
+      return;
+    }
+
+    for (const guildId of guildIds) {
+      this.#guildStates.get(guildId)?.restoreKaraoke();
+    }
+  }
+
+  #handleTrackStarted = (station: Station): StationEvents['trackStarted'] => async (deck, trackPlay, lastTrackPlay) => {
     if (trackPlay.track.extra?.kind !== TrackKind.Insertion) {
       const sentMessages = await this.#sendTrackPlayForStation(trackPlay, deck, station);
 
