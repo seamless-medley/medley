@@ -10,6 +10,7 @@ import tune from './tune';
 import latch from './latch';
 import profile from './profile';
 import collection from './collection';
+import karaoke from './karaoke';
 
 export const all = {
   join,
@@ -23,5 +24,6 @@ export const all = {
   tune,
   latch,
   profile,
-  collection
+  collection,
+  karaoke
 }
