@@ -2,7 +2,7 @@
 
 PostProcessor::PostProcessor()
 {
-    chain.setBypassed<index::DeFX>(false);
+    chain.setBypassed<index::Karaoke>(false);
     chain.setBypassed<index::Limiter>(false);
 
     karaokeMix = getKaraokeParams(DeFXKaraoke::Param::Mix);
@@ -19,7 +19,7 @@ void PostProcessor::process(const AudioSourceChannelInfo& info, double timestamp
     currentTime = timestamp;
 
     if (karaokeMixFader.shouldUpdate(currentTime)) {
-        chain.get<index::DeFX>().setParam(
+        chain.get<index::Karaoke>().setParam(
             DeFXKaraoke::Param::Mix,
             karaokeMixFader.update(currentTime)
         );
@@ -96,7 +96,7 @@ bool PostProcessor::setKaraokeEnabled(bool enabled, bool dontTransit) {
     karaokeEnabled = enabled;
 
     if (dontTransit) {
-        auto& fx = chain.get<index::DeFX>();
+        auto& fx = chain.get<index::Karaoke>();
         fx.setEnabled(karaokeEnabled);
         fx.setParam(DeFXKaraoke::Param::Mix, karaokeMix);
         return fx.isEnabled();
@@ -106,21 +106,21 @@ bool PostProcessor::setKaraokeEnabled(bool enabled, bool dontTransit) {
     auto end = start + 600;
 
     if (karaokeEnabled) {
-        chain.get<index::DeFX>().setEnabled(true);
+        chain.get<index::Karaoke>().setEnabled(true);
 
         karaokeMixFader.start(start, end, 0.0f, karaokeMix, 0.7f, karaokeMix, [=] {
             // Ensure resetting to the up-to-date value
             karaokeMixFader.reset(karaokeMix);
-            chain.get<index::DeFX>().setParam(DeFXKaraoke::Param::Mix, karaokeMix);
+            chain.get<index::Karaoke>().setParam(DeFXKaraoke::Param::Mix, karaokeMix);
         });
 
-        return chain.get<index::DeFX>().isEnabled();
+        return chain.get<index::Karaoke>().isEnabled();
     }
     else {
         karaokeMixFader.start(start, end, karaokeMix, 0.0f, 0.7f, karaokeMix, [=] {
             karaokeMixFader.reset(0.0f);
 
-            auto& fx = chain.get<index::DeFX>();
+            auto& fx = chain.get<index::Karaoke>();
             fx.setParam(DeFXKaraoke::Param::Mix, 0.0f);
             fx.setEnabled(false);
         });
@@ -130,11 +130,11 @@ bool PostProcessor::setKaraokeEnabled(bool enabled, bool dontTransit) {
 }
 
 float PostProcessor::getKaraokeParams(DeFXKaraoke::Param param) const {
-    return chain.get<index::DeFX>().getParam(param);
+    return chain.get<index::Karaoke>().getParam(param);
 }
 
 float PostProcessor::setKaraokeParams(DeFXKaraoke::Param param, float newValue) {
-    auto result = chain.get<index::DeFX>().setParam(param, newValue);
+    auto result = chain.get<index::Karaoke>().setParam(param, newValue);
 
     if (param == DeFXKaraoke::Param::Mix) {
         karaokeMix = result;

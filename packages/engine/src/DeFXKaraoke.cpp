@@ -24,7 +24,6 @@ void DeFXKaraoke::prepare(const ProcessSpec& spec)
     lowPassFilter->prepare(spec);
     highPassFilter->prepare(spec);
 
-
     updateFilter(true);
 
     lowPassFilter->reset();

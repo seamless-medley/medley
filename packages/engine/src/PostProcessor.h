@@ -12,7 +12,7 @@ using namespace juce::dsp;
 namespace medley {
     namespace processor {
         namespace index {
-            constexpr auto DeFX = 0;
+            constexpr auto Karaoke = 0;
             constexpr auto Limiter = 1;
         }
     }
