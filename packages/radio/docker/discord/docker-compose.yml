@@ -26,6 +26,6 @@ services:
       LOG_PRETTY: hide-date,use-colors
       FORCE_COLOR: 3
     volumes:
-      - /Music-Station/medley/config.yml:/app/config-docker.yml
+      - /Music-Station/medley/config.yml:/app/config.yml
       - /Music-Station/musics:/data/musics
       - /Music-Station/medley-drops:/data/medley-drops
