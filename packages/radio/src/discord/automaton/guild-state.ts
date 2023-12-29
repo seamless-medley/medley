@@ -214,7 +214,6 @@ export class GuildState {
     if (this.#voiceConnector) {
       if (exciter.removeCarrier(this.#voiceConnector) <= 0) {
         exciter.stop();
-        DiscordAudioPlayer.destroy(exciter);
       }
     }
 

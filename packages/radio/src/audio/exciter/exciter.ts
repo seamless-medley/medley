@@ -47,6 +47,7 @@ export interface ICarrier {
   dispatchAudio(): boolean;
 }
 
+/** @deprecated */
 type ExciterRegistration = {
   readonly constructor: Function;
   readonly station: Station;
@@ -54,26 +55,31 @@ type ExciterRegistration = {
   readonly encoderOptions: Partial<OpusPacketEncoderOptions>;
 }
 
+/** @deprecated */
 const cache = new Map<ExciterRegistration, WeakRef<IExciter>>();
 
+/** @deprecated */
 const registry = new FinalizationRegistry<ExciterRegistration>((registration) => {
   if (!cache.get(registration)?.deref()) {
     cache.delete(registration)
   }
 });
 
-export function isSameRegistration(a: ExciterRegistration, b: ExciterRegistration) {
+/** @deprecated */
+function isSameRegistration(a: ExciterRegistration, b: ExciterRegistration) {
   return (a.constructor === b.constructor)
     && (a.station === b.station)
     && isEqual(a.audioOptions, b.audioOptions)
     && isEqual(a.encoderOptions, b.encoderOptions)
 }
 
+/** @deprecated */
 function findRegistrationEntry(registration: ExciterRegistration) {
   return [...cache].find(([r]) => isSameRegistration(registration, r));
 }
 
-export function getExciterFromCache(registration: ExciterRegistration): IExciter | undefined {
+/** @deprecated */
+function getExciterFromCache(registration: ExciterRegistration): IExciter | undefined {
   const entry = findRegistrationEntry(registration);
 
   if (entry) {
@@ -85,7 +91,8 @@ export function getExciterFromCache(registration: ExciterRegistration): IExciter
   }
 }
 
-export function registerExciter<E extends IExciter>(exciter: E): E {
+/** @deprecated */
+function registerExciter<E extends IExciter>(exciter: E): E {
   const registration: ExciterRegistration = {
     constructor: exciter.constructor,
     station: exciter.station,
@@ -101,7 +108,8 @@ export function registerExciter<E extends IExciter>(exciter: E): E {
   return exciter;
 }
 
-export function unregisterExciter(exciter: IExciter) {
+/** @deprecated */
+function unregisterExciter(exciter: IExciter) {
   const entry = findRegistrationEntry({
     constructor: exciter.constructor,
     station: exciter.station,
