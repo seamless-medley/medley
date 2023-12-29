@@ -46,7 +46,7 @@ export class ExposedDeck implements Exposable<Deck> {
 
   #deckIndex: DeckIndex;
 
-  #timer: NodeJS.Timer;
+  #timer: NodeJS.Timeout;
 
   get #deck() {
     return this[$Exposing];
