@@ -11,9 +11,9 @@ import {
   UpdateAudioStreamOptions
 } from "@seamless-medley/medley";
 
-import { TrackCollectionBasicOptions, TrackIndex } from "./collections";
-import { Crate, LatchOptions, LatchSession } from "./crate";
-import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "./library";
+import { TrackCollectionBasicOptions, TrackIndex } from "../collections";
+import { Crate, LatchOptions, LatchSession } from "../crate";
+import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "../library";
 import { createLogger, Logger } from "@seamless-medley/logging";
 import {
   BoomBox,
@@ -26,10 +26,10 @@ import {
   TrackKind,
   trackRecordOf,
   TrackWithRequester
-} from "./playout";
-import { MetadataHelper } from "./metadata";
-import { SearchQuery, SearchQueryField } from "./library/search";
-import { CrateProfile } from "./crate/profile";
+} from "../playout";
+import { MetadataHelper } from "../metadata";
+import { SearchQuery, SearchQueryField } from "../library/search";
+import { CrateProfile } from "../crate/profile";
 
 export type StationAudioLevels = AudioLevels & {
   reduction: number;
@@ -906,4 +906,3 @@ export function makeAudience(type: AudienceType, group: string |  DiscordAudienc
     id
   }
 }
-
