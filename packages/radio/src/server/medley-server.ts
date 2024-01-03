@@ -1,4 +1,4 @@
-import { MusicDb, Station, StationEvents } from "@seamless-medley/core";
+import { AudienceType, MusicDb, Station, StationEvents, makeAudienceGroupId } from "@seamless-medley/core";
 import { createLogger } from "@seamless-medley/logging";
 
 import { MongoMusicDb } from "../musicdb/mongo";
@@ -16,6 +16,13 @@ import { AudioWebSocketServer } from "./audio/ws/server";
 import { RTCTransponder } from "./audio/rtc/transponder";
 import { ExposedTransponder } from "./expose/rtc/transponder";
 import { createAutomaton, createStation } from "../helper";
+import { StationConfig } from "../config/station";
+import { MedleyAutomaton } from "../discord/automaton";
+import { AutomatonConfig } from "../config/automaton";
+import { StreamingConfig } from "../config/streaming";
+import { ShoutAdapter } from "../streaming/shout/adapter";
+import { StreamingAdapter } from "../streaming/types";
+import { noop, stubFalse, stubTrue } from "lodash";
 
 const logger = createLogger({ name: 'medley-server' });
 
@@ -36,6 +43,12 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
   #configs: Config;
 
+  #stations = new Map<string, Station>;
+
+  #automatons = new Map<string, MedleyAutomaton>;
+
+  #streamers = new Set<StreamingAdapter<any>>;
+
   constructor(options: MedleyServerOptions) {
     super(options.io);
     //
@@ -51,33 +64,75 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
       this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
     }
 
+    this.#stations = await this.#createStations();
+    this.#automatons = await this.#createAutomatons();
+    this.#streamers = await this.#createStreamers();
+
+    this.emit('ready');
+  }
+
+  async createStation(id: string, config: StationConfig) {
+    logger.info(`Constructing station: ${id}`);
+
+    const station = await createStation({
+      ...config,
+      id,
+      musicDb: this.musicDb
+    });
+
+    this.registerStation(station);
+    this.#audioServer.publish(station);
+    this.#rtcTransponder?.publish(station);
+
+    return station;
+  }
+
+  removeStation(station: Station) {
+    if (this.#stations.get(station.id) !== station) {
+      return false;
+    }
+
+    this.#stations.delete(station.id);
+    this.deregisterStation(station);
+    this.#audioServer.unpublish(station);
+    this.#rtcTransponder?.unpublish(station);
+    return true;
+  }
+
+  async #createStations() {
     const stations = await Promise.all(
-      Object.entries(this.#configs.stations).map(async ([stationId, stationConfig]) => {
-        logger.info(`Constructing station: ${stationId}`);
-
-        const station = await createStation({
-          ...stationConfig,
-          id: stationId,
-          musicDb: this.musicDb
-        });
-
-        this.registerStation(station);
-        this.#audioServer.publish(station);
-        this.#rtcTransponder?.publish(station);
-
-        return station;
-      })
-    );
+      Object.entries(this.#configs.stations)
+        .map(args => this.createStation(...args)
+    ));
 
     logger.info('Completed stations construction');
 
+    return new Map<string, Station>(stations.map(s => [s.id, s]));
+  }
+
+  async createAutomaton(id: string, config: AutomatonConfig) {
+    return createAutomaton({
+      ...config,
+      id,
+      createdStations: Array.from(this.#stations.values())
+    });
+  }
+
+  removeAutomaton(automaton: MedleyAutomaton) {
+    if (this.#automatons.get(automaton.id) !== automaton) {
+      return false;
+    }
+
+    this.#automatons.delete(automaton.id);
+    automaton.destroy();
+    return true;
+  }
+
+  async #createAutomatons() {
     const automatons = await Promise.all(
-      Object.entries(this.#configs.automatons).map(([id, config]) => createAutomaton({
-        ...config,
-        id,
-        createdStations: stations
-      }))
-    );
+      Object.entries(this.#configs.automatons)
+        .map(args => this.createAutomaton(...args)
+    ));
 
     if (automatons.some(a => !a.isReady)) {
       logger.warn('Started, with some malfunctioning automatons');
@@ -85,7 +140,69 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
       logger.info('Started');
     }
 
-    this.emit('ready');
+    return new Map<string, MedleyAutomaton>(automatons.map(s => [s.id, s]));
+  }
+
+  async #streamerFactory(config: StreamingConfig): Promise<StreamingAdapter<any> | undefined> {
+    const station = this.#stations.get(config.station);
+
+    if (!station) {
+      return;
+    }
+
+    switch (config.type) {
+      case 'shout':
+        return new ShoutAdapter(station, {
+          outputFormat: config.format.codec,
+          sampleRate: config.format.sampleRate,
+          bitrate: (config.format.codec !== 'flac') ? config.format.bitrate : undefined,
+          icecast: {
+            host: config.icecast.host,
+            port: config.icecast.port,
+            tls: config.icecast.tls,
+            mountpoint: config.icecast.mountpoint || `/${station.id}`,
+            username: config.icecast.username,
+            password: config.icecast.password,
+            url: station.url ?? 'https://github.com/seamless-medley/medley',
+            name: station.name,
+            description: station.description
+          },
+          fx: config.fx
+        });
+
+      default:
+        return
+    }
+  }
+
+  async createStreamer(config: StreamingConfig): Promise<StreamingAdapter<any> | undefined> {
+    const station = this.#stations.get(config.station);
+
+    if (!station) {
+      return;
+    }
+
+    const streamer = await this.#streamerFactory(config);
+    if (!streamer) {
+      return;
+    }
+
+    await streamer.init().catch(noop);
+
+    if (streamer.initialized) {
+      station.addAudience(makeAudienceGroupId(AudienceType.Streaming, 'shout'), '-');
+    }
+
+    return streamer;
+  }
+
+  async #createStreamers() {
+    if (!this.#configs.streaming?.length) {
+      return new Set<StreamingAdapter<any>>();
+    }
+
+    const adapters = await Promise.all(this.#configs.streaming.map((config) => this.createStreamer(config)));
+    return new Set(adapters.filter((a): a is StreamingAdapter<any> => a !== undefined));
   }
 
   protected override addSocket(socket: Socket) {
