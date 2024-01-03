@@ -9,6 +9,7 @@ import {
 } from './config/station';
 import { AutomatonConfig } from "./config/automaton";
 import { MedleyAutomaton } from "./discord/automaton";
+import { join } from "path";
 
 function createCrateFromSequence(id: string, station: Station, sequence: SequenceConfig) {
   const validCollections = sequence.collections.filter(({ id: collectionId }) => station.hasCollection(collectionId));
@@ -152,6 +153,36 @@ export async function createAutomaton(cfg: AutomatonConfig & { id: string; creat
 
     await automaton.login();
   });
+}
+
+let version: string;
+
+export function getVersion() {
+  if (version) {
+    return;
+  }
+
+  if (process.env.npm_package_version) {
+    return version = process.env.npm_package_version;
+  }
+
+  try {
+    return version = require(join(process.cwd(), 'package.json')).version;
+  }
+  catch {
+
+  }
+
+  return version = 'unknown';
+}
+
+export function getVersionLine() {
+  const appVersion = getVersion();
+  const electronVersion = process.versions['electron'];
+  const runtime = electronVersion ? 'Electron' : 'NodeJS';
+  const runtimeVersion = electronVersion ? `v${electronVersion}` : process.version;
+
+  return `Medley v${appVersion} running on ${runtime} ${runtimeVersion}; abi=${process.versions.modules}; uv=${process.versions.uv}; v8=${process.versions.v8}`;
 }
 
 export async function showVersionBanner(file: string) {
