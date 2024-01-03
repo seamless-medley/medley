@@ -1,4 +1,4 @@
-import { RequestAudioOptions, RequestAudioStreamResult, Station } from '@seamless-medley/core';
+import { KaraokeUpdateParams, RequestAudioOptions, RequestAudioStreamResult, Station } from '@seamless-medley/core';
 import { isEqual, noop } from 'lodash';
 import { pipeline, Readable } from 'stream';
 import { ListenerSignature, TypedEmitter } from 'tiny-typed-emitter';
@@ -267,6 +267,14 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
 
   get refCount(): number {
     return this.#ref;
+  }
+
+  setKaraokeParams(params: KaraokeUpdateParams): boolean {
+    if (!this.request) {
+      return false;
+    }
+
+    return this.request.setFx('karaoke', params);
   }
 }
 

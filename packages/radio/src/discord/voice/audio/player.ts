@@ -1,4 +1,4 @@
-import { KaraokeUpdateParams, RequestAudioOptions, Station } from "@seamless-medley/core";
+import { RequestAudioOptions, Station } from "@seamless-medley/core";
 import { Exciter, ICarriableExciter } from "../../../audio/exciter";
 
 export class DiscordAudioPlayer extends Exciter implements ICarriableExciter {
@@ -8,14 +8,6 @@ export class DiscordAudioPlayer extends Exciter implements ICarriableExciter {
       DiscordAudioPlayer.requestAudioOptions,
       { bitrate }
     );
-  }
-
-  setKaraokeParams(params: KaraokeUpdateParams): boolean {
-    if (!this.request) {
-      return false;
-    }
-
-    return this.request.setFx('karaoke', params);
   }
 
   static requestAudioOptions: RequestAudioOptions = {
