@@ -4,6 +4,19 @@ import type { PackageJson } from 'type-fest';
 import { chain } from 'lodash';
 import simpleGit  from 'simple-git';
 
+async function getFunctionString(mainVersion: string) {
+  const git = simpleGit();
+
+  const branch = await git.revparse(['--abbrev-ref', 'HEAD']);
+
+  if (branch === 'main') {
+    return mainVersion;
+  }
+
+  const shortHash = await git.revparse(['--short', 'HEAD']);
+  return `${branch}:${shortHash}`;
+}
+
 async function combine() {
   const combinePath = './combine/discord';
 
@@ -53,16 +66,13 @@ async function combine() {
     .extend({ dependencies: deps })
     .value();
 
+  result.version = await getFunctionString(result.version!);
+
   await outputJson(join(combinePath, 'package.json'), result, { spaces: 2 });
-
-  const git = simpleGit();
-
-  const branch = await git.revparse(['--abbrev-ref', 'HEAD']);
-  const shortHash = await git.revparse(['--short', 'HEAD']);
 
   await outputFile(join(combinePath, 'banner.txt'), [
     'Medley (Discord)',
-    `Version: ${branch}:${shortHash}`,
+    `Version: ${result.version}`,
     `Build date: ${Date()}`
   ].join('\n'));
 
