@@ -244,7 +244,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       const files = await scanner.call(this, dir);
 
       if (files !== false) {
-        await this.add(shuffle(files), undefined, done);
+        await this.add(shuffle(files), undefined, done).then(breath);
         break;
       }
     }

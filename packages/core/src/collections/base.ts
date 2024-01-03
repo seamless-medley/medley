@@ -53,8 +53,8 @@ export type TrackCollectionEvents<T extends Track<any>> = {
   refresh: () => void;
   trackShift: (track: T) => void;
   trackPush: (track: T) => void;
-  tracksAdd: (tracks: T[], indexes: number[]) => void;
-  tracksRemove: (tracks: T[], indexes?: number[]) => void;
+  tracksAdd: (tracks: T[]) => void;
+  tracksRemove: (tracks: T[]) => void;
   tracksUpdate: (tracks: T[]) => void;
 }
 
@@ -234,9 +234,8 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
       this.trackIdMap.set(track.id, track);
     }
 
-    const indexes = mapped.map(t => this.indexOf(t));
     this.logger.info(`${mapped.length} track(s) added`);
-    this.emit('tracksAdd', mapped, indexes);
+    this.emit('tracksAdd', mapped);
   }
 
   async update(paths: string[]) {
@@ -258,8 +257,6 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
   }
 
   removeBy(predicate: (track: T) => boolean): T[] {
-    const snapshot = this.all();
-
     const [removed, remaining] = partition(this.tracks, predicate);
     this.tracks = remaining;
 
@@ -267,9 +264,7 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
       this.trackIdMap.delete(id);
     }
 
-    const indexes = removed.map(t => snapshot.findIndex(st => st.id == t.id));
-
-    this.emit('tracksRemove', removed, indexes);
+    this.emit('tracksRemove', removed);
 
     return removed;
   }
