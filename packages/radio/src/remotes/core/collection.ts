@@ -30,6 +30,6 @@ export interface Collection {
   ϟrefresh(): void;
   ϟtrackShift(track: Track): void;
   ϟtrackPush(track: Track): void;
-  ϟtracksAdd(tracks: Track[], indexes: number[]): void;
-  ϟtracksRemove(tracks: Track[], indexes?: number[]): void;
+  ϟtracksAdd(tracks: Track[]): void;
+  ϟtracksRemove(tracks: Track[]): void;
 }

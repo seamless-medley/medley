@@ -43,17 +43,15 @@ export class ExposedColection extends MixinEventEmitterOf<Collection>() implemen
     this.emit('trackPush', await toTrack(track, true));
   }
 
-  #onTracksAdd: MusicTrackCollectionEvents<Station>['tracksAdd'] = async (tracks, indexes) => {
+  #onTracksAdd: MusicTrackCollectionEvents<Station>['tracksAdd'] = async (tracks) => {
     this.emit('tracksAdd',
-      await Promise.all(tracks.map(t => toTrack(t, true))),
-      indexes
+      await Promise.all(tracks.map(t => toTrack(t, true)))
     );
   }
 
-  #onTracksRemove: MusicTrackCollectionEvents<Station>['tracksRemove'] = async (tracks, indexes) => {
+  #onTracksRemove: MusicTrackCollectionEvents<Station>['tracksRemove'] = async (tracks) => {
     this.emit('tracksRemove',
-      await Promise.all(tracks.map(t => toTrack(t, true))),
-      indexes
+      await Promise.all(tracks.map(t => toTrack(t, true)))
     );
   }
 
