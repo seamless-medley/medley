@@ -12,7 +12,7 @@ import { AudioWebSocketServer } from './audio/ws/server';
 import { Config, loadConfig } from '../config';
 import { MedleyAutomaton } from '../discord/automaton';
 import { RTCTransponder } from './audio/rtc/transponder';
-import { showVersionBanner } from '../helper';
+import { getVersionLine, showVersionBanner } from '../helper';
 
 const logger = createLogger({ name: 'main' });
 
@@ -25,14 +25,6 @@ process.on('unhandledRejection', (e) => {
 });
 
 ////////////////////////////////////////////////////////////////////////////////////
-
-function getVersionLine() {
-  const electronVersion = process.versions['electron'];
-  const runtime = electronVersion ? 'Electron' : 'NodeJS';
-  const version = electronVersion ? `v${electronVersion}` : process.version;
-
-  return `${runtime} version: ${version}; abi=${process.versions.modules}; uv=${process.versions.uv}; v8=${process.versions.v8}`;
-}
 
 function isPortAvailable(port: number, address?: string) {
   return new Promise<boolean>((resolve) => {

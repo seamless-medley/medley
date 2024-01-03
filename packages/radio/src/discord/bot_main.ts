@@ -5,7 +5,7 @@ import { MongoMusicDb } from "../musicdb/mongo";
 import { MedleyAutomaton } from "./automaton";
 import { loadConfig } from "../config";
 import { ZodError } from "zod";
-import { createAutomaton, createStation, showVersionBanner } from "../helper";
+import { createAutomaton, createStation, getVersionLine, showVersionBanner } from "../helper";
 import { createLogger } from "@seamless-medley/logging";
 
 const logger = createLogger({ name: 'main' });
@@ -19,14 +19,6 @@ process.on('unhandledRejection', (e) => {
 });
 
 ////////////////////////////////////////////////////////////////////////////////////
-
-function getVersionLine() {
-  const electronVersion = process.versions['electron'];
-  const runtime = electronVersion ? 'Electron' : 'NodeJS';
-  const version = electronVersion ? `v${electronVersion}` : process.version;
-
-  return `${runtime} version: ${version}; abi=${process.versions.modules}; uv=${process.versions.uv}; v8=${process.versions.v8}`;
-}
 
 async function main() {
   const program = new Command()
