@@ -206,8 +206,8 @@ importers:
         specifier: ^11.1.0
         version: 11.1.0
       discord-api-types:
-        specifier: 0.37.66
-        version: 0.37.66
+        specifier: 0.37.67
+        version: 0.37.67
       discord.js:
         specifier: ^14.14.1
         version: 14.14.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
@@ -275,8 +275,8 @@ importers:
         specifier: ^4.4.2
         version: 4.5.1
       reflect-metadata:
-        specifier: ^0.1.14
-        version: 0.1.14
+        specifier: ^0.2.1
+        version: 0.2.1
       socket.io:
         specifier: ^4.7.2
         version: 4.7.2(bufferutil@4.0.8)(utf-8-validate@5.0.10)
@@ -334,8 +334,8 @@ importers:
         specifier: ^1.0.0
         version: 1.0.1
       '@types/audioworklet':
-        specifier: ^0.0.52
-        version: 0.0.52
+        specifier: ^0.0.53
+        version: 0.0.53
       '@types/express':
         specifier: ^4.17.20
         version: 4.17.21
@@ -2090,8 +2090,8 @@ packages:
     resolution: {integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==}
     dev: true
 
-  /@types/audioworklet@0.0.52:
-    resolution: {integrity: sha512-+C0QA8HJS07NjSdLFUDsSfUGJiLs+FPa6K7Tu/e76dqHEnuTOjAjDyiFOnZTuf9j4x9P8Nmv0OOfcMNYnGzbAQ==}
+  /@types/audioworklet@0.0.53:
+    resolution: {integrity: sha512-glsfnbwNb3Iom3Qkvd8c8Aj4N0X+UVVGuCK/X8Qci1hfV+gsY8C72ud6ScJfJYE3g1GYY2Jq3kihjXo5WuH6qw==}
     dev: true
 
   /@types/babel__core@7.20.5:
@@ -3291,8 +3291,8 @@ packages:
     resolution: {integrity: sha512-o/dXNFfhBpYHpQFdT6FWzeO7pKc838QeeZ9d91CfVAtpr5XLK4B/zYxQbYgPdoMiTDvJfzcsLW5naXgmHGDNXw==}
     dev: false
 
-  /discord-api-types@0.37.66:
-    resolution: {integrity: sha512-3Q+6uBODmVaPAmZZ1jYQiQBbp0hqArgSU9Y6DuYY6KW5Sdij91bwbmFnnVI5XvATRkY+Wk9KMBWFzAEwSDs+1w==}
+  /discord-api-types@0.37.67:
+    resolution: {integrity: sha512-4HEzUEmwGPXWJdVhGZ/K+9eWs8kurdn5r/I8qD3/0hb14I0MZvx8K/JOyLhKLgcR4/8/jcr6Xej820BNgNXN7A==}
     dev: false
 
   /discord.js@14.14.1(bufferutil@4.0.8)(utf-8-validate@5.0.10):
@@ -5719,8 +5719,8 @@ packages:
       strip-indent: 3.0.0
     dev: true
 
-  /reflect-metadata@0.1.14:
-    resolution: {integrity: sha512-ZhYeb6nRaXCfhnndflDK8qI6ZQ/YcWZCISRAWICW9XYqMUwjZM9Z0DveWX/ABN01oxSHwVxKQmxeYZSsm0jh5A==}
+  /reflect-metadata@0.2.1:
+    resolution: {integrity: sha512-i5lLI6iw9AU3Uu4szRNPPEkomnkjRTaVt9hy/bn5g/oSzekBSMeLZblcjP74AW0vBabqERLLIrz+gR8QYR54Tw==}
     dev: false
 
   /regenerator-runtime@0.14.1:
