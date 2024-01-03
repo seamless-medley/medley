@@ -216,6 +216,11 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     });
   }
 
+  destroy() {
+    this.#client.destroy();
+    this.#audioDispatcher.clear();
+  }
+
   get client() {
     return this.#client;
   }

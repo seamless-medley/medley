@@ -57,6 +57,10 @@ export class AudioDispatcher {
     return this.#exciters.includes(exciter);
   }
 
+  clear() {
+    this.#exciters = [];
+  }
+
   protected add(exciter: IExciter) {
     if (this.has(exciter)) {
       return;
