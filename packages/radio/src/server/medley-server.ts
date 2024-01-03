@@ -146,6 +146,14 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     station.off('collectionRemoved', this.#handleStationCollectionRemoved);
 
     this.deregister('station', station.id);
+
+    for (const index of [0, 1, 2]) {
+      this.deregister('deck', `${station.id}/${index}`);
+    }
+
+    for (const col of station.collections) {
+      this.deregisterCollection(col);
+    }
   }
 
   #handleStationCollectionAdded: StationEvents['collectionAdded'] = (collection) => {
