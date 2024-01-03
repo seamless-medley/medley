@@ -1,4 +1,4 @@
-import { ChildProcessByStdio, spawn } from "child_process";
+import { ChildProcessByStdio, StdioPipe, spawn } from "child_process";
 import ffmpegPath from "ffmpeg-static";
 import { camelCase } from "lodash";
 import { createInterface } from "readline";
@@ -7,10 +7,10 @@ import { CamelCase } from "type-fest";
 
 export type FFmpegChildProcess = ChildProcessByStdio<Writable, Readable, Readable>;
 
-export const spawnFFmpeg = (exePath: string, args: string[]): FFmpegChildProcess => spawn(
+export const spawnFFmpeg = (exePath: string, args: string[], stdio?: StdioPipe[]): FFmpegChildProcess => spawn(
   exePath,
   ['-hide_banner', ...args],
-  { stdio: [ null, null, null ] }
+  { stdio }
 )
 
 export type FFmpegOverseerOptions = {
@@ -22,7 +22,7 @@ export type FFmpegOverseerOptions = {
   };
   beforeSpawn?: () => Promise<boolean | undefined>;
   afterSpawn?: (process: FFmpegChildProcess) => Promise<void>;
-  started?: (error?: FFMpegOverseerStartupError) => any;
+  started?: () => any;
   log?: (line: FFMpegLine) => any;
 }
 
@@ -63,6 +63,11 @@ export type ProgressValue = {
   values: Partial<Record<string, string>>;
 }
 
+export type InternalLine = {
+  type: 'internal';
+  text: string;
+}
+
 export type ProgressLine = {
   type: 'progress';
   values: ProgressValue;
@@ -73,7 +78,7 @@ export type ErrorLine = {
   text: string;
 }
 
-export type FFMpegLine = InfoLine | ProgressLine | ErrorLine;
+export type FFMpegLine = InternalLine | InfoLine | ProgressLine | ErrorLine;
 
 export class FFMpegOverseerStartupError extends Error {
   constructor(message: string, readonly info?: InfoLine) {
@@ -149,11 +154,11 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
   let lastProgress: number;
   let spawning = false;
 
-  const { min, max = 30_000 } = options.respawnDelay ?? {};
+  const { min: delayMin, max: delayMax = 30_000 } = options.respawnDelay ?? {};
   let respawnAttempts = 0;
 
-  const delay = () => (min && min <= max)
-    ? new Promise(resolve => setTimeout(resolve, Math.min(max, min * Math.pow(1.097, ++respawnAttempts))))
+  const delay = () => (delayMin && delayMin <= delayMax)
+    ? new Promise(resolve => setTimeout(resolve, Math.min(delayMax, delayMin * Math.pow(1.097, ++respawnAttempts))))
     : Promise.resolve();
 
   function watch() {
@@ -161,7 +166,7 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
 
     timer = setInterval(() => {
       const Δ = Date.now() - lastProgress;
-      if (Δ >= 1000) {
+      if (Δ >= 2000) {
         unwatch();
         running = false;
         stalled = true;
@@ -191,41 +196,6 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
     kill();
   }
 
-  const handleStdErr = (line: string) => {
-    const parsed = parseStdErr(line);
-    if (parsed) {
-      switch (parsed.type) {
-        case 'info':
-          lastInfo = parsed;
-          break;
-
-        case 'progress':
-          lastProgress = Date.now();
-          stalled = false;
-          stopped = false;
-
-          if (!running) {
-            running = true;
-            respawnAttempts = 0;
-            watch();
-            options?.started?.();
-          }
-
-          break;
-
-        case 'error':
-          if (!running) {
-            stopped = true;
-            options?.started?.(new FFMpegOverseerStartupError(parsed.text, lastInfo));
-            return;
-          }
-          break;
-      }
-
-      options.log?.(parsed);
-    }
-  }
-
   async function spawn() {
     if (spawning) {
       return;
@@ -248,7 +218,44 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
 
       const stdErrorLine = createInterface(process.stderr);
 
-      stdErrorLine.on('line', handleStdErr);
+      stdErrorLine.on('line', (line) => {
+        const parsed = parseStdErr(line);
+
+        if (!parsed) {
+          return;
+        }
+
+        if (!running) {
+          switch (parsed.type) {
+            case 'progress':
+              running = true;
+              respawnAttempts = 0;
+              watch();
+              options?.started?.();
+              resolve();
+              break;
+
+            case 'error':
+              stopped = true;
+              reject(new FFMpegOverseerStartupError(parsed.text, lastInfo));
+              return;
+          }
+        }
+
+        options.log?.(parsed);
+
+        switch (parsed.type) {
+          case 'info':
+            lastInfo = parsed;
+            break;
+
+          case 'progress':
+            lastProgress = Date.now();
+            stalled = false;
+            stopped = false;
+            break;
+        }
+      });
 
       process.on('exit', () => {
         running = false;
@@ -263,7 +270,6 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
       await options.afterSpawn?.(process);
 
       spawning = false;
-      resolve();
     });
   }
 
