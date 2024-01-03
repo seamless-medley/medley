@@ -846,7 +846,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
           return;
         }
 
-        const [automatonId, guildId] = groupId.split('/', 2);
+        const [automatonId, guildId] = groupId;
 
         return (automatonId === this.id) ? guildId : undefined;
       })

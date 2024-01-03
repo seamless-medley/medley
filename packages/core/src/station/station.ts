@@ -30,6 +30,7 @@ import {
 import { MetadataHelper } from "../metadata";
 import { SearchQuery, SearchQueryField } from "../library/search";
 import { CrateProfile } from "../crate/profile";
+import { Join } from 'type-fest';
 
 export type StationAudioLevels = AudioLevels & {
   reduction: number;
@@ -68,13 +69,16 @@ export type StationOptions = {
 
 export enum AudienceType {
   Discord = 'discord',
+  Web = 'web',
   Icy = 'icy',
-  Web = 'web'
+  Streaming = 'streaming'
 }
 
-export type DiscordAudienceGroupId = `${AudienceType.Discord}${string}/${string}`;
+export type AudienceOfGroup<A extends AudienceType, G extends string[]> = `${A}$${Join<G, '/'>}`;
 
-export type AudienceGroupId = DiscordAudienceGroupId | `${Exclude<AudienceType, AudienceType.Discord>}$${string}`;
+export type DiscordAudienceGroupId = AudienceOfGroup<AudienceType.Discord, [string, string]>;
+
+export type AudienceGroupId = DiscordAudienceGroupId | AudienceOfGroup<Exclude<AudienceType, AudienceType.Discord>, [string]>;
 
 type AudienceT<T extends AudienceType, G = string> = {
   type: T;
@@ -82,18 +86,16 @@ type AudienceT<T extends AudienceType, G = string> = {
   id: string;
 }
 
-export type DiscordAudience = Omit<AudienceT<AudienceType.Discord, never>, 'group'> & {
-  group: {
-    automatonId: string;
-    guildId: string;
-  }
-}
+export type DiscordAudience = AudienceT<AudienceType.Discord, {
+  automatonId: string;
+  guildId: string;
+}>
 
-export type IcyAudience = AudienceT<AudienceType.Icy>;
+export type StreamingAudience = AudienceT<AudienceType.Icy | AudienceType.Streaming>;
 
 export type WebAudience = AudienceT<AudienceType.Web>;
 
-export type Audience = DiscordAudience | IcyAudience | WebAudience;
+export type Audience = DiscordAudience | StreamingAudience | WebAudience;
 
 export type StationTrack = MusicTrack<Station>;
 export type StationTrackPlay = TrackPlay<StationTrack>;
@@ -873,7 +875,7 @@ export class StationProfile extends CrateProfile<StationTrack> {
 }
 
 export function makeAudienceGroupId(type: AudienceType.Discord, automatonId: string, guildId: string): DiscordAudienceGroupId;
-export function makeAudienceGroupId(type: AudienceType.Icy | AudienceType.Web, groupId: string): AudienceGroupId;
+export function makeAudienceGroupId(type: Exclude<AudienceType, AudienceType.Discord>, groupId: string): AudienceGroupId;
 export function makeAudienceGroupId(type: AudienceType, ...groupIds: string[]): AudienceGroupId {
   return `${type}$${groupIds.join('/')}` as AudienceGroupId;
 }
@@ -881,25 +883,16 @@ export function makeAudienceGroupId(type: AudienceType, ...groupIds: string[]): 
 export const extractAudienceGroupFromId = (id: AudienceGroupId) => {
   const [type, groupId] = id.split('$', 2);
 
-  if (type === AudienceType.Discord) {
-    return {
-      type: type as AudienceType.Discord,
-      groupId: groupId as DiscordAudienceGroupId
-    }
-  }
-
   return {
-    type: type as (AudienceType.Icy | AudienceType.Web),
-    groupId
+    type: type as AudienceType,
+    groupId: groupId.split('/')
   }
 }
 
-export function extractAudienceGroup({ group }: DiscordAudience): DiscordAudience['group'];
-export function extractAudienceGroup({ group }: IcyAudience | WebAudience): string;
 export function extractAudienceGroup({ group }: Audience): Audience['group'] { return group; }
 
 export function makeAudience(type: AudienceType.Discord, group: DiscordAudience['group'], id: string): DiscordAudience
-export function makeAudience(type: AudienceType, group: string |  DiscordAudience['group'], id: string): Audience {
+export function makeAudience(type: AudienceType, group: any, id: string): Audience {
   return {
     type,
     group: group as any,
