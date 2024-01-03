@@ -8,6 +8,7 @@ import { pickBy } from 'lodash';
 import { paraphrase, dollar } from "paraphrase";
 import { ServerConfig } from './server';
 import { WebRtcConfig } from './webrtc';
+import { StreamingConfigs } from './streaming';
 
 async function parseYAML(s: string) {
   return parse(s);
@@ -18,7 +19,8 @@ const Config = z.object({
   db: DbConfig,
   webrtc: WebRtcConfig.optional(),
   stations: z.record(StationConfig, { required_error: 'No stations' }),
-  automatons: z.record(AutomatonConfig, { required_error: 'No automatons' })
+  automatons: z.record(AutomatonConfig, { required_error: 'No automatons' }),
+  streaming: StreamingConfigs.optional()
 }, {
   required_error: 'Configuration file is empty or malformed'
 }).strict();

@@ -7,7 +7,7 @@ export const TrackMessageConfig = z.object({
   channel: z.string().optional(),
   retainOnReaction: z.boolean().optional(),
   always: z.boolean().optional()
-});
+}).strict();
 
 export const GuildSpecificConfig = z.object({
   autotune: z.string().min(1).optional(),
