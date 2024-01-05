@@ -40,7 +40,8 @@ function isPortAvailable(port: number, address?: string) {
 
 async function startServer(configs: Config) {
   return new Promise<[MedleyServer, http.Server]>(async (resolve, reject) => {
-    const httpServer = http.createServer(express());
+    const expressApp = express();
+    const httpServer = http.createServer(expressApp);
 
     const listeningPort = +(process.env.PORT || configs.server?.port || 3001);
     const listeningAddr = (process.env.BIND || configs.server?.address)?.toString();
@@ -62,6 +63,7 @@ async function startServer(configs: Config) {
       : undefined;
 
     const server = new MedleyServer({
+      expressApp,
       io,
       audioServer,
       rtcTransponder,
