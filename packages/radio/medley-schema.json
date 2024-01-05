@@ -657,7 +657,8 @@
     },
     "streaming_output": {
       "oneOf": [
-        { "$ref": "#/$defs/shout_output" }
+        { "$ref": "#/$defs/shout_output" },
+        { "$ref": "#/$defs/icy_output" }
       ]
     },
     "shout_output": {
@@ -698,7 +699,7 @@
               "minLength": 1
             }
           },
-          "required": ["host", "port", "username", "password"],
+          "required": ["host", "port", "mountpoint", "username", "password"],
           "additionalProperties": false
         },
         "format": {
@@ -713,6 +714,8 @@
                 },
                 "sampleRate": {
                   "type": "integer",
+                  "title": "Bitrate",
+                  "description": "Bitrate in Kbps",
                   "minimum": 8000,
                   "maximum": 192000
                 }
@@ -728,6 +731,8 @@
                 },
                 "bitrate": {
                   "type": "integer",
+                  "title": "Bitrate",
+                  "description": "Bitrate in Kbps",
                   "minimum": 80,
                   "maximum": 320
                 },
@@ -748,6 +753,8 @@
                 },
                 "bitrate": {
                   "type": "integer",
+                  "title": "Bitrate",
+                  "description": "Bitrate in Kbps",
                   "minimum": 16,
                   "maximum": 320
                 },
@@ -768,6 +775,8 @@
                 },
                 "bitrate": {
                   "type": "integer",
+                  "title": "Bitrate",
+                  "description": "Bitrate in Kbps",
                   "minimum": 8,
                   "maximum": 320
                 },
@@ -788,6 +797,8 @@
                 },
                 "bitrate": {
                   "type": "integer",
+                  "title": "Bitrate",
+                  "description": "Bitrate in Kbps",
                   "minimum": 8,
                   "maximum": 320
                 },
@@ -806,7 +817,80 @@
           "$ref": "#/$defs/fx"
         }
       },
-      "required": ["type", "icecast", "format", "station"],
+      "required": ["type", "station", "icecast", "format"],
+      "additionalProperties": false
+    },
+    "icy_output": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "icy"
+        },
+        "station": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mountpoint": {
+          "type": "string",
+          "pattern": "/.*"
+        },
+        "format": {
+          "type": "object",
+          "required": ["codec"],
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "codec": {
+                  "const": "mp3"
+                },
+                "bitrate": {
+                  "type": "integer",
+                  "title": "Bitrate",
+                  "description": "Bitrate in Kbps",
+                  "minimum": 80,
+                  "maximum": 320
+                },
+                "sampleRate": {
+                  "enum": [
+                    8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
+                  ]
+                }
+              },
+              "required": ["bitrate", "sampleRate"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "codec": {
+                  "const": "adts",
+                  "description": "Audio Data Transport Stream (Raw AAC)"
+                },
+                "bitrate": {
+                  "type": "integer",
+                  "title": "Bitrate",
+                  "description": "Bitrate in Kbps",
+                  "minimum": 16,
+                  "maximum": 320
+                },
+                "sampleRate": {
+                  "enum": [
+                    11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
+                  ]
+                }
+              },
+              "required": ["bitrate", "sampleRate"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "fx": {
+          "$ref": "#/$defs/fx"
+        }
+      },
+      "required": ["type",  "station", "format", "mountpoint"],
       "additionalProperties": false
     },
     "fx": {
