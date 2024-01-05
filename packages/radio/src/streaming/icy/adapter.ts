@@ -1,22 +1,24 @@
 import {
   AudienceType,
-  BoomBoxEvents,
   BoomBoxTrackPlay,
   getTrackBanner,
   makeAudienceGroupId,
   RequestAudioStreamResult,
-  Station
+  Station,
+  StationEvents,
+  TrackKind
 } from "@seamless-medley/core";
 
-import { RequestHandler } from "express";
+import { RequestHandler, Router } from "express";
 import { OutgoingHttpHeaders } from "http";
 import { noop, isUndefined, omitBy, } from "lodash";
 import { PassThrough, Transform, pipeline } from "stream";
-import { FFmpegChildProcess } from "../ffmpeg";
-import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
 import { IcyMetadata, MetadataMux } from "./mux";
+import { FFmpegChildProcess, FFMpegLine, InfoLine, ProgressValue } from "../ffmpeg";
+import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
+import { getVersion } from "../../helper";
 
-export const mimeTypes = {
+const mimeTypes = {
   mp3: 'audio/mpeg',
   adts: 'audio/aac'
 }
@@ -27,28 +29,82 @@ type OutputFormats = typeof outputFormats[number];
 
 export type IcyAdapterOptions = AdapterOptions<OutputFormats> & {
   ffmpegPath?: string;
+  mountpoint: string;
   metadataInterval?: number;
 }
 
 export class IcyAdapter extends FFMpegAdapter {
-  constructor(station: Station, options?: IcyAdapterOptions) {
+  #lastInfo?: InfoLine;
+
+  #error?: Error;
+
+  #progress?: ProgressValue;
+
+  #initialized = false;
+
+  #options: Omit<Required<IcyAdapterOptions>, 'ffmpegPath' | 'fx'> & {
+    fx?: IcyAdapterOptions['fx'];
+  }
+
+  #karaokeEnabled = false;
+
+  #currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
+
+  constructor(station: Station, options: IcyAdapterOptions) {
     super(station, options?.ffmpegPath);
+
+    const { metadataInterval = 16_000, mountpoint, fx, ...restOptions } = options;
 
     this.#options = {
       sampleFormat: 'FloatLE',
       sampleRate: 44100,
       bitrate: 128,
       outputFormat: 'mp3',
-      metadataInterval: 16000,
-      ...options ?? {}
+      mountpoint,
+      metadataInterval,
+      fx,
+      ...restOptions
     }
 
+    this.#karaokeEnabled = fx?.karaoke?.enabled === true;
+
+    station.on('deckStarted', this.#handleDeckStarted);
     station.on('trackActive', this.#handleTrackActive);
   }
 
-  #options: Required<AdapterOptions<OutputFormats>> & Pick<IcyAdapterOptions, 'metadataInterval'>;
+  override async init(): Promise<void> {
+    this.#error = undefined;
+    this.#lastInfo = undefined;
 
-  #currentTrackPlay: BoomBoxTrackPlay | undefined = undefined;
+    try {
+      await super.init();
+      this.#initialized = true;
+    }
+    catch (e) {
+      this.#error = e as Error;
+    }
+  }
+
+  get initialized() {
+    return this.#initialized;
+  }
+
+  get infoLine(): string | undefined {
+    return this.#lastInfo?.text;
+  }
+
+  get error(): Error | undefined {
+    return this.#error;
+  }
+
+  get statistics(): ProgressValue {
+    return this.#progress ?? {
+      duration: 0,
+      size: 0,
+      speed: 0,
+      values: {}
+    }
+  }
 
   #multiplexers = new Set<MetadataMux>();
 
@@ -78,7 +134,20 @@ export class IcyAdapter extends FFMpegAdapter {
     }
   }
 
-  #handleTrackActive: BoomBoxEvents['trackActive'] = (deckIndex, trackPlay) => {
+  #handleDeckStarted: StationEvents['deckStarted'] = (deck, trackPlay) => {
+    if (!trackPlay.track.extra) {
+      return;
+    }
+
+    if (trackPlay.track.extra.kind === TrackKind.Insertion) {
+      this.#audioRequest?.setFx('karaoke', { enabled: false });
+      return;
+    }
+
+    this.#audioRequest?.setFx('karaoke', { enabled: this.#karaokeEnabled });
+  }
+
+  #handleTrackActive: StationEvents['trackActive'] = (deckIndex, trackPlay) => {
     this.#currentTrackPlay = trackPlay;
 
     const metadata = this.#getIcyMetadata();
@@ -93,6 +162,10 @@ export class IcyAdapter extends FFMpegAdapter {
   }
 
   #handler: RequestHandler = (req, res) => {
+    if (!this.overseer) {
+      return;
+    }
+
     const needMetadata = req.headers['icy-metadata'] === '1';
 
     const url = new URL(req.url, `http://${req.headers.host ?? '0.0.0.0'}`);
@@ -139,16 +212,18 @@ export class IcyAdapter extends FFMpegAdapter {
 
       const paused = this.station.removeAudience(audienceGroup, audienceId);
       if (paused) {
-        this.overseer.stop();
+        this.overseer?.stop();
       }
     });
+
+    const version = getVersion();
 
     const resHeaders: OutgoingHttpHeaders = {
       'Connection': 'close',
       'Content-Type': mimeTypes[this.#options.outputFormat],
       'Cache-Control': 'no-cache, no-store',
-      'Server': 'Medley',
-      'X-Powered-By': 'Medley',
+      'Server': `Medley/${version}`,
+      'X-Powered-By': `Medley/${version}`,
       'icy-name': this.station.name,
       'icy-description': this.station.description,
       'icy-sr': this.#options.sampleRate,
@@ -167,8 +242,15 @@ export class IcyAdapter extends FFMpegAdapter {
     }, 2000);
   }
 
-  get handler(): RequestHandler {
-    return this.#handler;
+  #router?: Router;
+
+  override get httpRouter() {
+    if (!this.#router) {
+      this.#router = Router();
+      this.#router.route(`/icy${this.#options.mountpoint}`).get(this.#handler);
+    }
+
+    return this.#router;
   }
 
   #audioRequest?: RequestAudioStreamResult;
@@ -181,8 +263,9 @@ export class IcyAdapter extends FFMpegAdapter {
     this.#audioRequest = await this.station.requestAudioStream({
       format: this.#options.sampleFormat,
       sampleRate: this.#options.sampleRate,
-      bufferSize: this.#options.sampleRate * 2.0,
-      buffering: this.#options.sampleRate * 0.25
+      bufferSize: this.#options.sampleRate * 2.5,
+      buffering: this.#options.sampleRate * 0.5,
+      fx: this.#options.fx
     });
 
     pipeline(this.#audioRequest.stream, process.stdin, noop);
@@ -190,15 +273,33 @@ export class IcyAdapter extends FFMpegAdapter {
     process.stdout.on('data', buffer => this.#outlet.write(buffer));
   }
 
+  protected override log(line: FFMpegLine) {
+    if (line.type === 'info') {
+      this.#lastInfo = line;
+      return;
+    }
+
+    if (line.type === 'error') {
+      this.#error = new Error(line.text);
+      return;
+    }
+
+    if (line.type === 'progress') {
+      this.#progress = line.values;
+      return;
+    }
+  }
+
   override stop() {
     if (this.#audioRequest?.id) {
       this.station.deleteAudioStream(this.#audioRequest.id);
     }
 
-    this.overseer.stop();
+    this.overseer?.stop();
     this.#outlet.end();
 
     this.station.off('trackActive', this.#handleTrackActive);
+    this.station.off('deckStarted', this.#handleDeckStarted);
   }
 }
 

@@ -1,5 +1,6 @@
 import { AudioFormat, audioFormats, RequestAudioOptions, RequestAudioStreamResult, Station } from "@seamless-medley/core";
 import { createFFmpegOverseer, FFmpegChildProcess, FFMpegLine, FFmpegOverseer, FFmpegOverseerOptions, ProgressValue } from "./ffmpeg";
+import { RequestHandler, Router } from "express";
 
 const audioTypes = ['s16le', 's16be', 'f32le', 'f32be'];
 type AudioTypes = typeof audioTypes[number];
@@ -18,8 +19,10 @@ export interface StreamingAdapter<S> {
   get error(): Error | undefined;
   get initialized(): boolean;
   get statistics(): S;
+  get httpRouter(): Router | undefined;
   init(): Promise<void>;
   stop(): void;
+  destroy(): void;
 }
 
 export abstract class BaseStreamingAdapter<S> implements StreamingAdapter<S> {
@@ -37,9 +40,15 @@ export abstract class BaseStreamingAdapter<S> implements StreamingAdapter<S> {
 
   abstract get statistics(): S;
 
+  get httpRouter(): StreamingAdapter<any>['httpRouter'] {
+    return undefined;
+  }
+
   abstract init(): Promise<void>;
 
   abstract stop(): void;
+
+  abstract destroy(): void;
 }
 
 export abstract class FFMpegAdapter<S = ProgressValue> extends BaseStreamingAdapter<S> {
@@ -61,6 +70,10 @@ export abstract class FFMpegAdapter<S = ProgressValue> extends BaseStreamingAdap
         log: line => this.log(line)
       }
     );
+  }
+
+  async destroy() {
+    this.stop();
   }
 
   protected async getArgs(): Promise<string[]> {

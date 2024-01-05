@@ -1,3 +1,5 @@
+import { Express, Router } from 'express';
+import { noop } from "lodash";
 import { AudienceType, MusicDb, Station, StationEvents, makeAudienceGroupId } from "@seamless-medley/core";
 import { createLogger } from "@seamless-medley/logging";
 
@@ -20,13 +22,14 @@ import { StationConfig } from "../config/station";
 import { MedleyAutomaton } from "../discord/automaton";
 import { AutomatonConfig } from "../config/automaton";
 import { StreamingConfig } from "../config/streaming";
-import { ShoutAdapter } from "../streaming/shout/adapter";
 import { StreamingAdapter } from "../streaming/types";
-import { noop, stubFalse, stubTrue } from "lodash";
+import { ShoutAdapter } from "../streaming/shout/adapter";
+import { IcyAdapter } from "../streaming";
 
 const logger = createLogger({ name: 'medley-server' });
 
 export type MedleyServerOptions = {
+  expressApp: Express;
   io: SocketServer;
   audioServer: AudioWebSocketServer;
   rtcTransponder?: RTCTransponder;
@@ -34,6 +37,7 @@ export type MedleyServerOptions = {
 }
 
 export class MedleyServer extends SocketServerController<RemoteTypes> {
+  #expressApp: Express;
 
   #musicDb!: MusicDb;
 
@@ -52,6 +56,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   constructor(options: MedleyServerOptions) {
     super(options.io);
     //
+    this.#expressApp = options.expressApp;
     this.#audioServer = options.audioServer;
     this.#rtcTransponder = options.rtcTransponder;
     this.#configs = options.configs;
@@ -67,6 +72,19 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     this.#stations = await this.#createStations();
     this.#automatons = await this.#createAutomatons();
     this.#streamers = await this.#createStreamers();
+
+    this.#expressApp.use(
+      '/streams',
+      ((streamingRouter) => {
+        Array.from(this.#streamers)
+          .map(s => s.httpRouter)
+          .filter((r): r is Router => r !== undefined)
+          .forEach(r => streamingRouter.use(r));
+
+        return streamingRouter;
+      })(Router()),
+      (_, res) => void res.status(503).end('Unknown stream')
+    );
 
     this.emit('ready');
   }
@@ -167,6 +185,16 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
             name: station.name,
             description: station.description
           },
+          fx: config.fx
+        });
+
+      case 'icy':
+        return new IcyAdapter(station, {
+          outputFormat: config.format.codec,
+          sampleRate: config.format.sampleRate,
+          bitrate: config.format.bitrate,
+          metadataInterval: config.metadataInterval,
+          mountpoint: config.mountpoint,
           fx: config.fx
         });
 
