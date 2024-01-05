@@ -159,12 +159,20 @@ export class ShoutAdapter extends FFMpegAdapter {
       this.station.deleteAudioStream(this.audioRequest.id);
     }
 
+    const { fx } = this.#options;
+
+    // Defer the karaoke effect, if the station is in a transition state at the time of creating the audio stream.
+    if (fx?.karaoke?.enabled && this.station.isInTransition) {
+      fx.karaoke.enabled = false;
+      fx.karaoke.dontTransit = true;
+    }
+
     this.audioRequest = await this.station.requestAudioStream({
       format: this.#options.sampleFormat,
       sampleRate: this.#options.sampleRate,
       bufferSize: this.#options.sampleRate * 2.0,
       buffering: this.#options.sampleRate * 0.25,
-      fx: this.#options.fx
+      fx
     });
 
     pipeline(this.audioRequest.stream, process.stdin, noop);
