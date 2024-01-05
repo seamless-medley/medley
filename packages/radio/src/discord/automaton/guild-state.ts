@@ -474,7 +474,9 @@ export class GuildState {
     }
 
     if (this.stationLink.station.isInTransition) {
-      return true;
+      if (params.enabled) {
+        params.enabled = false;
+      }
     }
 
     return this.stationLink.exciter.setKaraokeParams(params);
