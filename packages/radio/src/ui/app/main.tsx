@@ -1,4 +1,4 @@
-import { RouterProvider } from "@tanstack/router";
+import { RouterProvider } from "@tanstack/react-router";
 import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
 
