@@ -32,7 +32,9 @@ export default defineConfig({
     mkcert()
   ],
   server: {
-    https: true,
+    https: {
+
+    },
     proxy: {
       '/socket.io': {
         target: 'ws://localhost:3001',
