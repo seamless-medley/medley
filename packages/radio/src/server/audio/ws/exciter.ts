@@ -11,7 +11,12 @@ export class WebSocketExciter extends Exciter<AudioStreamPlayerEvents> implement
   constructor(station: Station, bitrate = 256_000) {
     super(
       station,
-      { format: 'Int16LE', sampleRate: 48_000 },
+      {
+        format: 'Int16LE',
+        sampleRate: 48_000,
+        bufferSize: 48_000 * 2.5,
+        buffering: 12 * 960 // number of Opus packets x Opus packet size
+      },
       { bitrate }
     );
   }

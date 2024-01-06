@@ -40,7 +40,12 @@ export class RTCExciter extends Exciter implements IExciter {
   constructor({ station, transport, bitrate }: RTCExciterOptions) {
     super(
       station,
-      { format: 'Int16LE', sampleRate: 48_000 },
+      {
+        format: 'Int16LE',
+        sampleRate: 48_000,
+        bufferSize: 48_000 * 2.5,
+        buffering: 12 * 960 // number of Opus packets x Opus packet size
+      },
       { bitrate }
     );
 
