@@ -1,5 +1,6 @@
 import { MusicDb, MusicDbTrack, SearchHistory, TrackHistory, WorkerPoolAdapter } from "@seamless-medley/core";
 import { MongoClientOptions } from "mongodb";
+import { ConfigDb } from "../../types";
 
 export type Options = {
   url: string;
@@ -23,7 +24,7 @@ type WorkerMethods = MusicDb &
   PrefixRemap<'search_', SearchHistory> &
   PrefixRemap<'track_', TrackHistory>
 
-export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
+export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements MusicDb, ConfigDb {
   constructor() {
     super(__dirname + '/worker.js', {});
 

@@ -3,7 +3,8 @@ import { noop } from "lodash";
 import { AudienceType, MusicDb, Station, StationEvents, makeAudienceGroupId } from "@seamless-medley/core";
 import { createLogger } from "@seamless-medley/logging";
 
-import { MongoMusicDb } from "../musicdb/mongo";
+import { ConfigDb } from '../db/types';
+import { MongoMusicDb } from "../db/musicdb/mongo";
 //
 import type { Config } from "../config";
 //
@@ -40,6 +41,8 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   #expressApp: Express;
 
   #musicDb!: MusicDb;
+
+  #configDb!: ConfigDb;
 
   #audioServer: AudioWebSocketServer;
 
@@ -254,6 +257,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
       this.#musicDb?.dispose();
       this.#musicDb = newInstance;
+      this.#configDb = newInstance;
 
       logger.info('Connected to MongoDB');
     }
