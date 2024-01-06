@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { AspectRatio, Box, Button, Center, Grid, Group, Stack } from '@mantine/core';
-import { useParams } from '@tanstack/router';
+import { useParams } from '@tanstack/react-router';
 
 import { useClient } from '../../hooks/useClient';
 import { useStation } from '../../hooks/useStation';

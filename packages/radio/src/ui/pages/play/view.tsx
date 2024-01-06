@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "@tanstack/router";
+import { useParams } from "@tanstack/react-router";
 import { prominent } from 'color.js'
 import { Cover, CoverProps } from "../../components/play/cover/Cover";
 import { route } from "./route";

@@ -39,7 +39,7 @@
     "@seamless-medley/core": "../core",
     "@seamless-medley/logging": "../logging",
     "@seamless-medley/utils": "../utils",
-    "@tanstack/router": "0.0.1-beta.86",
+    "@tanstack/react-router": "^1.1.8",
     "axios": "1.6.0",
     "cfonts": "^3.2.0",
     "classnames": "^2.3.2",

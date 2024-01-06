@@ -1,4 +1,4 @@
-import { Outlet, RootRoute } from "@tanstack/router";
+import { Outlet, RootRoute } from "@tanstack/react-router";
 
 export const rootRoute = new RootRoute({
   component: () => (
