@@ -111,26 +111,16 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
   }
 
   async #indexTracks(infos: Array<IndexInfo<O>>, failures: Array<IndexInfo<O>>, done: () => void) {
-    if (infos.length <= 0) {
-      done();
-      return;
-    }
+    await Promise.all(infos.map(info => this.#indexTrack(info).catch(() => {
+      info.retried ??= 0;
+      info.retried++;
 
-    const [first, ...remainings] = infos;
-
-    try {
-      await this.#indexTrack(first);
-    }
-    catch (e) {
-      first.retried ??= 0;
-      first.retried++;
-
-      if (first.retried <= 3)  {
-        failures.push(first);
+      if (info.retried <= 3) {
+        failures.push(info);
       }
-    }
+    })));
 
-    this.#indexTracks(remainings, failures, done);
+    done();
   }
 
   async #indexTrack({ track }: IndexInfo<O>, force: boolean = false) {
@@ -153,7 +143,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
     }
 
     try {
-      this.#searchEngine.add(track);
+      await this.#searchEngine.add(track);
     }
     catch (e) {
       this.#logger.error(e);

@@ -183,7 +183,7 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
     const immediateTracks: T[] = [];
 
     for (const group of chunk(validPaths, 25 * os.cpus().length)) {
-      const created = await Promise.all(group.map(async p => await this.createTrack(p, await this.getTrackId(p))));
+      const created = await Promise.all(group.map(p => this.getTrackId(p).then(trackId => this.createTrack(p, trackId))));
       await onChunkCreated(created).then(breath);
       immediateTracks.push(...created);
     }
