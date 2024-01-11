@@ -51,6 +51,12 @@ async function startServer(configs: Config) {
       return;
     }
 
+    expressApp.use((_, res, next) => {
+      res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+      next();
+    });
+
     const io = new SocketIOServer(httpServer, '/socket.io');
     const audioServer = new AudioWebSocketServer(httpServer, configs.server.audioBitrate * 1000);
     const rtcTransponder = (configs.webrtc)
