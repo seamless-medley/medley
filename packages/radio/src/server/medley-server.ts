@@ -215,11 +215,6 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     return new Set(adapters.filter((a): a is StreamingAdapter<any> => a !== undefined));
   }
 
-  protected override addSocket(socket: Socket) {
-    super.addSocket(socket);
-    logger.debug({ id: socket.id }, 'Adding socket');
-  }
-
   async #connectMongoDB() {
     const dbConfig = this.#configs.db;
 
@@ -243,6 +238,11 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     catch (e) {
       throw e;
     }
+  }
+
+  protected override addSocket(socket: Socket) {
+    super.addSocket(socket);
+    logger.debug({ id: socket.id }, 'Adding socket');
   }
 
   get musicDb() {
