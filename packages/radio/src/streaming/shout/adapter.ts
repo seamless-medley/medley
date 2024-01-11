@@ -1,4 +1,4 @@
-import { BoomBoxTrackPlay, getTrackBanner, Station, StationEvents, TrackKind } from "@seamless-medley/core";
+import { AudienceType, BoomBoxTrackPlay, getTrackBanner, makeAudienceGroupId, Station, StationEvents, TrackKind } from "@seamless-medley/core";
 import axios, { AxiosError } from "axios";
 import { chain, noop } from "lodash";
 import { pipeline } from "stream";
@@ -256,6 +256,11 @@ export class ShoutAdapter extends FFMpegAdapter {
         this.#logger.error(e, 'Error updating metadata');
       }
     });
+  }
+
+  override start() {
+    const { host, port } = this.#options.icecast;
+    this.station.addAudience(makeAudienceGroupId(AudienceType.Streaming, 'shout'), `${host}:${port}${this.#getMountPoint()}`);
   }
 
   override stop() {

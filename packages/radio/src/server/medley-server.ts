@@ -30,7 +30,6 @@ import { IcyAdapter } from "../streaming";
 const logger = createLogger({ name: 'medley-server' });
 
 export type MedleyServerOptions = {
-  expressApp: Express;
   io: SocketServer;
   audioServer: AudioWebSocketServer;
   rtcTransponder?: RTCTransponder;
@@ -38,8 +37,6 @@ export type MedleyServerOptions = {
 }
 
 export class MedleyServer extends SocketServerController<RemoteTypes> {
-  #expressApp: Express;
-
   #musicDb!: MusicDb;
 
   #configDb!: ConfigDb;
@@ -59,7 +56,6 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   constructor(options: MedleyServerOptions) {
     super(options.io);
     //
-    this.#expressApp = options.expressApp;
     this.#audioServer = options.audioServer;
     this.#rtcTransponder = options.rtcTransponder;
     this.#configs = options.configs;
@@ -75,19 +71,6 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     this.#stations = await this.#createStations();
     this.#automatons = await this.#createAutomatons();
     this.#streamers = await this.#createStreamers();
-
-    this.#expressApp.use(
-      '/streams',
-      ((streamingRouter) => {
-        Array.from(this.#streamers)
-          .map(s => s.httpRouter)
-          .filter((r): r is Router => r !== undefined)
-          .forEach(r => streamingRouter.use(r));
-
-        return streamingRouter;
-      })(Router()),
-      (_, res) => void res.status(503).end('Unknown stream')
-    );
 
     this.emit('ready');
   }
@@ -220,10 +203,6 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
     await streamer.init().catch(noop);
 
-    if (streamer.initialized) {
-      station.addAudience(makeAudienceGroupId(AudienceType.Streaming, 'shout'), '-');
-    }
-
     return streamer;
   }
 
@@ -268,6 +247,10 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
   get musicDb() {
     return this.#musicDb;
+  }
+
+  get streamers() {
+    return Array.from(this.#streamers);
   }
 
   terminate() {

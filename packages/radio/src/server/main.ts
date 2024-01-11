@@ -63,7 +63,6 @@ async function startServer(configs: Config) {
       : undefined;
 
     const server = new MedleyServer({
-      expressApp,
       io,
       audioServer,
       rtcTransponder,
@@ -80,6 +79,30 @@ async function startServer(configs: Config) {
         .listen(listeningPort, listeningAddr, () => {
           httpServer.off('error', listenErrorHandler);
           logger.info(`Listening on port ${listeningPort}`);
+
+          const streamingRouter = express.Router();
+
+          const { streamers } = server;
+
+          for (const streamer of streamers) {
+            if (!streamer.initialized) {
+              continue;
+            }
+
+            const { httpRouter } = streamer;
+
+            if (httpRouter) {
+              streamingRouter.use(httpRouter);
+            }
+
+            streamer.start();
+          }
+
+          expressApp.use(
+            '/streams',
+            streamingRouter,
+            (_, res) => void res.status(503).end('Unknown stream')
+          );
 
           resolve([server, httpServer]);
         });

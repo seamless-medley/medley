@@ -21,6 +21,7 @@ export interface StreamingAdapter<S> {
   get statistics(): S;
   get httpRouter(): Router | undefined;
   init(): Promise<void>;
+  start(): void;
   stop(): void;
   destroy(): void;
 }
@@ -45,6 +46,8 @@ export abstract class BaseStreamingAdapter<S> implements StreamingAdapter<S> {
   }
 
   abstract init(): Promise<void>;
+
+  abstract start(): void;
 
   abstract stop(): void;
 
@@ -97,6 +100,10 @@ export abstract class FFMpegAdapter<S = ProgressValue> extends BaseStreamingAdap
   }
 
   protected log(line: FFMpegLine): any {
+
+  }
+
+  start() {
 
   }
 

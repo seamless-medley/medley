@@ -79,7 +79,7 @@ export class MetadataMux extends Transform {
         a.l += len;
       }
       return a;
-    }, { e: [], l: 0}).e.join('');
+    }, { e: [], l: 0 }).e.join('');
 
     const dataSize = Buffer.byteLength(all);
     const numBlocks = Math.ceil(dataSize / META_BLOCK_SIZE);
