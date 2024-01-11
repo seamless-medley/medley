@@ -181,6 +181,7 @@ export class IcyAdapter extends FFMpegAdapter {
 
     const transformers: Transform[] = [];
     const mux = new MetadataMux(needMetadata ? this.#options.metadataInterval : 0 ?? 0);
+    mux.metadata = this.#getIcyMetadata();
     this.#multiplexers.add(mux);
 
     transformers.push(mux);
@@ -236,10 +237,6 @@ export class IcyAdapter extends FFMpegAdapter {
     }
 
     res.writeHead(200, omitBy(resHeaders, isUndefined));
-
-    setTimeout(() => {
-      mux.metadata = this.#getIcyMetadata();
-    }, 2000);
   }
 
   #router?: Router;
