@@ -5,6 +5,7 @@ import { Exciter, IExciter } from "../../../audio/exciter";
 import { RTPData, createRTPHeader, incRTPData } from "../../../audio/network/rtp";
 import { randomNBit } from "@seamless-medley/utils";
 import type { AudioTransportExtraPayload } from "../../../audio/types";
+import { Logger, createLogger } from "@seamless-medley/logging";
 
 const payloadType = 119;
 
@@ -37,6 +38,8 @@ export class RTCExciter extends Exciter implements IExciter {
   #preparedPacket?: Buffer;
   #preparedInfo?: Buffer;
 
+  #logger: Logger;
+
   constructor({ station, transport, bitrate }: RTCExciterOptions) {
     super(
       station,
@@ -48,6 +51,8 @@ export class RTCExciter extends Exciter implements IExciter {
       },
       { bitrate }
     );
+
+    this.#logger = createLogger({ name: 'rtc-exciter', id: station.id })
 
     this.#transport = transport;
 
@@ -87,7 +92,7 @@ export class RTCExciter extends Exciter implements IExciter {
     this.#audioLevelDataProducer = await this.#transport.produceData({
       label: 'audio-level',
       protocol: 'notepack'
-    })
+    });
   }
 
   get producerId() {
@@ -130,12 +135,23 @@ export class RTCExciter extends Exciter implements IExciter {
   }
 
   override dispatch(): void {
-    if (this.#preparedPacket) {
-      this.#producer?.send(this.#preparedPacket);
-      incRTPData(this.#rtpData);
+    if (!this.request) {
+      return;
+    }
 
-      if (this.#preparedInfo) {
-        this.#audioLevelDataProducer?.send(this.#preparedInfo);
+    if (this.#preparedPacket) {
+      try {
+        this.#producer?.send(this.#preparedPacket);
+
+        if (this.#preparedInfo) {
+          this.#audioLevelDataProducer?.send(this.#preparedInfo);
+        }
+
+        incRTPData(this.#rtpData);
+      }
+      catch (e) {
+        this.#logger.error('Error while dispatching packet');
+        this.stop();
       }
     }
 
