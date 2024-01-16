@@ -34,8 +34,7 @@ export class MedleyStreamConsumer extends AudioWorkletProcessor {
     }
   }
 
-  process(_: Float32Array[][], outputs: Float32Array[][], parameters: Partial<Record<string, Float32Array>>) {
-    const output = outputs[0];
+  process(_: Float32Array[][], [output]: Float32Array[][], parameters: Partial<Record<string, Float32Array>>) {
     const samples = output[0].length;
 
     if (this.#pcmBuffer.getAvailableSamples() >= this.#minBufferSize) {

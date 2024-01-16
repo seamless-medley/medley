@@ -21,6 +21,8 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
    */
   #consumerNode!: AudioWorkletNode;
 
+  #outputNode: AudioNode;
+
   /**
    * A RingBuffer for holding 500ms of stereo PCM data
    */
@@ -35,10 +37,11 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
   #state: AudioTransportState = 'new';
 
-  constructor(context: AudioContext, socketId: string) {
+  constructor(socketId: string, context: AudioContext, output: AudioNode) {
     super();
 
     this.#ctx = context;
+    this.#outputNode = output;
 
     this.#clientWorker.postMessage({ type: 'init', pcmBuffer: this.#pcmBuffer });
 
@@ -105,7 +108,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
     this.#consumerNode.onprocessorerror = this.#handleProcessorError;
     this.#consumerNode.port.onmessage = this.#handleWorkletNodeMessage;
 
-    this.#consumerNode.connect(this.#ctx.destination);
+    this.#consumerNode.connect(this.#outputNode);
 
     this.#prepared = true;
   }
@@ -119,7 +122,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
   #handleWorkletNodeMessage = ({ data: extra }: MessageEvent<AudioTransportExtra>) => {
     this.#delayedAudioExtra.push(extra);
 
-    while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx.outputLatency * this.#ctx.sampleRate / 960) + 10) {
+    while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx.outputLatency * this.#ctx.sampleRate / 960) + 32 + 12) {
       this.emit('audioExtra', this.#delayedAudioExtra.shift()!);
     }
   }

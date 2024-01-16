@@ -20,16 +20,19 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   #sourceNode?: MediaStreamAudioSourceNode;
 
+  #outputNode: AudioNode;
+
   #stationId?: string;
 
   #state: AudioTransportState = 'new';
 
-  constructor(transponder: Remotable<RTCTransponder>, device: MediaSoupDevice, context: AudioContext) {
+  constructor(transponder: Remotable<RTCTransponder>, device: MediaSoupDevice, context: AudioContext, output: AudioNode) {
     super();
 
     this.#transponder = transponder;
     this.#device = device;
     this.#ctx = context;
+    this.#outputNode = output;
 
     this.#transponder.on('renew', this.#handleTransponderRenewal);
 
@@ -112,6 +115,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   }
 
+  // TODO: Typed options
   async play(stationId: string, options?: any): Promise<AudioTransportPlayResult> {
     this.#ctx.resume();
 
@@ -140,7 +144,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
     this.#sourceNode?.disconnect();
     this.#sourceNode = this.#ctx.createMediaStreamSource(stream);
-    this.#sourceNode.connect(this.#ctx.destination);
+    this.#sourceNode.connect(this.#outputNode);
 
     const state = await waitForTransportState(this.#transport, ['connected', 'failed'], options?.timeout);
 
@@ -193,7 +197,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
   #pushAudioExtra(extra: AudioTransportExtra) {
     this.#delayedAudioExtra.push(extra);
 
-    while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx.outputLatency * this.#ctx.sampleRate / 960) + 6) {
+    while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx.outputLatency * this.#ctx.sampleRate / 960) + 12) {
       this.emit('audioExtra', this.#delayedAudioExtra.shift()!);
     }
   }

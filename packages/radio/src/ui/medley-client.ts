@@ -7,6 +7,9 @@ import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
 import { Client } from "./client";
 import { StubRTCTransponder } from "./stubs/rtc/transponder";
 import { IAudioTransport, waitForAudioTransportState } from "./audio/transport";
+import { KaraokeFx } from './audio/fx/karaoke';
+import { StubStation } from './stubs/core/station';
+import { Station as RemoteStation } from '../remotes/core/station';
 
 export class MedleyClient extends Client<RemoteTypes> {
   #audioContext = new AudioContext({ latencyHint: 'playback' });
@@ -17,7 +20,18 @@ export class MedleyClient extends Client<RemoteTypes> {
 
   #playingStationId?: string;
 
-  #transportCreators: Array<() => IAudioTransport> = [];
+  #transportCreators: Array<() => Promise<IAudioTransport>> = [];
+
+  #station?: Remotable<RemoteStation>;
+
+  #karaokeFx = this.#prepareKaraoke();
+
+  #karaokeEnabled = false;
+
+  async #prepareKaraoke() {
+    await KaraokeFx.prepare(this.#audioContext);
+    return new KaraokeFx(this.#audioContext).connect(this.#audioContext.destination);
+  }
 
   protected override async handleSocketConnect() {
     super.handleSocketConnect();
@@ -29,17 +43,17 @@ export class MedleyClient extends Client<RemoteTypes> {
       await device.load({ routerRtpCapabilities: this.#transponder.caps() });
 
       if (device.loaded) {
-        this.#transportCreators.push(() => {
+        this.#transportCreators.push(async () => {
           console.log('Using WebRTCAudioTransport');
-          return new WebRTCAudioTransport(this.#transponder!, device, this.#audioContext)
+          return new WebRTCAudioTransport(this.#transponder!, device, this.#audioContext, (await this.#karaokeFx).input);
         });
       }
     }
 
     if (window.crossOriginIsolated) {
-      this.#transportCreators.push(() => {
+      this.#transportCreators.push(async () => {
         console.log('Using WebSocketAudioTransport');
-        return new WebSocketAudioTransport(this.#audioContext, this.socket.id);
+        return new WebSocketAudioTransport(this.socket.id, this.#audioContext, (await this.#karaokeFx).input);
       });
     }
 
@@ -55,7 +69,7 @@ export class MedleyClient extends Client<RemoteTypes> {
 
   async #nextTransport() {
     while (this.#transportCreators.length) {
-      const transport = this.#transportCreators.shift()?.();
+      const transport = await this.#transportCreators.shift()?.();
 
       if (!transport) {
         continue;
@@ -87,6 +101,7 @@ export class MedleyClient extends Client<RemoteTypes> {
 
     if (playResult === true) {
       this.#playingStationId = stationId;
+      this.#monitorStation();
       return true;
     }
 
@@ -105,4 +120,48 @@ export class MedleyClient extends Client<RemoteTypes> {
   get playingStationId() {
     return this.#playingStationId;
   }
+
+  async #monitorStation() {
+    this.#station?.off('deckStarted', this.#onDeckStarted);
+
+    if (!this.#playingStationId) {
+      return;
+    }
+
+    this.#station = await this.surrogateOf(StubStation, 'station', this.#playingStationId).catch(() => undefined);
+    this.#station?.on('deckStarted', this.#onDeckStarted);
+  }
+
+  #onDeckStarted: RemoteStation['ϟdeckStarted'] = (deckIndex, { kind }) => {
+    if (kind === 'insert') {
+      this.#temporarilyDisableKaraoke();
+      return;
+    }
+
+    this.#restoreKaraoke();
+  }
+
+  async #temporarilyDisableKaraoke() {
+    const fx = await this.#karaokeFx;
+    fx.set('mix', 0, 0.5);
+  }
+
+  async #restoreKaraoke() {
+    const fx = await this.#karaokeFx;
+    fx.set('mix', this.#karaokeEnabled ? 0.8 : 0, 0.5);
+  }
+
+  get karaokeEnabled() {
+    return this.#karaokeEnabled;
+  }
+
+  set karaokeEnabled(v) {
+    if (this.karaokeEnabled === v) {
+      return;
+    }
+
+    this.karaokeEnabled = v;
+    this.#restoreKaraoke();
+  }
+
 }
