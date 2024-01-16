@@ -9,8 +9,8 @@ export function propertyDescriptorOf(o: any) {
   return pickBy(Object.getOwnPropertyDescriptors(o), (_, prop) => isPublicPropertyName(prop));
 }
 
-export function isProperty(desc: PropertyDescriptor) {
-  return (desc.get || desc.set) || !isFunction(desc.value);
+export function isProperty(desc: PropertyDescriptor): boolean {
+  return (!!desc.get || !!desc.set) || !isFunction(desc.value);
 }
 
 export function isStream(o: any): o is Stream  {

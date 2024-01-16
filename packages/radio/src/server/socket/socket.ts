@@ -473,7 +473,7 @@ export class ObjectObserver<T extends object> {
       : undefined;
 
     this.#methods = pickBy(declared, desc => isFunction(desc.value));
-    this.#exposingProps = pickBy(exposing, desc => (desc.name in declared) && isProperty(desc) && isPublicPropertyName(desc.name));
+    this.#exposingProps = pickBy(exposing, desc => (desc.name in declared) && !(desc.name in this.#methods) && isPublicPropertyName(desc.name));
     this.#declaredProps = pickBy(declared, desc => {
       if (desc.instance instanceof EventEmitter) {
         if (['domain'].includes(desc.name)) {
