@@ -1,9 +1,11 @@
 import { AudienceType, makeAudienceGroupId, type Station } from '@seamless-medley/core';
 import { type types, createWorker } from 'mediasoup';
+import { TypedEmitter } from 'tiny-typed-emitter';
 import { Socket } from 'socket.io';
 import { RTCExciter } from './exciter';
 import { AudioDispatcher } from '../../../audio/exciter';
 import { type WebRtcConfig } from '../../../config/webrtc';
+import { createLogger } from '@seamless-medley/logging';
 
 type ConsumerResponse = Pick<types.Consumer, 'id' | 'producerId' | 'kind' | 'rtpParameters'>;;
 type DataConsumerResponse = Pick<types.DataConsumer, 'id' | 'dataProducerId' | 'label' | 'sctpStreamParameters'>;;
@@ -22,6 +24,8 @@ export type ClientTransportInfo = {
 export type ClientTransportData = {
   socket: Socket<{}>;
   disconnectHandler: () => void;
+  closeHandler: () => void;
+  routerCloseHandler: () => void;
   stationId?: string;
 }
 
@@ -30,7 +34,11 @@ export type ClientConsumerInfo = {
   audioLevelData?: DataConsumerResponse;
 }
 
-export class RTCTransponder {
+interface RTCTransponderEvents {
+  renew: () => void;
+}
+
+export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
   #dispatcher = new AudioDispatcher();
 
   #worker!: types.Worker;
@@ -41,24 +49,48 @@ export class RTCTransponder {
 
   #published = new Map<Station, RTCExciter>();
 
-  #transport = new Map<types.Transport['id'], types.WebRtcTransport<ClientTransportData>>();
+  #transports = new Map<types.Transport['id'], types.WebRtcTransport<ClientTransportData>>();
 
   #bitrate = 256_000;
+  #listens: WebRtcConfig['listens'] = [];
 
-  constructor() {
-
-  }
+  #logger = createLogger({ name: 'rtc-transponder' });
 
   async initialize(config: WebRtcConfig): Promise<this> {
     this.#bitrate = config.bitrate * 1000;
+    this.#listens = config.listens;
 
+    this.#internalInitialize();
+
+    return this;
+  }
+
+  async #internalInitialize() {
     this.#worker = await createWorker({
       logLevel: 'warn',
       logTags: ['rtp', 'ice']
     });
 
+    const fatalHandler = async () => {
+      this.#worker.off('died', fatalHandler);
+      await this.#internalInitialize();
+
+      // re-publish
+      this.#logger.debug('Re-publish');
+
+      for (const exciter of this.#published.values()) {
+        exciter.stop();
+      }
+
+      await Promise.all(Array.from(this.#published.keys()).map(station => this.publish(station)));
+
+      this.emit('renew');
+    }
+
+    this.#worker.on('died', fatalHandler);
+
     this.#webrtcServer = await this.#worker.createWebRtcServer({
-      listenInfos: config.listens
+      listenInfos: this.#listens
     });
 
     this.#router = await this.#worker.createRouter({
@@ -82,7 +114,7 @@ export class RTCTransponder {
       protocol: 'none'
     });
 
-    return this;
+    this.#transports.clear();
   }
 
   async publish(station: Station) {
@@ -122,31 +154,37 @@ export class RTCTransponder {
       numSctpStreams: sctpCaps.numStreams
     });
 
-    const disconnectHandler = () => transport.close();
+    const disconnectHandler = () => {
+      this.#logger.debug('Closing transport due to socket disconnection');
+      transport.close();
+    }
+    socket.once('disconnect', disconnectHandler);
+
+    const routerCloseHandler = () => {
+      this.#logger.debug('routerCloseHandler');
+
+      this.#removeClientTransport(transport);
+
+      if (!transport.closed) {
+        transport.close();
+      }
+    }
+    transport.once('routerclose', routerCloseHandler);
+
+    const closeHandler = () => {
+      this.#logger.debug('transport @close');
+      this.#removeClientTransport(transport);
+    }
+    transport.once('@close', closeHandler);
 
     transport.appData = {
       socket,
-      disconnectHandler
+      disconnectHandler,
+      closeHandler,
+      routerCloseHandler
     }
 
-    this.#transport.set(transport.id, transport);
-
-    socket.once('disconnect', disconnectHandler);
-
-    transport.on('@close', () => {
-      this.#transport.delete(transport.id);
-
-      const { stationId } = transport.appData;
-
-      if (stationId) {
-        const station = this.#stationFromId(stationId);
-
-        station?.removeAudience(
-          makeAudienceGroupId(AudienceType.Web, `rtc`),
-          transport.id
-        );
-      }
-    });
+    this.#transports.set(transport.id, transport);
 
     const nullConsumer = await transport.consumeData({ dataProducerId: this.#nullDataProducer.id });
 
@@ -167,8 +205,36 @@ export class RTCTransponder {
     }
   }
 
+  #removeClientTransport(transport: types.WebRtcTransport<ClientTransportData>) {
+    const deleted = this.#transports.delete(transport.id);
+    if (!deleted) {
+      return;
+    }
+
+    this.#logger.debug('removing transport');
+
+    const { closeHandler, routerCloseHandler, socket, disconnectHandler } = transport.appData;
+
+    transport.off('routerclose', routerCloseHandler);
+    transport.off('@close', closeHandler);
+    socket.off('disconnect', disconnectHandler);
+
+    const { stationId } = transport.appData;
+
+    if (stationId) {
+      const station = this.#stationFromId(stationId);
+
+      this.#logger.debug('removing transport from station audience');
+
+      station?.removeAudience(
+        makeAudienceGroupId(AudienceType.Web, `rtc`),
+        transport.id
+      );
+    }
+  }
+
   async closeClientTransport(transportId: string) {
-    const transport = this.#transport.get(transportId);
+    const transport = this.#transports.get(transportId);
     if (!transport) {
       return;
     }
@@ -195,7 +261,7 @@ export class RTCTransponder {
       return;
     }
 
-    const transport = this.#transport.get(transportId);
+    const transport = this.#transports.get(transportId);
     if (!transport) {
       return;
     }
@@ -237,7 +303,7 @@ export class RTCTransponder {
   }
 
   async startClientConsumer(transportId: string, dtlsParameters: types.DtlsParameters) {
-    const transport = this.#transport.get(transportId);
+    const transport = this.#transports.get(transportId);
     if (!transport) {
       return;
     }

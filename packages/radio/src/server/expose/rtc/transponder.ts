@@ -12,10 +12,20 @@ export class ExposedTransponder extends MixinEventEmitterOf<RemoteRTCTransponder
     super();
 
     this[$Exposing] = transponder;
+
+    this.#transponder.on('renew', this.#onRenew)
+  }
+
+  dispose() {
+    this.#transponder.off('renew', this.#onRenew);
   }
 
   get #transponder() {
     return this[$Exposing];
+  }
+
+  #onRenew = () => {
+    this.emit('renew');
   }
 
   get caps() {

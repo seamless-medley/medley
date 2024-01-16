@@ -31,24 +31,38 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     this.#device = device;
     this.#ctx = context;
 
-    this.#createTransport().then(async (transport) => {
-      if (!transport) {
-        this.#setState('failed');
-        return;
-      }
+    this.#transponder.on('renew', this.#handleTransponderRenewal);
 
-      const rtcState = await waitForTransportState(transport, ['connected', 'failed'], 1000);
-      this.#setState(rtcState === 'connected' ? 'ready' : 'failed');
-    })
+    this.#createTransport();
   }
 
   get state() {
     return this.#state;
   }
 
+  #handleTransponderRenewal = async () => {
+    if (this.#state !== 'ready') {
+      return;
+    }
+
+    this.#transport?.close();
+    await this.#createTransport();
+
+    const stationId = this.#stationId;
+    this.#stationId = undefined;
+
+    if (stationId) {
+      this.play(stationId);
+    }
+  }
+
   #setState(newState: AudioTransportState) {
     if (this.#state === newState) {
       return;
+    }
+
+    if (newState === 'failed') {
+      this.#transport?.close();
     }
 
     this.#state = newState;
@@ -85,7 +99,13 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
       sctpStreamParameters: transportInfo.tester.sctpStreamParameters ?? {}
     });
 
-    return transport;
+    if (!transport) {
+      this.#setState('failed');
+      return;
+    }
+
+    const rtcState = await waitForTransportState(transport, ['connected', 'failed'], 1000);
+    this.#setState(rtcState === 'connected' ? 'ready' : 'failed');
   }
 
   async prepareAudioContext() {

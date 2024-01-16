@@ -12,4 +12,6 @@ export interface RTCTransponder {
   initiateClientConsumer(transportId: string, clientCaps: types.RtpCapabilities, stationId: Station['id']): Promise<ClientConsumerInfo | undefined>;
 
   startClientConsumer(transportId: string, dtlsParameters: types.DtlsParameters): Promise<void>;
+
+  ϟrenew(): void;
 }
