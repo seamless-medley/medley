@@ -80,7 +80,7 @@ function rejectAfter(ms: number, reject: (reason?: any) => any, reason: string =
 }
 
 export class Client<Types extends { [key: string]: any }> extends EventEmitter<ClientEvents> {
-  protected socket: Socket<ServerEvents, SocketClientEvents>;
+  protected socket!: Socket<ServerEvents, SocketClientEvents>;
 
   private delegates = new Map<`${string}:${string}`, { [event: string]: Set<Callable> | undefined }>();
 
@@ -248,7 +248,6 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   }
 
   get ready() {
-    // TODO: This should also check whether connection initialization was done (auth, etc)
     return this.connected;
   }
 
