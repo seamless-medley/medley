@@ -7,7 +7,8 @@ import {
   isRequestTrack,
   LyricLine,
   parseLyrics,
-  Lyrics
+  Lyrics,
+  TrackKind as CoreTrackKind
 } from "@seamless-medley/core";
 
 import type { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
@@ -25,7 +26,8 @@ export type Track = Simplify<Writable<
 >>;
 
 export type TrackExtra = Simplify<Writable<
-  ConditionalPick<BoomBoxTrackExtra, Jsonifiable | undefined> & {
+  ConditionalPick<Omit<BoomBoxTrackExtra, 'kind'>, Jsonifiable | undefined> & {
+    kind: TrackKind,
     coverAndLyrics?: Omit<ConditionalPick<CoverAndLyrics, Jsonifiable>, 'lyrics'> & {
       lyrics: ConditionalPick<Lyrics, Jsonifiable>
     }
@@ -60,6 +62,12 @@ export type LatchSession = Simplify<Writable<
   }
 >>;
 
+const trackKinds = ['normal', 'request', 'insert'] as const;
+
+export type TrackKind = typeof trackKinds[number];
+
+export const trackKindToString = (k: CoreTrackKind): TrackKind => trackKinds[k.valueOf()];
+
 export const toTrack = async (
   track: BoomBoxTrack,
   noCover?: boolean
@@ -89,7 +97,7 @@ export const toTrackExtra = async (
   const lyrics = coverAndLyrics ? parseLyrics(coverAndLyrics?.lyrics, { bpm: tags?.bpm }) : undefined;
 
   return {
-    kind,
+    kind: trackKindToString(kind),
     source,
     tags,
     coverAndLyrics: coverAndLyrics ? {

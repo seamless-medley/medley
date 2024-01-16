@@ -24,8 +24,8 @@ export interface Station {
 
   ϟdeckLoaded(deckIndex: number, info: deckPO.DeckInfoWithPositions): void;
   ϟdeckUnloaded(deckIndex: number): void;
-  ϟdeckStarted(deckIndex: number, position: DeckPositions): void;
-  ϟdeckActive(deckIndex: number, position: DeckPositions): void;
+  ϟdeckStarted(deckIndex: number, position: deckPO.DeckPositionsWithTrackKind): void;
+  ϟdeckActive(deckIndex: number, position: deckPO.DeckPositionsWithTrackKind): void;
 
   ϟcollectionChange(prevCollection: string | undefined, newCollection: string, fromRequestTrack: boolean): void;
   ϟcrateChange: (oldCrate: string | undefined, newCrate: string) => void;

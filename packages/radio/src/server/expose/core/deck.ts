@@ -16,7 +16,8 @@ export class ExposedDeck implements Exposable<Deck> {
     trailing: 0,
     cuePoint: 0,
     transitionStart: 0,
-    transitionEnd: 0
+    transitionEnd: 0,
+    trackPlay: (() => undefined) as any // A fake getter, just to force register this virtual object
   };
 
   constructor(station: Station, deckIndex: DeckIndex) {
@@ -28,7 +29,7 @@ export class ExposedDeck implements Exposable<Deck> {
     this.#station.on('deckStarted', this.#onDeckStarted);
     this.#station.on('deckActive', this.#onDeckActive);
 
-    this.#update(station.getDeckInfo(deckIndex));
+    this.getDeckInfo().then(info => this.#update(info));
 
     this.#timer = setInterval(() => this.#updatePositions(this.#station.getDeckPositions(this.#deckIndex)), 1000 / 30);
   }

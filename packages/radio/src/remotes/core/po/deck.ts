@@ -1,10 +1,13 @@
 import { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
-import * as core from '@seamless-medley/core';
-import { toTrackPlay, TrackPlay } from "./track";
-import { DeckPositions } from "@seamless-medley/core";
+import {
+  type DeckInfo as CoreDeckInfo,
+  type DeckInfoWithPositions as CoreDeckInfoWithPositions
+} from '@seamless-medley/core';
+import { toTrackPlay, TrackKind, TrackPlay } from "./track";
+import { type DeckPositions } from "@seamless-medley/core";
 
 export type DeckInfo = Simplify<Writable<
-  ConditionalPick<core.DeckInfo, Jsonifiable | undefined> & {
+  ConditionalPick<CoreDeckInfo, Jsonifiable | undefined> & {
     trackPlay?: TrackPlay
   }
 >>;
@@ -13,13 +16,17 @@ export type DeckInfoWithPositions = DeckInfo & {
   positions: DeckPositions;
 }
 
-export const fromDeckInfo = async ({ trackPlay, active, playing }: core.DeckInfo): Promise<DeckInfo> => ({
+export type DeckPositionsWithTrackKind = DeckPositions & {
+  kind?: TrackKind;
+}
+
+export const fromDeckInfo = async ({ trackPlay, active, playing }: CoreDeckInfo): Promise<DeckInfo> => ({
   trackPlay: trackPlay ? await toTrackPlay(trackPlay) : undefined,
   active,
   playing
 });
 
-export const fromDeckInfoWithPositions = async (p: core.DeckInfoWithPositions): Promise<DeckInfoWithPositions> => ({
+export const fromDeckInfoWithPositions = async (p: CoreDeckInfoWithPositions): Promise<DeckInfoWithPositions> => ({
   ...await fromDeckInfo(p),
   positions: p.positions
 })

@@ -3,6 +3,7 @@ import { $Exposing, Exposable } from "../../../socket";
 import { type DeckInfoWithPositions, fromDeckInfoWithPositions } from "../../../remotes/core/po/deck";
 import { type Station as RemoteStation } from "../../../remotes/core/station";
 import { MixinEventEmitterOf } from "../../../socket";
+import { trackKindToString } from "../../../remotes/core/po/track";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
   [$Exposing]: Station;
@@ -45,13 +46,20 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   }
 
   #onDeckStarted: StationEvents['deckStarted'] = async (deckIndex: number) => {
-    const { positions } = await this.getDeckInfo(deckIndex);
-    this.emit('deckStarted', deckIndex, positions);
+    const { positions, trackPlay } = await this.getDeckInfo(deckIndex);
+    this.emit('deckStarted', deckIndex, {
+      ...positions,
+      kind: trackPlay?.track.extra?.kind
+    });
   }
 
   #onDeckActive: StationEvents['deckActive'] = async (deckIndex) => {
-    const { positions } = await this.getDeckInfo(deckIndex);
-    this.emit('deckActive', deckIndex, positions);
+    const { positions, trackPlay } = await this.getDeckInfo(deckIndex);
+
+    this.emit('deckActive', deckIndex, {
+      ...positions,
+      kind: trackPlay?.track.extra?.kind
+    });
   }
 
   #onCollectionChange: StationEvents['collectionChange'] = (prevCollection, newCollection, fromRequestTrack) => {
