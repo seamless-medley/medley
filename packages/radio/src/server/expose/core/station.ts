@@ -2,8 +2,7 @@ import { DeckIndex, DeckPositions, PlayState, Station, StationEvents } from "@se
 import { $Exposing, Exposable } from "../../../socket";
 import { type DeckInfoWithPositions, fromDeckInfoWithPositions } from "../../../remotes/core/po/deck";
 import { type Station as RemoteStation } from "../../../remotes/core/station";
-import { MixinEventEmitterOf } from "../../../socket";
-import { trackKindToString } from "../../../remotes/core/po/track";
+import { MixinEventEmitterOf } from "../../socket/types";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
   [$Exposing]: Station;

@@ -1,6 +1,5 @@
-import EventEmitter from "events";
+
 import type { ConditionalExcept } from "type-fest";
-import type TypedEventEmitter from "typed-emitter";
 import type { AsyncFunctionOf } from "../types";
 
 export type SelectKeyBy<O, C> = { [Key in keyof O]: Key extends C ? Key : never}[keyof O];
@@ -18,13 +17,6 @@ export type PickProp<T> = ConditionalExcept<T, Function>;
 export type EventEmitterOf<T, Events = PickEvent<T>> = keyof Events extends never ? {} : {
   on<E extends keyof Events>(event: E, listener: Events[E]): ThisType<T>;
   off<E extends keyof Events>(event: E, listener: Events[E]): ThisType<T>;
-}
-
-// @ts-ignore
-export type TypedEventEmitterOf<T> = TypedEventEmitter<PickEvent<T>>;
-
-export function MixinEventEmitterOf<T>() {
-  return EventEmitter as unknown as new (...args: any[]) => TypedEventEmitterOf<T>;
 }
 
 type GettersOf<T> = {
