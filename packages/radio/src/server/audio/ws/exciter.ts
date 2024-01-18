@@ -3,11 +3,11 @@ import { encode } from 'notepack.io';
 import { IExciter, Exciter } from "../../../audio/exciter";
 import { AudioTransportExtraPayload } from "../../../audio/types";
 
-interface AudioStreamPlayerEvents {
+interface WebSocketExciterEvents {
   packet(packet: Buffer): void;
 }
 
-export class WebSocketExciter extends Exciter<AudioStreamPlayerEvents> implements IExciter {
+export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements IExciter {
   constructor(station: Station, bitrate = 256_000) {
     super(
       station,

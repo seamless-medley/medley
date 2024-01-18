@@ -7,6 +7,10 @@ import { type RTCTransponder } from '../../../../remotes/rtc/transponder';
 import { type Remotable } from '../../../../socket';
 import type { AudioTransportExtra, AudioTransportExtraPayload } from '../../../../audio/types';
 
+export type PlayOptions = {
+  timeout?: number;
+}
+
 export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> implements IAudioTransport {
   readonly #transponder: Remotable<RTCTransponder>;
 
@@ -115,8 +119,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   }
 
-  // TODO: Typed options
-  async play(stationId: string, options?: any): Promise<AudioTransportPlayResult> {
+  async play(stationId: string, options?: PlayOptions): Promise<AudioTransportPlayResult> {
     this.#ctx.resume();
 
     if (this.#stationId === stationId) {
