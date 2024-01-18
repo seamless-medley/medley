@@ -24,9 +24,16 @@ export class MedleyClient extends Client<RemoteTypes> {
 
   #station?: Remotable<RemoteStation>;
 
-  #karaokeFx = this.#prepareKaraoke();
+  #karaokeFx: Promise<KaraokeFx>;
 
   #karaokeEnabled = false;
+
+  constructor() {
+    super();
+
+    this.#karaokeFx = this.#prepareKaraoke();
+    this.karaokeEnabled = false;
+  }
 
   async #prepareKaraoke() {
     await KaraokeFx.prepare(this.#audioContext);
@@ -148,6 +155,11 @@ export class MedleyClient extends Client<RemoteTypes> {
 
   async #restoreKaraoke() {
     const fx = await this.#karaokeFx;
+
+    if (this.#karaokeEnabled) {
+      fx.bypass = false;
+    }
+
     fx.set('mix', this.#karaokeEnabled ? 0.8 : 0, 0.5);
   }
 
@@ -160,7 +172,7 @@ export class MedleyClient extends Client<RemoteTypes> {
       return;
     }
 
-    this.karaokeEnabled = v;
+    this.#karaokeEnabled = v;
     this.#restoreKaraoke();
   }
 

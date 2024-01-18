@@ -18,7 +18,7 @@ export class KaraokeFx {
 
   #params: Map<string, AudioParam>;
 
-  #bypassed = false;
+  #bypassed?: boolean;
 
   constructor(context: AudioContext) {
     this.#context = context;
@@ -44,12 +44,15 @@ export class KaraokeFx {
       outputChannelCount: [2],
     });
 
+    this.#splitter.connect(this.#monoAttenuator, 0);
+    this.#splitter.connect(this.#monoAttenuator, 1);
+    this.#monoAttenuator.connect(this.#lowpass).connect(this.#highpass).connect(this.#processor, 0, 1);
+
     this.#params = (this.#processor.parameters as unknown as Map<string, AudioParam>);
 
     this.#input = new GainNode(context);
     this.#output = new GainNode(context);
-
-    this.#buildGraph();
+    this.bypass = true;
   }
 
   set(name: ParamNames, value: number, duration?: number) {
@@ -68,10 +71,6 @@ export class KaraokeFx {
 
   #buildGraph() {
     this.#input.connect(this.#splitter);
-    this.#splitter.connect(this.#monoAttenuator, 0);
-    this.#splitter.connect(this.#monoAttenuator, 1);
-    this.#monoAttenuator.connect(this.#lowpass).connect(this.#highpass).connect(this.#processor, 0, 1);
-
     this.#input.connect(this.#processor, 0, 0).connect(this.#output);
   }
 
@@ -85,17 +84,17 @@ export class KaraokeFx {
     return this;
   }
 
-  set bypass(v: boolean) {
-    if (this.#bypassed === v) {
+  set bypass(bypassing: boolean) {
+    if (this.#bypassed === bypassing) {
       return;
     }
 
     this.#input.disconnect();
     this.#processor.disconnect();
 
-    this.#bypassed = v;
+    this.#bypassed = bypassing;
 
-    if (v) {
+    if (!bypassing) {
       this.#buildGraph();
     } else {
       this.#input.connect(this.#output);
@@ -103,7 +102,7 @@ export class KaraokeFx {
   }
 
   get bypass() {
-    return this.#bypassed;
+    return this.#bypassed ?? false;
   }
 
   static #prepared = false;
@@ -118,7 +117,7 @@ export class KaraokeFx {
       this.#prepared = true;
     }
     catch (e) {
-      console.error('Error loading channel-diff', e);
+      console.error('Error loading medley-karaoke audio worklet', e);
     }
   }
 }
