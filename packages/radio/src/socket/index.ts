@@ -3,5 +3,4 @@ export * from './events';
 export * from './expose';
 export * from './stub';
 export * from './utils';
-export * from './decorator';
 export * from './audio';

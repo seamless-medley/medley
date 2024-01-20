@@ -2,21 +2,25 @@ import { Readable } from 'stream';
 import EventEmitter from "events";
 import http from "http";
 import { capitalize, isEqual, isFunction, isObject, mapValues, noop, omit, pickBy, random } from "lodash";
-import { Server as IOServer, Socket as IOSocket } from "socket.io";
+import { Server as IOServer } from "socket.io";
 import msgpackParser from 'socket.io-msgpack-parser';
 import { ConditionalKeys } from "type-fest";
 import { TypedEmitter } from "tiny-typed-emitter";
+
 import {
   $Exposing, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents,
   ClientEvents, RemoteCallback, RemoteResponse, ServerEvents,
-  isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf,
-  getDependents
+  isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf
 } from "../../socket";
+
+import { Socket, ClientData } from './types';
+
 import { createLogger } from '@seamless-medley/logging';
+import { getGuardingPredicate, getDependents } from './decorator';
 
 const logger = createLogger({ name: 'socket-server' });
 
-export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
+export class SocketServer extends IOServer<ClientEvents, ServerEvents, never, ClientData> {
   constructor(httpServer: http.Server, path: string) {
     super(httpServer, {
       path,
@@ -26,8 +30,6 @@ export class SocketServer extends IOServer<ClientEvents, ServerEvents> {
     });
   }
 }
-
-export type Socket<Data = any> = IOSocket<ClientEvents, ServerEvents, {}, Data>;
 
 type Handlers = {
   [key in keyof ClientEvents]: (socket: Socket, ...args: Parameters<ClientEvents[key]>) => any;
@@ -155,50 +157,70 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     const object = namespace?.get(id) as any;
     const observed = object instanceof ObjectObserver ? object : undefined;
     const instance = observed?.instance ?? object;
+    const cb = isFunction(callback) ? callback : undefined;
 
-    let result = undefined;
-
-    let resp: RemoteResponse<any>;
-
-    if (typeof instance === 'object') {
-      const value = key ? instance[key] : undefined;
-
-      if (predicate(value, instance, observed)) {
-        try {
-          result = await execute(instance, value, observed);
-
-          resp = { status: undefined, result };
-
-          if (isReadableStream(result)) {
-            resp = {
-              status: 'stream',
-              result: this.#registerStream(socket, result)
-            }
-          }
-        }
-        catch (e: any) {
-          resp = {
-            status: 'exception',
-            message: `${e.message || e}`
-          }
-
-          logger.error({ err: e, kind, id, key }, `Error inreracting`);
-        }
-      } else {
-        resp = {
-          status: 'key',
-          key: key!
-        }
-      }
-    } else {
-      resp = {
+    if (typeof instance !== 'object') {
+      cb?.({
         status: 'id',
         id
-      }
+      });
+
+      return;
     }
 
-    if (isFunction(callback)) {
-      callback(resp);
+    const classPred = getGuardingPredicate(instance.constructor);
+    if (classPred && !classPred(socket, instance)) {
+      cb?.({
+        status: 'prohibited',
+        id
+      });
+
+      return;
+    }
+
+    const propPred = getGuardingPredicate(instance.constructor, key);
+    if (propPred && !propPred(socket, instance)) {
+      cb?.({
+        status: 'prohibited',
+        id,
+        key
+      });
+
+      return;
+    }
+
+    const value = key ? instance[key] : undefined;
+
+    if (!predicate(value, instance, observed)) {
+      cb?.({
+        status: 'key',
+        key: key!
+      });
+
+      return;
+    }
+
+    try {
+      const result = await execute(instance, value, observed);
+
+      let resp: RemoteResponse<any> = { status: undefined, result };
+
+      if (isReadableStream(result)) {
+        resp = {
+          status: 'stream',
+          result: this.#registerStream(socket, result)
+        }
+      }
+
+      cb?.(resp);
+    }
+    catch (e: any) {
+      cb?.({
+        status: 'exception',
+        message: `${e.message || e}`
+      });
+
+      logger.error({ err: e, kind, id, key }, `Error inreracting`);
     }
   }
 
@@ -419,16 +441,28 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
   }
 
-  #makeObserverPropertyHandler = (kind: string, id: string): ObservedPropertyHandler<any> => async (stub, changes) => {
+  #makeObserverPropertyHandler = (kind: string, id: string): ObservedPropertyHandler<any> => async (instance, changes) => {
+    const classPred = getGuardingPredicate(instance.constructor);
+
     for (const [, socket] of this.io.sockets.sockets) {
+      if (classPred && !classPred(socket, instance)) {
+        continue;
+      }
+
       const observation = this.#socketObservations.get(socket);
 
-
       if (observation) {
-        const key = `${kind}:${id}` as `${string}:${string}`;
-        const handler = observation.get(key);
+        const filteredChanges = changes.filter(c => {
+          const propPred = getGuardingPredicate(instance.constructor, c.p);
+          return !propPred || propPred(socket, instance);
+        });
 
-        handler?.(stub, changes).catch(noop);
+        if (filteredChanges.length) {
+          const key = `${kind}:${id}` as `${string}:${string}`;
+          const handler = observation.get(key);
+
+          handler?.(instance, filteredChanges).catch(noop);
+        }
       }
     }
   }

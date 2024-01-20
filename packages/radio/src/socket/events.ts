@@ -18,6 +18,12 @@ export type StreamResponse = {
   result: [number, number];
 }
 
+export type ProhibitedErrorResponse = {
+  status: 'prohibited';
+  id: string;
+  key?: string;
+}
+
 export type IdErrorResponse = {
   status: 'id';
   id: string;
@@ -33,7 +39,7 @@ export type ExceptionResponse = {
   message: string;
 }
 
-export type ErrorResponse = IdErrorResponse | KeyErrorResponse | ExceptionResponse;;
+export type ErrorResponse = IdErrorResponse | KeyErrorResponse | ProhibitedErrorResponse | ExceptionResponse;;
 
 export type RemoteResponse<T> = OKResponse<T> | StreamResponse | ErrorResponse;
 

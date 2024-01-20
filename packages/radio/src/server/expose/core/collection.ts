@@ -1,7 +1,7 @@
 import { MusicTrackCollection, MusicTrackCollectionEvents, Station } from "@seamless-medley/core";
 import { isFunction, isObject, omitBy } from "lodash";
 import { $Exposing, Exposable } from "../../../socket";
-import { MixinEventEmitterOf } from "../../socket/types";
+import { MixinEventEmitterOf } from "../../socket";
 import { toTrack } from "../../../remotes/core/po/track";
 import { type Collection } from "../../../remotes/core/collection";
 

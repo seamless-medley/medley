@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { propertyDescriptorOf } from "./utils";
 import { WithoutEvents } from "./types";
 
@@ -37,4 +38,18 @@ export function StubOf<T>(wrapped: StubCtor<T>): Stub<T> {
   return Stubbed;
 }
 
+const $RemoteTimeout = Symbol("$RemoteTimeout");
+
+export const RemoteTimeout = (n: number = 60_000) => (target: any, prop?: string) => {
+  if (prop) {
+    Reflect.defineMetadata($RemoteTimeout, n, target.constructor, prop);
+  } else {
+    Reflect.defineMetadata($RemoteTimeout, n, target);
+  }
+}
+
+export function getRemoteTimeout(target: any, prop?: string) {
+  const result = prop ? Reflect.getMetadata($RemoteTimeout, target, prop) : undefined;
+  return result ?? Reflect.getMetadata($RemoteTimeout, target);
+}
 
