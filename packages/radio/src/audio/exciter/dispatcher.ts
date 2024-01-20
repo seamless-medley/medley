@@ -37,20 +37,19 @@ export class AudioDispatcher {
   #prepare(exciters: IExciter[]) {
     const next = exciters.shift();
 
-    // No exciters left to prepare
-    if (!next) {
-      // but still has some exciters doing their works
-      if (this.#nextTime !== -1) {
-        this.#timer = setTimeout(this.#cycle, this.#nextTime - Date.now());
-      }
+    if (next) {
+      next.prepare();
 
+      // Immediately prepare the remaining exciters in the next tick
+      setImmediate(() => this.#prepare(exciters));
       return;
     }
 
-    next.prepare();
-
-    // Immediately prepare the remaining exciters in the next tick
-    setImmediate(() => this.#prepare(exciters));
+    // No exciters left to prepare
+    // schedule next cycle
+    if (this.#nextTime !== -1) {
+      this.#timer = setTimeout(this.#cycle, this.#nextTime - performance.now());
+    }
   }
 
   has(exciter: IExciter) {
@@ -71,7 +70,7 @@ export class AudioDispatcher {
     if (this.#exciters.length === 1) {
       // Just added
 
-      this.#nextTime = Date.now();
+      this.#nextTime = performance.now();
       setImmediate(this.#cycle);
     }
   }
