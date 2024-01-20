@@ -21,6 +21,7 @@ export type TrackMessage = {
     lyric?: ButtonBuilder,
     more?: ButtonBuilder
   };
+  guildId: string;
   maybeMessage?: Promise<Message<boolean> | undefined>;
   lyricMessage?: Message;
 

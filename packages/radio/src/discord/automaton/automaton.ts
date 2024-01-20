@@ -201,8 +201,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     for (const station of stations) {
       station.on('deckStarted', this.#handleDeckStarted(station))
       station.on('trackStarted', this.#handleTrackStarted(station));
-      station.on('trackActive', this.#handleTrackActive);
-      station.on('trackFinished', this.#handleTrackFinished);
+      station.on('trackActive', this.#handleTrackActive(station));
+      station.on('trackFinished', this.#handleTrackFinished(station));
       station.on('collectionChange', this.#handleCollectionChange(station));
     }
 
@@ -497,7 +497,11 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     // Hide all button from old playing track as soon as this new track has started
     this.updateTrackMessage(async (msg) => {
-      // Skip this track that has just started
+      if (msg.station !== station) {
+        return;
+      }
+
+      // Ignore track message that has just started
       if (msg.trackPlay.uuid === trackPlay.uuid) {
         return;
       }
@@ -517,11 +521,15 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     });
   }
 
-  #handleTrackActive: StationEvents['trackActive'] = async (deck, trackPlay) => {
+  #handleTrackActive = (station: Station): StationEvents['trackStarted'] => async (deck, trackPlay) => {
     await waitFor(1000);
 
     // Reveal all buttons for this trackPlay
     this.updateTrackMessage(async (msg) => {
+      if (msg.station !== station) {
+        return;
+      }
+
       if (msg.trackPlay.uuid !== trackPlay.uuid) {
         return;
       }
@@ -538,9 +546,13 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     });
   }
 
-  #handleTrackFinished: StationEvents['trackFinished'] = (deck, trackPlay) => {
+  #handleTrackFinished = (station: Station): StationEvents['trackFinished'] => (deck, trackPlay) => {
     // Update this trackPlay status to "Played"
     this.updateTrackMessage(async (msg) => {
+      if (msg.station !== station) {
+        return;
+      }
+
       // Only update this trackPlay if it is neither played nor skipped
       if (msg.trackPlay.uuid !== trackPlay.uuid || msg.status >= TrackMessageStatus.Played) {
         return;
@@ -558,25 +570,23 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #handleCollectionChange = (station: Station): StationEvents['collectionChange'] => (oldCollection, newCollection) => {
     // Hide "more like this" button for this currently playing track
-    this.updateTrackMessage(
-      async (msg) =>  {
-        if (msg.station !== station) {
-          return;
-        }
-
-        const isEndingOrPlaying = (msg.status >= TrackMessageStatus.Playing) && (msg.status <= TrackMessageStatus.Ending);
-
-        if (!isEndingOrPlaying) {
-          return;
-        }
-
-        return {
-          showMore: msg.trackPlay.track.collection.id === newCollection.id,
-          showSkip: true,
-          showLyrics: true
-        }
+    this.updateTrackMessage(async (msg) =>  {
+      if (msg.station !== station) {
+        return;
       }
-    )
+
+      const isEndingOrPlaying = (msg.status >= TrackMessageStatus.Playing) && (msg.status <= TrackMessageStatus.Ending);
+
+      if (!isEndingOrPlaying) {
+        return;
+      }
+
+      return {
+        showMore: msg.trackPlay.track.collection.id === newCollection.id,
+        showSkip: true,
+        showLyrics: true
+      }
+    })
   }
 
   #handleMessageDeletion = (message: Message<boolean> | PartialMessage) => {
@@ -809,21 +819,23 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       return false;
     }
 
-    this.updateTrackMessage(
-      async (msg) => {
-        if (trackPlay.uuid !== msg.trackPlay.uuid) {
-          return;
-        }
-
-        return {
-          title: 'Skipped',
-          status: TrackMessageStatus.Skipped,
-          showSkip: false,
-          showMore: false,
-          showLyrics: false
-        }
+    this.updateTrackMessage(async (msg) => {
+      if (msg.station !== station) {
+        return;
       }
-    );
+
+      if (trackPlay.uuid !== msg.trackPlay.uuid) {
+        return;
+      }
+
+      return {
+        title: 'Skipped',
+        status: TrackMessageStatus.Skipped,
+        showSkip: false,
+        showMore: false,
+        showLyrics: false
+      }
+    });
 
     return true;
   }

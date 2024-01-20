@@ -34,13 +34,18 @@ export type CreateTrackMessageOptionsEx = CreateTrackMessageOptions & {
   playDuration: number;
 }
 
+export type CreatedTrackMessage = CreateTrackMessageOptionsEx & {
+  embed: EmbedBuilder;
+  cover?: CoverImageAttachment
+}
+
 export abstract class TrackMessageCreator {
   abstract readonly name: string;
 
-  protected abstract doCreate(options: CreateTrackMessageOptionsEx): Promise<CreateTrackMessageOptionsEx & Pick<TrackMessage, 'embed'> & { cover?: CoverImageAttachment }>;
+  protected abstract doCreate(options: CreateTrackMessageOptionsEx): Promise<CreatedTrackMessage>;
 
   async create(options: CreateTrackMessageOptions): Promise<TrackMessage> {
-    const { station, trackPlay, positions } = options;
+    const { guildId, station, trackPlay, positions } = options;
 
     const requested = isRequestTrack<StationTrack, Audience>(trackPlay.track) ? trackPlay.track : undefined;
     const requestedBy = requested?.requestedBy;
@@ -56,9 +61,12 @@ export abstract class TrackMessageCreator {
     const embed = new EmbedBuilder();
     embed.setTitle(requestedBy?.length ? 'Playing your request' : 'Playing');
 
-    const { cover, ...created } = await this.doCreate({
-      ...options,
+    const created = await this.doCreate({
+      station,
+      trackPlay,
+      positions,
       embed,
+      guildId,
       requested,
       requestedBy,
       track,
@@ -88,17 +96,18 @@ export abstract class TrackMessageCreator {
       : undefined;
 
     return {
-      ...created,
-      coverImage: cover?.builder,
-      trackPlay,
       station,
+      trackPlay,
       status: TrackMessageStatus.Playing,
       playDuration,
+      embed: created.embed,
+      coverImage: created.cover?.builder,
       buttons: {
         lyric: lyricButton,
         skip: skipButton,
         more: moreButton
-      }
+      },
+      guildId
     }
   }
 }
