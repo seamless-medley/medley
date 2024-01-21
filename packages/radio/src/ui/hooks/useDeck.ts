@@ -8,17 +8,13 @@ import { useSurrogate } from "./surrogate";
 import { useSetState } from "@mantine/hooks";
 
 export function useDeck(stationId: string | undefined, index: DeckIndex | undefined) {
-  const { surrogate: deck, error } = useSurrogate(StubDeck, 'deck', stationId ? `${stationId}/${index}` : undefined);
-  return {
-    deck,
-    error
-  }
+  return useSurrogate(StubDeck, 'deck', stationId ? `${stationId}/${index}` : undefined);
 }
 
 export function useDeckInfo(stationId: string | undefined, index: DeckIndex, ...args: (Exclude<keyof Deck, 'trackPlay'>)[]) {
   type PV = Deck[keyof Deck];
 
-  const { deck } = useDeck(stationId, index);
+  const [deck] = useDeck(stationId, index);
 
   const [info, setInfo] = useSetState<Deck>({
     active: false,
