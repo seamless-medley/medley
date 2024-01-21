@@ -2,5 +2,9 @@ import { StubCollection } from "../stubs/core/collection";
 import { useSurrogate } from "./surrogate";
 
 export function useCollection(id?: string) {
-  return useSurrogate(StubCollection, 'collection', id);
+  const { surrogate: collection, error } = useSurrogate(StubCollection, 'collection', id);
+  return {
+    collection,
+    error
+  }
 }

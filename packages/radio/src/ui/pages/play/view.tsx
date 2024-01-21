@@ -86,12 +86,12 @@ export const Play: React.FC = () => {
   const client = useClient();
   const { station: stationId } = useParams({ from: route.id });
 
-  const [station] = useStation(stationId);
+  const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
 
   const { info, cover } = useDeckInfo(stationId, activeDeck);
 
-  const [nextDeck] = useDeck(stationId, getNextDeck(activeDeck));
+  const { deck: nextDeck } = useDeck(stationId, getNextDeck(activeDeck));
   const nextTrackPlay = useRemotableProp(nextDeck, 'trackPlay');
 
   const [coverProps, setCoverProps] = useSetState<CoverProps>({

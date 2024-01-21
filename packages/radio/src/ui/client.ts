@@ -765,8 +765,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   }
 }
 
-abstract class RemoteError<Kind> {
-  readonly errorType: string;
+export abstract class RemoteError<Kind> {
+  readonly errorType: ErrorResponse['status'];
   readonly message?: string;
 
   constructor(response: ErrorResponse, readonly kind: Kind, readonly id: string) {
@@ -778,24 +778,24 @@ abstract class RemoteError<Kind> {
   }
 }
 
-class RemotePropertyError<Kind> extends RemoteError<Kind> {
+export class RemotePropertyError<Kind> extends RemoteError<Kind> {
   constructor(response: ErrorResponse, kind: Kind, id: string, readonly prop: string, readonly direction: 'get' | 'set') {
     super(response, kind, id);
   }
 }
 
-class RemoteInvocationError<Kind> extends RemoteError<Kind> {
+export class RemoteInvocationError<Kind> extends RemoteError<Kind> {
   constructor(response: ErrorResponse, kind: Kind, id: string, readonly method: string) {
     super(response, kind, id);
   }
 }
 
-class RemoteSubscriptionError<Kind> extends RemoteError<Kind> {
+export class RemoteSubscriptionError<Kind> extends RemoteError<Kind> {
   constructor(response: ErrorResponse, kind: Kind, id: string, readonly event: string) {
     super(response, kind, id);
   }
 }
 
-class RemoteObservationError<Kind> extends RemoteError<Kind> {
+export class RemoteObservationError<Kind> extends RemoteError<Kind> {
 
 }

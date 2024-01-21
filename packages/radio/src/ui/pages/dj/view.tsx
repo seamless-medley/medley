@@ -16,7 +16,7 @@ import { times } from 'lodash';
 import { useDeckInfo } from '../../hooks/useDeck';
 
 const PlayHead: React.FC<{ stationId: string }> = ({ stationId }) => {
-  const [station] = useStation(stationId);
+  const { station } = useStation(stationId);
 
   const activeDeck = station?.activeDeck() ?? 0;
 
@@ -34,7 +34,7 @@ const PlayHead: React.FC<{ stationId: string }> = ({ stationId }) => {
 }
 
 const CollectionList: React.FC<{ id: string }> = ({ id }) => {
-  const [collection] = useCollection(id);
+  const { collection } = useCollection(id);
   const [items, setItems] = useState<Track[]>([]);
 
   const refresh = () => {
@@ -80,12 +80,12 @@ export const DJ: React.FC = () => {
   const stationId = params.station;
 
   const client = useClient();
-  const [station, stationError] = useStation(stationId);
+  const { station, error: stationError } = useStation(stationId);
   const stationProps = useRemotableProps(station);
 
   const [collections, setCollections] = useState<string[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<string>();
-  const [collection] = useCollection(selectedCollection);
+  const { collection } = useCollection(selectedCollection);
 
   const handleCollectionChange: Station['ϟcollectionChange'] = (oldId, newId) => {
     setSelectedCollection(newId);
