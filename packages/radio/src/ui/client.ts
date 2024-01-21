@@ -16,12 +16,17 @@ import { IAudioTransport, type AudioTransportEvents } from "./audio/transport";
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, changes: ObservedPropertyChange<T>[]) => Promise<any>;
 
 class ObservingStore<T extends object> {
-  private _observed: T = {} as T;
+  #observed: T = {} as T;
 
-  private resolver: ((value: T) => void) | undefined;
+  #resolver: ((value: T) => void) | undefined;
 
-  private _pending: Promise<T> | undefined = new Promise<T>((resolve) => {
-    this.resolver = resolve;
+  #rejector: ((reason?: any) => void) | undefined;
+
+  #error?: RemoteError<any>;
+
+  #pending: Promise<T> | undefined = new Promise<T>((resolve, reject) => {
+    this.#resolver = resolve;
+    this.#rejector = reject;
   })
 
   readonly handlers = new Set<ObserverHandler<any>>();
@@ -31,18 +36,28 @@ class ObservingStore<T extends object> {
   }
 
   get observed() {
-    return this._observed;
+    return this.#observed;
   }
 
   set observed(value) {
-    this._observed = { ...value };
-    this.resolver?.(this._observed);
-    this.resolver = undefined;
-    this._pending = undefined;
+    this.#observed = { ...value };
+    this.#resolver?.(this.#observed);
+    this.#resolver = undefined;
+    this.#rejector = undefined;
+    this.#pending = undefined;
+  }
+
+  get error() {
+    return this.#error;
+  }
+
+  reject(e: RemoteError<any>) {
+    this.#error = e;
+    this.#rejector?.(e);
   }
 
   get pending() {
-    return this._pending;
+    return this.#pending;
   }
 
   add(handler: ObserverHandler<any>) {
@@ -90,8 +105,6 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
   constructor() {
     super();
-
-    console.log('Client ctor');
 
     this.socket = io({ transports: ['websocket'], parser: msgpackParser });
 
@@ -484,8 +497,13 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         const store = this.observingStores.get(key)!;
         store.add(handler);
 
-        await store.pending;
-        resolve(store.observed);
+        const [pendingStatus] = await Promise.allSettled([store.pending]);
+
+        if (pendingStatus.status === 'fulfilled') {
+          resolve(store.observed);
+        } else {
+          reject(store.error)
+        }
 
         return;
       }
@@ -493,7 +511,11 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       const store = new ObservingStore<Types[Kind]>(options);
       this.observingStores.set(key, store);
 
-      rejectAfter(5_000, reject);
+      rejectAfter(5_000, () => {
+        const error = new RemoteObservationError({ status: 'exception', message: 'Timeout' }, kind, id);
+        store.reject(error);
+        reject(error);
+      });
 
       this.socket.emit('r:ob', kind, id, options, async (response: RemoteResponse<any>) => {
         if (response.status === undefined) {
@@ -511,7 +533,9 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
           }
         }
 
-        reject(new RemoteObservationError(response, kind, id));
+        const error = new RemoteObservationError(response, kind, id);
+        store.reject(error);
+        reject(error);
       });
     });
   }
