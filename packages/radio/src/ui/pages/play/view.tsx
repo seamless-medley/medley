@@ -29,6 +29,7 @@ import { useSetState } from "@mantine/hooks";
 import type { DeckIndex, Metadata } from "@seamless-medley/core";
 import { useClient } from "../../hooks/useClient";
 import styled from "@emotion/styled";
+import { Button } from "@mantine/core";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -63,17 +64,17 @@ export const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).
 
 export const getNextDeck = (index: DeckIndex): DeckIndex => [1, 2, 0][index];
 
-const ListenButton = styled.div`
+const Control = styled.div`
   position: absolute;
   right: 0;
   top: 0;
+  padding: 0;
   z-index: 90000;
   cursor: pointer;
   opacity: 0;
   border-radius: 0 0 0 0.5em;
   transition: all 0.7s ease;
-  background-color: aqua;
-  padding: 0 4px;
+  /* background-color: aqua; */
 
   user-select: none;
 
@@ -86,12 +87,15 @@ export const Play: React.FC = () => {
   const client = useClient();
   const { station: stationId } = useParams({ from: route.id });
 
-  const [station] = useStation(stationId);
-  const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
+  const { station, error: stationError } = useStation(stationId);
+  const maybyActiveDeck = useRemotableProp(station, 'activeDeck');
+
+  const activeDeck = maybyActiveDeck ?? 0;
 
   const { info, cover } = useDeckInfo(stationId, activeDeck);
+  const nextDeckIndex = getNextDeck(activeDeck);
+  const { deck: nextDeck } = useDeck(stationId, nextDeckIndex);
 
-  const [nextDeck] = useDeck(stationId, getNextDeck(activeDeck));
   const nextTrackPlay = useRemotableProp(nextDeck, 'trackPlay');
 
   const [coverProps, setCoverProps] = useSetState<CoverProps>({
@@ -224,11 +228,14 @@ export const Play: React.FC = () => {
 
   return (
     <div style={{ height: '100vh', overflow: 'hidden' }}>
-      <ListenButton onClick={() => {
-        client.playAudio(stationId);
-      }}>
-        Listen
-      </ListenButton>
+      <Control>
+        <Button onClick={() => client.playAudio(stationId) }>
+          Listen
+        </Button>
+        <Button onClick={() => client.karaokeEnabled = !client.karaokeEnabled }>
+          Karaoke
+        </Button>
+      </Control>
       <Cover { ...coverProps } />
 
       <Lyrics
