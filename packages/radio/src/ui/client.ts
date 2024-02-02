@@ -1,4 +1,4 @@
-import { isFunction, mapValues, noop, pickBy, uniqueId, } from "lodash";
+import { isFunction, mapValues, noop, pickBy, random, uniqueId, } from "lodash";
 import { EventEmitter } from "eventemitter3";
 import { io, Socket } from "socket.io-client";
 import msgpackParser from 'socket.io-msgpack-parser';
@@ -7,7 +7,9 @@ import {
   ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents, RemoteObserveOptions,
   $AnyProp, AnyProp, ObservedPropertyChange, PickMethod, PickProp, Remotable, Stub,
   isProperty,
-  getRemoteTimeout
+  getRemoteTimeout,
+  SessionData,
+  AuthData
 } from "../socket";
 import { Callable, ParametersOf, ReturnTypeOf } from "../types";
 import { waitFor } from "@seamless-medley/utils";
@@ -41,6 +43,7 @@ class ObservingStore<T extends object> {
 
   set observed(value) {
     this.#observed = { ...value };
+    this.#error = undefined;
     this.#resolver?.(this.#observed);
     this.#resolver = undefined;
     this.#rejector = undefined;
@@ -52,8 +55,12 @@ class ObservingStore<T extends object> {
   }
 
   reject(e: RemoteError<any>) {
+    this.#observed = {} as T;
     this.#error = e;
     this.#rejector?.(e);
+    this.#resolver = undefined;
+    this.#rejector = undefined;
+    this.#pending = undefined;
   }
 
   get pending() {
@@ -77,6 +84,8 @@ type ClientEvents = AudioTransportEvents & {
   connect(): void;
   disconnect(reason?: DisconnectReason): void;
   //
+  start(): void;
+  //
   audioTransport(transport: IAudioTransport): void;
 }
 
@@ -88,10 +97,22 @@ export enum DisconnectReason {
   ParseError
 }
 
-function rejectAfter(ms: number, reject: (reason?: any) => any, reason: string = 'Timeout') {
-  if (ms > 0) {
-    waitFor(ms).then(() => reject(reason));
+type RejectAfterOptions = {
+  timeout: number;
+  reject: (reason?: any) => any;
+  reason?: string;
+}
+
+function rejectAfter({ timeout, reject, reason = 'Timeout' }: RejectAfterOptions) {
+  const ac = new AbortController();
+
+  if (timeout > 0) {
+    waitFor(timeout, ac.signal)
+      .then(() => reject(reason))
+      .catch(noop);
   }
+
+  return () => ac.abort();
 }
 
 export class Client<Types extends { [key: string]: any }> extends EventEmitter<ClientEvents> {
@@ -103,11 +124,23 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
   private surrogates = new Map<string, Remotable<Types[any]>>();
 
+  protected authData?: AuthData;
+
+  protected sessionData?: SessionData;
+
   constructor() {
     super();
 
-    this.socket = io({ transports: ['websocket'], parser: msgpackParser });
+    this.socket = io({
+      transports: ['websocket'],
+      parser: msgpackParser,
+      auth: callback => {
+        console.log('Sending auth', this.authData);
+        callback(this.authData ?? {})
+      }
+    });
 
+    this.socket.on('c:s', this.handleSessionResponse);
     this.socket.on('r:e', this.handleRemoteEvent);
     this.socket.on('r:u', this.handleRemoteUpdate);
     this.socket.on('r:sd', this.handleRemoteStreamData);
@@ -116,6 +149,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     this.socket.on('connect', () => this.handleSocketConnect());
     this.socket.on('disconnect', this.handleSocketDisconnect);
+  }
+
+  private handleSessionResponse: ServerEvents['c:s'] = async (sessionData) => {
+    console.log('AUTH RESP', { sessionData });
+    this.sessionData = sessionData;
+    this.startSession();
   }
 
   private handleRemoteEvent: ServerEvents['r:e'] = (kind, id, event, ...args) => {
@@ -161,6 +200,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
   }
 
   private handleSocketReconnect = (attempt: number) => {
+    console.log('RE-CONNECT');
+
     for (const [key, events] of this.delegates) {
       const [kind, id] = this.extractId(key);
 
@@ -178,37 +219,62 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       }
     }
 
-    for (const [key, store] of [...this.observingStores]) {
-      const [kind, id] = this.extractId(key);
+    this.#restoreObservingStores();
+  }
 
-      this.socket.emit('r:ob', kind, id, store.options, async (response) => {
-        if (response.status !== undefined) {
-          // Error reobserving
-          return;
-        }
+  async #restoreObservingStores(pred: (kind: string, id: string, store: ObservingStore<any>) => boolean = () => true) {
+    const restorations = [...this.observingStores]
+      .map(([key, store]) => {
+        const [kind, id] = this.extractId(key);
+        return [kind, id, store] as const;
+      })
+      .filter(p => pred(...p))
+      .map(([kind, id, store]) => new Promise<void>((resolve) => {
+        console.log('Restoring', kind, id);
 
-        store.observed = response.result;
+        this.socket.emit('r:ob', kind, id, store.options, async (response) => {
+          if (response.status === undefined) {
+            store.observed = response.result;
 
-        if (response.result) {
-          const changes = Object.entries(response.result).map<ObservedPropertyChange>(([prop, value]) => ({
-            p: prop,
-            o: value,
-            n: value
-          }));
+            if (response.result) {
+              const changes = Object.entries(response.result).map<ObservedPropertyChange>(([prop, value]) => ({
+                p: prop,
+                o: value,
+                n: value
+              }));
 
-          for (const handler of store.handlers) {
-            handler(kind, id, changes);
+              for (const handler of store.handlers) {
+                handler(kind, id, changes);
+              }
+            }
+
+            resolve();
+            return;
           }
-        }
-      });
-    }
+
+          if (response.status === 'stream') {
+            response = {
+              status: 'exception',
+              message: 'Remote property of type stream is not supported'
+            }
+          }
+
+          store.reject(new RemoteObservationError(response, kind, id));
+          resolve();
+        });
+      }));
+
+    await Promise.all(restorations);
   }
 
   protected async handleSocketConnect() {
+    console.log('CONNECT');
     this.emit('connect');
   }
 
   private handleSocketDisconnect = (reason: Socket.DisconnectReason) => {
+    this.sessionData = undefined;
+
     const reasonMap: Partial<Record<Socket.DisconnectReason, DisconnectReason>> = {
       'io client disconnect': DisconnectReason.ByClient,
       'io server disconnect': DisconnectReason.ByServer,
@@ -221,18 +287,30 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     this.emit('disconnect', reasonMap[reason]);
   }
 
+  protected async startSession() {
+    await this.#restoreObservingStores((kind, id, store) => store.error?.errorType === 'prohibited');
+
+    this.emit('start');
+  }
+
+  get session() {
+    return this.sessionData;
+  }
+
   private extractId(key: `${string}:${string}`) {
     return key.split(':', 2);
   }
 
   dispose() {
-    for (const [key, events] of [...this.delegates]) {
-      const [ns, id] = this.extractId(key);
+    if (this.connected) {
+      for (const [key, events] of [...this.delegates]) {
+        const [ns, id] = this.extractId(key);
 
-      for (const [event, delegates] of Object.entries(events)) {
-        if (delegates) {
-          for (const delegate of delegates?.values()) {
-            this.remoteUnsubscribe(ns, id, event, delegate);
+        for (const [event, delegates] of Object.entries(events)) {
+          if (delegates) {
+            for (const delegate of delegates?.values()) {
+              this.remoteUnsubscribe(ns, id, event, delegate);
+            }
           }
         }
       }
@@ -260,8 +338,16 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     return this.socket.connected;
   }
 
-  get ready() {
-    return this.connected;
+  authenticate(username: string, password: string) {
+    const e = new TextEncoder();
+
+    this.authData = (({ nn, f }) => ({ up: [f(username, nn[0]), f(password, nn[1])], nn: nn.map(n => 0xbe^n) }))(
+      { nn: Array(2).fill(undefined).map(() => random(1, 255)), f: (s:string,n: number) => Array.from(e.encode(s).map((s, i) => s^i^n)) }
+    );
+
+    const { nn, up: [u, p] } = this.authData;
+
+    this.socket.emit('c:a', nn, u, p);
   }
 
   private getDelegateEvents(ns: string, id: string) {
@@ -276,7 +362,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
   private getDelegateFor(kind: string, id: string, event: string) {
     const events = this.getDelegateEvents(kind, id);
-    const hasSet = !!events[event];
+    const hasSet = events[event] !== undefined;
     return hasSet ? events[event]! : (() => events[event] = new Set<Callable>())();
   }
 
@@ -303,9 +389,11 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     prop: P
   ) {
     return new Promise<any>((resolve, reject) => {
-      rejectAfter(timeout, reject);
+      const abortTimeout = rejectAfter({ timeout, reject });
 
       this.socket.emit('r:pg', kind, id, prop as string, async (response: RemoteResponse<any>) => {
+        abortTimeout();
+
         if (response.status === undefined) {
           resolve(response.result);
           return;
@@ -335,9 +423,11 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     value: O[P]
   ) {
     return new Promise<any>((resolve, reject) => {
-      rejectAfter(timeout, reject);
+      const abortTimeout = rejectAfter({ timeout, reject });
 
       this.socket.emit('r:ps', kind, id, prop as string, value, async (response: RemoteResponse<any>) => {
+        abortTimeout();
+
         if (response.status === undefined) {
           resolve(response.result);
           return;
@@ -367,9 +457,11 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     ...args: ParametersOf<M[N]>
   ) {
     return new Promise((resolve, reject) => {
-      rejectAfter(timeout, reject);
+      const abortTimeout = rejectAfter({ timeout, reject });
 
       this.socket.emit('r:mi', kind, id, method as string, args, async (response: RemoteResponse<ReturnTypeOf<M[N]>>) => {
+        abortTimeout();
+
         if (response.status === undefined) {
           resolve(response.result);
           return;
@@ -420,10 +512,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         return;
       }
 
-      rejectAfter(5_000, reject);
+      const abortTimeout = rejectAfter({ timeout: 5_000, reject });
 
       // It is the first time, subscribe to remote first
       this.socket.emit('r:es', kind, id, event, async (response: RemoteResponse<void>) => {
+        abortTimeout();
+
         if (response.status === undefined) {
           deletgates.add(delegate);
           resolve();
@@ -468,9 +562,11 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         this.delegates.delete(`${kind}:${id}`);
       }
 
-      rejectAfter(5_000, reject);
+      const abortTimeout = rejectAfter({ timeout: 5_000, reject });
 
       this.socket.emit('r:eu', kind, id, event, async (response: RemoteResponse<void>) => {
+        abortTimeout();
+
         if (response.status === undefined) {
           resolve();
           return;
@@ -491,18 +587,22 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
   remoteObserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, options: RemoteObserveOptions | undefined, handler: ObserverHandler<Kind>) {
     return new Promise<Types[Kind]>(async (resolve, reject) => {
+      console.log('remoteObserve', kind, id, new Error().stack);
+
       const key = `${kind}:${id}` as const;
 
       if (this.observingStores.has(key)) {
         const store = this.observingStores.get(key)!;
         store.add(handler);
 
-        const [pendingStatus] = await Promise.allSettled([store.pending]);
+        await store.pending;
 
-        if (pendingStatus.status === 'fulfilled') {
-          resolve(store.observed);
+        if (store.error === undefined) {
+          console.log('remoteObserve from stores', kind, id, store.observed);
+          resolve(store.observed)
         } else {
-          reject(store.error)
+          console.log('remoteObserve from stores reject', kind, id, store.error);
+          reject(store.error);
         }
 
         return;
@@ -511,16 +611,25 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       const store = new ObservingStore<Types[Kind]>(options);
       this.observingStores.set(key, store);
 
-      rejectAfter(5_000, () => {
-        const error = new RemoteObservationError({ status: 'exception', message: 'Timeout' }, kind, id);
-        store.reject(error);
-        reject(error);
-      });
+      const abortTimeout = rejectAfter({
+        timeout: 5_000,
+        reject: () => {
+          const error = new RemoteObservationError({ status: 'exception', message: 'Timeout' }, kind, id);
+          store.reject(error);
+          reject(error);
+        }
+      })
 
+      console.log('remoteObserve r:ob', kind, id);
       this.socket.emit('r:ob', kind, id, options, async (response: RemoteResponse<any>) => {
+        abortTimeout();
+
+        store.add(handler);
+
         if (response.status === undefined) {
+          console.log('remoteObserve r:ob response no error', kind, id, response);
+
           store.observed = response.result;
-          store.add(handler);
 
           resolve(store.observed);
           return;
@@ -537,6 +646,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         store.reject(error);
         reject(error);
       });
+
+      store.pending?.then(resolve, reject);
     });
   }
 
@@ -559,9 +670,11 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
       this.observingStores.delete(key);
 
-      rejectAfter(5_000, reject);
+      const abortTimeout = rejectAfter({ timeout: 5_000, reject });
 
       this.socket.emit('r:ub', kind, id, async (response) => {
+        abortTimeout();
+
         if (response.status === undefined) {
           resolve();
           return;
@@ -612,7 +725,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
       return this.surrogateCache.get(objectId)!.deref() as Remotable<Types[Kind]>;
     }
 
-    const uuid = uniqueId(`surrogate:${objectId}`);
+    const uuid = uniqueId(`surrogate:${objectId}--`);
 
     const { descriptors } = StubClass;
     const mergedDescs = { ...descriptors.own, ...descriptors.proto };
@@ -623,6 +736,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
     const propertyChangeHandlers = new Map<string | AnyProp, Set<(newValue: any, oldValue: any, prop: string) => Promise<any>>>();
 
     const propertyObserver: ObserverHandler<Kind> = async (kind, id, changes) => {
+
       const anyPropHandlers = propertyChangeHandlers.get($AnyProp);
 
       for (const { p: prop, o: oldValue, n: newValue } of changes) {
@@ -732,7 +846,9 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         return;
       }
 
-      this.remoteUnobserve(kind, id, propertyObserver);
+      if (this.socket.connected) {
+        this.remoteUnobserve(kind, id, propertyObserver).catch(noop);
+      }
 
       for (const [event, handlers] of [...subscriptionHandlers]) {
         for (const handler of handlers) {
@@ -779,6 +895,8 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         }
       }
     }) as Remotable<Types[any]>;
+
+    console.log('Returning surrogate', objectId, 'as', uuid);
 
     this.surrogates.set(uuid, surrogate);
     this.surrogateCache.set(objectId, new WeakRef(surrogate));

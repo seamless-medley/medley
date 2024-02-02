@@ -15,3 +15,5 @@ export type ParametersOf<T> = T extends (...args: infer A) => any ? A : never;
 export type ReturnTypeOf<T> = T extends (...args: any) => infer R ? R : never;
 
 export type AsyncFunctionOf<T> = T extends (...args: infer A) => infer R ? (...args: A) => Promise<Awaited<R>> : never;
+
+export type ExtractCtor<T> = T extends new (...args: infer A) => infer R ? { args: A, returns: R } : never;

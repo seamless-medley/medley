@@ -41,7 +41,7 @@ export class MedleyClient extends Client<RemoteTypes> {
   }
 
   protected override async handleSocketConnect() {
-    super.handleSocketConnect();
+    await super.handleSocketConnect();
 
     this.#transponder = await this.surrogateOf(StubRTCTransponder, 'transponder', '~').catch(() => undefined);
 
@@ -72,6 +72,15 @@ export class MedleyClient extends Client<RemoteTypes> {
     }
 
     transport.prepareAudioContext();
+  }
+
+  protected override async startSession() {
+    if (!this.authData) {
+      console.log('[test] Login as admin');
+      // this.authenticate('admin', 'admin'); // FIXME: this should be called on login action
+    }
+
+    await super.startSession();
   }
 
   async #nextTransport() {
