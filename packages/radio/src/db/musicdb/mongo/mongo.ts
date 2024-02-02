@@ -1,6 +1,7 @@
 import { MusicDb, MusicDbTrack, SearchHistory, TrackHistory, WorkerPoolAdapter } from "@seamless-medley/core";
 import { MongoClientOptions } from "mongodb";
-import { ConfigDb } from "../../types";
+import { SettingsDb } from "../../types";
+import { PlainUser, User } from "../../persistent/user";
 
 export type Options = {
   url: string;
@@ -14,6 +15,8 @@ export type Options = {
    * @default [86400,129600]  (24,36 hours)
    */
    ttls?: [min: number, max: number];
+
+   seed?: true;
 }
 
 type PrefixRemap<Prefix extends string, T> = {
@@ -22,9 +25,10 @@ type PrefixRemap<Prefix extends string, T> = {
 
 type WorkerMethods = MusicDb &
   PrefixRemap<'search_', SearchHistory> &
-  PrefixRemap<'track_', TrackHistory>
+  PrefixRemap<'track_', TrackHistory> &
+  PrefixRemap<'settings_', SettingsDb>
 
-export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements MusicDb, ConfigDb {
+export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
   constructor() {
     super(__dirname + '/worker.js', {});
 
@@ -35,7 +39,7 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
     const pool = (this.pool as any);
     await Promise.all(
       (pool.workers as any[])
-        .map(worker => worker.exec('configure', [options]))
+        .map((worker, index) => worker.exec('configure', [{ ...options, seed: index === 0 }]))
     );
     return this;
   }
@@ -92,6 +96,18 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
 
   get trackHistory() {
     return this.#trackHistory;
+  }
+
+  readonly settings: SettingsDb = {
+    verifyLogin: async (username, password) => {
+      const user = await this.exec('settings_verifyLogin', username, password);
+
+      if (!user) {
+        return;
+      }
+
+      return User.parse(user as unknown as PlainUser);
+    }
   }
 
   dispose() {

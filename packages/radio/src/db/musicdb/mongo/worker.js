@@ -1,7 +1,10 @@
+// @ts-check
+
+const argon2 = require('@node-rs/argon2');
 const workerpool = require('workerpool');
 const { threadId } = require('node:worker_threads');
 const { MongoClient, Db, Collection } = require('mongodb');
-const { random, omitBy } = require('lodash');
+const { random, omitBy, stubFalse } = require('lodash');
 const { createLogger } = require('@seamless-medley/logging');
 
 /** @typedef {import('@seamless-medley/core').MusicDb} MusicDb */
@@ -75,7 +78,25 @@ async function configure(options) {
     logger.info(`connection closed, connectionId: ${connectionId}, reason: ${reason}`);
   });
 
+  client.on('error', (e) => {
+    logger.error(e);
+  });
+
   db = client.db(options.database);
+
+  if (options.seed) {
+    const hasUsers = await db.listCollections().toArray().then(all => all.find(c => c.name === 'users') !== undefined);
+
+    if (!hasUsers) {
+      argon2.hash('admin').then((password) => {
+        const users = db.collection('users');
+        users.createIndexes([
+          { key: { username: 1 } }
+        ]);
+        users.insertOne({ username: 'admin', password, flags: (1n<<22n).toString() });
+      });
+    }
+  }
 
   musics = db.collection('musics');
   await musics.createIndexes([
@@ -99,10 +120,6 @@ async function configure(options) {
     { key: { stationId: 1 } },
     { key: { playedTime: 1 } }
   ]);
-
-  client.on('error', (e) => {
-    logger.error(e);
-  });
 }
 
 /**
@@ -365,6 +382,35 @@ const search_unmatchedItems = async(stationId) => {
       return [];
     });
 
+
+/* SettingsDb */
+
+/** @typedef {import('../../persistent/user').PlainUser} RawUser*/
+
+/**
+ *
+ * @param {string} username
+ * @param {string} password
+ */
+async function settings_verifyLogin(username, password) {
+  if (!db) {
+    throw new Error('Not initialized');
+  }
+
+  const row = await db.collection('users')
+    .findOne({ username })
+    .catch(() => undefined)
+    ?? undefined;
+
+  if (row && await argon2.verify(row.password, password)) {
+    const { password: ignored, _id, ...user }  = row;
+    return {
+      ...user,
+      _id: _id.toHexString()
+    };
+  }
+}
+
 workerpool.worker({
   configure,
   findById,
@@ -376,5 +422,7 @@ workerpool.worker({
   search_recentItems,
   search_unmatchedItems,
   track_add,
-  track_getAll
+  track_getAll,
+  // SettingsDb
+  settings_verifyLogin
 })
