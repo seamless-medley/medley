@@ -3,7 +3,7 @@ import { noop } from "lodash";
 import { AudienceType, MusicDb, Station, StationEvents, makeAudienceGroupId } from "@seamless-medley/core";
 import { createLogger } from "@seamless-medley/logging";
 
-import { ConfigDb } from '../db/types';
+import { SettingsDb } from '../db/types';
 import { MongoMusicDb } from "../db/musicdb/mongo";
 //
 import type { Config } from "../config";
@@ -26,6 +26,8 @@ import { StreamingConfig } from "../config/streaming";
 import { StreamingAdapter } from "../streaming/types";
 import { ShoutAdapter } from "../streaming/shout/adapter";
 import { IcyAdapter } from "../streaming";
+import { User } from '../db/persistent/user';
+import { UserModel } from '../db/models/user';
 
 const logger = createLogger({ name: 'medley-server' });
 
@@ -39,7 +41,7 @@ export type MedleyServerOptions = {
 export class MedleyServer extends SocketServerController<RemoteTypes> {
   #musicDb!: MusicDb;
 
-  #configDb!: ConfigDb;
+  #settingsDb!: SettingsDb;
 
   #audioServer: AudioWebSocketServer;
 
@@ -227,11 +229,11 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
           dbConfig.metadataTTL?.min ?? 60 * 60 * 24 * 7,
           dbConfig.metadataTTL?.max ?? 60 * 60 * 24 * 12,
         ]
-      });
+      }) as MongoMusicDb;
 
       this.#musicDb?.dispose();
       this.#musicDb = newInstance;
-      this.#configDb = newInstance;
+      this.#settingsDb = newInstance.settings;
 
       logger.info('Connected to MongoDB');
     }
@@ -240,9 +242,9 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     }
   }
 
-  protected override addSocket(socket: Socket) {
-    super.addSocket(socket);
-    logger.debug({ id: socket.id }, 'Adding socket');
+  protected override async authenticateSocket(socket: Socket, username: string, password: string) {
+    const user = await this.#settingsDb?.verifyLogin(username, password);
+    return user ? new UserModel(user) : undefined;
   }
 
   get musicDb() {
@@ -330,4 +332,3 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
  *    |- Discord Server
  *    |- Settings
  */
-

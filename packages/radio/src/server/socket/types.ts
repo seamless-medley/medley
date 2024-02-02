@@ -2,6 +2,7 @@ import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
 import { Socket as IOSocket } from "socket.io";
 import { ClientEvents, ServerEvents, PickEvent } from "../../socket";
+import { UserModel } from "../../db/models/user";
 
 export type TypedEventEmitterOf<T> = TypedEventEmitter<
   // @ts-ignore
@@ -13,9 +14,12 @@ export function MixinEventEmitterOf<T>() {
 }
 
 export type ClientData = {
-  auth: boolean;
+  user?: UserModel;
 }
 
 export type Socket = IOSocket<ClientEvents, ServerEvents, never, ClientData>;
 
+/**
+ * Return `true` if allowed
+ */
 export type GuardPredicate = (socket: Socket, instance: object) => boolean | Promise<boolean>;

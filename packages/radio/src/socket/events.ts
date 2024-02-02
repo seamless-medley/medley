@@ -1,6 +1,8 @@
-import type { ObservedPropertyChange } from "./types";
+import type { ObservedPropertyChange, SessionData } from "./types";
 
 export type ServerEvents = {
+  'c:s': (session: SessionData) => void;
+  //
   'r:e': (kind: string, id: string, event: string, ...args: any[]) => void;
   'r:u': (kind: string, id: string, changes: ObservedPropertyChange[]) => void;
   'r:sd': (id: number, data: Buffer) => void;
@@ -56,6 +58,7 @@ export type RemoteObserveOptions = {
 }
 
 export type ClientEvents = {
+  'c:a': (x: number[], username: number[], password: number[]) => void;
   // property
   'r:pg': (kind: string, id: string, prop: string, callback: RemoteCallback) => void;
   'r:ps': (kind: string, id: string, prop: string, value: any, callback: RemoteCallback) => void;

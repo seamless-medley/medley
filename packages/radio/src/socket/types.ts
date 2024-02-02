@@ -1,6 +1,7 @@
 
 import type { ConditionalExcept } from "type-fest";
 import type { AsyncFunctionOf } from "../types";
+import type { PlainUser } from "../db/persistent/user";
 
 export type SelectKeyBy<O, C> = { [Key in keyof O]: Key extends C ? Key : never}[keyof O];
 export type SelectKeyByValue<O, C> = { [Key in keyof O]: O[Key] extends C ? Key : never}[keyof O];
@@ -56,4 +57,11 @@ export type ObservedPropertyChange<T = any> = {
 
 export type ObservedPropertyHandler<T> = (instance: T, changes: ObservedPropertyChange[]) => Promise<any>;
 
-export type ExtractCtor<T> = T extends new (...args: infer A) => infer R ? { args: A, returns: R } : never;
+export type AuthData = {
+  nn: number[];
+  up: [number[], number[]];
+}
+
+export type SessionData = {
+  user?: PlainUser;
+}

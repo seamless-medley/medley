@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { PickProp } from "../../socket/types";
-import { GuardPredicate } from "./types";
-import { authorized } from "./guards";
+import { GuardPredicate, Socket } from "./types";
+import { loggedIn } from "./guards";
 
 const $Dependents = Symbol("$Dependents");
 
@@ -33,5 +33,15 @@ export function getGuardingPredicate(target: any, prop?: string): GuardPredicate
   return result ?? Reflect.getMetadata($Guard, target);
 }
 
-export const Authorized = Guarded(authorized);
+export async function hasObjectGuardAccess(socket: Socket, instance: object, prop?: string): Promise<boolean> {
+  const pred = getGuardingPredicate(instance.constructor, prop);
+
+  if (!pred) {
+    return true;
+  }
+
+  return pred(socket, instance);
+}
+
+export const LoggedIn = Guarded(loggedIn);
 

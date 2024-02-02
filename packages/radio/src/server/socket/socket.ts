@@ -10,13 +10,16 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import {
   $Exposing, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents,
   ClientEvents, RemoteCallback, RemoteResponse, ServerEvents,
-  isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf
+  isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf, AuthData
 } from "../../socket";
 
 import { Socket, ClientData } from './types';
 
 import { createLogger } from '@seamless-medley/logging';
-import { getGuardingPredicate, getDependents } from './decorator';
+import { SettingsDb } from '../../db/types';
+import { getDependents, hasObjectGuardAccess } from './decorator';
+import { PlainUser } from '../../db/persistent/user';
+import { $ActualObject } from '../../db/models/base';
 
 const logger = createLogger({ name: 'socket-server' });
 
@@ -37,6 +40,17 @@ type Handlers = {
 
 const isEvented = (value: any, object: any) => isFunction(value) && object instanceof EventEmitter;
 
+const isAuthData = (o: any): o is AuthData => {
+  if (Array.isArray(o?.nn) && o.nn.length) {
+    if (Array.isArray(o?.up) && o.up.length === 2) {
+      return Array.isArray(o.up[0]) && Array.isArray(o.up[1]);
+    }
+  }
+
+  return false;
+}
+
+
 export type SocketServerEvents = {
   ready(): void;
 }
@@ -53,14 +67,34 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
 
   #socketObservations = new Map<Socket, Map<`${string}:${string}`, ObservedPropertyHandler<any>>>();
 
-  protected addSocket(socket: Socket) {
-    for (const [name, handler] of Object.entries(this.#handlers)) {
-      socket.on(name as keyof ClientEvents, (...args: any[]) => {
+  #sendSession(socket: Socket) {
+    socket.emit('c:s', {
+      user: socket.data.user?.toPlain()
+    });
+  }
+
+  protected async addSocket(socket: Socket) {
+    logger.debug({ socket: socket.id }, 'Adding socket');
+
+    socket.data = {};
+
+    for (const key of Object.keys(this.#handlers)) {
+      const name = key as keyof ClientEvents;
+
+      socket.on(name, (...args: any[]) => {
+        const handler = this.#handlers[name] as (socket: Socket, ...args: any[]) => any;
         handler(socket, ...args);
       });
     }
 
     socket.on('disconnect', () => this.#removeSocket(socket));
+
+    if (isAuthData(socket.handshake.auth)) {
+      const { auth: { nn, up } } = socket.handshake;
+      await this.#handleAuth(socket, nn, up[0], up[1]);
+    }
+
+    this.#sendSession(socket);
   }
 
   #removeSocket(socket: Socket) {
@@ -156,7 +190,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     const namespace = this.#objectNamespaces.get(kind);
     const object = namespace?.get(id) as any;
     const observed = object instanceof ObjectObserver ? object : undefined;
-    const instance = observed?.instance ?? object;
+    const instance: Record<any, any> = observed?.instance ?? object;
     const cb = isFunction(callback) ? callback : undefined;
 
     if (typeof instance !== 'object') {
@@ -168,8 +202,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       return;
     }
 
-    const classPred = getGuardingPredicate(instance.constructor);
-    if (classPred && !classPred(socket, instance)) {
+    if (!await hasObjectGuardAccess(socket, instance)) {
       cb?.({
         status: 'prohibited',
         id
@@ -178,8 +211,9 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       return;
     }
 
-    const propPred = getGuardingPredicate(instance.constructor, key);
-    if (propPred && !propPred(socket, instance)) {
+    console.log('Checking', instance.constructor.name, key);
+
+    if (!await hasObjectGuardAccess(socket, instance, key)) {
       cb?.({
         status: 'prohibited',
         id,
@@ -220,11 +254,26 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
         message: `${e.message || e}`
       });
 
-      logger.error({ err: e, kind, id, key }, `Error inreracting`);
+      logger.error({ err: e, kind, id, key }, `Error interacting`);
     }
   }
 
+  protected async authenticateSocket(socket: Socket, username: string, password: string): Promise<ClientData['user']> {
+    return undefined;
+  }
+
+  async #handleAuth(socket: Socket, nn: number[], u: number[], p: number[]) {
+    const up = [u, p].map((e, ki) => Buffer.from(e.map((a,i) => 0xbe^a^nn[ki]^i)).toString());
+    const user = await this.authenticateSocket(socket, up[0], up[1]);
+    socket.data.user = user;
+  }
+
   #handlers: Handlers = {
+    'c:a': async (socket, nn, u, p) => {
+      await this.#handleAuth(socket, nn, u, p);
+      this.#sendSession(socket);
+    },
+
     'r:pg': async (socket, kind, id, prop, callback) => {
       this.#interact(
         socket,
@@ -266,7 +315,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
         socket,
         kind, id, undefined,
         (value, object) => !!object,
-        async (object, _, observed) => {
+        async (object, _, observed: ObjectObserver<object> | undefined) => {
           if (!this.#socketObservations.has(socket)) {
             this.#socketObservations.set(socket, new Map());
           }
@@ -275,7 +324,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
           const key = `${kind}:${id}` as `${string}:${string}`;
 
           if (!observation.has(key)) {
-            const observer: ObservedPropertyHandler<any> = async (stub, changes) => {
+            const observer: ObservedPropertyHandler<object> = async (stub, changes) => {
               if (options?.ignoreOldValue) {
                 changes = changes.map(c => omit(c, 'o'));
               }
@@ -287,7 +336,23 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
             observation.set(key, observer);
           }
 
-          return observed?.getAll();
+          const allProps = observed?.getAll();
+
+          if (!allProps) {
+            return;
+          }
+
+          const propsWithGuards = await Promise.all(Object.entries(allProps).map(async ([prop, value]) => ({
+            prop,
+            value,
+            allowed: await hasObjectGuardAccess(socket, object, prop)
+          })));
+
+          return propsWithGuards.filter(({ allowed }) => allowed).reduce((a, { prop, value }) => {
+            a[prop] = value;
+            return a;
+          }, {} as Record<any, any>);
+
         },
         callback
       )
@@ -441,21 +506,21 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
   }
 
-  #makeObserverPropertyHandler = (kind: string, id: string): ObservedPropertyHandler<any> => async (instance, changes) => {
-    const classPred = getGuardingPredicate(instance.constructor);
-
+  #makeObserverPropertyHandler = (kind: string, id: string): ObservedPropertyHandler<object> => async (instance, changes) => {
     for (const [, socket] of this.io.sockets.sockets) {
-      if (classPred && !classPred(socket, instance)) {
+      if (!await hasObjectGuardAccess(socket, instance)) {
         continue;
       }
 
       const observation = this.#socketObservations.get(socket);
 
       if (observation) {
-        const filteredChanges = changes.filter(c => {
-          const propPred = getGuardingPredicate(instance.constructor, c.p);
-          return !propPred || propPred(socket, instance);
-        });
+        const changesWithGuards = await Promise.all(changes.map(async change => ({
+          change,
+          allowed: await hasObjectGuardAccess(socket, instance, change.p)
+        })));
+
+        const filteredChanges = changesWithGuards.filter(({ allowed }) => allowed).map(({ change }) => change);
 
         if (filteredChanges.length) {
           const key = `${kind}:${id}` as `${string}:${string}`;
