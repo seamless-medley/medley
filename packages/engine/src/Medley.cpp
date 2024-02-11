@@ -247,56 +247,59 @@ void Medley::changeListenerCallback(ChangeBroadcaster* source)
 }
 
 void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onLoadingDone) {
-    auto nextDeck = getNextDeck(currentDeck);
-
-    if (nextDeck == nullptr) {
-        currentDeck->log(LogLevel::Error, "Could not find another deck");
-        return;
-    }
-
-    if (nextDeck->isTrackLoading) {
-        nextDeck->log(LogLevel::Error, "Busy loading some track");
-        nextDeck->unloadTrack();
-    }
-
-    auto const pQueue = &queue;
-    const Deck::OnLoadingDone deckLoadingHandler = [this, _onLoadingDone = onLoadingDone, p = play, cd = currentDeck, _nextDeck = nextDeck](bool loadingResult) {
-        if (loadingResult) {
-            _onLoadingDone(true);
-
-            if (p) {
-                _nextDeck->start();
-            }
-
-            return;
-        }
-
-        loadNextTrack(cd, p, _onLoadingDone);
-    };
-
-    // Fetch next track from queue
-    if (queue.count() > 0) {
-        if (auto track = queue.fetchNextTrack()) {
-            nextDeck->loadTrack(track, deckLoadingHandler);
-        }
-
-        return;
-    }
-
     // Queue is empty, request to fill it with some tracks
-    {
+    if (queue.count() <= 0) {
         ScopedLock sl(callbackLock);
         listeners.call([&](Callback& listener) {
-            listener.enqueueNext([&, _pQueue = pQueue, cd = currentDeck, p = play, _onLoadingDone = onLoadingDone](bool enqueueResult) {
+            listener.enqueueNext([&, _pQueue = &queue, p = play, _onLoadingDone = onLoadingDone](bool enqueueResult) {
                 if (enqueueResult && _pQueue->count() > 0) {
-                    // enqueue succeeded, try to load again
-                    loadNextTrack(cd, p, _onLoadingDone);
+                    // enqueue succeeded, try to load again using available deck
+                    loadNextTrack(nullptr, p, _onLoadingDone);
                 }
                 else {
                     _onLoadingDone(false);
                 }
             });
         });
+
+        return;
+    }
+
+    // Fetch next track from queue
+    if (queue.count() > 0) {
+        if (auto track = queue.fetchNextTrack()) {
+            auto nextDeck = getNextDeck(currentDeck);
+
+            if (nextDeck == nullptr) {
+                currentDeck->log(LogLevel::Error, "Could not find another deck");
+                return;
+            }
+
+            if (nextDeck->_isTrackLoading) {
+                nextDeck->log(LogLevel::Error, "Busy loading some track");
+                nextDeck->unloadTrack();
+            }
+
+            const Deck::OnLoadingDone deckLoadingHandler = [this, _onLoadingDone = onLoadingDone, p = play, cd = currentDeck, _nextDeck = nextDeck](bool loadingResult) {
+                if (loadingResult) {
+                    _onLoadingDone(true);
+
+                    if (p) {
+                        _nextDeck->start();
+                    }
+
+                    return;
+                }
+
+                // Track loading failed, try again with next track
+                loadNextTrack(nullptr, p, _onLoadingDone);
+            };
+
+
+            nextDeck->loadTrack(track, deckLoadingHandler);
+        }
+
+        return;
     }
 }
 
@@ -312,9 +315,11 @@ void Medley::deckTrackScanned(Deck& sender)
 
 Deck* Medley::getAvailableDeck() {
     for (auto deck : decks) {
-        if (!deck->isTrackLoaded()) {
-            return deck;
+        if (deck->isTrackLoading() || deck->isTrackLoaded()) {
+            continue;
         }
+
+        return deck;
     }
 
     return nullptr;
@@ -702,7 +707,7 @@ bool Medley::play(bool shouldFade)
         Deck* loadedDeck = nullptr;
 
         for (auto deck : decks) {
-            if (deck->isTrackLoading || deck->isTrackLoaded()) {
+            if (deck->_isTrackLoading || deck->isTrackLoaded()) {
                 loadedDeck = deck;
             }
         }

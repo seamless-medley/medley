@@ -63,12 +63,12 @@ double Deck::getPosition() const
 
 void Deck::loadTrack(const ITrack::Ptr track, OnLoadingDone doneCallback)
 {
-    if (isTrackLoading) {
+    if (_isTrackLoading) {
         doneCallback(false);
         return;
     }
 
-    isTrackLoading = true;
+    _isTrackLoading = true;
     loader.load(track, doneCallback);
     loadingThread.addTimeSliceClient(&loader);
 
@@ -90,7 +90,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
     if (!newReader) {
         logger->warn("Could not create format reader");
-        isTrackLoading = false;
+        _isTrackLoading = false;
         return false;
     }
 
@@ -210,7 +210,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     this->reader = reader;
 
     this->track = track;
-    isTrackLoading = false;
+    _isTrackLoading = false;
 
     listeners.call([this](Callback& cb) {
         this->trackPlay = TrackPlay(this->track, getDuration());
@@ -224,7 +224,7 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
 
 void Deck::unloadTrackInternal()
 {
-    isTrackLoading = false;
+    _isTrackLoading = false;
     inputStreamEOF = false;
     playing = false;
     stopped = true;

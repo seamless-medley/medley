@@ -46,6 +46,8 @@ public:
 
     void unloadTrack();
 
+    bool isTrackLoading() const { return _isTrackLoading; }
+
     bool isTrackLoaded() const { return source != nullptr; }
 
     void setPosition(double time);
@@ -212,7 +214,7 @@ private:
 
     int64 findFadingPosition(AudioFormatReader* reader, int64 startSample, int64 numSamples);
 
-    bool isTrackLoading = false;
+    bool _isTrackLoading = false;
     ITrack::Ptr track = nullptr;
     TrackPlay trackPlay;
 
