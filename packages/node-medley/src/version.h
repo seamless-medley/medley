@@ -1,3 +1,4 @@
 #define MEDLEY_VERSION_MAJOR 0
 #define MEDLEY_VERSION_MINOR 4
-#define MEDLEY_VERSION_PATCH 0
+#define MEDLEY_VERSION_PATCH 1
+#define MEDLEY_VERSION_PRE_RELEASE "fix-doubled-track-loading.0"
