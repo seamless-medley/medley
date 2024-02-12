@@ -647,6 +647,11 @@ export class Station extends TypedEmitter<StationEvents> {
 
     this.#profile = profile;
     this.#boombox.sweeperInsertionRules = profile.sweeperRules;
+
+    if (this.#boombox.sweeperInsertionRules.length === 0 && id !== 'default') {
+      this.#boombox.sweeperInsertionRules = this.getProfile('default')?.sweeperRules ?? [];
+    }
+
     return profile;
   }
 
