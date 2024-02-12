@@ -71,7 +71,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     if (error) {
       const normalized = normalizePath(dir);
 
-      this.logger.error(error, 'Error in subscription for dir: %s marking it for re-subscribing', normalized);
+      this.logger.error('Error in subscription for dir: %s marking it for re-subscribing', normalized);
 
       const info = this.#watchInfos.get(normalized);
 
