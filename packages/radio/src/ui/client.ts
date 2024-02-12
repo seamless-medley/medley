@@ -587,8 +587,6 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
   remoteObserve<Kind extends Extract<keyof Types, string>>(kind: Kind, id: string, options: RemoteObserveOptions | undefined, handler: ObserverHandler<Kind>) {
     return new Promise<Types[Kind]>(async (resolve, reject) => {
-      console.log('remoteObserve', kind, id, new Error().stack);
-
       const key = `${kind}:${id}` as const;
 
       if (this.observingStores.has(key)) {

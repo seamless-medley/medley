@@ -491,8 +491,6 @@ export class GuildState {
       return false;
     }
 
-    this.adapter.getLogger().debug({ guildId: this.guildId }, 'temporarilyDisableKaraoke');
-
     return this.stationLink.exciter.setKaraokeParams({ enabled: false });
   }
 
@@ -500,8 +498,6 @@ export class GuildState {
     if (!this.stationLink?.exciter) {
       return false;
     }
-
-    this.adapter.getLogger().debug({ guildId: this.guildId, flag: this.#karaokeEnabled }, 'restoreKaraoke');
 
     return this.stationLink.exciter.setKaraokeParams({ enabled: this.#karaokeEnabled });
   }
