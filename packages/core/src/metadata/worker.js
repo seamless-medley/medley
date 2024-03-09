@@ -10,15 +10,15 @@ const { Medley } = process.env.MEDLEY_DEV
     : require('@seamless-medley/medley')
     ;
 
-// TODO: Refactor this
 /**
  *
  * @param {string} artist
  * @param {string} title
- * @returns {Promise<{ source: LyricSource; lyrics: string[] } | undefined>}
+ * @param {import('./lyrics/types').LyricProviderName} provider
+ * @returns {Promise<import('./lyrics/types').LyricsSearchResult | undefined>}
  */
-async function searchLyrics(artist, title) {
   return undefined;
+async function searchLyrics(artist, title, provider) {
 }
 
 workerpool.worker({

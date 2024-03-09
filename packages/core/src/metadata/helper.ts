@@ -6,6 +6,7 @@ import { MusicDb } from '../library/music_db';
 import { omitBy, negate } from 'lodash/fp';
 import { BoomBoxCoverAnyLyrics } from '../playout';
 import { stubFalse } from 'lodash';
+import { LyricProviderName, LyricsSearchResult } from './lyrics/types';
 
 let instance: MetadataHelper;
 
@@ -28,7 +29,7 @@ interface Methods {
   audioProperties(path: string): AudioProperties;
   coverAndLyrics(path: string): WorkerCoverAndLyrics | BoomBoxCoverAnyLyrics;
   isTrackLoadable(path: string): boolean;
-  searchLyrics(artist: string, title: string): { lyrics: string[], source: BoomBoxCoverAnyLyrics['lyricsSource'] } | undefined;
+  searchLyrics(artist: string, title: string, provider: LyricProviderName): LyricsSearchResult | undefined;
 }
 
 type RunIfNeededOptions = {
@@ -145,8 +146,8 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     .catch(stubFalse);
   }
 
-  async searchLyrics(artist: string, title: string) {
-    return this.#runIfNeeded(`searchLyrics:${artist}:${title}`, async () => this.exec('searchLyrics', artist, title));
+  async searchLyrics(artist: string, title: string, provider: LyricProviderName) {
+    return this.#runIfNeeded(`searchLyrics:${artist}:${title}`, async () => this.exec('searchLyrics', artist, title, provider));
   }
 
   static getDefaultInstance() {
@@ -177,8 +178,8 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     return this.getDefaultInstance().isTrackLoadable(path, timeout);
   }
 
-  static searchLyrics(artist: string, title: string) {
-    return this.getDefaultInstance().searchLyrics(artist, title);
+  static searchLyrics(artist: string, title: string, provider: LyricProviderName) {
+    return this.getDefaultInstance().searchLyrics(artist, title, provider);
   }
 }
 

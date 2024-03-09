@@ -26,11 +26,13 @@ export enum TrackKind {
   Insertion
 }
 
+export type LyricSource = {
+  text: string;
+  href?: string
+}
+
 export type BoomBoxCoverAnyLyrics = CoverAndLyrics & {
-  lyricsSource: {
-    text: string;
-    href?: string
-  }
+  lyricsSource: LyricSource;
 }
 
 export type BoomBoxTrackExtra = TrackExtra & {
