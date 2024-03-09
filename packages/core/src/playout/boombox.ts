@@ -3,7 +3,7 @@ import { castArray, chain, flatten, mapValues, matches, some, toLower, trim, uni
 import { isString } from 'lodash/fp';
 import { compareTwoStrings } from "string-similarity";
 import { TypedEmitter } from "tiny-typed-emitter";
-import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions } from "@seamless-medley/medley";
+import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions, AudioProperties } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track, TrackExtra } from "../track";
 import { TrackCollection, TrackIndex, WatchTrackCollection } from "../collections";
@@ -35,6 +35,7 @@ export type BoomBoxCoverAnyLyrics = CoverAndLyrics & {
 
 export type BoomBoxTrackExtra = TrackExtra & {
   tags?: Metadata;
+  maybeAudioProperties?: Promise<AudioProperties>;
   maybeCoverAndLyrics?: Promise<BoomBoxCoverAnyLyrics>;
   kind: TrackKind;
 }

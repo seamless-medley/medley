@@ -23,6 +23,7 @@ async function searchLyrics(artist, title) {
 
 workerpool.worker({
   metadata: Medley.getMetadata,
+  audioProperties: Medley.getAudioProperties,
   coverAndLyrics: Medley.getCoverAndLyrics,
   isTrackLoadable: Medley.isTrackLoadable,
   searchLyrics

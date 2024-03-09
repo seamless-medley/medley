@@ -1,5 +1,5 @@
 import { WorkerPoolOptions } from 'workerpool';
-import type { CoverAndLyrics, Metadata } from '@seamless-medley/medley';
+import type { AudioProperties, CoverAndLyrics, Metadata } from '@seamless-medley/medley';
 import { Track } from '../track';
 import { WorkerPoolAdapter } from '../worker_pool_adapter';
 import { MusicDb } from '../library/music_db';
@@ -25,6 +25,7 @@ export type FetchResult = {
 
 interface Methods {
   metadata(path: string): Metadata | undefined;
+  audioProperties(path: string): AudioProperties;
   coverAndLyrics(path: string): WorkerCoverAndLyrics | BoomBoxCoverAnyLyrics;
   isTrackLoadable(path: string): boolean;
   searchLyrics(artist: string, title: string): { lyrics: string[], source: BoomBoxCoverAnyLyrics['lyricsSource'] } | undefined;
@@ -91,6 +92,13 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     return (m ?? {}) as Metadata;
   }
 
+  async audioProperties(path: string) {
+    return this.#runIfNeeded(
+      `audioProperties:${path}`,
+      async () => this.exec('audioProperties', path)
+    );
+  }
+
   async coverAndLyrics(path: string) {
     return this.#runIfNeeded(`coverAndLyrics:${path}`, async () => {
       const lyricsSource = { text: 'Metadata' };
@@ -151,6 +159,10 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
 
   static metadata(path: string) {
     return this.getDefaultInstance().metadata(path);
+  }
+
+  static audioProperties(path: string) {
+    return this.getDefaultInstance().audioProperties(path);
   }
 
   static coverAndLyrics(path: string) {
