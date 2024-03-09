@@ -1,8 +1,9 @@
-import { BoomBoxCoverAnyLyrics, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics, StationTrack } from "@seamless-medley/core";
+import { BoomBoxCoverAnyLyrics, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics, searchLyrics, StationTrack } from "@seamless-medley/core";
 import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder, hyperlink, messageLink, inlineCode } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
 import { deny, guildStationGuard, joinStrings, reply, warn } from "../utils";
+import { LyricsSearchResult } from "@seamless-medley/core/src/metadata/lyrics/types";
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, trackId: StationTrack['id']) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
@@ -36,42 +37,43 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   const { lyrics: lyricsText, lyricsSource } = await new Promise<BoomBoxCoverAnyLyrics>(async (resolve) => {
     const bbCoverAndLyrics = await (trackExtra?.maybeCoverAndLyrics ?? MetadataHelper.coverAndLyrics(track.path));
 
-    if (bbCoverAndLyrics?.lyrics) {
-      const parsed = parseLyrics(bbCoverAndLyrics.lyrics);
+    let { lyrics, lyricsSource } = bbCoverAndLyrics;
+    const { cover, coverMimeType } = bbCoverAndLyrics;
 
-      resolve({
-        ...bbCoverAndLyrics,
-        lyrics: parsed.timeline.length > 0
-          ? joinStrings(lyricsToText(parsed, false))
-          : bbCoverAndLyrics.lyrics.trim()
-      });
+    let searchResult: LyricsSearchResult | undefined;
 
-      return;
-    }
-
-    if (trackExtra?.tags) {
+    if (!lyrics && trackExtra?.tags) {
       const artist = trackExtra.tags.artist;
       const title = trackExtra.tags.title;
 
       if (artist && title) {
         await interaction.deferReply();
 
-        const lyrics = await MetadataHelper.searchLyrics(artist, title).catch(() => undefined);
+        searchResult = await searchLyrics(artist, title).catch(() => undefined);
 
-        const searchedCoverAndLyrics: BoomBoxCoverAnyLyrics = {
-          cover: bbCoverAndLyrics?.cover ?? Buffer.alloc(0),
-          coverMimeType: bbCoverAndLyrics?.coverMimeType ?? '',
-          lyrics: lyrics?.lyrics?.join('\n') ?? '',
-          lyricsSource: lyrics?.source ?? { text: 'N/A' }
-        };
-
-        trackExtra.maybeCoverAndLyrics = Promise.resolve(searchedCoverAndLyrics);
-        resolve(searchedCoverAndLyrics);
-        return;
+        if (searchResult?.lyrics) {
+          lyrics = searchResult.lyrics;
+          lyricsSource = searchResult.source;
+        }
       }
     }
 
-    resolve(bbCoverAndLyrics);
+    const parsed = parseLyrics(lyrics);
+
+    const parsedCoverAndLyrics: BoomBoxCoverAnyLyrics = {
+      cover,
+      coverMimeType,
+      lyricsSource,
+      lyrics: parsed.timeline.length > 0
+        ? joinStrings(lyricsToText(parsed, false))
+        : lyrics.trim()
+    }
+
+    if (trackExtra) {
+      trackExtra.maybeCoverAndLyrics = Promise.resolve(parsedCoverAndLyrics);
+    }
+
+    resolve(parsedCoverAndLyrics);
   })
 
   if (!lyricsText) {
