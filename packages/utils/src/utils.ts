@@ -187,3 +187,21 @@ export function createNamedFunc<F extends (...args: any) => any>(name: string, f
   const f = ({ [name]: function() { return fn.apply(this, arguments) } })[name] as F;
   return f;
 }
+
+export async function groupByAsync<T, K extends string>(items: T[], getKey: (o: T) => Promise<K>) {
+  const mapped = await Promise.all(items.map(async item => ({
+    key: await getKey(item),
+    item
+  })));
+
+  return mapped.reduce((o, { key, item }) => {
+    if (!(key in o)) {
+      o[key] = [];
+    }
+
+    o[key].push(item);
+
+    return o;
+  }, {} as Record<K, T[]>)
+}
+
