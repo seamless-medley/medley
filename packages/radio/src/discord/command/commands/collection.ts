@@ -51,8 +51,8 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     ttl: 90_000,
     data: station.currentSequenceCollection,
 
-    makeCaption: () => [],
-    makeComponents(trackingCollection) {
+    makeCaption: async () => [],
+    async makeComponents(trackingCollection) {
       const collections = getCollections();
 
       if (getCollections().length <= 1) {

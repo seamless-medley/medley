@@ -4,13 +4,15 @@ import { guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
 import { noop } from "lodash";
 import { Strings } from "./type";
 
+export type InteractorMessageBuilder = () => Promise<Omit<InteractionReplyOptions, 'flags'>>;
+
 export type InteractorOnCollectParams<D> = {
   data?: D;
   runningKey: string;
   collected: MessageComponentInteraction;
   collector: InteractionCollector<CollectedMessageInteraction>,
   selector: Message,
-  buildMessage: () => Omit<InteractionReplyOptions, 'flags'>;
+  buildMessage: InteractorMessageBuilder;
   resetTimer: () => void;
   done: (shouldDelete?: boolean) => Promise<any>;
 }
@@ -29,8 +31,8 @@ export type InteractorOptions<D = unknown> = {
   data?: D;
   //
   formatTimeout?: (time: string) => string;
-  makeCaption: (data?: D) => Strings;
-  makeComponents: (data?: D) => Array<ActionRowBuilder<MessageActionRowComponentBuilder>>;
+  makeCaption: (data?: D) => Promise<Strings>;
+  makeComponents: (data?: D) => Promise<Array<ActionRowBuilder<MessageActionRowComponentBuilder>>>;
   onCollect: (params: InteractorOnCollectParams<D>) => any;
 
   hook?: (params: InteractorHookParams) => () => any;
@@ -39,8 +41,6 @@ export type InteractorOptions<D = unknown> = {
 const defaultFunctions = {
   formatTimeout: (time: string) => `Timeout: ${time}`
 }
-
-export type InteractorMessageBuilder = () => Omit<InteractionReplyOptions, 'flags'>;
 
 export async function interact<D>(options: InteractorOptions<D>): Promise<void> {
   const {
@@ -63,16 +63,16 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
 
   const makeTimeout = () => ttl ? (formatTimeout ?? defaultFunctions.formatTimeout)(formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')) : undefined;
 
-  const buildMessage: InteractorMessageBuilder = () => ({
+  const buildMessage: InteractorMessageBuilder = async () => ({
     fetchReply: true,
     content: joinStrings([
       makeTimeout(),
-      ...makeCaption(options.data)
+      ...await makeCaption(options.data)
     ]),
-    components: makeComponents(options.data)
+    components: await makeComponents(options.data)
   });
 
-  const replyMessage = () => reply(interaction, buildMessage());
+  const replyMessage = async () => reply(interaction, await buildMessage());
 
   const selector = await replyMessage();
 

@@ -1,7 +1,11 @@
 import {
   AudienceType,
+  AudioProperties,
+  BoomBoxTrack,
+  BoomBoxTrackExtra,
   getTrackBanner,
   makeAudience,
+  MetadataHelper,
   StationTrack
 } from "@seamless-medley/core";
 
@@ -19,7 +23,7 @@ import {
   MessageComponentInteraction
 } from "discord.js";
 
-import { chain, chunk, clamp, Dictionary, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
+import { chain, chunk, clamp, Dictionary, flatten, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
@@ -28,6 +32,7 @@ import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, 
 import { ansi } from "../../../format/ansi";
 import { getVoteMessage } from "../vote";
 import { interact } from "../../interactor";
+import { groupByAsync } from "@seamless-medley/utils";
 
 type Selection = {
   title: string;
@@ -129,11 +134,11 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     }, {} as Dictionary<SelectionsWithChunk>)
     .value();
 
-  const [isGrouped, resultSelectionChunks] = ((): [grouped: boolean, data: SelectMenuComponentOptionData[][]] => {
+  const [isGrouped, resultSelectionChunks] = await (async (): Promise<[grouped: boolean, data: SelectMenuComponentOptionData[][]]> => {
     const entries = Object.entries(groupedSelections);
 
     if (entries.length === 1) {
-      return [false, [makeTrackSelections(entries[0][1])]];
+      return [false, [await makeTrackSelections(entries[0][1])]];
     }
 
     return [true, chain(entries)
@@ -260,7 +265,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     ttl: 90_000,
     formatTimeout: time => `Request Timeout: ${time}`,
 
-    makeCaption() {
+    async makeCaption() {
       switch (state.menu) {
         case 'results':
           if (isGrouped && state.totalPages > 1) {
@@ -272,7 +277,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
       }
     },
 
-    makeComponents() {
+    async makeComponents() {
       const rows: Array<ActionRowBuilder<MessageActionRowComponentBuilder>> = [];
 
       const { page, totalPages, choices } = state;
@@ -307,7 +312,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         case 'pick':
           rows.push(
             new ActionRowBuilder<MessageActionRowComponentBuilder>()
-              .addComponents(trackPickerBuilder.addOptions(makeTrackSelections(choices))),
+              .addComponents(trackPickerBuilder.addOptions(await makeTrackSelections(choices))),
 
             new ActionRowBuilder<MessageActionRowComponentBuilder>()
               .addComponents(cancelButtonBuilder, backButtonBuilder)
@@ -347,7 +352,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         state.menu = 'results';
         state.page = clamp(state.page + increment, 0, state.totalPages - 1);
 
-        collected.update(buildMessage());
+        collected.update(await buildMessage());
 
         return;
       }
@@ -393,7 +398,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
           state.menu = 'pick';
           state.choices = choices;
 
-          collected.update(buildMessage());
+          collected.update(await buildMessage());
 
           return;
         }
@@ -416,39 +421,58 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
 const isExtensionLossless = (ext: string) => /(flac|wav)/i.test(ext);
 
+function fetchAudioProps(track: BoomBoxTrack): Promise<AudioProperties> | undefined {
+  const { extra } = track;
+
+  if (!extra) {
+    return;
+  }
+
+  if (extra.maybeAudioProperties === undefined) {
+    extra.maybeAudioProperties = MetadataHelper.audioProperties(track.path);
+  }
+
+  return extra.maybeAudioProperties;
+}
+
 const trackSelectionProcessors: ClarificationProcessor[] = [
+  // By collection
   {
-    getKey: (s => s.track.collection.id),
+    getKey: (async s => s.track.collection.id),
     prioritize: identity,
-    clarify: (_, s) => s.track.collection.extra.description
+    clarify: async (_, s) => s.track.collection.extra.description
   },
+  // Same collection?, try extension
   {
-    getKey: s => extname(s.track.path.toUpperCase()).substring(1),
+    getKey: async s => extname(s.track.path.toUpperCase()).substring(1),
     prioritize: key => isExtensionLossless(key) ? -1 : 0,
     clarify: identity,
   },
+  // Still not clear?, may be audio sample rate
   {
-    getKey: ({ track }) => ((track.extra?.tags?.sampleRate ?? 0) / 1000).toFixed(1),
+    getKey: async ({ track }) => (((await fetchAudioProps(track))?.sampleRate ?? 0) / 1000).toFixed(1),
     prioritize: k => -k,
-    clarify: (key, s) => s.track.extra?.tags?.sampleRate ? `${key}KHz` : ''
+    clarify: async (key, s) => (await fetchAudioProps(s.track))?.sampleRate ? `${key}KHz` : ''
   },
+  // Bitrate
   {
-    getKey: sel => sel.track.extra?.tags?.bitrate ?? 0,
+    getKey: async ({ track }) => ((await fetchAudioProps(track))?.bitrate ?? 0).toString(),
     prioritize: k => -k,
-    clarify: key => `${key}Kbps`
+    clarify: async key => `${key}Kbps`
   },
+  // Album
   {
-    getKey: s => s.track.extra?.tags?.album ?? '',
+    getKey: async s => s.track.extra?.tags?.album ?? '',
     prioritize: identity,
     clarify: identity
   }
 ];
 
-const makeTrackSelections = (choices: Selection[]) => chain(choices)
-  .groupBy(selectionOrder)
-  .values()
-  .flatMap(g => clarifySelection(g, trackSelectionProcessors))
-  .value()
+const makeTrackSelections = async (choices: Selection[]): Promise<SelectMenuComponentOptionData[]> => {
+  const groups = Object.values(groupBy(choices, selectionOrder));
+  const clarifications = groups.map(g => clarifySelection(g, trackSelectionProcessors));
+  return flatten(await Promise.all(clarifications));
+}
 
 function selectionOrder(selection: Selection): 0 | 1 | 2 {
   const { options } = selection.track.collection;
@@ -470,12 +494,12 @@ function selectionToComponentData(selection: Selection, [collection, ...clarifie
 }
 
 type ClarificationProcessor = {
-  getKey: (s: Selection) => any;
+  getKey: (s: Selection) => Promise<string>;
   prioritize: (key: string) => number;
-  clarify?: (key: string, sample: Selection) => string;
+  clarify?: (key: string, sample: Selection) => Promise<string>;
 }
 
-function clarifySelection(selections: Selection[], processors: ClarificationProcessor[], clarified: string[] = []) {
+async function clarifySelection(selections: Selection[], processors: ClarificationProcessor[], clarified: string[] = []) {
   if (processors.length < 1) {
     return selections.map(sel => selectionToComponentData(sel, clarified));
   }
@@ -484,7 +508,7 @@ function clarifySelection(selections: Selection[], processors: ClarificationProc
 
   const result: SelectMenuComponentOptionData[] = [];
 
-  const groups = groupBy(selections, s => processor.getKey(s));
+  const groups = await groupByAsync(selections, s => processor.getKey(s));
   const keys = Object.keys(groups).sort(processor.prioritize);
 
   for (const key of keys) {
@@ -494,10 +518,10 @@ function clarifySelection(selections: Selection[], processors: ClarificationProc
       continue;
     }
 
-    const nextClarifications = [...clarified, processor.clarify?.(key, group[0]) ?? ''];
+    const nextClarifications = [...clarified, await processor.clarify?.(key, group[0]) ?? ''];
 
     if (group.length > 1) {
-      result.push(...clarifySelection(group, nextProcessors, nextClarifications));
+      result.push(...await clarifySelection(group, nextProcessors, nextClarifications));
       continue;
     }
 

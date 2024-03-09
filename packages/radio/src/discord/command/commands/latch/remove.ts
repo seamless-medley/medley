@@ -50,8 +50,8 @@ export async function remove(options: SubCommandHandlerOptions) {
     interaction,
     onGoing,
     ttl: 90_000,
-    makeCaption: () => ['Latch session:'],
-    makeComponents: () => [
+    makeCaption: async () => ['Latch session:'],
+    makeComponents: async () => [
       new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
           new StringSelectMenuBuilder()

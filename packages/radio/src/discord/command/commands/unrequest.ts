@@ -49,8 +49,8 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     onGoing,
     ttl: 90_000,
 
-    makeCaption: () => ['Requests:'],
-    makeComponents: () => [
+    makeCaption: async () => ['Requests:'],
+    makeComponents: async () => [
       new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
           new StringSelectMenuBuilder()

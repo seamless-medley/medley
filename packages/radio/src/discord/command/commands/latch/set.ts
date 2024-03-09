@@ -80,12 +80,12 @@ export async function set(options: SubCommandHandlerOptions) {
     onGoing,
     ttl: 90_000,
 
-    makeCaption: () => [
+    makeCaption: async () => [
       'Latch:',
       error.text ? makeColoredMessage('red|b', error.text) : undefined
     ],
 
-    makeComponents() {
+    async makeComponents() {
       const listing = collections.map<SelectMenuComponentOptionData>(c => ({
         label: c.extra.description ?? startCase(c.id),
         description: `${c.length} track(s)`,
@@ -175,7 +175,7 @@ export async function set(options: SubCommandHandlerOptions) {
 
         selections[collected.customId] = collected.values?.at(0);
 
-        await collected.update(buildMessage());
+        await collected.update(await buildMessage());
       }
     },
 

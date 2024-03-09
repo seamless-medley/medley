@@ -103,8 +103,8 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
     automaton,
     interaction,
     onGoing,
-    makeCaption: () => [],
-    makeComponents() {
+    makeCaption: async () => [],
+    async makeComponents() {
       const listing = stations.map<SelectMenuComponentOptionData>(station => ({
         label: station.name,
         value: station.id,

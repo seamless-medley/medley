@@ -39,8 +39,8 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     onGoing,
     ttl: 90_000,
 
-    makeCaption: () => [],
-    makeComponents() {
+    makeCaption: async () => [],
+    async makeComponents() {
       const listing = profiles.map<SelectMenuComponentOptionData>(p => ({
         label: p.name,
         description: p.description ?? `${p.name} profile`,
