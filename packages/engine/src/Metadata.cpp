@@ -191,30 +191,6 @@ namespace {
     }
 }
 
-void medley::Metadata::readMpegInfo(const File& f)
-{
-    FileInputStream stream(f);
-
-    mp3dec_io_t io{};
-    mp3dec_ex_t dec{};
-
-    io.read = &minimp3_read_cb;
-    io.seek = &minimp3_seek_cb;
-    io.read_data = io.seek_data = &stream;
-
-    mp3dec_ex_open_cb(&dec, &io, MP3D_SEEK_TO_SAMPLE);
-
-    auto lengthInSamples = dec.detected_samples / dec.info.channels;
-
-    if (lengthInSamples <= 0) {
-        lengthInSamples = dec.samples / dec.info.channels;
-    }
-
-    bitrate = dec.info.bitrate_kbps;
-    sampleRate = dec.info.hz;
-    duration = lengthInSamples / (float)sampleRate;
-}
-
 bool medley::Metadata::readID3V2(const juce::File& f)
 {
     #ifdef _WIN32
@@ -230,9 +206,6 @@ bool medley::Metadata::readID3V2(const juce::File& f)
     }
 
     try {
-
-        readMpegInfo(f);
-
         if (!file.hasID3v2Tag()) {
             return false;
         }
@@ -341,22 +314,7 @@ bool medley::Metadata::readFLAC(const File& f)
     TagLib::FLAC::File file(&stream, TagLib::ID3v2::FrameFactory::instance(), true, TagLib::AudioProperties::Fast);
 
     if (!file.isValid()) {
-        throw std::runtime_error("Invalid FLAC file");
-    }
-
-    if (isFLACSupported(&stream)) {
-        try {
-            auto const props = file.audioProperties();
-
-            bitrate = props->bitrate();
-            sampleRate = props->sampleRate();
-            duration = props->lengthInMilliseconds() / 1000.0;
-        }
-        catch (...) {
-            bitrate = 0;
-            sampleRate = 0;
-            duration = 0;
-        }
+        throw std::runtime_error("Could not open FLAC file for reading");
     }
 
     try {
@@ -531,5 +489,107 @@ void medley::Metadata::CoverAndLyrics::read(const File& file, bool readCover, bo
         readXiph(file, readCover, readLyrics);
         return;
     }
+    }
+}
+
+medley::Metadata::AudioProperties::AudioProperties(const File& file)
+{
+    read(file);
+}
+
+void medley::Metadata::AudioProperties::read(const File& file)
+{
+    auto filetype = utils::getFileTypeFromFileName(file);
+
+    switch (filetype) {
+    case utils::FileType::MP3: {
+        readMpegInfo(file);
+        return;
+    }
+
+    case utils::FileType::FLAC: {
+        readXiph(file);
+        return;
+    }
+    }
+}
+
+void medley::Metadata::AudioProperties::readMpegInfo(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+    TagLib::MPEG::File file(&stream, TagLib::ID3v2::FrameFactory::instance(), true, TagLib::AudioProperties::Average);
+
+    if (file.isSupported(&stream)) {
+        auto props = file.audioProperties();
+
+        bitrate = props->bitrate();
+        sampleRate = props->sampleRate();
+        duration = props->lengthInSeconds();
+
+        //if ((bitrate != 0) && (sampleRate != 0) && (duration != 0)) {
+        //    return;
+        //}
+    }
+
+    /*{
+        FileInputStream stream(f);
+
+        mp3dec_io_t io{};
+        mp3dec_ex_t dec{};
+
+        io.read = &minimp3_read_cb;
+        io.seek = &minimp3_seek_cb;
+        io.read_data = io.seek_data = &stream;
+
+        if (mp3dec_ex_open_cb(&dec, &io, MP3D_SEEK_TO_SAMPLE) != 0) {
+            return;
+        }
+
+        auto lengthInSamples = dec.detected_samples / dec.info.channels;
+
+        if (lengthInSamples <= 0) {
+            lengthInSamples = dec.samples / dec.info.channels;
+        }
+
+        bitrate = dec.info.bitrate_kbps;
+        sampleRate = dec.info.hz;
+        duration = lengthInSamples / (float)sampleRate;
+    }*/
+}
+
+void medley::Metadata::AudioProperties::readXiph(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+    TagLib::FLAC::File file(&stream, TagLib::ID3v2::FrameFactory::instance(), true, TagLib::AudioProperties::Fast);
+
+    if (!file.isValid()) {
+        throw std::runtime_error("Invalid FLAC file");
+    }
+
+    if (isFLACSupported(&stream)) {
+        try {
+            auto const props = file.audioProperties();
+
+            bitrate = props->bitrate();
+            sampleRate = props->sampleRate();
+            duration = props->lengthInMilliseconds() / 1000.0;
+        }
+        catch (...) {
+            bitrate = 0;
+            sampleRate = 0;
+            duration = 0;
+        }
     }
 }

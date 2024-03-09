@@ -121,6 +121,8 @@ public:
 
     static Napi::Value static_getMetadata(const Napi::CallbackInfo& info);
 
+    static Napi::Value static_getAudioProperties(const Napi::CallbackInfo& info);
+
     static Napi::Value static_getCoverAndLyrics(const Napi::CallbackInfo& info);
 
     static Napi::Value static_isTrackLoadable(const Napi::CallbackInfo& info);

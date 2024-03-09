@@ -64,6 +64,25 @@ public:
         juce::String lyrics;
     };
 
+    class AudioProperties
+    {
+    public:
+        AudioProperties(const File& file);
+
+        int getBitrate() const { return bitrate; }
+        int getSampleRate() const { return sampleRate; }
+        double getDuration() const { return duration; }
+
+    private:
+        void read(const File& file);
+        void readMpegInfo(const File& f);
+        void readXiph(const File& f);
+
+        int bitrate = 0;
+        int sampleRate = 0;
+        double duration = 0;
+    };
+
     Metadata();
 
     bool readFromTrack(const ITrack::Ptr track);
@@ -82,14 +101,10 @@ public:
     double getCueIn() const { return cueIn; }
     double getCueOut() const { return cueOut; }
     double getLastAudible() const { return lastAudible; }
-    int getBitrate() const { return bitrate; }
-    int getSampleRate() const { return sampleRate; }
-    double getDuration() const { return duration; }
 
     std::vector<std::pair<juce::String, juce::String>>&  getComments() { return comments; }
 
-private:
-    void readMpegInfo(const File& f);
+private:    
     bool readID3V2(const File& f);
     bool readFLAC(const File& f);
     void readTag(const TagLib::Tag& tag);
@@ -108,10 +123,6 @@ private:
     double lastAudible = -1.0;
 
     std::vector<std::pair<juce::String, juce::String>> comments;
-
-    int bitrate = 0;
-    int sampleRate = 0;
-    double duration = 0;
 };
 
 }

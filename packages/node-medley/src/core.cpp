@@ -17,14 +17,6 @@ namespace {
         result.Set("albumArtist", safeString(env, metadata.getAlbumArtist()));
         result.Set("originalArtist", safeString(env, metadata.getOriginalArtist()));
 
-        auto bitrate = metadata.getBitrate();
-        auto sampleRate = metadata.getSampleRate();
-        auto duration = metadata.getDuration();
-
-        result.Set("bitrate", bitrate != 0.0f ? Napi::Number::New(env, bitrate) : env.Undefined());
-        result.Set("sampleRate", sampleRate != 0.0f ? Napi::Number::New(env, sampleRate) : env.Undefined());
-        result.Set("duration", duration != 0.0f ? Napi::Number::New(env, duration) : env.Undefined());
-
         auto trackGain = metadata.getTrackGain();
         auto bpm = metadata.getBeatsPerMinute();
 
@@ -49,6 +41,21 @@ namespace {
 
         return result;
     }
+
+    void readAudioProperties(juce::String trackFile, Object& result) {
+        medley::Metadata::AudioProperties audProps(trackFile);
+
+        auto bitrate = audProps.getBitrate();
+        auto sampleRate = audProps.getSampleRate();
+        auto duration = audProps.getDuration();
+
+        auto env = result.Env();
+
+        result.Set("bitrate", bitrate != 0.0f ? Napi::Number::New(env, bitrate) : env.Undefined());
+        result.Set("sampleRate", sampleRate != 0.0f ? Napi::Number::New(env, sampleRate) : env.Undefined());
+        result.Set("duration", duration != 0.0f ? Napi::Number::New(env, duration) : env.Undefined());
+    }
+
 }
 
 void Medley::Initialize(Object& exports) {
@@ -86,6 +93,7 @@ void Medley::Initialize(Object& exports) {
         InstanceAccessor<&Medley::getReplayGainBoost, &Medley::setReplayGainBoost>("replayGainBoost"),
         //
         StaticMethod<&Medley::static_getMetadata>("getMetadata"),
+        StaticMethod<&Medley::static_getAudioProperties>("getAudioProperties"),
         StaticMethod<&Medley::static_getCoverAndLyrics>("getCoverAndLyrics"),
         StaticMethod<&Medley::static_isTrackLoadable>("isTrackLoadable"),
         StaticMethod<&Medley::static_getInfo>("$getInfo"),
@@ -965,6 +973,22 @@ Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
     }
 
     return createJSMetadata(env, metadata);
+}
+
+Napi::Value Medley::static_getAudioProperties(const Napi::CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    juce::String trackFile = info[0].ToString().Utf8Value();
+    auto result = Object::New(env);
+
+    readAudioProperties(trackFile, result);
+
+    return result;
 }
 
 Napi::Value Medley::static_getCoverAndLyrics(const Napi::CallbackInfo& info) {

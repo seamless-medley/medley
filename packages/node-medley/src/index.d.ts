@@ -250,6 +250,8 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   static getMetadata(path: string): Metadata | undefined;
 
+  static getAudioProperties(path: string): AudioProperties;
+
   static getCoverAndLyrics(path: string): CoverAndLyrics;
 
   static isTrackLoadable(track: TrackDescriptor<any>): boolean;
@@ -360,12 +362,15 @@ export type Metadata = {
   isrc?: string;
   albumArtist?: string;
   originalArtist?: string;
-  bitrate?: number;
-  sampleRate?: number;
-  duration?: number;
   trackGain?: number;
   bpm?: number;
   comments: [string, string][];
+}
+
+export type AudioProperties = {
+  bitrate?: number;
+  sampleRate?: number;
+  duration?: number;
 }
 
 export type MetadataFields = keyof Metadata;
