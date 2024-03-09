@@ -62,12 +62,20 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     }
 
     const promise = new Promise<R>(async (resolve, reject) => {
+      let timer: NodeJS.Timeout;
+
       if (timeout) {
         const cause = new Error();
-        setTimeout(() => reject(new TaskTimeoutError(cause)), timeout);
+
+        timer = setTimeout(() => {
+          reject(new TaskTimeoutError(cause));
+        }, timeout);
       }
 
-      executor().then(resolve).catch(reject);
+      executor()
+        .then(resolve)
+        .catch(reject)
+        .finally(() => timer && clearTimeout(timer))
     });
 
     const removeOnGoing = () => void setTimeout(() => ongoingTasks.delete(key), ttl);
