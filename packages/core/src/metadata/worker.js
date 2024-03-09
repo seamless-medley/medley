@@ -2,6 +2,7 @@
 
 const { dirname } = require('path');
 const workerpool = require('workerpool');
+const { Searcher: MMSearcher, sourceName: mmSourceName } = require('./lyrics/musixmatch')
 
 /** @type {import('@seamless-medley/medley')} */
 const { Medley } = process.env.MEDLEY_DEV
@@ -17,8 +18,13 @@ const { Medley } = process.env.MEDLEY_DEV
  * @param {import('./lyrics/types').LyricProviderName} provider
  * @returns {Promise<import('./lyrics/types').LyricsSearchResult | undefined>}
  */
-  return undefined;
 async function searchLyrics(artist, title, provider) {
+  /** @type {import('./lyrics/types').LyricsSearcher} */
+  const instance = new ({
+    [mmSourceName]: MMSearcher
+  })[provider];
+
+  return instance?.searchLyrics(artist, title).catch(() => undefined);
 }
 
 workerpool.worker({
