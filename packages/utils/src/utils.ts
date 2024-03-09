@@ -40,7 +40,19 @@ export function weightedSample<T>(list: T[], weights: number[]) {
   return sample(list);
 }
 
-export const waitFor = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+export const waitFor = (ms: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {
+  const handleAbort = () => {
+    clearTimeout(timer);
+    reject(new Error('Aborted'));
+  }
+
+  signal?.addEventListener('abort', handleAbort);
+
+  const timer = setTimeout(() => {
+    signal?.removeEventListener('abort', handleAbort);
+    resolve();
+  }, ms);
+});
 
 export const breath = () => waitFor(0);
 
