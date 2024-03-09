@@ -9,7 +9,7 @@ import { debounce, groupBy, noop, once, shuffle, stubFalse, stubTrue, uniq } fro
 import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
 
-import { TrackCollection, TrackCollectionOptions } from "./base";
+import { ChunkHandler, TrackCollection, TrackCollectionOptions } from "./base";
 import { Track } from "../track";
 import { breath } from '@seamless-medley/utils';
 
@@ -235,8 +235,11 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     return glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
   }
 
-  async #scan(dir: string, fn: () => any = () => noop) {
-    const done = once(fn);
+  async #scan(dir: string, onFirstChunkAdded?: () => any) {
+    const start = performance.now();
+    this.emit('scan' as any);
+
+    const notifyOnce = once(onFirstChunkAdded ?? noop) as ChunkHandler<T>;
 
     const scanners = [this.#extScanner, this.#globScanner];
 
@@ -244,10 +247,12 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       const files = await scanner.call(this, dir);
 
       if (files !== false) {
-        await this.add(shuffle(files), undefined, done).then(breath);
+        await this.add(shuffle(files), undefined, notifyOnce).then(breath);
         break;
       }
     }
+
+    this.emit('scan-done' as any);
   }
 
   async rescan(full?: boolean) {

@@ -1,4 +1,4 @@
-import { castArray, chain, isString, noop } from 'lodash';
+import { castArray, chain, isString, noop, partition } from 'lodash';
 import normalizePath from 'normalize-path';
 import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents } from '../collections';
 import { Logger, createLogger } from '@seamless-medley/logging';
@@ -30,10 +30,13 @@ export type MusicTrackCollectionEvents<O> = TrackCollectionEvents<MusicTrack<O>>
 type IndexInfo<O> = {
   track: MusicTrack<O>;
   retried?: number;
+  succeeded?: boolean;
 }
 
+type Stats = Record<'discovered' | 'indexing' | 'indexed', number>;
 
 export interface MusicLibraryEvents {
+  stats(stats: Stats): void;
 }
 
 export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicLibraryEvents> {
@@ -49,6 +52,25 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     super();
 
     this.#logger = createLogger({ name: 'library', id: this.id });
+  }
+
+  #stats: Stats = {
+    discovered: 0,
+    indexing: 0,
+    indexed: 0
+  }
+
+  private set stats(newStats: Partial<Stats>) {
+    this.#stats = {
+      ...this.#stats,
+      ...newStats
+    }
+
+    this.emit('stats', this.#stats);
+  }
+
+  get stats() {
+    return this.#stats;
   }
 
   #trackCreator: TrackCreator<MusicTrack<O>> = async (path) => {
@@ -71,20 +93,42 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     }
   }
 
-  #handleTrackAddition = (tracks: Array<MusicTrack<O>>) => {
-    this.#tryIndexTracks(tracks.map(track => ({ track })));
-  }
+  #handleTrackAddition = (collection: WatchTrackCollection<MusicTrack<O>, MusicLibraryExtra<O>>) => (tracks: Array<MusicTrack<O>>, chunkIndex: number, totalChunks: number) => {
+    this.stats = {
+      discovered: this.#stats.discovered + tracks.length
+    }
 
-  #tryIndexTracks = (infos: Array<IndexInfo<O>>) => {
-    const failures: Array<IndexInfo<O>> = [];
+    const infos = tracks.map<IndexInfo<O>>(track => ({ track, succeeded: false }));
 
-    this.#indexTracks(infos, failures, () => {
+    this.#tryIndexTracks(infos, () => {
+      const [succeeded, failures] = partition(infos, info => info.succeeded);
+
+      this.#logger.info('%d tracks(s) from collection \'%s\' have been indexed', succeeded.length, collection.extra.description);
+
       if (failures.length) {
-        setTimeout(() => this.#tryIndexTracks(failures), 1000);
+        this.#logger.warn(failures.map(f => f.track.path), 'Could not index');
+      }
+
+      if (chunkIndex +1 === totalChunks) {
+        this.#logger.info('Done indexing: %s', collection.extra.description);
       }
     });
   }
 
+  #tryIndexTracks = async (infos: Array<IndexInfo<O>>, done: () => void) => {
+    this.stats = {
+      indexing: this.#stats.indexing + infos.length
+    }
+
+    this.#indexTracks(infos, async (retries) => {
+      if (retries.length) {
+        setTimeout(() => this.#tryIndexTracks(retries, done), 1000);
+        return;
+      }
+
+      done();
+    });
+  }
 
   #handleTrackRemoval = (tracks: Array<MusicTrack<O>>) => {
     for (const { id } of tracks) {
@@ -92,6 +136,11 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     }
 
     this.#searchEngine.removeAll(tracks);
+
+    this.stats = {
+      discovered: this.#stats.discovered - tracks.length,
+      indexed: this.#stats.indexed - tracks.length
+    }
   }
 
   #handleTrackUpdates = async (tracks: Array<MusicTrack<O>>) => {
@@ -114,36 +163,44 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     super.remove(...collections);
   }
 
-  async #indexTracks(infos: Array<IndexInfo<O>>, failures: Array<IndexInfo<O>>, done: () => void) {
-    await Promise.all(infos.map(info => this.#indexTrack(info).catch(() => {
-      info.retried ??= 0;
-      info.retried++;
+  async #indexTracks(infos: Array<IndexInfo<O>>, done: (failures: Array<IndexInfo<O>>) => void) {
+    const failures: Array<IndexInfo<O>> = [];
 
-      if (info.retried <= 3) {
-        failures.push(info);
-      }
-    })));
+    await Promise.all(infos.map(info => this.#indexTrack(info)
+      .then(() => {
+        info.succeeded = true;
 
-    done();
+        this.stats = {
+          indexing: this.#stats.indexing - 1,
+          indexed: this.#stats.indexed + 1
+        }
+      })
+      .catch(() => {
+        info.retried ??= 0;
+        info.retried++;
+
+        this.stats = {
+          indexing: this.#stats.indexing - 1
+        }
+
+        if (info.retried <= 3) {
+          failures.push(info);
+        }
+      })
+    ));
+
+    done(failures);
   }
 
-  async #indexTrack({ track }: IndexInfo<O>, force: boolean = false) {
+  async #indexTrack({ track, retried }: IndexInfo<O>, force: boolean = false) {
     if (force || !track.extra?.tags) {
-      try {
-        await helper.fetchMetadata(track, this.musicDb, force)
-          .then(async (result) => {
-            track.musicId = result.metadata.isrc,
-            track.extra = {
-              ...track.extra,
-              tags: result.metadata,
-              kind: TrackKind.Normal
-            };
-          });
-      }
-      catch (e) {
-        this.#logger.error(e, 'Error while indexing a track');
-        throw e;
-      }
+      const { metadata } = await MetadataHelper.fetchMetadata(track, this.musicDb, force);
+      track.musicId = metadata.isrc,
+      track.extra = {
+        ...track.extra,
+        tags: metadata,
+        kind: TrackKind.Normal
+      };
     }
 
     try {
@@ -183,9 +240,17 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
         resolve(newCollection);
       });
 
-      newCollection.on('tracksAdd', this.#handleTrackAddition);
+      newCollection.on('tracksAdd', this.#handleTrackAddition(newCollection));
       newCollection.on('tracksRemove', this.#handleTrackRemoval);
       newCollection.on('tracksUpdate', this.#handleTrackUpdates);
+
+      newCollection.on('scan' as any, () => {
+        this.#logger.info('Start scanning collection \`%s\`', newCollection.extra.description);
+      });
+
+      newCollection.on('scan-done' as any, () => {
+        this.#logger.info('Finish scanning collection \'%s\'', newCollection.extra.description);
+      });
 
       this.add(newCollection);
 
@@ -320,5 +385,3 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     return result.map(s => s.suggestion);
   }
 }
-
-const helper = new MetadataHelper();

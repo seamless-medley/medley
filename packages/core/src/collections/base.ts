@@ -53,16 +53,23 @@ export type TrackCollectionEvents<T extends Track<any>> = {
   refresh: () => void;
   trackShift: (track: T) => void;
   trackPush: (track: T) => void;
-  tracksAdd: (tracks: T[]) => void;
+  tracksAdd: (tracks: T[], chunkIndex: number, totalChunks: number) => void;
   tracksRemove: (tracks: T[]) => void;
   tracksUpdate: (tracks: T[]) => void;
 }
 
 export const supportedExts = ['mp3', 'flac', 'wav', 'ogg', 'aiff'];
 
-export const knownExtRegExp = new RegExp(`\\.(${supportedExts.join('|')})$`, 'i')
+export const knownExtRegExp = new RegExp(`\\.(${supportedExts.join('|')})$`, 'i');
 
-export class TrackCollection<T extends Track<any>, Extra = any, Options extends TrackCollectionOptions<T> = TrackCollectionOptions<T>> extends TypedEmitter<TrackCollectionEvents<T>> {
+export type ChunkHandler<T> = (chunk: T[], chunkIndex: number, totalChunks: number) => Promise<void>;
+
+export class TrackCollection<
+  T extends Track<any>,
+  Extra = any,
+  Options extends TrackCollectionOptions<T> = TrackCollectionOptions<T>
+> extends TypedEmitter<TrackCollectionEvents<T>>
+{
   protected _ready: boolean = false;
 
   protected tracks: T[] = [];
@@ -167,7 +174,7 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
     return knownExtRegExp.test(filename);
   }
 
-  async #transform(paths: string[], onChunkCreated: (tracks: T[]) => Promise<any>) {
+  async #transform(paths: string[], onChunkCreated: ChunkHandler<T>) {
     const validPaths = chain(paths)
       .castArray()
       .map(p => normalizePath(p))
@@ -176,29 +183,31 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
       .value();
 
     if (!validPaths?.length) {
-      onChunkCreated([]);
+      onChunkCreated([], 0, 0);
       return [];
     }
 
     const immediateTracks: T[] = [];
 
-    for (const group of chunk(validPaths, 25 * os.cpus().length)) {
+    const chunks = chunk(validPaths, 25 * os.cpus().length);
+
+    for (const [index, group] of chunks.entries()) {
       const created = await Promise.all(group.map(p => this.getTrackId(p).then(trackId => this.createTrack(p, trackId))));
-      await onChunkCreated(created).then(breath);
+      await onChunkCreated(created, index, chunks.length).then(breath);
       immediateTracks.push(...created);
     }
 
     return immediateTracks;
   }
 
-  async add(paths: string[], mode?: TrackAddingMode, onChunkAdded?: () => any): Promise<T[]> {
-    return this.#transform(paths, async created => {
-      await this.#addTracks(created, mode);
-      await onChunkAdded?.();
+  async add(paths: string[], mode?: TrackAddingMode, onChunkAdded?: ChunkHandler<T>): Promise<T[]> {
+    return this.#transform(paths, async (chunk, chunkIndex, totalChunks) => {
+      await this.#addTracks(chunk, chunkIndex, totalChunks, mode);
+      await onChunkAdded?.(chunk, chunkIndex, totalChunks);
     });
   }
 
-  async #addTracks(tracks: T[], mode?: TrackAddingMode) {
+  async #addTracks(tracks: T[], chunkIndex: number, totalChunks: number, mode?: TrackAddingMode) {
     const { tracksMapper } = this.options;
 
     const newTracks = tracks.filter(it => !this.trackIdMap.has(it.id));
@@ -235,7 +244,7 @@ export class TrackCollection<T extends Track<any>, Extra = any, Options extends 
     }
 
     this.logger.info(`${mapped.length} track(s) added`);
-    this.emit('tracksAdd', mapped);
+    this.emit('tracksAdd', mapped, chunkIndex, totalChunks);
   }
 
   async update(paths: string[]) {
