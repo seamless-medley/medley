@@ -1,4 +1,4 @@
-import EventEmitter from "events";
+import { ListenerSignature, TypedEmitter } from "tiny-typed-emitter";
 
 type IDOf<T> = T extends { id: infer ID } ? ID : any;
 
@@ -14,7 +14,7 @@ export interface IReadonlyLibrary<T extends { id: ID }, ID = IDOf<T>> extends It
   first(): T | undefined;
 }
 
-export class BaseLibrary<T extends { id: ID }, ID = IDOf<T>> extends EventEmitter implements Iterable<T> {
+export class BaseLibrary<T extends { id: ID }, Events extends ListenerSignature<Events> = {}, ID = IDOf<T>> extends TypedEmitter<Events> implements Iterable<T> {
   protected elements = new Map<ID, T>();
 
   constructor(...elements: T[]) {
@@ -71,7 +71,7 @@ export class BaseLibrary<T extends { id: ID }, ID = IDOf<T>> extends EventEmitte
   }
 }
 
-export class Library<T extends { id: ID }, ID = IDOf<T>> extends BaseLibrary<T, ID> implements IReadonlyLibrary<T, ID> {
+export class Library<T extends { id: ID }, Events extends ListenerSignature<Events>, ID = IDOf<T>> extends BaseLibrary<T, Events, ID> implements IReadonlyLibrary<T, ID> {
   get size() {
     return super.size;
   }

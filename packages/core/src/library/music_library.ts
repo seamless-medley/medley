@@ -32,7 +32,11 @@ type IndexInfo<O> = {
   retried?: number;
 }
 
-export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>> {
+
+export interface MusicLibraryEvents {
+}
+
+export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicLibraryEvents> {
   #logger: Logger;
 
   #searchEngine = new SearchEngine();

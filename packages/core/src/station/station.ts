@@ -859,7 +859,7 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 }
 
-export class StationRegistry<S extends Station> extends Library<S, S['id']> {
+export class StationRegistry<S extends Station> extends Library<S, {}, S['id']> {
 
 }
 

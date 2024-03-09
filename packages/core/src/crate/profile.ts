@@ -117,6 +117,6 @@ export class CrateProfile<T extends Track<any>> {
 }
 
 
-export class CrateProfileBook<P extends CrateProfile<any>> extends Library<P, string> {
+export class CrateProfileBook<P extends CrateProfile<any>> extends Library<P, {}, string> {
 
 }
