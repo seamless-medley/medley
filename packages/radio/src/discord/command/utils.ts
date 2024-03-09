@@ -126,7 +126,8 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
 const previewTrackPeek = ({ index, localIndex, track }: TrackPeek<StationRequestedTrack>, padding: number, focus?: number) => {
   const isFocusing = focus === index;
   const label = padStart(`${localIndex + 1}`, padding);
-  return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)} {{red|b}}[${track.priority || 0}]`;
+  const priority = track.priority ? ` {{red|b}}[${track.priority}]` : '';
+  return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)}${priority}`;
 }
 
 export function isTrackRequestedFromGuild(track: TrackWithRequester<BoomBoxTrack, Audience>, guildId: string) {
