@@ -10,9 +10,9 @@ import {
 } from "@seamless-medley/core";
 
 import { RequestHandler, Router } from "express";
-import { OutgoingHttpHeaders } from "http";
+import { OutgoingHttpHeaders } from "node:http";
 import { noop, isUndefined, omitBy, } from "lodash";
-import { PassThrough, Transform, pipeline } from "stream";
+import { PassThrough, Transform, pipeline } from "node:stream";
 import { IcyMetadata, MetadataMux } from "./mux";
 import { FFmpegChildProcess, FFMpegLine, InfoLine, ProgressValue } from "../ffmpeg";
 import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";

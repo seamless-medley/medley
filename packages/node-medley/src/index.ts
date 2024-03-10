@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { basename, dirname } from 'node:path';
-import { Readable } from 'stream';
+import { Readable } from 'node:stream';
 import type { AudioFormat, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult } from './index.d';
 
 const nodeGypBuild = require('node-gyp-build');

@@ -4,7 +4,7 @@ const argon2 = require('@node-rs/argon2');
 const workerpool = require('workerpool');
 const { threadId } = require('node:worker_threads');
 const { MongoClient, Db, Collection } = require('mongodb');
-const { random, omitBy, stubFalse } = require('lodash');
+const { random, omitBy } = require('lodash');
 const { createLogger } = require('@seamless-medley/logging');
 
 /** @typedef {import('@seamless-medley/core').MusicDb} MusicDb */

@@ -1,5 +1,5 @@
-import { createServer } from 'net';
-import http from 'http';
+import { createServer } from 'node:net';
+import http from 'node:http';
 import express from 'express';
 import { ZodError } from "zod";
 import { Command } from '@commander-js/extra-typings';
@@ -13,6 +13,7 @@ import { Config, loadConfig } from '../config';
 import { MedleyAutomaton } from '../discord/automaton';
 import { RTCTransponder } from './audio/rtc/transponder';
 import { getVersionLine, showVersionBanner } from '../helper';
+import { extname } from 'node:path';
 
 const logger = createLogger({ name: 'main' });
 

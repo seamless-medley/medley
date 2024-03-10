@@ -1,6 +1,6 @@
-import { Readable } from 'stream';
-import EventEmitter from "events";
-import http from "http";
+import { Readable } from 'node:stream';
+import EventEmitter from "node:events";
+import http from "node:http";
 import { capitalize, isEqual, isFunction, isObject, mapValues, noop, omit, pickBy, random } from "lodash";
 import { Server as IOServer } from "socket.io";
 import msgpackParser from 'socket.io-msgpack-parser';

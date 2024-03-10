@@ -1,5 +1,5 @@
 import { omit, toPairs } from "lodash";
-import { Transform, TransformCallback } from "stream";
+import { Transform, TransformCallback } from "node:stream";
 
 const EMPTY_METADATA = Buffer.from([0]);
 const META_BLOCK_SIZE = 16;

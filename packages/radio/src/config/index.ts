@@ -1,4 +1,4 @@
-import { readFile } from 'fs/promises';
+import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
 import { z } from 'zod';
 import { DbConfig } from './db';

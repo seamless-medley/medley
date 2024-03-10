@@ -4,7 +4,7 @@ import { CamelCase } from "type-fest";
 import { makeVoiceStateUpdatePayload, Payload } from "./network/payload";
 import { ConnectionStatus, VoiceConnection, VoiceConnectionEvents } from './network/connection'
 import { noop } from "lodash";
-import EventEmitter, { once } from "events";
+import EventEmitter, { once } from "node:events";
 import { ICarrier } from "../../audio/exciter";
 import { MedleyAutomaton } from "../automaton";
 

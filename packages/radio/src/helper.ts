@@ -1,6 +1,6 @@
 import { Crate, MusicDb, Station, StationProfile, StationRegistry, StationTrack, WatchTrackCollection, crateLimitFromSequenceLimit, createChanceable, scanDir } from "@seamless-medley/core";
 import normalizePath from "normalize-path";
-import { readFile } from 'fs/promises';
+import { readFile } from 'node:fs/promises';
 
 import {
   type StationConfig,

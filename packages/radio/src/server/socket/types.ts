@@ -1,4 +1,4 @@
-import EventEmitter from "events";
+import EventEmitter from "node:events";
 import type TypedEventEmitter from "typed-emitter";
 import { Socket as IOSocket } from "socket.io";
 import { ClientEvents, ServerEvents, PickEvent } from "../../socket";

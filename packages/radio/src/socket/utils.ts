@@ -1,5 +1,5 @@
 import { isFunction, isString, pickBy } from "lodash";
-import type { Readable, Stream, Writable } from "stream";
+import type { Readable, Stream, Writable } from "node:stream";
 
 export function isPublicPropertyName(name: any) {
   return isString(name) && !/^[_$ϟ]/.test(name) && !['constructor'].includes(name);

@@ -16,7 +16,7 @@ import {
 import { AttachmentBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import { chain, get, isEmpty, sample } from "lodash";
 import mime from 'mime-types';
-import { parse as parsePath } from 'path';
+import { parse as parsePath } from 'node:path';
 import { TrackMessage, TrackMessageStatus } from "../types";
 
 export type CreateTrackMessageOptions = {

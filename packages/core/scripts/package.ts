@@ -1,7 +1,7 @@
 import { PackageJson } from 'type-fest';
 import { mapValues, omit } from 'lodash';
 import { mkdirp } from 'mkdirp';
-import fs from 'fs';
+import fs from 'node:fs';
 
 async function transform() {
   const p = require('../package.json') as Required<PackageJson>;

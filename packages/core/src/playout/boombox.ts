@@ -1,4 +1,4 @@
-import { parse as parsePath } from 'path';
+import { parse as parsePath } from 'node:path';
 import { castArray, chain, flatten, mapValues, matches, some, toLower, trim, uniq, without } from "lodash";
 import { isString } from 'lodash/fp';
 import { compareTwoStrings } from "string-similarity";

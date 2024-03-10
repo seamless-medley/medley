@@ -1,5 +1,5 @@
-import { writeFile } from 'fs/promises';
-import { argv } from 'process';
+import { writeFile } from 'node:fs/promises';
+import { argv } from 'node:process';
 import { inc, parse, ReleaseType } from 'semver';
 import { PackageJson } from 'type-fest';
 

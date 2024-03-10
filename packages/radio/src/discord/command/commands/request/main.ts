@@ -24,7 +24,7 @@ import {
 } from "discord.js";
 
 import { chain, chunk, clamp, Dictionary, flatten, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
-import { parse as parsePath, extname } from 'path';
+import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../emojis";
 import { InteractionHandlerFactory } from "../../type";

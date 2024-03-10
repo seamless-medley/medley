@@ -1,6 +1,6 @@
 /// <reference types="node" />
 
-import type { Readable } from 'stream';
+import type { Readable } from 'node:stream';
 
 export interface TrackInfo {
   /**

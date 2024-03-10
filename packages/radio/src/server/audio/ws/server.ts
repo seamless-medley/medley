@@ -1,8 +1,8 @@
 import { AudienceType, Station, makeAudienceGroupId } from "@seamless-medley/core";
-import EventEmitter from "events";
-import http, { IncomingMessage } from "http";
+import EventEmitter from "node:events";
+import http, { IncomingMessage } from "node:http";
 import { decode } from "notepack.io";
-import { Duplex } from "stream";
+import { Duplex } from "node:stream";
 import { WebSocket, WebSocketServer } from "ws";
 import { AudioSocketCommand, AudioSocketReply } from "../../../socket";
 import { AudioDispatcher } from "../../../audio/exciter/dispatcher";

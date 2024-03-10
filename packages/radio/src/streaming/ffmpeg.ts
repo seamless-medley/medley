@@ -2,7 +2,7 @@ import { ChildProcessByStdio, StdioPipe, spawn } from "child_process";
 import ffmpegPath from "ffmpeg-static";
 import { camelCase } from "lodash";
 import { createInterface } from "readline";
-import { Readable, Writable } from "stream";
+import { Readable, Writable } from "node:stream";
 import { CamelCase } from "type-fest";
 
 export type FFmpegChildProcess = ChildProcessByStdio<Writable, Readable, Readable>;

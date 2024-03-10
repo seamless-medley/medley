@@ -1,7 +1,7 @@
 import { AudienceType, BoomBoxTrackPlay, getTrackBanner, makeAudienceGroupId, Station, StationEvents, TrackKind } from "@seamless-medley/core";
 import axios, { AxiosError } from "axios";
 import { chain, noop } from "lodash";
-import { pipeline } from "stream";
+import { pipeline } from "node:stream";
 import { FFMpegCapabilities, FFmpegChildProcess, FFMpegLine, getFFmpegCaps, InfoLine, ProgressValue } from "../ffmpeg";
 import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
 import { getVersion } from "../../helper";

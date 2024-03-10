@@ -1,6 +1,6 @@
-import { dirname, join, resolve } from 'path';
+import { dirname, join, resolve } from 'node:path';
 import rebuild from '@electron/rebuild';
-import { readdir, cp } from 'fs/promises';
+import { readdir, cp } from 'node:fs/promises';
 import { rimraf } from 'rimraf';
 
 const moduleDir = (name: string) => dirname(require.resolve(name));

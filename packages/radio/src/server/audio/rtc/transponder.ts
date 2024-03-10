@@ -5,6 +5,7 @@ import { Socket } from 'socket.io';
 import { RTCExciter } from './exciter';
 import { AudioDispatcher } from '../../../audio/exciter';
 import { type WebRtcConfig } from '../../../config/webrtc';
+import { Duplex } from 'node:stream';
 import { createLogger } from '@seamless-medley/logging';
 
 type ConsumerResponse = Pick<types.Consumer, 'id' | 'producerId' | 'kind' | 'rtpParameters'>;;
