@@ -19,7 +19,7 @@ export class OpusPacketEncoder extends Transform {
 
   #buffer = Buffer.alloc(0);
 
-  #opus: Opus;
+  #opus?: Opus;
 
   #buffering = true;
 
@@ -27,15 +27,64 @@ export class OpusPacketEncoder extends Transform {
     super({ readableObjectMode: true });
     this.#frameSize = options?.frameSize ?? 960;
     this.#backlog = options?.backlog ?? 10;
-    this.#opus = Opus.create(options);
+
+    Opus.create(options).then((opus) => {
+      this.#opus = opus;
+      this.emit('ready');
+    })
   }
 
   get bitrate() {
-    return this.#opus.bitrate;
+    return this.#opus?.bitrate ?? 0;
   }
 
   set bitrate(value: number) {
-    this.#opus.bitrate = value;
+    if (this.#opus) {
+      this.#opus.bitrate = value;
+    }
+  }
+
+  async #processBlock(index: number, requiredBytes: number, packets: Buffer[]): Promise<boolean> {
+    const start = index * requiredBytes;
+    const end = start + requiredBytes;
+    const block = this.#buffer.subarray(start, end);
+
+    if (block.byteLength !== requiredBytes) {
+      return false;
+    }
+
+    const packet = await this.#opus?.encode(block, this.#frameSize);
+
+    if (!packet) {
+      return false;
+    }
+
+    packets.push(packet);
+    return true;
+  }
+
+  async #process(requiredBytes: number) {
+    const packets: Buffer[] = [];
+
+    let blocksProcessed = 0;
+
+    while (blocksProcessed * requiredBytes < this.#buffer.length) {
+      const ok = await this.#processBlock(blocksProcessed, requiredBytes, packets);
+
+      if (!ok) {
+        break;
+      }
+
+      blocksProcessed++;
+    }
+
+    if (blocksProcessed > 0) {
+      this.#buffer = this.#buffer.subarray(blocksProcessed * requiredBytes);
+    }
+
+    while (packets.length > 0) {
+      this.push(packets.shift());
+    }
   }
 
   _transform(chunk: Buffer, encoding: BufferEncoding, done: TransformCallback): void {
@@ -52,39 +101,14 @@ export class OpusPacketEncoder extends Transform {
       this.#buffering = false;
     }
 
-    const packets: Buffer[] = [];
-
-    let blocksProcessed = 0
-    while (blocksProcessed * requiredBytes < this.#buffer.length) {
-      const start = blocksProcessed * requiredBytes;
-      const end = start + requiredBytes;
-      const block = this.#buffer.subarray(start, end);
-
-      if (block.byteLength !== requiredBytes) {
-        break;
+    this.#process(requiredBytes).then(() => {
+      if (!this.#buffering && this.#backlog) {
+        if (this.#buffer.length <= 0) {
+          this.#buffering = true;
+        }
       }
 
-      const packet = this.#opus.encode(block, this.#frameSize);
-      //
-      packets.push(packet);
-      //
-      blocksProcessed++;
-    }
-
-    if (blocksProcessed > 0) {
-      this.#buffer = this.#buffer.subarray(blocksProcessed * requiredBytes);
-    }
-
-    while (packets.length > 0) {
-      this.push(packets.shift());
-    }
-
-    if (!this.#buffering) {
-      if (this.#buffer.length <= 0) {
-        this.#buffering = true;
-      }
-    }
-
-    done();
+      done();
+    });
   }
 }

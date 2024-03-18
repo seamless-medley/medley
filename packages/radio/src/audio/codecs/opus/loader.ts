@@ -1,9 +1,13 @@
 // This module works in Node env only
 
-type Loader = {
-  new(options?: Partial<OpusOptions>): Opus;
-  load: () => boolean;
-}
+import { stat } from "node:fs/promises";
+import { join } from "node:path";
+import { Worker, MessageChannel } from "node:worker_threads";
+
+// type Loader = {
+//   new(options?: Partial<OpusOptions>): Opus;
+//   load: () => boolean;
+// }
 
 export type OpusOptions = {
   /**
@@ -18,16 +22,26 @@ const makeOpusOptions = (options?: Partial<OpusOptions>): OpusOptions => ({
   bitrate: options?.bitrate || 128_000,
   errorCorrection: options?.errorCorrection ?? false,
   packetLossPercentage: options?.packetLossPercentage ?? 0
-})
+});
 
-export abstract class Opus {
-  protected native: any = undefined;
+type NativeInterface = {
+  encode(audio: Buffer, frameSize: number): Promise<Buffer>;
+  getBitrate(): number;
+  setBitrate(value: number): void;
+}
 
-  encode(audio: Buffer, frameSize: number): Buffer {
+type OpusPrivate = {
+  init(options: OpusOptions): Promise<void>;
+}
+
+export abstract class Opus<Intf extends NativeInterface = any> {
+  protected native!: Intf;
+
+  async encode(audio: Buffer, frameSize: number): Promise<Buffer> {
     return this.native.encode(audio, frameSize);
   }
 
-  protected init(options: OpusOptions): void {
+  protected async init(options: OpusOptions): Promise<void> {
     this.bitrate = options.bitrate;
     this.errorCorrection = options.errorCorrection;
     this.packetLossPercentage = options.packetLossPercentage;
@@ -51,27 +65,32 @@ export abstract class Opus {
     this.ctl(4014, percent);
   }
 
-  static create(options?: Partial<OpusOptions>): Opus {
-    const Ctor = [DiscordOpus, OpusScript].find(c => c.load()) as Loader | undefined;
-
-    if (!Ctor) {
-      throw new ReferenceError('Could not find Opus native module');
+  static async create(options?: Partial<OpusOptions>): Promise<Opus> {
+    for (const Ctor of [DiscordOpus, OpusScript]) {
+      if (await Ctor.load()) {
+        const inst = new Ctor();
+        await (inst as unknown as OpusPrivate).init(makeOpusOptions(options));
+        return inst;
+      }
     }
 
-    return new Ctor(options);
+    throw new ReferenceError('Could not find Opus native module');
   }
 }
 
-export class OpusScript extends Opus {
-  constructor(options?: Partial<OpusOptions>) {
+type OpusScriptInterface = NativeInterface & {
+  encoderCTL(c: number, value: number): any;
+}
+
+class OpusScript extends Opus<OpusScriptInterface> {
+  constructor() {
     super();
     this.native = new OpusScript.#Opus(48000, 2, OpusScript.#Opus.Application.AUDIO);
-    this.init(makeOpusOptions(options));
   }
 
   static #Opus: any;
 
-  static load() {
+  static async load() {
     if (this.#Opus) return true;
 
     try {
@@ -100,16 +119,19 @@ export class OpusScript extends Opus {
 
 }
 
-export class DiscordOpus extends Opus {
-  constructor(options?: Partial<OpusOptions>) {
+type DiscordOpusInterface = NativeInterface & {
+  applyEncoderCTL(c: number, value: number): any;
+}
+
+class DiscordOpus extends Opus<DiscordOpusInterface> {
+  constructor() {
     super();
     this.native = new DiscordOpus.#OpusEncoder(48000, 2);
-    this.init(makeOpusOptions(options));
   }
 
   static #OpusEncoder: any;
 
-  static load() {
+  static async load() {
     if (this.#OpusEncoder) return true;
 
     try {
