@@ -26,7 +26,7 @@ export class OpusPacketEncoder extends Transform {
   constructor(options?: Partial<OpusPacketEncoderOptions>) {
     super({ readableObjectMode: true });
     this.#frameSize = options?.frameSize ?? 960;
-    this.#backlog = options?.backlog ?? 10;
+    this.#backlog = options?.backlog ?? 0;
 
     Opus.create(options).then((opus) => {
       this.#opus = opus;
