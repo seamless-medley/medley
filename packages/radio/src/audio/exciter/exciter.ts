@@ -148,25 +148,30 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
       throw new Error('An exciter could not be used multiple times');
     }
 
-    this.dispatcher = dispatcher;
-    try {
-      this.request = await this.station.requestAudioStream(this.audioOptions);
-      this.opusEncoder = new OpusPacketEncoder(this.encoderOptions);
+    return new Promise<void>(async (resolve, reject) => {
+      this.dispatcher = dispatcher;
+      try {
+        this.request = await this.station.requestAudioStream(this.audioOptions);
+        this.opusEncoder = new OpusPacketEncoder(this.encoderOptions);
 
-      this.outlet = pipeline(
-        [
-          this.request.stream,
-          this.opusEncoder
-        ],
-        noop
-      ) as unknown as Readable;
+        this.opusEncoder.on('ready', () => {
+          this.outlet = pipeline(
+            [
+              this.request!.stream,
+              this.opusEncoder!
+            ],
+            noop
+          ) as unknown as Readable;
 
-      (dispatcher as unknown as DispatcherPrivate).add(this);
-    }
-    catch (e: unknown) {
-      this.dispatcher = undefined;
-      throw e;
-    }
+          (dispatcher as unknown as DispatcherPrivate).add(this);
+          resolve();
+        });
+      }
+      catch (e: unknown) {
+        this.dispatcher = undefined;
+        reject(e);
+      }
+    });
   }
 
   stop() {
@@ -181,6 +186,10 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
 
     this.outlet?.destroy;
     this.outlet = undefined;
+  }
+
+  get started() {
+    return this.outlet !== undefined;
   }
 
   get bitrate() {
