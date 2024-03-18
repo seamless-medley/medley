@@ -42,6 +42,7 @@
     "@seamless-medley/core": "../core",
     "@seamless-medley/logging": "../logging",
     "@seamless-medley/utils": "../utils",
+    "@tabler/icons-react": "^3.1.0",
     "@tanstack/react-router": "^1.19.12",
     "@wyw-in-js/babel-preset": "^0.5.0",
     "axios": "1.6.0",
