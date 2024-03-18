@@ -12,7 +12,7 @@ export class DiscordAudioPlayer extends Exciter implements ICarriableExciter {
 
   static requestAudioOptions: RequestAudioOptions = {
     bufferSize: 48000 * 2.5, // This should be large enough to hold PCM data while waiting for node stream to comsume
-    buffering: 48000 * 0.03,
+    buffering: 960 * 12,
     preFill: 48000 * 0.5, // Pre-fill the stream with at least 500ms of audio, to reduce stuttering while encoding to Opus
     // discord voice only accept 48KHz sample rate, 16 bit per sample
     sampleRate: 48000,

@@ -47,7 +47,8 @@ export class RTCExciter extends Exciter implements IExciter {
         format: 'Int16LE',
         sampleRate: 48_000,
         bufferSize: 48_000 * 2.5,
-        buffering: 12 * 960 // number of Opus packets x Opus packet size
+        buffering: 960 * 12, // Opus packet size x number of Opus packets
+        preFill: 48000 * 0.5
       },
       { bitrate }
     );
