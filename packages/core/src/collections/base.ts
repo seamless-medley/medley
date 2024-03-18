@@ -5,7 +5,7 @@ import { castArray, chain, chunk, clamp, findLastIndex, omit, partition, random,
 import normalizePath from 'normalize-path';
 import { Logger, createLogger } from '@seamless-medley/logging';
 import { Track } from "../track";
-import { breath, moveArrayElements, moveArrayIndexes } from '@seamless-medley/utils';
+import { moveArrayElements, moveArrayIndexes, waitFor } from '@seamless-medley/utils';
 
 export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 
@@ -189,11 +189,19 @@ export class TrackCollection<
 
     const immediateTracks: T[] = [];
 
-    const chunks = chunk(validPaths, 25 * os.cpus().length);
+    const buckets = chunk(validPaths, 25 * os.cpus().length);
 
-    for (const [index, group] of chunks.entries()) {
-      const created = await Promise.all(group.map(p => this.getTrackId(p).then(trackId => this.createTrack(p, trackId))));
-      await onChunkCreated(created, index, chunks.length).then(breath);
+    for (const [index, bucket] of buckets.entries()) {
+      const created = new Array<T>(bucket.length);
+
+      for (let i = 0; i < bucket.length; i++) {
+        const p = bucket[i];
+        const trackId = await this.getTrackId(p);
+        created[i] = await this.createTrack(p, trackId);
+      }
+
+      await onChunkCreated(created, index, buckets.length);
+      await waitFor(10);
       immediateTracks.push(...created);
     }
 
