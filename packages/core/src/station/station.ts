@@ -132,6 +132,8 @@ export type StationEvents = {
   collectionAdded: (collection: StationTrackCollection) => void;
   collectionRemoved: (collection: StationTrackCollection) => void;
   collectionUpdated: (collection: StationTrackCollection) => void;
+  //
+  audienceChanged: () => void;
 }
 
 type BoomBoxEventsForStation = BoomBoxEvents<StationProfile>;
@@ -849,6 +851,7 @@ export class Station extends TypedEmitter<StationEvents> {
     }
 
     this.#audienceCount = value;
+    this.emit('audienceChanged');
   }
 
   get hasAudiences() {
