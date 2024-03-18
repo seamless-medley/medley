@@ -11,13 +11,9 @@ function createTypedSharedArrayBuffer<T extends TypedArray>(Ctor: new (buffer: S
   return new Ctor(new SharedArrayBuffer(elementCount * (Ctor as any).BYTES_PER_ELEMENT));
 }
 
-export class RingBuffer {
+export class RingBuffer<ExtraIn, ExtraOut = ExtraIn> {
   readonly bufferLength: number;
   private channelData: Float32Array[];
-
-  private magnitudeData: Float32Array[];
-  private peakData: Float32Array[];
-  private reductionData: Float32Array;
 
   // For storing read/write position
   private states = createTypedSharedArrayBuffer(Uint32Array, Object.values(State).length);
@@ -26,44 +22,11 @@ export class RingBuffer {
     this.bufferLength = size + 1;
     this.channels = channels;
 
-    const chanelList = Array(channels).fill(0);
-
-    this.channelData = chanelList.map(() => createTypedSharedArrayBuffer(Float32Array, this.bufferLength));
-
-    this.magnitudeData = chanelList.map<Float32Array>(() => new Float32Array(
-      new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
-    ));
-
-    this.peakData = chanelList.map<Float32Array>(() => new Float32Array(
-      new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
-    ));
-
-    this.reductionData = new Float32Array(new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT));
+    this.channelData = Array(channels).fill(0).map(() => createTypedSharedArrayBuffer(Float32Array, this.bufferLength));
   }
 
-  push(inputs: Float32Array[], blockLength: number, extra: AudioTransportExtraPayload) {
-    const [currentRead, currentWrite] = this.getCurrentReadWrite();
-
-    if (this.getAvailableWrite(currentRead, currentWrite) < blockLength) {
-      return false;
-    }
-
-    const [
-      left_mag, left_peak,
-      right_mag, right_peak,
-      reduction
-    ] = extra;
-
-    const levels: AudioLevel[] = [
-      { magnitude: left_mag, peak: left_peak },
-      { magnitude: right_mag, peak: right_peak },
-    ];
-
-    let nextWrite = currentWrite + blockLength;
-
-    if (nextWrite > this.bufferLength) {
-      nextWrite -= this.bufferLength;
-
+  protected doPush(inputs: Float32Array[], blockLength: number, extra: ExtraIn, currentWrite: number, nextWrite: number, overlap: boolean) {
+    if (overlap) {
       for (const [channel, data] of this.channelData.entries()) {
         const blockA = data.subarray(currentWrite);
         const blockB = data.subarray(0, nextWrite);
@@ -73,51 +36,50 @@ export class RingBuffer {
         blockA.set(input.subarray(0, blockA.length));
         blockB.set(input.subarray(blockA.length));
       }
-
-      for (const [channel, data] of this.magnitudeData.entries()) {
-        const blockA = data.subarray(currentWrite);
-        const blockB = data.subarray(0, nextWrite);
-
-        blockA.fill(levels[channel].magnitude);
-        blockB.fill(levels[channel].magnitude);
-      }
-
-      for (const [channel, data] of this.peakData.entries()) {
-        const blockA = data.subarray(currentWrite);
-        const blockB = data.subarray(0, nextWrite);
-
-        blockA.fill(levels[channel].peak);
-        blockB.fill(levels[channel].peak);
-      }
-
-      {
-        const blockA = this.reductionData.subarray(currentWrite);
-        const blockB = this.reductionData.subarray(0, nextWrite);
-
-        blockA.fill(reduction);
-        blockB.fill(reduction);
-      }
     } else {
       for (const [channel, data] of this.channelData.entries()) {
         const block = data.subarray(currentWrite, nextWrite);
 
         block.set(inputs[channel].subarray(0, blockLength));
       }
+    }
+  }
 
-      for (const [channel, data] of this.magnitudeData.entries()) {
-        const block = data.subarray(currentWrite, nextWrite);
-        block.fill(levels[channel].magnitude);
-      }
+  protected doPull(outputs: Float32Array[], blockLength: number, currentRead: number, nextRead: number, overlap: boolean): ExtraOut | undefined {
+    if (overlap) {
+      for (const [channel, data] of this.channelData.entries()) {
+        const blockA = data.subarray(currentRead);
+        const blockB = data.subarray(0, nextRead);
 
-      for (const [channel, data] of this.peakData.entries()) {
-        const block = data.subarray(currentWrite, nextWrite);
-        block.fill(levels[channel].peak);
-      }
+        const output = outputs[channel];
 
-      {
-        const block = this.reductionData.subarray(currentWrite, nextWrite);
-        block.fill(reduction);
+        output.set(blockA);
+        output.set(blockB, blockA.length);
       }
+    } else {
+      for (const [channel, data] of this.channelData.entries()) {
+        const output = outputs[channel];
+        output.set(data.subarray(currentRead, nextRead));
+      }
+    }
+
+    return undefined;
+  }
+
+  push(inputs: Float32Array[], blockLength: number, extra: ExtraIn) {
+    const [currentRead, currentWrite] = this.getCurrentReadWrite();
+
+    if (this.getAvailableWrite(currentRead, currentWrite) < blockLength) {
+      return false;
+    }
+
+    let nextWrite = currentWrite + blockLength;
+
+    if (nextWrite > this.bufferLength) {
+      nextWrite -= this.bufferLength;
+      this.doPush(inputs, blockLength, extra, currentWrite, nextWrite, true);
+    } else {
+      this.doPush(inputs, blockLength, extra, currentWrite, nextWrite, false);
 
       if (nextWrite === this.bufferLength) {
         nextWrite = 0;
@@ -128,63 +90,22 @@ export class RingBuffer {
     return true;
   }
 
-  pull(outputs: Float32Array[], blockLength: number): AudioTransportExtra | undefined {
+  pull(outputs: Float32Array[], blockLength: number): ExtraOut | undefined {
     const [currentRead, currentWrite] = this.getCurrentReadWrite();
 
     if (this.getAvailableRead(currentRead, currentWrite) < blockLength) {
       return;
     }
 
-    const levelL: AudioLevel = { magnitude: 0, peak: 0 };
-    const levelR: AudioLevel = { magnitude: 0, peak: 0 };
-    let reduction = 0;
+    let result: ExtraOut | undefined;
 
     let nextRead = currentRead + blockLength;
     if (this.bufferLength < nextRead) {
       nextRead -= this.bufferLength;
 
-      for (const [channel, data] of this.channelData.entries()) {
-        const blockA = data.subarray(currentRead);
-        const blockB = data.subarray(0, nextRead);
-
-        const output = outputs[channel];
-
-        output.set(blockA);
-        output.set(blockB, blockA.length);
-      }
-
-      {
-        levelL.magnitude = this.magnitudeData[0][nextRead-1];
-        levelR.magnitude = this.magnitudeData[1][nextRead-1];
-      }
-
-      {
-        levelL.peak = this.peakData[0][nextRead-1];
-        levelR.peak = this.peakData[1][nextRead-1];
-      }
-
-      {
-        reduction = this.reductionData[nextRead-1];
-      }
+      result = this.doPull(outputs, blockLength, currentRead, nextRead, true);
     } else {
-      for (const [channel, data] of this.channelData.entries()) {
-        const output = outputs[channel];
-        output.set(data.subarray(currentRead, nextRead));
-      }
-
-      {
-        levelL.magnitude = this.magnitudeData[0][nextRead-1];
-        levelR.magnitude = this.magnitudeData[1][nextRead-1];
-      }
-
-      {
-        levelL.peak = this.peakData[0][nextRead-1];
-        levelR.peak = this.peakData[1][nextRead-1];
-      }
-
-      {
-        reduction = this.reductionData[nextRead-1];
-      }
+      result = this.doPull(outputs, blockLength, currentRead, nextRead, false);
 
       if (nextRead === this.bufferLength) {
         nextRead = 0;
@@ -192,13 +113,8 @@ export class RingBuffer {
     }
 
     Atomics.store(this.states, State.Read, nextRead);
-    return {
-      audioLevels: {
-        left: levelL,
-        right: levelR,
-        reduction
-      }
-    }
+
+    return result;
   }
 
   private getCurrentReadWrite() {
@@ -229,5 +145,107 @@ export class RingBuffer {
   reset() {
     Atomics.store(this.states, State.Read, 0);
     Atomics.store(this.states, State.Write, 0);
+  }
+}
+
+export class RingBufferWithExtra extends RingBuffer<AudioTransportExtraPayload, AudioTransportExtra> {
+  private magnitudeData: Float32Array[];
+  private peakData: Float32Array[];
+  private reductionData: Float32Array;
+
+  constructor(size: number, channels: number = 2) {
+    super(size, channels);
+
+    const channelList = Array(channels).fill(0);
+
+    this.magnitudeData = channelList.map<Float32Array>(() => new Float32Array(
+      new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
+    ));
+
+    this.peakData = channelList.map<Float32Array>(() => new Float32Array(
+      new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT)
+    ));
+
+    this.reductionData = new Float32Array(new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT));
+  }
+
+  protected override doPush(inputs: Float32Array[], blockLength: number, extra: AudioTransportExtraPayload, currentWrite: number, nextWrite: number, overlap: boolean) {
+    super.doPush(inputs, blockLength, extra, currentWrite, nextWrite, overlap);
+
+    const [
+      left_mag, left_peak,
+      right_mag, right_peak,
+      reduction
+    ] = extra;
+
+    const levels: AudioLevel[] = [
+      { magnitude: left_mag, peak: left_peak },
+      { magnitude: right_mag, peak: right_peak },
+    ];
+
+    if (overlap) {
+      for (const [channel, data] of this.magnitudeData.entries()) {
+        const blockA = data.subarray(currentWrite);
+        const blockB = data.subarray(0, nextWrite);
+
+        blockA.fill(levels[channel].magnitude);
+        blockB.fill(levels[channel].magnitude);
+      }
+
+      for (const [channel, data] of this.peakData.entries()) {
+        const blockA = data.subarray(currentWrite);
+        const blockB = data.subarray(0, nextWrite);
+
+        blockA.fill(levels[channel].peak);
+        blockB.fill(levels[channel].peak);
+      }
+
+      {
+        const blockA = this.reductionData.subarray(currentWrite);
+        const blockB = this.reductionData.subarray(0, nextWrite);
+
+        blockA.fill(reduction);
+        blockB.fill(reduction);
+      }
+    } else {
+      for (const [channel, data] of this.magnitudeData.entries()) {
+        const block = data.subarray(currentWrite, nextWrite);
+        block.fill(levels[channel].magnitude);
+      }
+
+      for (const [channel, data] of this.peakData.entries()) {
+        const block = data.subarray(currentWrite, nextWrite);
+        block.fill(levels[channel].peak);
+      }
+
+      {
+        const block = this.reductionData.subarray(currentWrite, nextWrite);
+        block.fill(reduction);
+      }
+    }
+  }
+
+  protected doPull(outputs: Float32Array[], blockLength: number, currentRead: number, nextRead: number, overlap: boolean): AudioTransportExtra | undefined {
+    super.doPull(outputs, blockLength, currentRead, nextRead, overlap);
+
+    const levelL: AudioLevel = { magnitude: 0, peak: 0 };
+    const levelR: AudioLevel = { magnitude: 0, peak: 0 };
+    let reduction = 0;
+
+    levelL.magnitude = this.magnitudeData[0][nextRead-1];
+    levelR.magnitude = this.magnitudeData[1][nextRead-1];
+
+    levelL.peak = this.peakData[0][nextRead-1];
+    levelR.peak = this.peakData[1][nextRead-1];
+
+    reduction = this.reductionData[nextRead-1]
+
+    return {
+      audioLevels: {
+        left: levelL,
+        right: levelR,
+        reduction
+      }
+    }
   }
 }

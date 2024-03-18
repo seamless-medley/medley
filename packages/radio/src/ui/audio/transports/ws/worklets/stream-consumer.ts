@@ -1,10 +1,10 @@
-import { RingBuffer } from "../ringbuffer";
+import { RingBufferWithExtra } from "../ringbuffer";
 import type { AudioTransportExtra } from "../../../../../audio/types";
 
 export type MedleyStreamProcessorNodeOptions = Omit<AudioWorkletNodeOptions, 'processorOptions'> & {
   processorOptions: {
     minBufferSize: number;
-    pcmBuffer: RingBuffer;
+    pcmBuffer: RingBufferWithExtra;
   }
 }
 
@@ -15,7 +15,7 @@ export type MedleyStreamProcessorNodeOptions = Omit<AudioWorkletNodeOptions, 'pr
  */
 export class MedleyStreamConsumer extends AudioWorkletProcessor {
   #minBufferSize: number;
-  #pcmBuffer: RingBuffer;
+  #pcmBuffer: RingBufferWithExtra;
   #currentExtra?: AudioTransportExtra;
 
   constructor(options: MedleyStreamProcessorNodeOptions) {
@@ -24,7 +24,7 @@ export class MedleyStreamConsumer extends AudioWorkletProcessor {
     this.#minBufferSize = options.processorOptions.minBufferSize;
     this.#pcmBuffer = options.processorOptions.pcmBuffer;
 
-    Object.setPrototypeOf(this.#pcmBuffer, RingBuffer.prototype);
+    Object.setPrototypeOf(this.#pcmBuffer, RingBufferWithExtra.prototype);
   }
 
   set #current(v: AudioTransportExtra) {

@@ -10,11 +10,11 @@ import { AudioSocketCommand, AudioSocketCommandMap, AudioSocketReply } from "../
 import Decoder from "./decoder?worker";
 import type { Decoder as DecoderInft } from "./decoder";
 import type { AudioTransportExtraPayload } from "../../../../audio/types";
-import { RingBuffer } from "./ringbuffer";
+import { RingBufferWithExtra } from "./ringbuffer";
 
 export type InitMessage = {
   type: 'init';
-  pcmBuffer: RingBuffer;
+  pcmBuffer: RingBufferWithExtra;
 }
 
 export type ConnectMessage = {
@@ -69,7 +69,7 @@ let _socketId: string | undefined;
  * An instance of it is passed from AudioPipeline, the RingBuffer internally holds a shared memory region using SharedArrayBuffer
  * This shared memory can then be accessed from multiple threads/workers
  */
-let pcmBuffer: RingBuffer | undefined;
+let pcmBuffer: RingBufferWithExtra | undefined;
 
 /**
  * Another Web Worker for docoding Opus Packets
@@ -166,7 +166,7 @@ self.addEventListener('message', (e: MessageEvent<InputMessage>) => {
   switch (type) {
     case 'init': // This message was sent from AudioPipeline
       pcmBuffer = e.data.pcmBuffer;
-      Object.setPrototypeOf(pcmBuffer, RingBuffer.prototype);
+      Object.setPrototypeOf(pcmBuffer, RingBufferWithExtra.prototype);
       return;
 
     case 'connect':
