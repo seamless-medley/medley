@@ -4,6 +4,21 @@ import { MantineProvider } from '@mantine/core';
 import { initRoot } from '../init';
 import { router } from "../pages/_router";
 import { theme } from "../theme/theme";
+import { OverlayScrollbars } from "overlayscrollbars";
+
+OverlayScrollbars(
+  {
+    target: document.body
+  },
+  {
+    overflow: {
+      x: 'hidden'
+    },
+    scrollbars: {
+      autoHide: 'move'
+    }
+  }
+);
 
 initRoot().render(
   // <React.StrictMode>
