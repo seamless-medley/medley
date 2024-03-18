@@ -147,3 +147,117 @@ class DiscordOpus extends Opus<DiscordOpusInterface> {
     this.native.applyEncoderCTL(c, value);
   }
 }
+
+/**
+ * Experimental decoder
+ */
+export class ThreadedDiscordOpus extends Opus<never> {
+  static #filename = join(__dirname, 'worker.js');
+
+  static async load() {
+    if (!stat(this.#filename)) {
+      return false;
+    }
+
+    return new Promise<boolean>((resolve) => {
+      try {
+        const worker = new Worker(this.#filename);
+
+        const done = (result: boolean) => {
+          resolve(result);
+          worker.terminate();
+        }
+
+        worker.once('online', () => done(true));
+        worker.once('error', () => done(false));
+      }
+      catch (e) {
+        console.log('Worker error', e);
+        resolve(false);
+      }
+    });
+  }
+
+  #worker!: Worker;
+
+  #sharedPcmBuffers: Uint8Array[] = [];
+  #sharedOpusBuffers: Uint8Array[] = [];
+
+  #slot = 0;
+
+  #totalSlots = 1;
+
+  protected override async init(options: OpusOptions): Promise<void> {
+    const slots = new Array(this.#totalSlots).fill(0);
+
+    const pcmBuffers = slots.map(() => new Uint8Array(new SharedArrayBuffer(Uint8Array.BYTES_PER_ELEMENT * 65536)));
+    const opusBuffers = slots.map(() => new Uint8Array(new SharedArrayBuffer(Uint8Array.BYTES_PER_ELEMENT * 65536)));
+
+    this.#worker = new Worker(ThreadedDiscordOpus.#filename, {
+      workerData: {
+        pcmBuffers,
+        opusBuffers
+      }
+    });
+
+    this.#sharedPcmBuffers = pcmBuffers;
+    this.#sharedOpusBuffers = opusBuffers;
+
+    await super.init(options);
+  }
+
+  #bitrate = 128_000;
+
+  get bitrate() {
+    return this.#bitrate;
+  }
+
+  set bitrate(value: number) {
+    this.#bitrate = value;
+
+    this.#worker.postMessage({
+      fn: 'bitrate',
+      bitrate: value
+    });
+  }
+
+  async encode(audio: Buffer, frameSize: number): Promise<Buffer> {
+    return new Promise<Buffer>((resolve, reject) => {
+      const slot = this.#slot;
+      const sharedPcm = this.#sharedPcmBuffers[slot];
+      const sharedOpus = this.#sharedOpusBuffers[slot];
+
+      this.#slot = (this.#slot + 1) % this.#totalSlots;
+
+      const { port1: origin, port2: workerPort } = new MessageChannel();
+
+      origin.once('message', (size) => {
+        const opus = Buffer.from(sharedOpus.slice(0, size));
+        resolve(opus);
+        origin.close();
+      });
+
+      origin.once('messageerror', (e) => {
+        origin.close();
+        reject(e);
+      });
+
+      sharedPcm.set(audio);
+
+      this.#worker.postMessage({
+        fn: 'encode',
+        slot,
+        bufferSize: audio.length,
+        port: workerPort
+      }, [workerPort])
+    })
+  }
+
+  protected ctl(c: number, value: number) {
+    this.#worker.postMessage({
+      fn: 'ctl',
+      c,
+      value
+    });
+  }
+}
