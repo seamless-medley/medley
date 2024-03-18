@@ -480,12 +480,12 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
             response = {
               status: 'exception',
-              message: 'The stream returned by the remove invocation is already exist'
+              message: 'The stream returned by the remote invocation is already exist'
             }
           } else {
             response = {
               status: 'exception',
-              message: 'The stream returned by the remove invocation is invalid'
+              message: 'The stream returned by the remote invocation is invalid'
             }
           }
         }
