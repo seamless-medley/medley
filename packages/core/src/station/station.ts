@@ -488,6 +488,7 @@ export class Station extends TypedEmitter<StationEvents> {
 
     const ok = this.medley.fadeOut();
     if (ok) {
+      this.playState = PlayState.Playing;
       this.#logger.info('Skipping track: %s', this.trackPlay?.track?.path);
     }
 
