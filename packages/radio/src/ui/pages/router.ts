@@ -1,8 +1,8 @@
-import { rootRoute } from './_root';
+import { rootRoute } from './rootRoute';
 import { route as indexRoute } from './home';
-import { route as djRoute } from './dj/route';
+import { djRoute as djRoute } from './dj/route';
 import { route as playRoute } from './play/route';
-import { Router } from '@tanstack/react-router';
+import { createRouter } from '@tanstack/react-router';
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -10,7 +10,7 @@ const routeTree = rootRoute.addChildren([
   playRoute
 ]);
 
-export const router = new Router({ routeTree })
+export const router = createRouter({ routeTree })
 
 declare module '@tanstack/react-router' {
   interface Register {
