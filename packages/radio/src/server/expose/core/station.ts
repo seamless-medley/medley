@@ -74,6 +74,10 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.emit('crateChange', oldCrate?.id, newCrate.id);
   }
 
+  get audienceCount() {
+    return this.#station.audienceCount;
+  }
+
   get id() {
     return this.#station.id;
   }

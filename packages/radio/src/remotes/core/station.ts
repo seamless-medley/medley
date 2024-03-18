@@ -11,6 +11,7 @@ export interface Station {
   readonly paused: boolean;
   readonly playState: PlayState;
   readonly activeDeck: DeckIndex | undefined;
+  readonly audienceCount: number;
 
   start(): void;
   pause(): void;
