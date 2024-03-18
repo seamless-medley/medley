@@ -239,7 +239,6 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   }
 
   async #scan(dir: string, onFirstChunkAdded?: () => any) {
-    const start = performance.now();
     this.emit('scan' as any);
 
     const notifyOnce = once(onFirstChunkAdded ?? noop) as ChunkHandler<T>;
