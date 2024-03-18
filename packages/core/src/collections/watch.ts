@@ -5,7 +5,7 @@ import which from 'which';
 
 import fg from 'fast-glob';
 import { minimatch } from 'minimatch';
-import { debounce, groupBy, noop, once, shuffle, stubFalse, stubTrue, uniq } from "lodash";
+import { chain, debounce, noop, once, shuffle, stubFalse, stubTrue, uniq } from "lodash";
 import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
 
@@ -83,7 +83,10 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       return;
     }
 
-    const byType = groupBy(events, 'type') as Partial<Record<watcher.EventType, watcher.Event[]>>;
+    const byType = chain(events)
+      .uniqBy(({ path, type }) => `${type}:${path}`)
+      .groupBy('type')
+      .value() as Partial<Record<watcher.EventType, watcher.Event[]>>;
 
     if (byType.delete) {
       this.#handlePathDeletion(byType.delete);
