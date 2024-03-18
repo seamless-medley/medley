@@ -1,4 +1,6 @@
 import { TypedEmitter } from 'tiny-typed-emitter';
+import { Join } from 'type-fest';
+import { sumBy } from 'lodash';
 
 import {
   AudioLevels,
@@ -11,10 +13,11 @@ import {
   UpdateAudioStreamOptions
 } from "@seamless-medley/medley";
 
+import { createLogger, Logger } from "@seamless-medley/logging";
+
 import { TrackCollectionBasicOptions, TrackIndex } from "../collections";
 import { Crate, LatchOptions, LatchSession } from "../crate";
 import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "../library";
-import { createLogger, Logger } from "@seamless-medley/logging";
 import {
   BoomBox,
   BoomBoxEvents,
@@ -30,7 +33,6 @@ import {
 import { MetadataHelper } from "../metadata";
 import { SearchQuery, SearchQueryField } from "../library/search";
 import { CrateProfile } from "../crate/profile";
-import { Join } from 'type-fest';
 
 export type StationAudioLevels = AudioLevels & {
   reduction: number;
@@ -157,6 +159,8 @@ export class Station extends TypedEmitter<StationEvents> {
   maxTrackHistory: number = 50;
 
   #audiences: Map<AudienceGroupId, Set<string>> = new Map();
+
+  #audienceCount = 0;
 
   #logger: Logger;
 
@@ -763,22 +767,39 @@ export class Station extends TypedEmitter<StationEvents> {
       this.#audiences.set(groupId, new Set());
     }
 
-    this.#audiences.get(groupId)!.add(audienceId);
+    const aud = this.#audiences.get(groupId);
+    if (aud) {
+      if (!aud.has(audienceId)) {
+        aud.add(audienceId);
+        this.audienceCount += 1;
+      }
+    }
+
     return this.playIfHasAudiences();
   }
 
   removeAudience(groupId: AudienceGroupId, audienceId: string) {
-    this.getAudiences(groupId)?.delete(audienceId);
+    const aud = this.getAudiences(groupId);
+
+    if (aud) {
+      if (aud.delete(audienceId)) {
+        this.audienceCount -= 1;
+      }
+    }
+
     return this.pauseIfNoAudiences('an audience removed');
   }
 
   removeAudiencesForGroup(groupId: AudienceGroupId) {
-    this.#audiences.delete(groupId);
+    if (this.#audiences.delete(groupId)) {
+      this.audienceCount = this.countAudiences();
+    }
     return this.pauseIfNoAudiences('audiences group removed');
   }
 
   updateAudiences(groupId: AudienceGroupId, audiences: string[]) {
     this.#audiences.set(groupId, new Set(audiences));
+    this.audienceCount = this.countAudiences();
     this.updatePlayback();
   }
 
@@ -812,26 +833,26 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#audiences.get(groupId);
   }
 
-  get totalAudiences() {
-    const audiences = new Set<string>();
+  countAudiences() {
+    const groups = [...this.#audiences.values()];
+    const result = sumBy(groups, g => g.size);
+    return result;
+  }
 
-    for (const aud of this.#audiences.values()) {
-      for (const id of aud.keys()) {
-        audiences.add(id);
-      }
+  get audienceCount() {
+    return this.#audienceCount;
+  }
+
+  private set audienceCount(value) {
+    if (this.#audienceCount === value) {
+      return;
     }
 
-    return audiences.size;
+    this.#audienceCount = value;
   }
 
   get hasAudiences() {
-    for (const aud of this.#audiences.values()) {
-      if (aud.size > 0) {
-        return true;
-      }
-    }
-
-    return false;
+    return this.#audienceCount > 0;
   }
 
   get audienceGroups() {
