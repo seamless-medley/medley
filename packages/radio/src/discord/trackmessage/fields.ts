@@ -21,7 +21,7 @@ export const spotifyURI = (text: string, type: string, id: string, tooltip?: str
   return tooltip ? hyperlink(text, url, tooltip) : hyperlink(text, url);
 }
 
-const spotifySearchLink = (q: string) => hyperlink(q, `${spotifyBaseURL}/search/${encodeURIComponent(q)}`, 'Search on Spotify');
+export const spotifySearchLink = (q: string, field?: string) => hyperlink(q, `${spotifyBaseURL}/search/${encodeURIComponent(q)}` + (field ? `/${field}` : ''), 'Search on Spotify');
 
 export const formatSpotifyField = (field: MetadataFields, value: string, id: string | undefined) => {
   if (!spotifyMetadataFields.includes(field)) {
@@ -32,5 +32,11 @@ export const formatSpotifyField = (field: MetadataFields, value: string, id: str
     return spotifyURI(value, field, id, `More about this ${field} on Spotify`);
   }
 
-  return spotifySearchLink(value);
+  const spotifyFieldMap: Partial<Record<MetadataFields, string>> = {
+    title: 'tracks',
+    artist: 'artists',
+    album: 'albums'
+  }
+
+  return spotifySearchLink(value, spotifyFieldMap[field]);
 }

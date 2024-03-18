@@ -2,7 +2,7 @@ import { MetadataFields } from "@seamless-medley/core";
 import { APIEmbedField, bold, hyperlink, quote, userMention } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
 import { formatDuration } from "../../format/format";
-import { extractSpotifyMetadata, formatSpotifyField, metadataFields, spotifyURI } from "../fields";
+import { extractSpotifyMetadata, formatSpotifyField, metadataFields, spotifySearchLink, spotifyURI } from "../fields";
 import { createCoverImageAttachment, CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 
 const emptyField = { name: '\u200B', value: '\u200B', inline: true };
@@ -32,7 +32,7 @@ export class Normal extends TrackMessageCreator {
       .setDescription(quote(
         spotifyMetadata.track
           ? spotifyURI(data.description, 'track', spotifyMetadata.track, "More about this track on Spotify")
-          : data.description
+          : spotifySearchLink(data.description, 'tracks')
       ));
 
     for (const group of chunk(metadataFields, 2)) {
