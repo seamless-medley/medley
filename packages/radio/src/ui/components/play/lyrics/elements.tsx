@@ -1,8 +1,8 @@
 import React, { CSSProperties, PropsWithChildren } from 'react';
-import styled from "@emotion/styled";
 import classNames from 'classnames';
 import { linearGradient, rgba } from 'polished';
 import { attrs } from '../../../utils/attrs';
+import { styled } from '@linaria/react';
 
 interface BackgroundProp {
   background: string;

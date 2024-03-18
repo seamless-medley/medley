@@ -1,8 +1,8 @@
 
 import React, { PropsWithChildren, forwardRef, useEffect, useState } from 'react';
-import styled from "@emotion/styled";
-import { chain, first, random } from 'lodash';
+import { chain, first } from 'lodash';
 import { rgba, transparentize } from "polished";
+import { styled } from '@linaria/react';
 
 export interface ColorsProp {
   colors: string[];

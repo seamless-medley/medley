@@ -1,4 +1,4 @@
-import styled from "@emotion/styled";
+import { styled } from '@linaria/react';
 import { setLightness, transparentize } from 'polished';
 
 export const Container = styled.div`

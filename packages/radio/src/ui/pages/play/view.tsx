@@ -28,8 +28,8 @@ import { useRemotableProp } from "../../hooks/remotable";
 import { useSetState } from "@mantine/hooks";
 import type { DeckIndex, Metadata } from "@seamless-medley/core";
 import { useClient } from "../../hooks/useClient";
-import styled from "@emotion/styled";
 import { Button } from "@mantine/core";
+import { styled } from "@linaria/react";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -78,7 +78,7 @@ const Control = styled.div`
 
   user-select: none;
 
-  :hover {
+  &:hover {
     opacity: 1;
   }
 `;

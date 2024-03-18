@@ -1,12 +1,14 @@
 import { defineConfig } from "vite";
+import mkcert from 'vite-plugin-mkcert';
 import react from "@vitejs/plugin-react";
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
-import mkcert from 'vite-plugin-mkcert';
+import wyw from '@wyw-in-js/vite';
 
 export default defineConfig({
   root: './src/ui/app',
   plugins: [
+    mkcert(),
     {
       name: "configure-response-headers",
       configureServer: (server) => {
@@ -19,6 +21,7 @@ export default defineConfig({
     },
     react({
       babel: {
+        presets: ['@babel/preset-typescript', ['@babel/preset-react', { runtime: 'automatic' }]],
         plugins: [
           jotaiDebugLabel,
           jotaiReactRefresh,
@@ -28,7 +31,12 @@ export default defineConfig({
         ]
       }
     }),
-    mkcert()
+    wyw({
+      include: ['**/*.{ts,tsx}'],
+      babelOptions: {
+        presets: ['@babel/preset-typescript', ['@babel/preset-react', { runtime: 'automatic' }]],
+      },
+    })
   ],
   server: {
     https: {
