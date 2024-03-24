@@ -56,6 +56,7 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
 
     await this.#audioTransport?.dispose();
     this.#audioTransport = undefined;
+
     this.#transportCreators = [];
     this.#transponder = undefined;
 
@@ -131,7 +132,7 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
       return false;
     }
 
-    await this.#audioTransport.prepareAudioContext();;
+    await this.#audioTransport.prepareAudioContext();
 
     const playResult = await this.#audioTransport.play(stationId);
 
