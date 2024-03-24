@@ -1,9 +1,19 @@
-import { useAtomValue } from "jotai"
-import { clientAtom } from "../atoms/client"
+import { useCallback, useEffect, useState } from "react";
+import { client } from "../init";
 
-export const useClient = () => useAtomValue(clientAtom);
 
-export const useClientSession = () => {
-  const client = useClient();
-  return client.session;
+export function usePlayingStationId() {
+  const [id, setId] = useState<string>();
+
+  const handler = useCallback(setId, []);
+
+  useEffect(() => {
+    client.on('playingStation', handler);
+
+    return () => {
+      client.off('playingStation', handler);
+    }
+  }, []);
+
+  return id;
 }

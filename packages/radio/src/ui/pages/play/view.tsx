@@ -27,9 +27,9 @@ import { castArray, chain, random, sortBy, trim, uniq } from "lodash";
 import { useRemotableProp } from "../../hooks/remotable";
 import { useSetState } from "@mantine/hooks";
 import type { DeckIndex, Metadata } from "@seamless-medley/core";
-import { useClient } from "../../hooks/useClient";
 import { Button } from "@mantine/core";
 import { styled } from "@linaria/react";
+import { client } from "../../init";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -84,7 +84,6 @@ const Control = styled.div`
 `;
 
 export const Play: React.FC = () => {
-  const client = useClient();
   const { station: stationId } = useParams({ from: route.id });
 
   const { station, error: stationError } = useStation(stationId);

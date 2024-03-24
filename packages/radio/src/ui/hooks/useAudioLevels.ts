@@ -4,7 +4,7 @@ import { mapValues } from "lodash";
 import { compose } from "lodash/fp";
 import { useCallback, useEffect, useRef } from "react";
 import { AudioTransportExtra } from "../../audio/types";
-import { useClient } from "./useClient";
+import { client } from "../init";
 
 const emptyLevel: StationAudioLevels = {
   left: {
@@ -34,7 +34,6 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, opti
   const normalize = (v: number) => interpolate(Math.min(v, max), [-100, max], [0, 1]);
   const process = compose(normalize, gainToDecibels);
 
-  const client = useClient();
   const raf = useRef(0);
 
   const update = (levels: StationAudioLevels) => {

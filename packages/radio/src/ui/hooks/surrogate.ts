@@ -3,8 +3,8 @@ import { useForceUpdate } from "@mantine/hooks";
 import type { RemoteTypes } from "../../remotes";
 import type { Stub, Remotable } from "../../socket";
 import { useRemotableProps } from "./remotable";
-import { useClient } from "./useClient";
 import { RemoteObserveOptions } from "../../socket";
+import { client } from "../init";
 
 type SurrogateState<T> = {
   surrogate?: Remotable<T>;
@@ -35,7 +35,6 @@ export function useSurrogate<
   id: string | undefined,
   options?: RemoteObserveOptions
 ): SurrogateState<T> {
-  const client = useClient();
 
   const [state, dispatch] = useReducer(useSurrogateReducer, {});
 
