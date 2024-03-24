@@ -103,6 +103,8 @@ public:
 
     Napi::Value reqAudioConsume(const CallbackInfo& info);
 
+    Napi::Value reqAudioGetlatency(const CallbackInfo& info);
+
     Napi::Value updateAudioStream(const CallbackInfo& info);
 
     Napi::Value reqAudioDispose(const CallbackInfo& info);

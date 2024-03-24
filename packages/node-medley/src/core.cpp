@@ -75,6 +75,7 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::requestAudioStream>("*$reqAudio"),
         InstanceMethod<&Medley::reqAudioConsume>("*$reqAudio$consume"),
         InstanceMethod<&Medley::updateAudioStream>("updateAudioStream"),
+        InstanceMethod<&Medley::reqAudioGetlatency>("*$reqAudio$getLatency"),
         InstanceMethod<&Medley::reqAudioDispose>("*$reqAudio$dispose"),
         InstanceMethod<&Medley::reqAudioGetFx>("*$reqAudio$getFx"),
         InstanceMethod<&Medley::reqAudioSetFx>("*$reqAudio$setFx"),
@@ -848,6 +849,31 @@ Napi::Value Medley::updateAudioStream(const CallbackInfo& info) {
     }
 
     return Boolean::New(env, true);
+}
+
+Napi::Value Medley::reqAudioGetlatency(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 1) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    auto streamId = static_cast<uint32_t>(info[0].As<Number>().Int32Value());
+    auto it = audioRequests.find(streamId);
+    if (it == audioRequests.end()) {
+        return env.Undefined();
+    }
+
+    auto& request = it->second;
+
+    auto sampleRate = engine->getOutputSampleRate();
+    auto outputLatency = (double)engine->getOutputLatency();
+    auto bufferedSize = (double)request->buffer.getNumReady();
+
+    auto latencyMs = (jmax(bufferedSize, (double)request->buffering) + outputLatency) / sampleRate * 1000;
+
+    return Number::New(env, latencyMs);
 }
 
 Napi::Value Medley::reqAudioDispose(const CallbackInfo& info) {

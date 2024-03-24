@@ -89,6 +89,7 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
     stream,
     ...result,
     update: options => this.updateAudioStream(streamId, options),
+    getLatency: () => this['*$reqAudio$getLatency'](streamId),
     getFx: type => this['*$reqAudio$getFx'](streamId, type) as never,
     setFx: (type, params) => this['*$reqAudio$setFx'](streamId, type, params)
   }

@@ -335,6 +335,11 @@ export type RequestAudioStreamResult = RequestAudioResult & {
 
   update(options: UpdateAudioStreamOptions): boolean;
 
+  /**
+   * Get audio pipeline latency in millisecond
+   */
+  getLatency(): number;
+
   getFx(type: 'karaoke'): KaraokeParams | undefined;
   getFx(type: any): never;
 
