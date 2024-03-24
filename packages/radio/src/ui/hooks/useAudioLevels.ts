@@ -1,7 +1,6 @@
 import type { StationAudioLevels } from "@seamless-medley/core";
 import { gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { mapValues } from "lodash";
-import { compose } from "lodash/fp";
 import { useCallback, useEffect, useRef } from "react";
 import { AudioTransportExtra } from "../../audio/types";
 import { client } from "../init";
@@ -18,39 +17,41 @@ const emptyLevel: StationAudioLevels = {
   reduction: 0
 }
 
-type NormalizedAudioLevel = {
+type AudioLevel = {
   magnitude: number;
   peak: number;
 }
 
+type ChannelAudioLevel = Record<'scaled' | 'db' | 'level', AudioLevel>
+
 export type UseAudioLevelsData = {
-  left: NormalizedAudioLevel;
-  right: NormalizedAudioLevel;
+  left: ChannelAudioLevel;
+  right: ChannelAudioLevel;
   reduction: number;
 }
 
 export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, options?: { max?: number }) {
   const max = options?.max ?? 0;
-  const normalize = (v: number) => interpolate(Math.min(v, max), [-100, max], [0, 1]);
-  const process = compose(normalize, gainToDecibels);
+  const normalize = (db: number) => interpolate(Math.min(db, max), [-100, max], [0, 1]);
 
-  const raf = useRef(0);
+  const levelToChannelLevel = (level: AudioLevel): ChannelAudioLevel => {
+    const db = mapValues(level, gainToDecibels)
+    return {
+      scaled: mapValues(db, normalize),
+      level,
+      db
+    }
+  };
 
-  const update = (levels: StationAudioLevels) => {
-    const left = mapValues(levels.left, process);
-    const right = mapValues(levels.right, process);
+  const update = useCallback((levels: StationAudioLevels) => {
     const reduction = normalize(levels.reduction + max);
 
-    raf.current = requestAnimationFrame(() => {
-      callback({
-        left,
-        right,
-        reduction
-      });
-
-      raf.current = 0;
+    callback({
+      left: levelToChannelLevel(levels.left),
+      right: levelToChannelLevel(levels.right),
+      reduction
     });
-  }
+  }, []);
 
   const handleAudioExtra = useCallback((extra: AudioTransportExtra) => update(extra.audioLevels), [callback]);
   const handleDisconnect = useCallback(() => update(emptyLevel), []);
@@ -60,7 +61,6 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, opti
     client.on('disconnect', handleDisconnect);
 
     return () => {
-      cancelAnimationFrame(raf.current);
       client.off('audioExtra', handleAudioExtra);
       client.off('disconnect', handleDisconnect);
     }
