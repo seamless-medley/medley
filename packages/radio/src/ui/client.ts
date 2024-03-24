@@ -191,11 +191,13 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
   }
 
   private handleRemoteStreamData: ServerEvents['r:sd'] = (id, data) => {
-    if (!this.localStreams.has(id)) {
+    const stream = this.localStreams.get(id);
+
+    if (!stream) {
       return false;
     }
 
-    this.localStreams.get(id)?.push(new Uint8Array(data));
+    stream.push(new Uint8Array(data));
     return true;
   }
 
@@ -286,7 +288,6 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
   }
 
   protected async handleSocketConnect() {
-    console.log('CONNECT');
     this.emit('connect');
   }
 
