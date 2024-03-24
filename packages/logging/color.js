@@ -1,4 +1,4 @@
-const tty = require('tty');
+const tty = require('node:tty');
 
 const { env = {} } = typeof process === "undefined" ? {} : process;
 
