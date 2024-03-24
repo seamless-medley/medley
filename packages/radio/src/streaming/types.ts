@@ -1,6 +1,6 @@
 import { AudioFormat, audioFormats, RequestAudioOptions, RequestAudioStreamResult, Station } from "@seamless-medley/core";
 import { createFFmpegOverseer, FFmpegChildProcess, FFMpegLine, FFmpegOverseer, FFmpegOverseerOptions, ProgressValue } from "./ffmpeg";
-import { RequestHandler, Router } from "express";
+import { Router } from "express";
 
 const audioTypes = ['s16le', 's16be', 'f32le', 'f32be'];
 type AudioTypes = typeof audioTypes[number];
