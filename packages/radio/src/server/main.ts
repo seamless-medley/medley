@@ -58,6 +58,28 @@ async function startServer(configs: Config) {
       next();
     });
 
+    const streamingRouter = express.Router();
+
+    expressApp.use(
+      '/streams',
+      streamingRouter,
+      (_, res) => void res.status(503).end('Unknown stream')
+    );
+
+    expressApp.use('/', express.static('dist/ui'), (req, res, next) => {
+      const ext = extname(req.path);
+
+      if (!ext) {
+        res.sendFile('index.html', {
+          root: 'dist/ui',
+          dotfiles: 'deny'
+        });
+        return;
+      }
+
+      next();
+    });
+
     const io = new SocketIOServer(httpServer, '/socket.io');
     const audioServer = new AudioWebSocketServer(httpServer, configs.server.audioBitrate * 1000);
     const rtcTransponder = (configs.webrtc)

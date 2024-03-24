@@ -234,8 +234,6 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       return;
     }
 
-    console.log('Checking', instance.constructor.name, key);
-
     if (!await hasObjectGuardAccess(socket, instance, key)) {
       cb?.({
         status: 'prohibited',
