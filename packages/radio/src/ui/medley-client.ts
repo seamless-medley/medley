@@ -151,6 +151,11 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
     return false;
   }
 
+  stopAudio() {
+    this.playingStationId = undefined;
+    this.#audioTransport?.stop();
+  }
+
   get playingStationId() {
     return this.#playingStationId;
   }
