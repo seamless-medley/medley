@@ -72,6 +72,7 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
 
   if (prefill) {
     const consumingSize = (options.buffering || sampleRate * 0.01) * bytesPerSample * 2;
+
     while (totalSamples() < prefill) {
       buffers.push(await consume(consumingSize));
     }
