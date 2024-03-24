@@ -13,7 +13,9 @@ export type AudioTransportPlayResult = boolean | 'transport_failed' | 'media_fai
 export interface IAudioTransport extends EventEmitter<AudioTransportEvents> {
   get state(): AudioTransportState;
   prepareAudioContext(): Promise<void>;
+  dispose(): Promise<void>;
   play(stationId: string, options?: any): Promise<AudioTransportPlayResult>;
+  stop(): Promise<void>;
 }
 
 export async function waitForAudioTransportState(transport: IAudioTransport, states: AudioTransportState[], timeout = 2000): Promise<AudioTransportState | undefined> {

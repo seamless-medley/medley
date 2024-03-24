@@ -45,7 +45,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
     this.#clientWorker.postMessage({ type: 'init', pcmBuffer: this.#pcmBuffer });
 
-    const listener = (e: MessageEvent<OpenMessage>) => {
+    const listener = (e: MessageEvent<OutputMessage>) => {
       if (e.data.type === 'open') {
         this.#clientWorker.removeEventListener('message', listener);
         this.#setState('ready');
@@ -81,6 +81,37 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
     return true;
   }
 
+  async stop() {
+    this.#clientWorker.postMessage({ type: 'stop' });
+
+    return new Promise<void>((resolve) => {
+      const listener = (e: MessageEvent<OutputMessage>) => {
+        if (e.data.type === 'stopped') {
+          resolve();
+          this.#clientWorker.removeEventListener('message', listener);
+        }
+      }
+
+      this.#clientWorker.addEventListener('message', listener);
+
+      this.emit('audioExtra', {
+        audioLevels: {
+          left: {
+            magnitude: 0,
+            peak: 0
+          },
+          right: {
+            magnitude: 0,
+            peak: 0
+          },
+          reduction: 0
+        }
+      });
+
+      this.#delayedAudioExtra = [];
+    });
+  }
+
   async prepareAudioContext() {
     if (this.#prepared) {
       return;
@@ -111,6 +142,11 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
     this.#consumerNode.connect(this.#outputNode);
 
     this.#prepared = true;
+  }
+
+  async dispose() {
+    this.#consumerNode?.disconnect();
+    await this.stop();
   }
 
   #handleProcessorError = (e: Event) => {

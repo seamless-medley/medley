@@ -28,6 +28,13 @@ export type ClientTransportData = {
   closeHandler: () => void;
   routerCloseHandler: () => void;
   stationId?: string;
+  consumer?: types.Consumer<ClientConsumerData>;
+}
+
+export type ClientConsumerData = {
+  closeHandler: () => void;
+  transport: types.WebRtcTransport<ClientTransportData>;
+  stationId: string;
 }
 
 export type ClientConsumerInfo = {
@@ -61,7 +68,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
     this.#bitrate = config.bitrate * 1000;
     this.#listens = config.listens;
 
-    this.#internalInitialize();
+    await this.#internalInitialize();
 
     return this;
   }
@@ -159,6 +166,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
       this.#logger.debug('Closing transport due to socket disconnection');
       transport.close();
     }
+
     socket.once('disconnect', disconnectHandler);
 
     const routerCloseHandler = () => {
@@ -170,12 +178,14 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
         transport.close();
       }
     }
+
     transport.once('routerclose', routerCloseHandler);
 
     const closeHandler = () => {
       this.#logger.debug('transport @close');
       this.#removeClientTransport(transport);
     }
+
     transport.once('@close', closeHandler);
 
     transport.appData = {
@@ -214,12 +224,20 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
 
     this.#logger.debug('removing transport');
 
-    const { closeHandler, routerCloseHandler, socket, disconnectHandler } = transport.appData;
+    const { closeHandler, routerCloseHandler, disconnectHandler, socket, consumer } = transport.appData;
 
     transport.off('routerclose', routerCloseHandler);
     transport.off('@close', closeHandler);
     socket.off('disconnect', disconnectHandler);
 
+    if (consumer) {
+      consumer.off('@close', consumer.appData.closeHandler);
+    }
+
+    this.#removeStationAudience(transport);
+  }
+
+  #removeStationAudience(transport: types.WebRtcTransport<ClientTransportData>) {
     const { stationId } = transport.appData;
 
     if (stationId) {
@@ -273,19 +291,39 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
       return;
     }
 
-    transport.appData.stationId = stationId;
-
     station.addAudience(
       makeAudienceGroupId(AudienceType.Web, `rtc`),
       transportId
     );
 
-    const consumer = await transport.consume({
+    const consumer = await transport.consume<ClientConsumerData>({
       producerId,
       rtpCapabilities: clientCaps
     });
 
-    const audioLevelDataConsumer = audioLevelDataProducerId ? await transport.consumeData({ dataProducerId: audioLevelDataProducerId }) : undefined;
+    const closeHandler = () => {
+      this.#logger.debug('Consumer @close');
+      this.#removeStationAudience(transport);
+      transport.appData.consumer = undefined;
+    }
+
+    consumer.once('@close', closeHandler);
+
+    consumer.appData = {
+      closeHandler,
+      transport,
+      stationId
+    }
+
+    transport.appData = {
+      ...transport.appData,
+      stationId,
+      consumer
+    }
+
+    const audioLevelDataConsumer = audioLevelDataProducerId
+      ? await transport.consumeData({ dataProducerId: audioLevelDataProducerId })
+      : undefined;
 
     return {
       rtp: {
@@ -310,5 +348,19 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
     }
 
     await transport.connect({ dtlsParameters });
+  }
+
+  async stopClientConsumer(transportId: string) {
+    const transport = this.#transports.get(transportId);
+    if (!transport) {
+      return;
+    }
+
+    const { consumer } = transport.appData;
+    if (!consumer) {
+      return;
+    }
+
+    consumer.close();
   }
 }

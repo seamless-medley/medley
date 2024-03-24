@@ -105,6 +105,33 @@ export class AudioWebSocketServer extends EventEmitter {
       );
     }
 
+  detuneAudioSocket(socket: AudioWebSocket): boolean {
+    if (!socket.stationId) {
+      return false;
+    }
+
+    const station = this.#stationFromId(socket.stationId);
+    if (!station) {
+      return false;
+    }
+
+    const listeners = this.#stationListeners.get(socket.stationId);
+
+    if (!listeners?.has(socket)) {
+      return false;
+    }
+
+    if (listeners.has(socket)) {
+      listeners.delete(socket);
+    }
+
+    if (socket.socketId) {
+      station.removeAudience(
+        makeAudienceGroupId(AudienceType.Web, `ws`),
+        socket.socketId
+      );
+    }
+
     return true;
   }
 
@@ -163,6 +190,10 @@ class AudioWebSocket {
         if (this.server.tuneAudioSocket(stationId, this)) {
           this.#stationId = stationId;
         }
+        break;
+
+      case AudioSocketCommand.Detune:
+        this.server.detuneAudioSocket(this);
         break;
     }
   }

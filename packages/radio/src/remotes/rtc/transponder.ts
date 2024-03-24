@@ -13,5 +13,7 @@ export interface RTCTransponder {
 
   startClientConsumer(transportId: string, dtlsParameters: types.DtlsParameters): Promise<void>;
 
+  stopClientConsumer(transportId: string): Promise<void>;
+
   ϟrenew(): void;
 }

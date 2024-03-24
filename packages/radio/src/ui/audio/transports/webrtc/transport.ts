@@ -20,6 +20,10 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   #transport?: types.Transport;
 
+  #consumer?: types.Consumer;
+
+  #audioLevelConsumer?: types.DataConsumer;
+
   #audioElement = new Audio();
 
   #sourceNode?: MediaStreamAudioSourceNode;
@@ -140,10 +144,11 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
       return 'transport_failed';
     }
 
-    const consumer = await this.#transport.consume(consumerInfo.rtp);
+    this.#consumer?.close();
+    this.#consumer = await this.#transport.consume(consumerInfo.rtp);
 
     const stream = new MediaStream();
-    stream.addTrack(consumer.track);
+    stream.addTrack(this.#consumer.track);
 
     this.#sourceNode?.disconnect();
     this.#sourceNode = this.#ctx.createMediaStreamSource(stream);
@@ -167,32 +172,39 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     this.#stationId = stationId;
 
     if (consumerInfo.audioLevelData) {
-      const dataConsumer = await this.#transport.consumeData({
+      this.#audioLevelConsumer?.off('message', this.#audioExtraHandler);
+      this.#audioLevelConsumer?.close();
+
+      this.#audioLevelConsumer = await this.#transport.consumeData({
         ...consumerInfo.audioLevelData,
         sctpStreamParameters: consumerInfo.audioLevelData.sctpStreamParameters ?? {}
       });
 
-      dataConsumer.on('message', (data: ArrayBuffer) => {
-        const extra = decode(data) as AudioTransportExtraPayload;
-        const [left_mag, left_peak, right_mag, right_peak, reduction] = extra;
-
-        this.#pushAudioExtra({
-          audioLevels: {
-            left: {
-              magnitude: left_mag,
-              peak: left_peak,
-            },
-            right: {
-              magnitude: right_mag,
-              peak: right_peak
-            },
-            reduction
-          }
-        });
+      this.#audioLevelConsumer.on('message', this.#audioExtraHandler);
+    }
       });
     }
 
     return result;
+  }
+
+  #audioExtraHandler = (data: ArrayBuffer) => {
+    const extra = decode(data) as AudioTransportExtraPayload;
+    const [left_mag, left_peak, right_mag, right_peak, reduction] = extra;
+
+    this.#pushAudioExtra({
+      audioLevels: {
+        left: {
+          magnitude: left_mag,
+          peak: left_peak,
+        },
+        right: {
+          magnitude: right_mag,
+          peak: right_peak
+        },
+        reduction
+      }
+    });
   }
 
   #delayedAudioExtra: AudioTransportExtra[] = [];
@@ -202,7 +214,42 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
     while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx.outputLatency * this.#ctx.sampleRate / 960) + 12) {
       this.emit('audioExtra', this.#delayedAudioExtra.shift()!);
+  async stop() {
+    this.#audioLevelConsumer?.off('message', this.#audioExtraHandler);
+    this.#audioLevelConsumer?.close();
+    this.#audioLevelConsumer = undefined;
+
+    this.#consumer?.close();
+    this.#consumer = undefined;
+
+    this.#sourceNode?.disconnect();
+    this.#sourceNode = undefined;
+
+    this.#stationId = undefined;
+
+    if (this.#transport) {
+      await this.#transponder.stopClientConsumer(this.#transport.id);
     }
+
+    this.emit('audioExtra', {
+      audioLevels: {
+        left: {
+          magnitude: 0,
+          peak: 0
+        },
+        right: {
+          magnitude: 0,
+          peak: 0
+        },
+        reduction: 0
+      }
+    });
+
+    this.#delayedAudioExtra = [];
+  }
+
+  async dispose() {
+    await this.stop();
   }
 }
 

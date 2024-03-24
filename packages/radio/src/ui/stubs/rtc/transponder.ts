@@ -11,6 +11,8 @@ class StubbingRTCTransponder {
 
   startClientConsumer = noop as any;
 
+  stopClientConsumer = noop as any;
+
   closeClientTransport = noop as any;
 }
 

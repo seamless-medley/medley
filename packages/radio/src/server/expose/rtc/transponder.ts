@@ -48,4 +48,8 @@ export class ExposedTransponder extends MixinEventEmitterOf<RemoteRTCTransponder
   startClientConsumer(transportId: string, dtlsParameters: types.DtlsParameters): Promise<void> {
     return this.#transponder.startClientConsumer(transportId, dtlsParameters);
   }
+
+  stopClientConsumer(transportId: string): Promise<void> {
+    return this.#transponder.stopClientConsumer(transportId);
+  }
 }

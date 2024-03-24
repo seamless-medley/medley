@@ -31,13 +31,26 @@ export type PlayMessage = {
   stationId: string;
 }
 
-export type InputMessage = InitMessage | ConnectMessage | DisconnectMessage | PlayMessage;
+export type StopMessage = {
+  type: 'stop';
+}
+
+export type InputMessage = InitMessage | ConnectMessage | DisconnectMessage | PlayMessage | StopMessage;
 
 export type OpenMessage = {
   type: 'open';
 }
 
-export type OutputMessage = OpenMessage;
+export type StoppedMessage = {
+  type: 'stopped';
+}
+
+export type AudioLatencyMessage = {
+  type: 'audio-latency';
+  latency: number;
+}
+
+export type OutputMessage = OpenMessage | StoppedMessage;
 
 export interface AudioClientEventMap extends AbstractWorkerEventMap {
   "message": MessageEvent<OutputMessage>;
@@ -160,6 +173,11 @@ function play(stationId: string) {
   sendCommand(AudioSocketCommand.Tune, stationId);
 }
 
+function stop() {
+  sendCommand(AudioSocketCommand.Detune, undefined);
+  self.postMessage({ type: 'stopped' });
+}
+
 self.addEventListener('message', (e: MessageEvent<InputMessage>) => {
   const { type } = e.data;
 
@@ -179,6 +197,10 @@ self.addEventListener('message', (e: MessageEvent<InputMessage>) => {
 
     case 'play':
       play(e.data.stationId);
+      return;
+
+    case 'stop':
+      stop();
       return;
   }
 });
