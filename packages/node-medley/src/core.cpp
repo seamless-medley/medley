@@ -644,12 +644,12 @@ Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {
 
     auto device = engine->getCurrentAudioDevice();
     auto numChannels = device->getOutputChannelNames().size();
-    auto sampleRate = device->getCurrentSampleRate();
+    auto sampleRate = engine->getOutputSampleRate();
 
     auto requestedSampleRate = options.Has("sampleRate") ? options.Get("sampleRate") : env.Undefined();
     auto outSampleRate = (!requestedSampleRate.IsNull() && !requestedSampleRate.IsUndefined()) ? requestedSampleRate.ToNumber().DoubleValue() : sampleRate;
 
-    uint32_t bufferSize = 0;
+    uint32_t bufferSize = (uint32_t)(sampleRate * 0.25f);
     {
         auto jsValue = options.Get("bufferSize");
         if (jsValue.IsNumber()) {
@@ -660,7 +660,7 @@ Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {
         }
     }
 
-    uint32_t buffering = 0;
+    uint32_t buffering = (uint32_t)(sampleRate * 0.01f);
     {
         auto jsValue = options.Get("buffering");
         if (jsValue.IsNumber()) {
@@ -669,6 +669,11 @@ Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {
                 buffering = value;
             }
         }
+    }
+
+    if (bufferSize <= buffering) {
+        TypeError::New(env, "bufferSize is too small").ThrowAsJavaScriptException();
+        return env.Undefined();
     }
 
     auto gainJS = options.Has("gain") ? options.Get("gain") : env.Undefined();
@@ -737,14 +742,15 @@ std::shared_ptr<audio_req::AudioRequest> Medley::registerAudioRequest(uint32_t i
     auto numChannels = device->getOutputChannelNames().size();
     auto deviceSampleRate = device->getCurrentSampleRate();
 
+    auto outputSampleRate = engine->getOutputSampleRate();
     int latencyInSamples = engine->getOutputLatency();
 
     if (bufferSize == 0) {
-        bufferSize = (uint32_t)(outSampleRate * 0.25f);
+        bufferSize = (uint32_t)(outputSampleRate * 0.25f);
     }
 
     if (buffering == 0) {
-        buffering = (uint32_t)(outSampleRate * 0.01f);
+        buffering = (uint32_t)(outputSampleRate * 0.01f);
     }
 
     std::shared_ptr<PostProcessor> processor = std::make_shared<PostProcessor>();

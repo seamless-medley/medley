@@ -285,7 +285,7 @@ export type RequestAudioOptions = {
   /**
    * Maximun frames the internal buffer can hold, increase this value helps reduce stuttering in some situations
    *
-   * @default 250ms (sampleRate * 0.25)
+   * @default 250ms (deviceSampleRate * 0.25)
    */
   bufferSize?: number;
 
@@ -297,7 +297,7 @@ export type RequestAudioOptions = {
    * Setting this value to 0 may cause the underlying stream to return empty buffers
    * which cause Node.js to utilize more CPU cycles while waiting for data
    *
-   * @default 10ms (sampleRate * 0.01)
+   * @default 10ms (deviceSampleRate * 0.01)
    */
   buffering?: number;
 
