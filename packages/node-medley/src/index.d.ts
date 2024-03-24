@@ -347,7 +347,12 @@ export type RequestAudioStreamResult = RequestAudioResult & {
   setFx(type: any, params: never): false;
 }
 
-export type AudioDeviceDescriptor = {
+export type NullAudioDeviceDescriptor = {
+  type: 'Null';
+  device: 'Null Device';
+}
+
+export type AudioDeviceDescriptor = NullAudioDeviceDescriptor | {
   type: string;
   device: string;
 }
