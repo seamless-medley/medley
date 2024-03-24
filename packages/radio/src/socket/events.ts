@@ -1,11 +1,19 @@
 import type { ObservedPropertyChange, SessionData } from "./types";
 
 export type ServerEvents = {
+  // Server Ping
+  's:p': (timestamp: number, callback: (timestamp: number) => void) => void;
+  // Client Latency, latency between server and client
+  'c:l': (latencyMs: number) => void;
+  // Client session
   'c:s': (session: SessionData) => void;
-  //
+  // Remote Event, when a remote object emit an event
   'r:e': (kind: string, id: string, event: string, ...args: any[]) => void;
+  // Remote Update, when a remote object has changed its properties
   'r:u': (kind: string, id: string, changes: ObservedPropertyChange[]) => void;
+  // Remote Stream Data
   'r:sd': (id: number, data: Buffer) => void;
+  // Remote Stream Closed
   'r:sc': (id: number) => void;
 }
 
