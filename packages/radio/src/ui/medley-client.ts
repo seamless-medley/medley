@@ -54,6 +54,8 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
   protected override async handleSocketConnect() {
     await super.handleSocketConnect();
 
+    await this.#audioTransport?.dispose();
+    this.#audioTransport = undefined;
     this.#transportCreators = [];
     this.#transponder = undefined;
 
