@@ -41,9 +41,23 @@ export type Remotable<T, Props = PickProp<T>> =
   SettersOf<Props> &
   AsyncFunctionsOf<PickMethod<T>> &
 {
+  /**
+   * Get a fresh propery value
+   */
+  getProperty<P extends keyof Props>(prop: P): Promise<Props[P]>;
+
+  /**
+   * Get all cached properties
+   */
   getProperties(): Props;
-  //
+
+  /**
+   * Add a listener for listening to changes
+   *
+   * Call the returned function to stop listening
+   */
   addPropertyChangeListener<P extends keyof Props>(props: P | AnyProp, listener: (newValue: Props[P], oldValue: Props[P], prop: P) => any): () => void;
+
   addDisposeListener(listener: () => Promise<any>): ThisType<T>;
   //
   dispose(): Promise<void>;
