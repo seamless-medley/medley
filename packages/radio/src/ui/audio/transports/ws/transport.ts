@@ -37,6 +37,9 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
   #state: AudioTransportState = 'new';
 
+
+  static #hasWorklet = false;
+
   constructor(socketId: string, context: AudioContext, output: AudioNode) {
     super();
 
@@ -117,8 +120,9 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
       return;
     }
 
-    try {
+    if (!WebSocketAudioTransport.#hasWorklet) try {
       await this.#ctx.audioWorklet.addModule(worklet);
+      WebSocketAudioTransport.#hasWorklet = true;
     }
     catch (e) {
       console.error('Error adding AudioWorklet module', e);
