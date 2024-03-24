@@ -6,12 +6,13 @@
 
 # Features
 - Cross-platform
-- Seamless playback
+- Seamless playback, automatically transit between tracks
 - Nice transition between tracks, with customizable transition point
 - Track metadata reading, including cover art and lyrics
 - ReplayGain support
 - Audio level normalization (in conjunction with ReplayGain)
 - Built-in audio limiter
+- Built-in Karaoke effect (vocal removal)
 - Audio level measurement
 - Play directly to audio device
 - Consume PCM data directly from audio pipeline via Node.js stream
@@ -35,30 +36,13 @@ npm i @seamless-medley/medley
 pnpm add @seamless-medley/medley
 ```
 
-### **Linux**:
-
-The following libraries are required for `node-medley` to load:
-
-- [TagLib](https://taglib.org/)
-- [libsamplerate](https://github.com/libsndfile/libsamplerate)
-- libasound
-- freetype
-- curl
-
-Make sure those libraries are installed on user's machine before using `node-medley`.
-
-> **On Ubuntu**
-```bash
-apt install libtag1v5 libsamplerate0 libasound2 libfreetype6 libcurl4
-```
-
 # Getting started
 
 ```ts
 // Import 2 main classes.
 import { Medley, Queue } from '@seamless-medley/medley';
 
-// Then craete a new queue instance and pass it to `Medley` class while instantiate.
+// Then craete a new queue instance and pass it to `Medley` class while instantiating.
 const queue = new Queue();
 const medley = new Medley(queue);
 
@@ -234,6 +218,8 @@ See also:
         - [requestAudioStream](#requestaudiostreamoptions)
         - [updateAudioStream](#updateaudiostreamid-options)
         - [deleteAudioStream](#deleteaudiostreamid)
+        - [getFx('karaoke')](#getfxtype-karaoke)
+        - [setFx('karaoke')](#setfxtype-karaoke-params)
     - Properties
         - [playing](#playing)
         - [paused](#paused)
@@ -255,6 +241,7 @@ See also:
         - [getInfo](#getinfo)
         - [isTrackLoadable](#istrackloadabletrack)
         - [getMetadata](#getmetadatapath)
+        - [getAudioProperties](#getaudiopropertiespath)
         - [getCoverAndLyrics](#getcoverandlyricspath)
 
 - [Queue](#queue-class)
@@ -390,12 +377,12 @@ Request for PCM audio data stream
     - `FloatBE` - 32 bit floating point, big endian
 
 - `bufferSize` *(number)* - Maximun frames the internal buffer can hold, increase this value helps reduce stuttering in some situations
-    - Default value is 250ms (`sampleRate` * 0.25)
+    - Default value is 250ms (`deviceSampleRate` * 0.25)
 
 - `buffering` *(number)*:
     - Number of frames to buffer before returning the buffered frames back to Node.js stream
     - Reducing this value will cause the stream to pump faster
-    - Default value is 10ms  (`sampleRate` * 0.01)
+    - Default value is 10ms  (`deviceSampleRate` * 0.01)
 
 - `preFill` *(number)* - Optional number of frames to pre-fill into the stream right after requesting
 
@@ -423,9 +410,13 @@ Returns a `Promise` of `object` with:
 
 - `update` *((options) => boolean)* - Update this audio stream, the `options` is the same as [updateAudioStream(id, options)](#updateaudiostreamid-options)
 
+- `getLatency` *() => number* - Get the audio latency
+
 - `getFx` - See [getFx](#getfxtype-karaoke)
+    > Calling this method from this object only effects the corresponding stream, but does not effect the main output.
 
 - `setFx` - See [setFx](#setfxtype-karaoke-params)
+    > Calling this method from this object only effects the corresponding stream, but does not effect the main output.
 
 ## `updateAudioStream(id, options)`
 
@@ -674,6 +665,12 @@ Returns `true` if the `track` can be loaded and played.
 
 Returns [Metadata](#metadata) for `path`
 
+## `getAudioProperties(path)`
+
+Returns [AudioProperties](#audioproperties) for `path`
+
+> Please note that this function may scan the whole file in order to get a good result.
+
 ## `getCoverAndLyrics(path)`
 
 Returns an `object` with:
@@ -759,12 +756,14 @@ A `TrackInfo` can be either a `string` to file path, or an `object` with:
   - `isrc` *(string?)* - [International Standard Recording Code](https://en.wikipedia.org/wiki/International_Standard_Recording_Code)
   - `albumArtist` *(string?)*
   - `originalArtist` *(string?)*
-  - `bitrate` *(number?)* - in **Kbps**
-  - `sampleRate` *(number?)* - in **Hz**
-  - `duration` *(number?)* - in **seconds**
   - `trackGain` *(number?)* - [ReplayGain](https://en.wikipedia.org/wiki/ReplayGain) value in **dB (decibels)**, `0` means no `ReplayGain` value for this track
   - `bpm` *(number?)* - Beats Per Minute
   - `comments` *([string, string][])* - List of key/value pair for all user-defined comments
+
+# AudioProperties
+  - `bitrate` *(number?)* - in **Kbps**
+  - `sampleRate` *(number?)* - in **Hz**
+  - `duration` *(number?)* - in **seconds**
 
 # Demo musics
 Demo music from [Bensound.com](https://bensound.com)
