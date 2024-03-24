@@ -812,16 +812,24 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     const emitterMethods = { on, off };
 
-    const getProperties = () => getObservedFromStore();
+    const getTimeout = (prop?: string) => Math.max(0, getRemoteTimeout(StubClass.StubbedFrom, prop) ?? 60_000);
+
+    const getProperty = async (prop: string) => {
+      const value = await this.remoteGet(kind, id, getTimeout(), prop as any);
+      getObservedFromStore()[prop] = value;
+      return value;
+    }
+
+    const getProperties = getObservedFromStore;
 
     const propertyGetters = mapValues(propertyDescs, (desc, name) => (...args: any[]) => {
+
       if (args.length === 0) {
         return getProperties()[name];
       }
 
       return new Promise(async (resolve, reject) => {
-        const timeout = Math.max(0, getRemoteTimeout(StubClass.StubbedFrom, name) ?? 60_000);
-        await this.remoteSet(kind, id, timeout, name as any, args[0]).then(resolve).catch(reject);
+        await this.remoteSet(kind, id, getTimeout(name), name as any, args[0]).then(resolve).catch(reject);
         return;
       })
     });
@@ -833,8 +841,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
         return;
       }
 
-      const timeout = Math.max(0, getRemoteTimeout(StubClass.StubbedFrom, name) ?? 60_000);
-      return this.remoteInvoke(kind, id, timeout, name as any, ...args as any);
+      return this.remoteInvoke(kind, id, getTimeout(name), name as any, ...args as any);
     });
 
     const dispose = async () => {
@@ -869,6 +876,7 @@ export class Client<Types extends { [key: string]: any }> extends EventEmitter<C
 
     const specialMethods: Record<string | symbol, any> = {
       dispose,
+      getProperty,
       getProperties,
       addPropertyChangeListener,
       addDisposeListener
