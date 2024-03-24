@@ -6,7 +6,9 @@ export const route = createRoute({
   path: '/',
   component: () => (
     <div>
-      <h3>Welcome Home!</h3>
+      <div>
+
+      </div>
     </div>
   )
 });

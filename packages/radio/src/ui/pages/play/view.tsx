@@ -21,6 +21,7 @@ import { getLuminance,
   hsl,
   radialGradient
 } from 'polished';
+
 import { Lyrics, defaultColors as defaultLyricsColors } from "../../components/play/lyrics/Lyrics";
 import { PlayHead } from "../../components/play/playhead/PlayHead";
 import { castArray, chain, random, sortBy, trim, uniq } from "lodash";
@@ -74,7 +75,6 @@ const Control = styled.div`
   opacity: 0;
   border-radius: 0 0 0 0.5em;
   transition: all 0.7s ease;
-  /* background-color: aqua; */
 
   user-select: none;
 
