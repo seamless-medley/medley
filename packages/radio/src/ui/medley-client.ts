@@ -93,6 +93,10 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
     }
 
     transport.prepareAudioContext();
+
+    if (this.#playingStationId) {
+      this.playAudio(this.#playingStationId);
+    }
   }
 
   protected override async startSession() {
@@ -137,7 +141,7 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
     const playResult = await this.#audioTransport.play(stationId);
 
     if (playResult === true) {
-      this.#playingStationId = stationId;
+      this.playingStationId = stationId;
       this.#monitorStation();
       return true;
     }
@@ -161,6 +165,11 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
 
   get playingStationId() {
     return this.#playingStationId;
+  }
+
+  private set playingStationId(id) {
+    this.#playingStationId = id;
+    this.emit('playingStation', id);
   }
 
   async #monitorStation() {
