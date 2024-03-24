@@ -42,13 +42,15 @@ async function combine() {
   await Promise.all(copyTasks);
 
   const mainPackage = require('../package.json') as PackageJson;
-  const { dependencies: loggingDeps = {} } = (require('../../logging/package.json') as PackageJson);
-  const { dependencies: utilsDeps = {} } = require('../../utils/package.json') as PackageJson;
-  const { dependencies: coreDeps = {} } = (require('../../core/package.json') as PackageJson);
 
   const deps = chain({})
-    .extend(loggingDeps, utilsDeps, coreDeps, mainPackage.dependencies)
-    .omitBy((_, name) => /^(@emotion|socket\.io|react|express|valtio|@mantine|framer-motion|ffmpeg|jotai|reflect-metadata|notepack.io|opus-decoder|mediasoup|polished|@tanstack)/.test(name ?? ''))
+    .extend(
+      ...[
+        'logging', 'utils', 'core'
+      ].map(name => (require(`../../${name}/package.json`) as PackageJson).dependencies),
+      mainPackage.dependencies
+    )
+    .omitBy((_, name) => /^(socket\.io|react|express|@mantine|framer-motion|ffmpeg|reflect-metadata|notepack.io|opus-decoder|mediasoup|polished|@tanstack)/.test(name ?? ''))
     .transform((o, value, key) => {
       if (key.startsWith('@seamless-medley/') && value?.startsWith('..')) {
         o[key] = value.substring(1);
