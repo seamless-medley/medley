@@ -5,8 +5,12 @@
       "dependsOn": ["@seamless-medley/core#build"],
       "outputs": ["dist/**"]
     },
+    "build:server": {
+      "dependsOn": ["@seamless-medley/core#build"],
+      "outputs": ["dist/**"]
+    },
     "combine-discord": {
-      "dependsOn": ["build"],
+      "dependsOn": ["build:server"],
       "outputs": ["combine/discord/**"]
     }
   }
