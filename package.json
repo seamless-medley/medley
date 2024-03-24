@@ -48,7 +48,8 @@
     "allowedDeprecatedVersions": {
       "@floating-ui/react-dom-interactions": "*",
       "@npmcli/move-file": "*",
-      "string-similarity": "*"
+      "string-similarity": "*",
+      "babel-merge": "*"
     }
   },
   "commitlint": {
