@@ -22,9 +22,10 @@
     "dev:bot": "cross-env DEBUG=1 ts-node src/discord/bot_main.ts",
     "debug:bot": "cross-env DEBUG=1 tsx --inspect --trace-warnings src/discord/bot_main.ts",
     "combine-discord": "tsx scripts/combine-discord.ts",
-    "build": "tsc --build",
-    "vb": "vite build"
     "combine-discord:docker": "docker build -f ./docker/discord/Dockerfile -t medley/combine ../..",
+    "build": "concurrently -n build: pnpm:build:*",
+    "build:server": "tsc --build tsconfig.build.json",
+    "build:react": "vite build"
   },
   "dependencies": {
     "@commander-js/extra-typings": "^12.0.1",

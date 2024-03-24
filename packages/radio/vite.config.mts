@@ -48,5 +48,30 @@ export default defineConfig({
         ws: true
       }
     }
+  },
+  build: {
+    outDir: '../../../dist/ui',
+    emptyOutDir: false,
+    chunkSizeWarningLimit: 640,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          lodash: ['lodash'],
+          ui: [
+            'react', 'react-dom', '@tanstack/react-router',
+            '@mantine/core', '@mantine/hooks',
+            'polished', 'framer-motion'
+          ]
+        },
+        assetFileNames: 'assets/[ext]/[name]-[hash][extname]'
+      },
+      onwarn: (warning, handler) => {
+        if (['SOURCEMAP_ERROR', 'INVALID_ANNOTATION'].includes(warning.code ?? '')) {
+          return;
+        }
+
+        handler(warning);
+      }
+    }
   }
 });
