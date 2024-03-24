@@ -16,6 +16,7 @@ export interface IAudioTransport extends EventEmitter<AudioTransportEvents> {
   dispose(): Promise<void>;
   play(stationId: string, options?: any): Promise<AudioTransportPlayResult>;
   stop(): Promise<void>;
+  set transmissionLatency(value: number);
 }
 
 export async function waitForAudioTransportState(transport: IAudioTransport, states: AudioTransportState[], timeout = 2000): Promise<AudioTransportState | undefined> {

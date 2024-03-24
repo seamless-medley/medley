@@ -90,14 +90,14 @@ let pcmBuffer: RingBufferWithExtra | undefined;
 const decoder = new Decoder() as unknown as DecoderInft<AudioTransportExtraPayload>;
 
 decoder.addEventListener('message', (e) => {
-  const { decoded: { channelData, samplesDecoded }, extra } = e.data;
+  const { decoded: { channelData, samplesDecoded }, extra, timestamp } = e.data;
 
   if (!pcmBuffer) {
     return;
   }
 
   // Write PCM data to the RingBuffer, to be comsumed by the stream-processor
-  pcmBuffer.push(channelData.slice(0, 2), samplesDecoded, extra);
+  pcmBuffer.push(channelData.slice(0, 2), samplesDecoded, { extra, timestamp });
 });
 
 /**
@@ -107,9 +107,16 @@ function handleStream(ev: MessageEvent<ArrayBuffer>) {
   const view = new DataView(ev.data);
   const op = view.getUint8(0);
 
-  const data = new Uint8Array(ev.data, 1);
+
+
+  if (op === AudioSocketReply.Latency) {
+    const latency = view.getUint32(1, true);
+    self.postMessage({ type: 'audio-latency', latency });
+    return;
+  }
 
   if (op === AudioSocketReply.Opus) {
+    const data = new Uint8Array(ev.data, 1);
     handleOpus(data);
     return;
   }
@@ -126,7 +133,8 @@ function handleOpus(data: Uint8Array) {
 
   decoder.postMessage({
     opus,
-    extra
+    extra,
+    timestamp: Math.trunc(performance.timeOrigin + performance.now())
   });
 }
 

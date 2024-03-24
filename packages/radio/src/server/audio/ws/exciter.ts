@@ -5,6 +5,7 @@ import { AudioTransportExtraPayload } from "../../../audio/types";
 
 interface WebSocketExciterEvents {
   packet(packet: Buffer): void;
+  audioLatency(ms: number): void;
 }
 
 export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements IExciter {
@@ -23,6 +24,10 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
 
   #preparedPacket?: Buffer;
 
+  #audioLatency = 0;
+  #lastAudioLatencyUpdated = 0;
+  #preparedAudioLatencyInfo?: number;
+
   override prepare(): void {
     const opus = this.read();
 
@@ -32,6 +37,8 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
     }
 
     const { audioLevels  } = this.station;
+
+    const audioLatency = this.request?.getLatency() ?? 0;
 
     const extra: AudioTransportExtraPayload = [
       audioLevels.left.magnitude,
@@ -49,6 +56,13 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
     resultPacket.set(opus, 2 + infoBuffer.byteLength);
 
     this.#preparedPacket = resultPacket;
+
+    if (((performance.now() - this.#lastAudioLatencyUpdated) > 1000) || (this.#audioLatency !== audioLatency)) {
+      this.#audioLatency = audioLatency;
+      this.#lastAudioLatencyUpdated = performance.now();
+
+      this.#preparedAudioLatencyInfo = audioLatency;
+    }
   }
 
   override dispatch(): void {
@@ -56,6 +70,15 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
       this.emit('packet', this.#preparedPacket);
     }
 
+    if (this.#preparedAudioLatencyInfo) {
+      this.emit('audioLatency', this.#preparedAudioLatencyInfo);
+    }
+
     this.#preparedPacket = undefined;
+    this.#preparedAudioLatencyInfo = undefined;
+  }
+
+  get audioLatency() {
+    return this.#audioLatency;
   }
 }

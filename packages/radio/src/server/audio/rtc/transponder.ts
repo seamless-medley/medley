@@ -40,6 +40,8 @@ export type ClientConsumerData = {
 export type ClientConsumerInfo = {
   rtp: ConsumerResponse;
   audioLevelData?: DataConsumerResponse;
+  eventData?: DataConsumerResponse;
+  audioLatency: number;
 }
 
 interface RTCTransponderEvents {
@@ -285,7 +287,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
       return;
     }
 
-    const { producerId, audioLevelDataProducerId } = exciter;
+    const { producerId, audioLevelDataProducerId, eventDataProducerId } = exciter;
 
     if (!producerId) {
       return;
@@ -325,6 +327,10 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
       ? await transport.consumeData({ dataProducerId: audioLevelDataProducerId })
       : undefined;
 
+    const eventDataConsumer = eventDataProducerId
+      ? await transport.consumeData({ dataProducerId: eventDataProducerId })
+      : undefined;
+
     return {
       rtp: {
         id: consumer.id,
@@ -332,12 +338,22 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
         kind: consumer.kind,
         rtpParameters: consumer.rtpParameters
       },
+
       audioLevelData: audioLevelDataConsumer ? {
         id: audioLevelDataConsumer.id,
         dataProducerId: audioLevelDataConsumer.dataProducerId,
         label: audioLevelDataConsumer.label,
         sctpStreamParameters: audioLevelDataConsumer.sctpStreamParameters,
-      } : undefined
+      } : undefined,
+
+      eventData: eventDataConsumer ? {
+        id: eventDataConsumer.id,
+        dataProducerId: eventDataConsumer.dataProducerId,
+        label: eventDataConsumer.label,
+        sctpStreamParameters: eventDataConsumer.sctpStreamParameters,
+      } : undefined,
+
+      audioLatency: exciter.audioLatency
     }
   }
 

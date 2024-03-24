@@ -1,9 +1,9 @@
 import { EventEmitter } from "eventemitter3";
 import worklet from "./worklets/stream-consumer-module.js?worker&url";
 import AudioClientWorker from './client?worker';
-import type { AudioClientIntf, OpenMessage } from "./client";
-import { RingBuffer } from "./ringbuffer";
-import type { AudioTransportExtra } from "../../../../audio/types";
+import type { AudioClientIntf, OpenMessage, OutputMessage } from "./client";
+import { AudioTransportExtraPayloadWithTimestamp, RingBufferWithExtra } from "./ringbuffer";
+import type { AudioTransportExtra, AudioTransportExtraPayload } from "../../../../audio/types";
 import type { MedleyStreamProcessorNodeOptions } from "./worklets/stream-consumer";
 import type { AudioTransportEvents, AudioTransportState, IAudioTransport } from "../../transport";
 
@@ -26,7 +26,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
   /**
    * A RingBuffer for holding 500ms of stereo PCM data
    */
-  #pcmBuffer = new RingBuffer(960 * 25, 2);
+  #pcmBuffer = new RingBufferWithExtra(960 * 25, 2);
 
   /**
    * For audio socket connection and Opus decoding
@@ -37,6 +37,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
   #state: AudioTransportState = 'new';
 
+  #transmissionLatency = 0;
 
   static #hasWorklet = false;
 
@@ -58,7 +59,15 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
     }
 
     this.#clientWorker.addEventListener('message', listener);
+    this.#clientWorker.addEventListener('message', this.#audioLatencyListener);
     this.#clientWorker.postMessage({ type: 'connect', socketId });
+  }
+
+  #audioLatencyListener = (e: MessageEvent<OutputMessage>) => {
+    if (e.data.type === 'audio-latency') {
+      this.#audioLatency = e.data.latency / 1000;
+      return;
+    }
   }
 
   get state() {
@@ -72,6 +81,10 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
     this.#state = newState;
     this.emit('stateChanged', newState);
+  }
+
+  set transmissionLatency(value: number) {
+    this.#transmissionLatency = value;
   }
 
   async play(stationId: string) {
@@ -157,13 +170,46 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
     console.error('Processor error', e);
   }
 
+  #audioLatency = 0;
+
   #delayedAudioExtra: AudioTransportExtra[] = [];
 
-  #handleWorkletNodeMessage = ({ data: extra }: MessageEvent<AudioTransportExtra>) => {
+  #handleWorkletNodeMessage = ({ data: payload }: MessageEvent<AudioTransportExtraPayloadWithTimestamp>) => {
+    const {
+      extra: [left_mag, left_peak, right_mag, right_peak, reduction],
+      timestamp
+    } = payload;
+
+
+    const now = Math.trunc(performance.timeOrigin + performance.now());
+    const pipelineLatency = (now - timestamp) / 1000;
+
+    this.#pushAudioExtra({
+      audioLevels: {
+        left: {
+          magnitude: left_mag,
+          peak: left_peak,
+        },
+        right: {
+          magnitude: right_mag,
+          peak: right_peak
+        },
+        reduction
+      }
+    }, pipelineLatency);
+  }
+
+  #pushAudioExtra(extra: AudioTransportExtra, pipelineLatency: number) {
     this.#delayedAudioExtra.push(extra);
 
-    while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx.outputLatency * this.#ctx.sampleRate / 960) + 32 + 12) {
-      this.emit('audioExtra', this.#delayedAudioExtra.shift()!);
+    const totalLatency = this.#audioLatency + this.#transmissionLatency + pipelineLatency + this.#ctx.outputLatency + this.#ctx.baseLatency;
+
+    const minBlock = Math.ceil(totalLatency / 0.02);
+    const blockCount = this.#delayedAudioExtra.length - minBlock;
+
+    if (blockCount > 0) {
+      const blocks = this.#delayedAudioExtra.splice(0, blockCount);
+      this.emit('audioExtra', blocks.at(-1)!);
     }
   }
 }

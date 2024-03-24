@@ -5,15 +5,18 @@
  */
 
 import { OpusDecodedAudio, OpusDecoder } from 'opus-decoder';
+import { type Timestamp } from './ringbuffer';
 
 export type InputMessage<T> = {
   opus: Uint8Array;
   extra: T;
+  timestamp: number;
 }
 
 export type OutputMessage<T> = {
   decoded: OpusDecodedAudio;
   extra: T;
+  timestamp: number;
 }
 
 export interface DecoderEventMap<T> extends AbstractWorkerEventMap {
@@ -38,13 +41,14 @@ async function run() {
 
   // When an Opus Packet has arrived
   self.addEventListener('message', (e: MessageEvent<InputMessage<any>>) => {
-    const { opus, extra } = e.data;
+    const { opus, extra, timestamp } = e.data;
     const decoded = decoder.decodeFrame(opus);
 
     // Post the decoded data out, for other threads to read
     self.postMessage({
       decoded,
-      extra
+      extra,
+      timestamp
     })
   });
 }

@@ -105,6 +105,14 @@ export class AudioWebSocketServer extends EventEmitter {
       );
     }
 
+    const exciter = this.#published.get(station);
+    if (exciter) {
+      socket.sendLatency(exciter.audioLatency);
+    }
+
+    return true;
+  }
+
   detuneAudioSocket(socket: AudioWebSocket): boolean {
     if (!socket.stationId) {
       return false;
@@ -147,6 +155,18 @@ export class AudioWebSocketServer extends EventEmitter {
 
       for (const listener of listeners) {
         listener.sendPacket(packet);
+      }
+    });
+
+    exciter.on('audioLatency', (latency) => {
+      const listeners = this.#stationListeners.get(station.id);
+
+      if (!listeners || listeners.size < 1)  {
+        return;
+      }
+
+      for (const listener of listeners) {
+        listener.sendLatency(latency);
       }
     })
 
@@ -206,14 +226,22 @@ class AudioWebSocket {
     return this.#stationId;
   }
 
-  sendPayload(reply: AudioSocketReply, data: Buffer) {
-    const payload = Buffer.alloc(data.byteLength + 1);
+  sendPayload(reply: AudioSocketReply, data?: Buffer) {
+    const payload = Buffer.alloc((data?.byteLength ?? 0) + 1);
     payload.writeUInt8(reply);
-    payload.set(data, 1);
+    if (data) {
+      payload.set(data, 1);
+    }
     this.socket.send(payload);
   }
 
   sendPacket(packet: Buffer) {
     this.sendPayload(AudioSocketReply.Opus, packet);
+  }
+
+  sendLatency(ms: number) {
+    const data = Buffer.alloc(4);
+    data.writeUInt32LE(ms);
+    this.sendPayload(AudioSocketReply.Latency, data);
   }
 }

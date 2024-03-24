@@ -33,10 +33,15 @@ export class RTCExciter extends Exciter implements IExciter {
   #transport: types.DirectTransport;
   #producer?: types.Producer;
   #audioLevelDataProducer?: types.DataProducer;
+  #eventDataProducer?: types.DataProducer;
+
+  #audioLatency = 0;
+  #lastAudioLatencyUpdated = 0;
 
   #rtpData: RTPData;
   #preparedPacket?: Buffer;
-  #preparedInfo?: Buffer;
+  #preparedAudioLevelInfo?: Buffer;
+  #preparedAudioLatencyInfo?: Buffer;
 
   #logger: Logger;
 
@@ -93,6 +98,11 @@ export class RTCExciter extends Exciter implements IExciter {
       label: 'audio-level',
       protocol: 'notepack'
     });
+
+    this.#eventDataProducer = await this.#transport.produceData({
+      label: 'events',
+      protocol: 'notepack'
+    });
   }
 
   get producerId() {
@@ -101,6 +111,10 @@ export class RTCExciter extends Exciter implements IExciter {
 
   get audioLevelDataProducerId() {
     return this.#audioLevelDataProducer?.id;
+  }
+
+  get eventDataProducerId() {
+    return this.#eventDataProducer?.id;
   }
 
   override prepare(): void {
@@ -123,15 +137,27 @@ export class RTCExciter extends Exciter implements IExciter {
 
     const { audioLevels  } = this.station;
 
+    const audioLatency = this.request?.getLatency() ?? 0;
+
     const extra: AudioTransportExtraPayload = [
       audioLevels.left.magnitude,
       audioLevels.left.peak,
       audioLevels.right.magnitude,
       audioLevels.right.peak,
       audioLevels.reduction
-    ]
+    ];
 
-    this.#preparedInfo = encode(extra) as Buffer;
+    this.#preparedAudioLevelInfo = encode(extra) as Buffer;
+
+    if (((performance.now() - this.#lastAudioLatencyUpdated) > 1000) || (this.#audioLatency !== audioLatency)) {
+      this.#audioLatency = audioLatency;
+      this.#lastAudioLatencyUpdated = performance.now();
+
+      this.#preparedAudioLatencyInfo = encode({
+        type: 'audio-latency',
+        latency: audioLatency
+      }) as Buffer;
+    }
   }
 
   override dispatch(): void {
@@ -143,8 +169,8 @@ export class RTCExciter extends Exciter implements IExciter {
       try {
         this.#producer?.send(this.#preparedPacket);
 
-        if (this.#preparedInfo) {
-          this.#audioLevelDataProducer?.send(this.#preparedInfo);
+        if (this.#preparedAudioLevelInfo) {
+          this.#audioLevelDataProducer?.send(this.#preparedAudioLevelInfo);
         }
 
         incRTPData(this.#rtpData);
@@ -155,13 +181,22 @@ export class RTCExciter extends Exciter implements IExciter {
       }
     }
 
+    if (this.#preparedAudioLatencyInfo) {
+      this.#eventDataProducer?.send(this.#preparedAudioLatencyInfo);
+      this.#preparedAudioLatencyInfo = undefined;
+    }
+
     this.#preparedPacket = undefined;
-    this.#preparedInfo = undefined;
+    this.#preparedAudioLevelInfo = undefined;
   }
 
   override stop() {
     super.stop();
 
     this.#transport.close();
+  }
+
+  get audioLatency() {
+    return this.#audioLatency;
   }
 }

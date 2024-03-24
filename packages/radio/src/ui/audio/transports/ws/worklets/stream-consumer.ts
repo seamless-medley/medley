@@ -1,5 +1,4 @@
-import { RingBufferWithExtra } from "../ringbuffer";
-import type { AudioTransportExtra } from "../../../../../audio/types";
+import { AudioTransportExtraPayloadWithTimestamp, RingBufferWithExtra } from "../ringbuffer";
 
 export type MedleyStreamProcessorNodeOptions = Omit<AudioWorkletNodeOptions, 'processorOptions'> & {
   processorOptions: {
@@ -16,7 +15,7 @@ export type MedleyStreamProcessorNodeOptions = Omit<AudioWorkletNodeOptions, 'pr
 export class MedleyStreamConsumer extends AudioWorkletProcessor {
   #minBufferSize: number;
   #pcmBuffer: RingBufferWithExtra;
-  #currentExtra?: AudioTransportExtra;
+  #currentExtra?: AudioTransportExtraPayloadWithTimestamp;
 
   constructor(options: MedleyStreamProcessorNodeOptions) {
     super();
@@ -27,7 +26,7 @@ export class MedleyStreamConsumer extends AudioWorkletProcessor {
     Object.setPrototypeOf(this.#pcmBuffer, RingBufferWithExtra.prototype);
   }
 
-  set #current(v: AudioTransportExtra) {
+  set #current(v: AudioTransportExtraPayloadWithTimestamp) {
     if (this.#currentExtra !== v) {
       this.#currentExtra = v;
       this.port.postMessage(v);
@@ -37,7 +36,7 @@ export class MedleyStreamConsumer extends AudioWorkletProcessor {
   process(_: Float32Array[][], [output]: Float32Array[][], parameters: Partial<Record<string, Float32Array>>) {
     const samples = output[0].length;
 
-    if (this.#pcmBuffer.getAvailableSamples() >= this.#minBufferSize) {
+    if (this.#pcmBuffer.getAvailableSamples() >= Math.max(samples, this.#minBufferSize)) {
       const extra = this.#pcmBuffer.pull(output, samples);
 
       if (extra) {

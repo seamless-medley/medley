@@ -1,6 +1,6 @@
 import type { AudioLevel } from "@seamless-medley/core";
 import type { TypedArray } from "type-fest";
-import type { AudioTransportExtra, AudioTransportExtraPayload } from "../../../../audio/types";
+import type { AudioTransportExtraPayload } from "../../../../audio/types";
 
 enum State {
   Read,
@@ -148,10 +148,21 @@ export class RingBuffer<ExtraIn, ExtraOut = ExtraIn> {
   }
 }
 
-export class RingBufferWithExtra extends RingBuffer<AudioTransportExtraPayload, AudioTransportExtra> {
+export type Timestamp = {
+  origin: number;
+  value: number;
+}
+
+export type AudioTransportExtraPayloadWithTimestamp = {
+  extra: AudioTransportExtraPayload;
+  timestamp: number;
+}
+
+export class RingBufferWithExtra extends RingBuffer<AudioTransportExtraPayloadWithTimestamp, AudioTransportExtraPayloadWithTimestamp> {
   private magnitudeData: Float32Array[];
   private peakData: Float32Array[];
   private reductionData: Float32Array;
+  private timestampData: Float64Array;
 
   constructor(size: number, channels: number = 2) {
     super(size, channels);
@@ -167,16 +178,20 @@ export class RingBufferWithExtra extends RingBuffer<AudioTransportExtraPayload, 
     ));
 
     this.reductionData = new Float32Array(new SharedArrayBuffer(this.bufferLength * Float32Array.BYTES_PER_ELEMENT));
+    this.timestampData = new Float64Array(new SharedArrayBuffer(this.bufferLength * Float64Array.BYTES_PER_ELEMENT));
   }
 
-  protected override doPush(inputs: Float32Array[], blockLength: number, extra: AudioTransportExtraPayload, currentWrite: number, nextWrite: number, overlap: boolean) {
-    super.doPush(inputs, blockLength, extra, currentWrite, nextWrite, overlap);
+  protected override doPush(inputs: Float32Array[], blockLength: number, payload: AudioTransportExtraPayloadWithTimestamp, currentWrite: number, nextWrite: number, overlap: boolean) {
+    super.doPush(inputs, blockLength, payload, currentWrite, nextWrite, overlap);
 
-    const [
-      left_mag, left_peak,
-      right_mag, right_peak,
-      reduction
-    ] = extra;
+    const {
+      extra: [
+        left_mag, left_peak,
+        right_mag, right_peak,
+        reduction
+      ],
+      timestamp
+     } = payload;
 
     const levels: AudioLevel[] = [
       { magnitude: left_mag, peak: left_peak },
@@ -207,6 +222,14 @@ export class RingBufferWithExtra extends RingBuffer<AudioTransportExtraPayload, 
         blockA.fill(reduction);
         blockB.fill(reduction);
       }
+
+      {
+        const blockA = this.timestampData.subarray(currentWrite);
+        const blockB = this.timestampData.subarray(0, nextWrite);
+
+        blockA.fill(timestamp);
+        blockB.fill(timestamp);
+      }
     } else {
       for (const [channel, data] of this.magnitudeData.entries()) {
         const block = data.subarray(currentWrite, nextWrite);
@@ -222,30 +245,28 @@ export class RingBufferWithExtra extends RingBuffer<AudioTransportExtraPayload, 
         const block = this.reductionData.subarray(currentWrite, nextWrite);
         block.fill(reduction);
       }
+
+      {
+        const block = this.timestampData.subarray(currentWrite, nextWrite);
+        block.fill(timestamp);
+      }
     }
   }
 
-  protected doPull(outputs: Float32Array[], blockLength: number, currentRead: number, nextRead: number, overlap: boolean): AudioTransportExtra | undefined {
+  protected doPull(outputs: Float32Array[], blockLength: number, currentRead: number, nextRead: number, overlap: boolean): AudioTransportExtraPayloadWithTimestamp | undefined {
     super.doPull(outputs, blockLength, currentRead, nextRead, overlap);
 
-    const levelL: AudioLevel = { magnitude: 0, peak: 0 };
-    const levelR: AudioLevel = { magnitude: 0, peak: 0 };
-    let reduction = 0;
-
-    levelL.magnitude = this.magnitudeData[0][nextRead-1];
-    levelR.magnitude = this.magnitudeData[1][nextRead-1];
-
-    levelL.peak = this.peakData[0][nextRead-1];
-    levelR.peak = this.peakData[1][nextRead-1];
-
-    reduction = this.reductionData[nextRead-1]
-
     return {
-      audioLevels: {
-        left: levelL,
-        right: levelR,
-        reduction
-      }
+      extra: [
+        this.magnitudeData[0][nextRead-1],
+        this.peakData[0][nextRead-1],
+
+        this.magnitudeData[1][nextRead-1],
+        this.peakData[1][nextRead-1],
+
+        this.reductionData[nextRead-1]
+      ],
+      timestamp: this.timestampData[nextRead-1]
     }
   }
 }

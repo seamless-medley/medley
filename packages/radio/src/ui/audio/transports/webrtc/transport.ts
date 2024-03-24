@@ -7,6 +7,13 @@ import { type RTCTransponder } from '../../../../remotes/rtc/transponder';
 import { type Remotable } from '../../../../socket';
 import type { AudioTransportExtra, AudioTransportExtraPayload } from '../../../../audio/types';
 
+type AudioLatencyEvent = {
+  type: 'audio-latency';
+  latency: number;
+}
+
+type TransportEvent = AudioLatencyEvent;
+
 export type PlayOptions = {
   timeout?: number;
 }
@@ -24,6 +31,8 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   #audioLevelConsumer?: types.DataConsumer;
 
+  #eventConsumer?: types.DataConsumer;
+
   #audioElement = new Audio();
 
   #sourceNode?: MediaStreamAudioSourceNode;
@@ -33,6 +42,8 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
   #stationId?: string;
 
   #state: AudioTransportState = 'new';
+
+  #transmissionLatency = 0;
 
   constructor(transponder: Remotable<RTCTransponder>, device: MediaSoupDevice, context: AudioContext, output: AudioNode) {
     super();
@@ -49,6 +60,10 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   get state() {
     return this.#state;
+  }
+
+  set transmissionLatency(value: number) {
+    this.#transmissionLatency = value;
   }
 
   #handleTransponderRenewal = async () => {
@@ -182,11 +197,35 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
       this.#audioLevelConsumer.on('message', this.#audioExtraHandler);
     }
+
+    if (consumerInfo.eventData) {
+      this.#eventConsumer?.off('message', this.#eventConsumerMessageHandler);
+      this.#eventConsumer?.close();
+
+      this.#eventConsumer = await this.#transport.consumeData({
+        ...consumerInfo.eventData,
+        sctpStreamParameters: consumerInfo.eventData.sctpStreamParameters ?? {}
       });
+
+      this.#eventConsumer.on('message', this.#eventConsumerMessageHandler);
     }
+
+    this.#audioLatency = (consumerInfo.audioLatency || 0) / 1000;
 
     return result;
   }
+
+  #eventConsumerMessageHandler = (data: ArrayBuffer) => {
+    const event = decode(data) as TransportEvent;
+
+    switch (event.type) {
+      case 'audio-latency':
+        this.#audioLatency = event.latency / 1000;
+        break;
+    }
+  }
+
+  #audioLatency = 0;
 
   #audioExtraHandler = (data: ArrayBuffer) => {
     const extra = decode(data) as AudioTransportExtraPayload;
@@ -212,9 +251,22 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
   #pushAudioExtra(extra: AudioTransportExtra) {
     this.#delayedAudioExtra.push(extra);
 
-    while (this.#delayedAudioExtra.length > Math.ceil(this.#ctx.outputLatency * this.#ctx.sampleRate / 960) + 12) {
-      this.emit('audioExtra', this.#delayedAudioExtra.shift()!);
+    const totalLatency = this.#audioLatency + this.#transmissionLatency + this.#ctx.outputLatency + this.#ctx.baseLatency;
+
+    const minBlock = Math.ceil(totalLatency / 0.02);
+    const blockCount = this.#delayedAudioExtra.length - minBlock;
+
+    if (blockCount > 0) {
+      const blocks = this.#delayedAudioExtra.splice(0, blockCount);
+      this.emit('audioExtra', blocks.at(-1)!);
+    }
+  }
+
   async stop() {
+    this.#eventConsumer?.off('message', this.#eventConsumerMessageHandler);
+    this.#eventConsumer?.close();
+    this.#eventConsumer = undefined;
+
     this.#audioLevelConsumer?.off('message', this.#audioExtraHandler);
     this.#audioLevelConsumer?.close();
     this.#audioLevelConsumer = undefined;
