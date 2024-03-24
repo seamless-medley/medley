@@ -10,6 +10,7 @@ import { IAudioTransport, waitForAudioTransportState } from "./audio/transport";
 import { KaraokeFx } from './audio/fx/karaoke';
 import { StubStation } from './stubs/core/station';
 import { Station as RemoteStation } from '../remotes/core/station';
+import { createNamedFunc } from '@seamless-medley/utils';
 
   #audioContext = new AudioContext({ latencyHint: 'playback' });
 type MedleyClientEvents = {
@@ -24,7 +25,7 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
 
   #playingStationId?: string;
 
-  #transportCreators: Array<() => Promise<IAudioTransport>> = [];
+  #transportCreators: Array<() => Promise<IAudioTransport | undefined>> = [];
 
   #station?: Remotable<RemoteStation>;
 
@@ -53,6 +54,9 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
   protected override async handleSocketConnect() {
     await super.handleSocketConnect();
 
+    this.#transportCreators = [];
+    this.#transponder = undefined;
+
     this.#transponder = await this.surrogateOf(StubRTCTransponder, 'transponder', '~').catch(() => undefined);
 
     if (this.#transponder) {
@@ -60,18 +64,22 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
       await device.load({ routerRtpCapabilities: this.#transponder.caps() });
 
       if (device.loaded) {
-        this.#transportCreators.push(async () => {
+        this.#transportCreators.push(createNamedFunc('create_webrtc', async () => {
           console.log('Using WebRTCAudioTransport');
           return new WebRTCAudioTransport(this.#transponder!, device, this.#audioContext, (await this.#karaokeFx).input);
-        });
+        }));
       }
     }
 
     if (window.crossOriginIsolated) {
-      this.#transportCreators.push(async () => {
+      this.#transportCreators.push(createNamedFunc('create_ws', async () => {
+        if (!this.socket.id) {
+          return;
+        }
+
         console.log('Using WebSocketAudioTransport');
         return new WebSocketAudioTransport(this.socket.id, this.#audioContext, (await this.#karaokeFx).input);
-      });
+      }));
     }
 
     const transport = await this.#nextTransport();
