@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 import EventEmitter from "node:events";
 import http from "node:http";
-import { capitalize, isEqual, isFunction, isObject, mapValues, noop, omit, pickBy, random } from "lodash";
+import { capitalize, isEqual, isFunction, isObject, mapValues, mean, noop, omit, pickBy, random } from "lodash";
 import { Server as IOServer } from "socket.io";
 import msgpackParser from 'socket.io-msgpack-parser';
 import { ConditionalKeys } from "type-fest";
@@ -59,6 +59,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
   constructor(protected io: SocketServer) {
     super();
     io.on('connection', socket => this.addSocket(socket));
+    setInterval(this.#pingSockets, 1000);
   }
 
   #objectNamespaces = new Map<string, Map<string, ObjectObserver<object>>>();
@@ -76,7 +77,9 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
   protected async addSocket(socket: Socket) {
     logger.debug({ socket: socket.id }, 'Adding socket');
 
-    socket.data = {};
+    socket.data = {
+      latencyBacklog: []
+    };
 
     for (const key of Object.keys(this.#handlers)) {
       const name = key as keyof ClientEvents;
@@ -95,6 +98,26 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
 
     this.#sendSession(socket);
+  }
+
+  #pingSockets = async () => {
+    const sockets = await this.io.sockets.fetchSockets();
+
+    for (const socket of sockets) {
+      if (performance.now() - (socket.data.lastPing ?? 0) >= 5e3) {
+        // Do ping
+        const sentTime = performance.now();
+        socket.data.lastPing = sentTime;
+        socket.emit('s:p', sentTime, (rcvdTime) => {
+          socket.data.latencyBacklog.push((performance.now() - rcvdTime) / 2);
+          if (socket.data.latencyBacklog.length > 5) {
+            socket.data.latencyBacklog.shift();
+          }
+
+          socket.emit('c:l', mean(socket.data.latencyBacklog) || 0);
+        });
+      }
+    }
   }
 
   #removeSocket(socket: Socket) {

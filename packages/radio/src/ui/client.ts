@@ -126,6 +126,8 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
 
   protected sessionData?: SessionData;
 
+  protected _latency = 0;
+
   constructor() {
     super();
 
@@ -138,6 +140,8 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
       }
     });
 
+    this.socket.on('s:p', this.handleServerPing);
+    this.socket.on('c:l', this.handleLatencyReport);
     this.socket.on('c:s', this.handleSessionResponse);
     this.socket.on('r:e', this.handleRemoteEvent);
     this.socket.on('r:u', this.handleRemoteUpdate);
@@ -147,6 +151,14 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
 
     this.socket.on('connect', () => this.handleSocketConnect());
     this.socket.on('disconnect', this.handleSocketDisconnect);
+  }
+
+  private handleServerPing: ServerEvents['s:p'] = async (serverTime, callback) => {
+    callback(serverTime);
+  }
+
+  private handleLatencyReport: ServerEvents['c:l'] = async (latencyMs) => {
+    this.latency = latencyMs;
   }
 
   private handleSessionResponse: ServerEvents['c:s'] = async (sessionData) => {
@@ -218,6 +230,14 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
     }
 
     this.#restoreObservingStores();
+  }
+
+  get latency() {
+    return this._latency;
+  }
+
+  set latency(ms: number) {
+    this._latency = ms;
   }
 
   async #restoreObservingStores(pred: (kind: string, id: string, store: ObservingStore<any>) => boolean = () => true) {

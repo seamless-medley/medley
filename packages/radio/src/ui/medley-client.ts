@@ -39,6 +39,12 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
     this.karaokeEnabled = false;
   }
 
+  override set latency(ms: number) {
+    if (this.#audioTransport) {
+      this.#audioTransport.transmissionLatency = ms / 1000;
+    }
+  }
+
   async #prepareKaraoke() {
     await KaraokeFx.prepare(this.#audioContext);
     return new KaraokeFx(this.#audioContext).connect(this.#audioContext.destination);

@@ -15,6 +15,8 @@ export function MixinEventEmitterOf<T>() {
 
 export type ClientData = {
   user?: UserModel;
+  lastPing?: number;
+  latencyBacklog: number[];
 }
 
 export type Socket = IOSocket<ClientEvents, ServerEvents, never, ClientData>;
