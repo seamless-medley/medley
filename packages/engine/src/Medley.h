@@ -90,6 +90,8 @@ public:
 
     int getOutputLatency();
 
+    double getOutputSampleRate();
+
     inline Deck& getDeck1() const { return *decks[0]; }
 
     inline Deck& getDeck2() const { return *decks[1]; }

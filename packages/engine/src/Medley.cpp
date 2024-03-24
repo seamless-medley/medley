@@ -685,6 +685,11 @@ int Medley::getOutputLatency()
     return latency;
 }
 
+double Medley::getOutputSampleRate()
+{
+    return getCurrentAudioDevice()->getCurrentSampleRate();
+}
+
 Deck* Medley::getMainDeck() const
 {
     for (auto deck : decks) {
