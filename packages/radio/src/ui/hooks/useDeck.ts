@@ -15,7 +15,7 @@ export function useDeck(stationId: string | undefined, index: DeckIndex | undefi
   }
 }
 
-export function useDeckInfo(stationId: string | undefined, index: DeckIndex, ...args: (Exclude<keyof Deck, 'trackPlay'>)[]) {
+export function useDeckInfo(stationId: string | undefined, index: DeckIndex, ...onlyProps: (keyof Deck)[]) {
   type PV = Deck[keyof Deck];
 
   const { deck } = useDeck(stationId, index);
@@ -59,12 +59,12 @@ export function useDeckInfo(stationId: string | undefined, index: DeckIndex, ...
   }
 
   const handleChange = useCallback((newValue: PV, oldValue: PV, prop: keyof Deck) => {
-    if (args.length && !args.includes(prop as any)) {
-      return;
-    }
-
     if (prop === 'trackPlay') {
       handleTrackPlay(newValue as TrackPlay);
+    }
+
+    if (onlyProps.length && !onlyProps.includes(prop as any)) {
+      return;
     }
 
     setInfo({
