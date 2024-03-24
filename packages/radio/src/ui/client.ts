@@ -85,8 +85,6 @@ type ClientEvents = AudioTransportEvents & {
   disconnect(reason?: DisconnectReason): void;
   //
   start(): void;
-  //
-  audioTransport(transport: IAudioTransport): void;
 }
 
 export enum DisconnectReason {
@@ -115,7 +113,7 @@ function rejectAfter({ timeout, reject, reason = 'Timeout' }: RejectAfterOptions
   return () => ac.abort();
 }
 
-export class Client<Types extends { [key: string]: any }> extends EventEmitter<ClientEvents> {
+export class Client<Types extends { [key: string]: any }, E extends {}> extends EventEmitter<E | ClientEvents> {
   protected socket!: Socket<ServerEvents, SocketClientEvents>;
 
   private delegates = new Map<`${string}:${string}`, { [event: string]: Set<Callable> | undefined }>();

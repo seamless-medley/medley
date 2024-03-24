@@ -11,9 +11,13 @@ import { KaraokeFx } from './audio/fx/karaoke';
 import { StubStation } from './stubs/core/station';
 import { Station as RemoteStation } from '../remotes/core/station';
 
-export class MedleyClient extends Client<RemoteTypes> {
   #audioContext = new AudioContext({ latencyHint: 'playback' });
+type MedleyClientEvents = {
+  audioTransport(transport: IAudioTransport): void;
+  playingStation(id?: string): void;
+}
 
+export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
   #audioTransport?: IAudioTransport;
 
   #transponder?: Remotable<RTCTransponder>;
