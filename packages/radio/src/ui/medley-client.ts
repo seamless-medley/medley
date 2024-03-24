@@ -12,13 +12,18 @@ import { StubStation } from './stubs/core/station';
 import { Station as RemoteStation } from '../remotes/core/station';
 import { createNamedFunc } from '@seamless-medley/utils';
 
-  #audioContext = new AudioContext({ latencyHint: 'playback' });
 type MedleyClientEvents = {
   audioTransport(transport: IAudioTransport): void;
   playingStation(id?: string): void;
 }
 
 export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
+  #audioContext = new AudioContext({
+    // This is crucial as we're using Opus which always decode to 48KHz PCM samples
+    sampleRate: 48_000,
+    latencyHint: 'playback'
+  });
+
   #audioTransport?: IAudioTransport;
 
   #transponder?: Remotable<RTCTransponder>;
