@@ -2,33 +2,32 @@ import { createRoot, type Root } from "react-dom/client";
 import { MedleyClient } from "./medley-client";
 
 let root: Root;
-let client: MedleyClient;
+let _client: MedleyClient | undefined;
 
 export function initClient() {
-  console.group('initClient');
   // @ts-ignore
   const isDev = import.meta.env.DEV;
 
   if (isDev) {
-    console.log('Restore', window.$client);
-    client = window.$client;
+    _client = window.$client;
   }
 
-  if (!client) {
-    console.log('Create client');
-
-    client = new MedleyClient();
-    client.once('disconnect', () => client.dispose());
+  if (!_client) {
+    _client = new MedleyClient();
+    _client.once('disconnect', () => {
+      _client?.dispose();
+      _client = undefined;
+      window.$client = undefined;
+    });
 
     if (isDev) {
-      console.log('Save', client);
-      window.$client = client;
+      window.$client = _client;
     }
   }
 
   console.groupEnd();
 
-  return client;
+  return _client;
 }
 
 export function initRoot() {
@@ -41,9 +40,12 @@ export function initRoot() {
 
   // @ts-ignore
   if (!window.$root && import.meta.env.DEV) {
+
     window.$root = root;
   }
 
   return root;
 }
+
+export const client = initClient();
 

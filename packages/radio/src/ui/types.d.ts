@@ -6,6 +6,6 @@ import type { MedleyClient } from "./medley-client";
 declare global {
   interface Window {
     $root: Root,
-    $client: MedleyClient;
+    $client: MedleyClient | undefined;
   }
 }
