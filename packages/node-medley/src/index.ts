@@ -48,10 +48,7 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
   const result = this['*$reqAudio'](options) as RequestAudioResult;
   const streamId = result.id;
 
-  const buffers: Buffer[] = [];
-
   const bytesPerSample = formatToBytesPerSample(options.format);
-  const totalSamples = () => buffers.reduce((a, b) => a + b.length, 0) / bytesPerSample / 2;
 
   const consume = async (size: number) => {
     return await this['*$reqAudio$consume'](streamId, Math.max(size, (options.buffering ?? 0) * bytesPerSample * 2)) as Buffer;
@@ -63,20 +60,9 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
     highWaterMark: sampleRate * bytesPerSample * 2,
     objectMode: false,
     read: async (size: number) => {
-      buffers.push(await consume(size));
-      stream.push(buffers.pop());
+      stream.push(await consume(size));
     }
   });
-
-  const prefill = options.preFill ?? options.buffering;
-
-  if (prefill) {
-    const consumingSize = (options.buffering || sampleRate * 0.01) * bytesPerSample * 2;
-
-    while (totalSamples() < prefill) {
-      buffers.push(await consume(consumingSize));
-    }
-  }
 
   stream.on('close', async () => {
     stream.emit('closed');
