@@ -302,7 +302,9 @@ export type RequestAudioOptions = {
   buffering?: number;
 
   /**
-   * Number of frames to pre-fill into the stream
+   * @deprecated
+   *
+   * No longer supported
    */
   preFill?: number;
 

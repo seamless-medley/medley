@@ -384,8 +384,6 @@ Request for PCM audio data stream
     - Reducing this value will cause the stream to pump faster
     - Default value is 10ms  (`deviceSampleRate` * 0.01)
 
-- `preFill` *(number)* - Optional number of frames to pre-fill into the stream right after requesting
-
 - `gain` *(number)* - Output gain, a floating point number ranging from 0 to 1
 
 - `fx` *(object)* - Effects parameter:
