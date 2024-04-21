@@ -658,8 +658,8 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.findTrackById(id);
   }
 
-  async search(q: SearchQuery, limit?: number) {
-    const result = await this.#library.search(q, limit);
+  async search(q: SearchQuery, limit?: number, exactMatch?: boolean) {
+    const result = await this.#library.search(q, limit, exactMatch);
 
     this.#musicDb.searchHistory.add(this.id, { ...q, resultCount: result.length });
 

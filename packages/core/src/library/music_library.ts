@@ -290,13 +290,14 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     }
   }
 
-  async search(q: Partial<Record<'artist' | 'title' | 'query', string>>, limit?: number): Promise<Array<MusicTrack<O>>> {
   async findTracksByComment(key: string, value: string, limit: number = 0) {
     const found = await this.musicDb.findByComment(key, value, limit);
     return found
       .map(({ trackId }) => this.findTrackById(trackId))
       .filter((t): t is MusicTrack<O> => t !== undefined)
   }
+
+  async search(q: Partial<Record<'artist' | 'title' | 'query', string>>, limit?: number, exactMatch?: boolean): Promise<Array<MusicTrack<O>>> {
     const { artist, title, query } = q;
 
     const mainQueries: Array<Query> = [];
@@ -307,7 +308,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
       if (artist) {
         titleAndArtistValues.push({
-          queries: ['artist', 'originalArtist', 'albumArtist'].map(artistField => ({
+          queries: (exactMatch ? ['artist'] : ['artist', 'originalArtist', 'albumArtist']).map(artistField => ({
             fields: [artistField], queries: [artist]
           })),
           combineWith: 'OR',
@@ -336,7 +337,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
     const result = await this.#searchEngine.search(
       { queries: mainQueries, combineWith: 'OR' },
-      { prefix: true, fuzzy: 0.2 }
+      !exactMatch ? { prefix: true, fuzzy: 0.2 } : { prefix: false, fuzzy: false }
     );
 
     const chained = chain(result)
