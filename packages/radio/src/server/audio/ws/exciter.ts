@@ -1,4 +1,5 @@
 import { Station } from "@seamless-medley/core";
+import { mean } from "lodash";
 import { encode } from 'notepack.io';
 import { IExciter, Exciter } from "../../../audio/exciter";
 import { AudioTransportExtraPayload } from "../../../audio/types";
@@ -28,6 +29,8 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
   #lastAudioLatencyUpdated = 0;
   #preparedAudioLatencyInfo?: number;
 
+  #latencyBuffer: number[] = [];
+
   override prepare(): void {
     const opus = this.read();
 
@@ -36,17 +39,15 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
       return;
     }
 
-    const { audioLevels  } = this.station;
-
-    const audioLatency = this.request?.getLatency() ?? 0;
+    const { audioLevels: { left, right, reduction }  } = this.station;
 
     const extra: AudioTransportExtraPayload = [
-      audioLevels.left.magnitude,
-      audioLevels.left.peak,
-      audioLevels.right.magnitude,
-      audioLevels.right.peak,
-      audioLevels.reduction
-    ]
+      left.magnitude,
+      left.peak,
+      right.magnitude,
+      right.peak,
+      reduction
+    ];
 
     const infoBuffer = encode(extra) as Buffer;
 
@@ -57,11 +58,22 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
 
     this.#preparedPacket = resultPacket;
 
-    if (((performance.now() - this.#lastAudioLatencyUpdated) > 1000) || (this.#audioLatency !== audioLatency)) {
-      this.#audioLatency = audioLatency;
-      this.#lastAudioLatencyUpdated = performance.now();
+    if ((performance.now() - this.#lastAudioLatencyUpdated) > 1000) {
+      const streamLatency = this.request?.getLatency() ?? 0;
 
-      this.#preparedAudioLatencyInfo = audioLatency;
+      this.#latencyBuffer.push(streamLatency);
+      if (this.#latencyBuffer.length >= 10) {
+        this.#latencyBuffer.shift();
+      }
+
+      const audioLatency = Math.trunc(mean(this.#latencyBuffer));
+
+      if (this.#audioLatency !== audioLatency) {
+        this.#audioLatency = audioLatency;
+        this.#lastAudioLatencyUpdated = performance.now();
+
+        this.#preparedAudioLatencyInfo = audioLatency;
+      }
     }
   }
 

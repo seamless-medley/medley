@@ -74,7 +74,7 @@ export class AudioWebSocketServer extends EventEmitter {
     return [...this.#published.keys()].find(s => s.id === stationId);
   }
 
-  tuneAudioSocket(stationId: Station['id'], socket: AudioWebSocket): boolean {
+  async tuneAudioSocket(stationId: Station['id'], socket: AudioWebSocket): Promise<boolean> {
     const station = this.#stationFromId(stationId);
     if (!station) {
       return false;
@@ -198,7 +198,7 @@ class AudioWebSocket {
     socket.on('message', this.#handleMessage);
   }
 
-  #handleMessage = (m: Buffer) => {
+  #handleMessage = async (m: Buffer) => {
     const command = m.readUint8(0) as AudioSocketCommand;
     const data = decode(m.subarray(1));
 
@@ -209,7 +209,7 @@ class AudioWebSocket {
 
       case AudioSocketCommand.Tune:
         const stationId = data;
-        if (this.server.tuneAudioSocket(stationId, this)) {
+        if (await this.server.tuneAudioSocket(stationId, this)) {
           this.#stationId = stationId;
         }
         break;

@@ -50,7 +50,7 @@ export type AudioLatencyMessage = {
   latency: number;
 }
 
-export type OutputMessage = OpenMessage | StoppedMessage;
+export type OutputMessage = OpenMessage | StoppedMessage | AudioLatencyMessage;
 
 export interface AudioClientEventMap extends AbstractWorkerEventMap {
   "message": MessageEvent<OutputMessage>;

@@ -172,6 +172,8 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
   #audioLatency = 0;
 
+  #pipelineLatency = 0;
+
   #delayedAudioExtra: AudioTransportExtra[] = [];
 
   #handleWorkletNodeMessage = ({ data: payload }: MessageEvent<AudioTransportExtraPayloadWithTimestamp>) => {
@@ -196,15 +198,17 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
         },
         reduction
       }
-    }, pipelineLatency);
+    });
   }
 
-  #pushAudioExtra(extra: AudioTransportExtra, pipelineLatency: number) {
+  get latency() {
+    return 0.3 + this.#audioLatency + this.#transmissionLatency + this.#pipelineLatency + this.#ctx.outputLatency + this.#ctx.baseLatency;
+  }
+
+  #pushAudioExtra(extra: AudioTransportExtra) {
     this.#delayedAudioExtra.push(extra);
 
-    const totalLatency = this.#audioLatency + this.#transmissionLatency + pipelineLatency + this.#ctx.outputLatency + this.#ctx.baseLatency;
-
-    const minBlock = Math.ceil(totalLatency / 0.02);
+    const minBlock = Math.ceil(this.latency / 0.02);
     const blockCount = this.#delayedAudioExtra.length - minBlock;
 
     if (blockCount > 0) {

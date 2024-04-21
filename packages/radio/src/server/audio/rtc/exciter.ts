@@ -1,11 +1,12 @@
 import { Station } from "@seamless-medley/core";
+import { Logger, createLogger } from "@seamless-medley/logging";
+import { mean, random } from "lodash";
 import { encode } from 'notepack.io';
 import { type types } from 'mediasoup';
 import { Exciter, IExciter } from "../../../audio/exciter";
 import { RTPData, createRTPHeader, incRTPData } from "../../../audio/network/rtp";
 import { randomNBit } from "@seamless-medley/utils";
 import type { AudioTransportExtraPayload } from "../../../audio/types";
-import { Logger, createLogger } from "@seamless-medley/logging";
 
 const payloadType = 119;
 
@@ -117,6 +118,8 @@ export class RTCExciter extends Exciter implements IExciter {
     return this.#eventDataProducer?.id;
   }
 
+  #latencyBuffer: number[] = [];
+
   override prepare(): void {
     const opus = this.read();
 
@@ -135,28 +138,37 @@ export class RTCExciter extends Exciter implements IExciter {
       opus
     ]);
 
-    const { audioLevels  } = this.station;
-
-    const audioLatency = this.request?.getLatency() ?? 0;
+    const { audioLevels: { left, right, reduction }  } = this.station;
 
     const extra: AudioTransportExtraPayload = [
-      audioLevels.left.magnitude,
-      audioLevels.left.peak,
-      audioLevels.right.magnitude,
-      audioLevels.right.peak,
-      audioLevels.reduction
+      left.magnitude,
+      left.peak,
+      right.magnitude,
+      right.peak,
+      reduction
     ];
 
     this.#preparedAudioLevelInfo = encode(extra) as Buffer;
 
-    if (((performance.now() - this.#lastAudioLatencyUpdated) > 1000) || (this.#audioLatency !== audioLatency)) {
-      this.#audioLatency = audioLatency;
-      this.#lastAudioLatencyUpdated = performance.now();
+    if ((performance.now() - this.#lastAudioLatencyUpdated > 1000)) {
+      const streamLatency = this.request?.getLatency() ?? 0;
 
-      this.#preparedAudioLatencyInfo = encode({
-        type: 'audio-latency',
-        latency: audioLatency
-      }) as Buffer;
+      this.#latencyBuffer.push(streamLatency);
+      if (this.#latencyBuffer.length >= 10) {
+        this.#latencyBuffer.shift();
+      }
+
+      const audioLatency = Math.trunc(mean(this.#latencyBuffer));
+
+      if (this.#audioLatency !== audioLatency) {
+        this.#audioLatency = audioLatency;
+        this.#lastAudioLatencyUpdated = performance.now();
+
+        this.#preparedAudioLatencyInfo = encode({
+          type: 'audio-latency',
+          latency: audioLatency
+        }) as Buffer;
+      }
     }
   }
 

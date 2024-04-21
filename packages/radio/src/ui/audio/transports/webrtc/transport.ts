@@ -45,6 +45,8 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   #transmissionLatency = 0;
 
+  #audioLatency = 0;
+
   constructor(transponder: Remotable<RTCTransponder>, device: MediaSoupDevice, context: AudioContext, output: AudioNode) {
     super();
 
@@ -225,8 +227,6 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     }
   }
 
-  #audioLatency = 0;
-
   #audioExtraHandler = (data: ArrayBuffer) => {
     const extra = decode(data) as AudioTransportExtraPayload;
     const [left_mag, left_peak, right_mag, right_peak, reduction] = extra;
@@ -246,14 +246,16 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     });
   }
 
+  get latency() {
+    return this.#audioLatency + this.#transmissionLatency + this.#ctx.outputLatency + this.#ctx.baseLatency;
+  }
+
   #delayedAudioExtra: AudioTransportExtra[] = [];
 
   #pushAudioExtra(extra: AudioTransportExtra) {
     this.#delayedAudioExtra.push(extra);
 
-    const totalLatency = this.#audioLatency + this.#transmissionLatency + this.#ctx.outputLatency + this.#ctx.baseLatency;
-
-    const minBlock = Math.ceil(totalLatency / 0.02);
+    const minBlock = Math.ceil(this.latency / 0.02);
     const blockCount = this.#delayedAudioExtra.length - minBlock;
 
     if (blockCount > 0) {
