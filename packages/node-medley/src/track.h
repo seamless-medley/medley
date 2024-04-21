@@ -83,7 +83,9 @@ private:
         }
 
         auto disableNextLeadIn = ref.Get("disableNextLeadIn");
-        this->disableNextLeadIn = disableNextLeadIn.ToBoolean().Value();
+        if (!disableNextLeadIn.IsUndefined() && !disableNextLeadIn.IsNull()) {
+            this->disableNextLeadIn = disableNextLeadIn.ToBoolean().Value();
+        }
     }
 
     Napi::ObjectReference ref;
