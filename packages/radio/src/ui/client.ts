@@ -406,8 +406,8 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
     id: string,
     timeout: number,
     prop: P
-  ) {
-    return new Promise<any>((resolve, reject) => {
+  ): Promise<O[P]> {
+    return new Promise<O[P]>((resolve, reject) => {
       const abortTimeout = rejectAfter({ timeout, reject });
 
       this.socket.emit('r:pg', kind, id, prop as string, async (response: RemoteResponse<any>) => {
