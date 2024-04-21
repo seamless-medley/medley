@@ -21,7 +21,7 @@ import { CommandError, Strings } from "./type";
 
 export const maxSelectMenuOptions = 25;
 
-type ReplyableInteraction = CommandInteraction | MessageComponentInteraction;
+export type ReplyableInteraction = CommandInteraction | MessageComponentInteraction;
 
 export function makeCodeBlockMessage(s: string | Strings, lang: string): Strings {
   const items = castArray(s);

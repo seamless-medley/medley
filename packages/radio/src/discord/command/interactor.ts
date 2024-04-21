@@ -1,6 +1,6 @@
 import { ActionRowBuilder, CollectedMessageInteraction, CommandInteraction, InteractionCollector, InteractionReplyOptions, MappedInteractionTypes, Message, MessageActionRowComponentBuilder, MessageComponentInteraction, time as formatTime, userMention } from "discord.js";
 import { MedleyAutomaton } from "../automaton";
-import { guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
+import { ReplyableInteraction, guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
 import { noop } from "lodash";
 import { Strings } from "./type";
 
@@ -25,7 +25,7 @@ export type InteractorHookParams = {
 export type InteractorOptions<D = unknown> = {
   automaton: MedleyAutomaton;
   commandName: string;
-  interaction: CommandInteraction,
+  interaction: ReplyableInteraction,
   onGoing?: Set<string>;
   ttl?: number;
   data?: D;
