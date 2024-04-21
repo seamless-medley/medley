@@ -4,7 +4,7 @@ import { deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, permissionGuar
 import { chain, startCase } from "lodash";
 import { interact } from "../interactor";
 import { ansi } from "../../format/ansi";
-import { StationEvents, StationTrackCollection, TrackCollection, isRequestTrack } from "@seamless-medley/core";
+import { StationEvents, TrackCollection, isRequestTrack } from "@seamless-medley/core";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
