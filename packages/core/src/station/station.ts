@@ -658,6 +658,10 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.findTrackById(id);
   }
 
+  async findTracksByComment(key: string, value: string, limit: number = 0) {
+    return this.#library.findTracksByComment(key, value, limit);
+  }
+
   async search(q: SearchQuery, limit?: number, exactMatch?: boolean) {
     const result = await this.#library.search(q, limit, exactMatch);
 
