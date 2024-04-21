@@ -1,6 +1,6 @@
 import { castArray, chain, isString, noop, partition } from 'lodash';
 import normalizePath from 'normalize-path';
-import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents } from '../collections';
+import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents, WatchPathWithOption } from '../collections';
 import { Logger, createLogger } from '@seamless-medley/logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
@@ -10,9 +10,11 @@ import { MusicDb } from './music_db';
 import { TrackWithCollectionExtra } from '../track';
 import { scanDir } from './scanner';
 
+export type MusicCollectionWatch = WatchPathWithOption | string;
+
 export type MusicCollectionDescriptor = {
   id: string;
-  paths: string[];
+  paths: MusicCollectionWatch[];
   description: string;
 } & TrackCollectionBasicOptions;
 
@@ -255,7 +257,10 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       this.add(newCollection);
 
       for (const path of paths) {
-        newCollection.watch(normalizePath(path));
+        newCollection.watch(!isString(path)
+          ? path :
+          { dir: path, options: {} }
+        );
       }
     });
   }
