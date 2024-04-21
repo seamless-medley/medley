@@ -144,6 +144,10 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
   }
 
   async start(dispatcher: AudioDispatcher) {
+    if (this.dispatcher === dispatcher) {
+      return;
+    }
+
     if (this.dispatcher) {
       throw new Error('An exciter could not be used multiple times');
     }
