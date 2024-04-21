@@ -1,11 +1,10 @@
 import os from 'node:os';
 import { dirname } from 'node:path';
 import { stat } from "node:fs/promises";
-import which from 'which';
 
 import fg from 'fast-glob';
 import { minimatch } from 'minimatch';
-import { chain, debounce, noop, once, shuffle, stubFalse, stubTrue, uniq } from "lodash";
+import { chain, debounce, noop, once, shuffle, stubFalse, sum, sumBy, uniq } from "lodash";
 import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
 
@@ -343,18 +342,6 @@ const glob = (pattern: string) => fg(pattern, {
   suppressErrors: true,
 });
 
-let watchManAvailable: boolean | undefined;
-
-async function isWatchManAvailable() {
-  if (watchManAvailable !== undefined) {
-    return watchManAvailable;
-  }
-
-  const found = await which('watchman').then(stubTrue).catch(stubFalse);
-  watchManAvailable = found;
-  return found;
-}
-
 function getPlatformBackend(platform: NodeJS.Platform = os.platform()): BackendType {
   switch (platform) {
     case 'win32':
@@ -371,12 +358,6 @@ function getPlatformBackend(platform: NodeJS.Platform = os.platform()): BackendT
   }
 }
 
-async function getBackends(): Promise<BackendType[]> {
-  const defaultBackend = getPlatformBackend();
-  const hasWatchman = await isWatchManAvailable();
-  return hasWatchman ? ['watchman', defaultBackend] : [defaultBackend];
-}
-
 export async function watch(dir: string, callback: SubscribeCallback, options?: WatchOptions) {
   const stats = await stat(dir).catch(stubFalse);
 
@@ -388,14 +369,10 @@ export async function watch(dir: string, callback: SubscribeCallback, options?: 
     return;
   }
 
-  const backends = await getBackends();
+  try {
+    return await watcher.subscribe(dir, callback, { backend: getPlatformBackend() });
+  }
+  catch (e) {
 
-  for (const backend of backends) {
-    try {
-      return await watcher.subscribe(dir, callback, { backend });
-    }
-    catch (e) {
-      continue;
-    }
   }
 }

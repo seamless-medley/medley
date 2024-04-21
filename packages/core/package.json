@@ -28,7 +28,6 @@
   "devDependencies": {
     "@types/normalize-path": "^3.0.1",
     "@types/string-similarity": "^4.0.1",
-    "@types/which": "^3.0.1",
     "@types/workerpool": "^6.4.5",
     "node-gyp-build": "^4.6.1"
   }
