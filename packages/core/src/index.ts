@@ -6,5 +6,4 @@ export * from './metadata';
 export * from './crate';
 export * from './playout';
 export * from './station';
-export * from './lyrics';
 export * from './worker_pool_adapter';

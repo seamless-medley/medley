@@ -1,8 +1,8 @@
 import React from 'react';
 import { Line, Container, Ticker, LineColors } from './elements';
-import type { LyricLine, Lyrics as CoreLyrics } from '@seamless-medley/core';
+import type { LyricLine, Lyrics as CoreLyrics } from '@seamless-medley/utils';
 import { clamp, debounce, findIndex } from 'lodash';
-// import type { TrackInfo, LyricLine } from 'common/types';
+import { findLyricLine } from '@seamless-medley/utils';
 
 interface Colors {
   background: string;
@@ -45,8 +45,8 @@ export class Lyrics extends React.Component<Props, { line: number }> {
 
   private animate() {
     this.raf = requestAnimationFrame(() => {
-      const now = Date.now();
-      const delta = now - this.lastTick;
+      // const now = Date.now();
+      // const delta = now - this.lastTick;
       //
       // this.position += delta;
       // this.lastTick = now;
@@ -97,26 +97,9 @@ export class Lyrics extends React.Component<Props, { line: number }> {
 
     const { line } = this.state;
 
-    let foundLine = line;
-    let newLine = null;
+    const foundLine = findLyricLine(lyrics.timeline, this.props.position + latencyCompensation, line);
 
-    while (newLine !== foundLine) {
-      newLine = foundLine;
-
-      let i = (foundLine + 1) || 0;
-      while (i < lyrics.timeline?.length) {
-        let { time } = lyrics.timeline[i];
-
-        if (time !== undefined && time <= this.props.position + latencyCompensation) {
-          foundLine = i;
-          break;
-        }
-
-        i++;
-      }
-    }
-
-    if (foundLine !== line) {
+    if (foundLine > -1 && foundLine !== line) {
       this.setState({
         line: foundLine
       });

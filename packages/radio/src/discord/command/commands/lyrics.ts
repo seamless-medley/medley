@@ -1,9 +1,10 @@
-import { BoomBoxCoverAnyLyrics, getTrackBanner, lyricsToText, MetadataHelper, parseLyrics, searchLyrics, StationTrack } from "@seamless-medley/core";
+import { BoomBoxCoverAnyLyrics, getTrackBanner, MetadataHelper, searchLyrics, StationTrack } from "@seamless-medley/core";
 import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder, hyperlink, messageLink, inlineCode } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
 import { deny, guildStationGuard, joinStrings, reply, warn } from "../utils";
 import { LyricsSearchResult } from "@seamless-medley/core/src/metadata/lyrics/types";
+import { lyricsToText, parseLyrics } from "@seamless-medley/utils";
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, trackId: StationTrack['id']) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);

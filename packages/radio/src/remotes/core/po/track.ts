@@ -5,11 +5,10 @@ import {
   type CoverAndLyrics,
   type LatchSession as CoreLatchSession,
   isRequestTrack,
-  LyricLine,
-  parseLyrics,
-  Lyrics,
   TrackKind as CoreTrackKind
 } from "@seamless-medley/core";
+
+import { Lyrics, parseLyrics } from "@seamless-medley/utils";
 
 import type { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
 
