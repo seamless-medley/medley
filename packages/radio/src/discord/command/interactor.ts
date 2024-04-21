@@ -57,7 +57,7 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
   const runningKey = `${guildId}:${issuer}`;
 
   if (onGoing?.has(runningKey)) {
-    reply(interaction, `Finish the previous \`${options.commandName}\` command, please`);
+    reply(interaction, `${userMention(issuer)} Finish the previous \`${options.commandName}\` command, please`);
     return;
   }
 
