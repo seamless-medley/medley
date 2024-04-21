@@ -490,9 +490,9 @@
             "minLength": 1
           }
         },
-        "followCrateAfterRequestTrack": {
+        "followCollectionAfterRequestTrack": {
           "type": "boolean",
-          "description": "Whether to follow crate on a requested track",
+          "description": "Whether to follow collection on a requested track",
           "default": true
         },
         "noRequestSweeperOnIdenticalCollection": {

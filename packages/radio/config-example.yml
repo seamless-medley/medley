@@ -76,7 +76,7 @@ stations:
     profiles:
       default:
         name: Default profile
-        followCrateAfterRequestTrack: true
+        followCollectionAfterRequestTrack: true
         intros:
           - E:\medley-drops\intros
         requestSweepers:

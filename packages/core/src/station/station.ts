@@ -365,7 +365,7 @@ export class Station extends TypedEmitter<StationEvents> {
     const {
       requestSweepers,
       noRequestSweeperOnIdenticalCollection,
-      followCrateAfterRequestTrack
+      followCollectionAfterRequestTrack
     } = this.#profile;
 
     const currentTrack =  this.#boombox.trackPlay?.track;
@@ -403,35 +403,19 @@ export class Station extends TypedEmitter<StationEvents> {
       }
     }
 
-    if (followCrateAfterRequestTrack && !track.collection.options.noFollowOnRequest) {
-      if (!this.isLatchActive) {
-        // const located = this.#boombox.locateCrate(track.collection.id);
-        // const oldCrateIndex = this.#boombox.getCrateIndex();
+    const oldCollection = this.currentSequenceCollection;
 
-        // if (located !== undefined && located !== oldCrateIndex) {
-        //   this.#logger.debug(
-        //     {
-        //       old: this.#boombox.crates[oldCrateIndex].id,
-        //       new: this.#boombox.crates[located].id
-        //     },
-        //     'Follow crate after a request track'
-        //   );
+    if (followCollectionAfterRequestTrack && !track.collection.options.noFollowOnRequest && !this.isLatchActive) {
+      this.#boombox.forcefullySelectCollection(track.collection);
+    }
 
-        //   this.#boombox.setCrateIndex(located);
-        // }
-
-        const oldCollection = this.currentSequenceCollection;
-        this.#boombox.forcefullySelectCollection(track.collection);
-
-        if (oldCollection?.id !== track.collection.id) {
-          this.emit(
-            'collectionChange',
-            oldCollection as StationTrackCollection | undefined,
-            track.collection as StationTrackCollection,
-            false
-          );
-        }
-      }
+    if (oldCollection?.id !== track.collection.id) {
+      this.emit(
+        'collectionChange',
+        oldCollection as StationTrackCollection | undefined,
+        track.collection as StationTrackCollection,
+        false
+      );
     }
 
     if (isSameCollection && this.#boombox.isKnownCollection(track.collection)) {
@@ -897,11 +881,7 @@ export class StationProfile extends CrateProfile<StationTrack> {
 
   noRequestSweeperOnIdenticalCollection: boolean = true;
 
-  /**
-   * @deprecated will be changed to `followCollectionAfterRequestTrack`
-   * since the sequencer is now cpable of selection certain collection in a crate on demand
-   * */
-  followCrateAfterRequestTrack: boolean = true;
+  followCollectionAfterRequestTrack: boolean = true;
 }
 
 export function makeAudienceGroupId(type: AudienceType.Discord, automatonId: string, guildId: string): DiscordAudienceGroupId;

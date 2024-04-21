@@ -86,7 +86,7 @@ export const StationProfile = z.object({
   intros: z.string().array().optional(),
   sweeperRules: z.array(SweeperRule).optional(),
   requestSweepers: z.string().array().optional(),
-  followCrateAfterRequestTrack: z.boolean().optional(),
+  followCollectionAfterRequestTrack: z.boolean().optional(),
   noRequestSweeperOnIdenticalCollection: z.boolean().optional(),
   sequences: z.array(SequenceConfig)
 })
