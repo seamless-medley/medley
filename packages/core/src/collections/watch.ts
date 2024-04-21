@@ -13,7 +13,17 @@ import { ChunkHandler, TrackCollection, TrackCollectionOptions } from "./base";
 import { Track } from "../track";
 import { breath } from '@seamless-medley/utils';
 
+export type WatchOptions = {
+
+}
+
+export type WatchPathWithOption = {
+  dir: string;
+  options?: WatchOptions;
+}
+
 type WatchInfo = {
+  options?: WatchOptions;
   subscription?: AsyncSubscription;
   handler: SubscribeCallback;
 }
@@ -155,16 +165,17 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     this.#updateFiles();
   }
 
-  async #subscribeToPath(normalizedPath: string) {
+  async #subscribeToPath(normalizedPath: string, options?: WatchOptions) {
     if (!this.#watchInfos.has(normalizedPath)) {
       this.#watchInfos.set(normalizedPath, {
+        options,
         handler: this.#handleSubscriptionEvents(normalizedPath)
       })
     }
 
     const info = this.#watchInfos.get(normalizedPath)!;
 
-    info.subscription = await watch(normalizedPath, info.handler);
+    info.subscription = await watch(normalizedPath, info.handler, options);
   }
 
   #createResumeSubscriptionTasks() {
@@ -174,7 +185,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   }
 
   #createResumeSubscriptionTask = (dir: string, info: WatchInfo): ResumeSubscriptionTask => async () => {
-    await this.#subscribeToPath(normalizePath(dir));
+    await this.#subscribeToPath(normalizePath(dir), info.options);
 
     if (info.subscription) {
       this.logger.info(`Resume subscription for ${dir}`);
@@ -190,7 +201,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
    * Note that adding individual file does not monitor for file changes
    * and it will be lost when a full re-scan occur
    */
-  async watch(dir: string) {
+  async watch({ dir, options }: WatchPathWithOption) {
     const normalized = normalizePath(dir);
 
     if (this.#watchInfos.has(normalized)) {
@@ -268,12 +279,12 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
   }
 
   async rewatch() {
-    const dirs = this.#watchInfos.keys();
+    const entries = [...this.#watchInfos.entries()];
 
     this.unwatchAll(false);
 
-    for (const dir of dirs) {
-      this.watch(dir);
+    for (const [dir, { options }] of entries) {
+      this.watch({ dir, options });
     }
   }
 
@@ -366,7 +377,7 @@ async function getBackends(): Promise<BackendType[]> {
   return hasWatchman ? ['watchman', defaultBackend] : [defaultBackend];
 }
 
-async function watch(dir: string, callback: SubscribeCallback) {
+export async function watch(dir: string, callback: SubscribeCallback, options?: WatchOptions) {
   const stats = await stat(dir).catch(stubFalse);
 
   if (!stats) {

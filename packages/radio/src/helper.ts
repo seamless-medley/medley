@@ -1,5 +1,4 @@
-import { Crate, MusicDb, Station, StationProfile, StationRegistry, StationTrack, WatchTrackCollection, crateLimitFromSequenceLimit, createChanceable, scanDir } from "@seamless-medley/core";
-import normalizePath from "normalize-path";
+import { Crate, MusicCollectionWatch, MusicDb, Station, StationProfile, StationRegistry, StationTrack, WatchPathWithOption, WatchTrackCollection, crateLimitFromSequenceLimit, createChanceable, scanDir } from "@seamless-medley/core";
 import { readFile } from 'node:fs/promises';
 
 import {
@@ -10,6 +9,7 @@ import {
 import { AutomatonConfig } from "./config/automaton";
 import { MedleyAutomaton } from "./discord/automaton";
 import { join } from "path";
+import { isString } from "lodash";
 
 function createCrateFromSequence(id: string, station: Station, sequence: SequenceConfig) {
   const validCollections = sequence.collections.filter(({ id: collectionId }) => station.hasCollection(collectionId));
@@ -26,11 +26,11 @@ function createCrateFromSequence(id: string, station: Station, sequence: Sequenc
   })
 }
 
-function createTrackCollection(id: string, paths: string[] = [], logPrefix: string) {
+function createTrackCollection(id: string, paths: MusicCollectionWatch[] = [], logPrefix: string) {
   const collection = new WatchTrackCollection(id, undefined, { logPrefix, scanner: scanDir });
 
   for (const path of paths) {
-    collection.watch(normalizePath(path));
+    collection.watch(isString(path) ? { dir: path } : path);
   }
 
   return collection;

@@ -1,8 +1,24 @@
 import { TrackAddingMode } from "@seamless-medley/core";
 import { z } from "zod";
 
+const WatchOptions = z.object({
+
+})
+
+const WatchPathWithOption = z.object({
+  dir: z.string().min(1),
+  options: WatchOptions.optional()
+});
+
+type WatchPathWithOption = z.infer<typeof WatchPathWithOption>
+
+const MusicCollectionWatch = z.union([
+  z.string().transform<WatchPathWithOption>(dir => ({ dir })),
+  WatchPathWithOption
+])
+
 export const MusicCollection = z.object({
-  paths: z.array(z.string().min(1)).nonempty(),
+  paths: z.array(MusicCollectionWatch).nonempty(),
   description: z.string(),
 
   auxiliary: z.boolean().optional(),
