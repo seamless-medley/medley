@@ -11,6 +11,7 @@ import latch from './latch';
 import profile from './profile';
 import collection from './collection';
 import karaoke from './karaoke';
+import rescan from './rescan';
 
 export const all = {
   join,
@@ -25,5 +26,6 @@ export const all = {
   latch,
   profile,
   collection,
-  karaoke
+  karaoke,
+  rescan
 }
