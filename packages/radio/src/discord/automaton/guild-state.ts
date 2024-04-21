@@ -1,3 +1,5 @@
+import { chain, uniqBy } from "lodash";
+
 import {
   AudienceGroupId,
   IReadonlyLibrary,
@@ -9,15 +11,24 @@ import { retryable } from "@seamless-medley/utils";
 import { Logger } from "@seamless-medley/logging";
 
 import {
+  ActionRowBuilder,
   BaseGuildVoiceChannel,
+  ButtonBuilder,
+  ButtonStyle,
   ChannelType,
   Client,
+  EmbedBuilder,
   Guild,
   GuildBasedChannel,
   GuildMember,
+  Message,
+  MessageActionRowComponentBuilder,
+  MessageReplyOptions,
   PermissionsBitField,
   VoiceBasedChannel,
-  VoiceState
+  VoiceState,
+  hyperlink,
+  quote
 } from "discord.js";
 
 import { TrackMessage } from "../trackmessage/types";
@@ -27,6 +38,8 @@ import { DiscordAudioPlayer } from "../voice/audio/player";
 import { GuildSpecificConfig, MedleyAutomaton } from "./automaton";
 import { TrackMessageCreator } from "../trackmessage/creator/base";
 import { makeCreator } from "../trackmessage/creator";
+import { createCoverImageAttachment } from "../helpers/message";
+import { extractSpotifyMetadata, extractSpotifyUrl, fetchSpotifyInfo, formatSpotifyField, spotifyURI } from "../helpers/spotify";
 
 export type GuildStateAdapter = {
   getAutomaton(): MedleyAutomaton;
@@ -507,6 +520,139 @@ export class GuildState {
 
   get karaokeEnabled() {
     return this.#karaokeEnabled;
+  }
+
+  async handleIncomingMessage(message: Message<true>) {
+    const station = this.tunedStation;
+    if (!station) {
+      return;
+    }
+
+    const matches = extractSpotifyUrl(message.content);
+
+    const createReply = async (url: URL, [type, id]: [string, string]): Promise<MessageReplyOptions | undefined> => {
+      const searchKey = `spotify:${type}`;
+
+      switch (type) {
+        case 'track': {
+          const info = await fetchSpotifyInfo(url.href);
+
+          if (info?.type !== 'track' || !info.title) {
+            return;
+          }
+
+          const embed = new EmbedBuilder();
+
+          if (info.image) {
+            embed.setThumbnail(info.image);
+          }
+
+          const tracks = await station.findTracksByComment(searchKey, id, 1);
+
+          if (tracks.length < 1) {
+            const searchResult = await station.search({
+              title: info.title,
+              artist: info.artist
+            });
+
+            tracks.push(...searchResult);
+          }
+
+          const [track] = tracks;
+
+          if (track) {
+            const { id: trackId, extra } = track;
+
+            const { title = info.title || 'Unknown', artist = info.artist || 'Unknown' } = extra?.tags ?? {};
+
+            embed
+              .setTitle('Found a dedicated track for this link')
+              .addFields(
+                { name: 'Title', value: quote(formatSpotifyField('title', title, id)) },
+                { name: 'Artist', value: quote(info.artist_url ? hyperlink(artist, info.artist_url) : artist) },
+              )
+
+            if (!embed.data.thumbnail) {
+              const cover = await createCoverImageAttachment(track);
+              if (cover) {
+                embed.setThumbnail(cover.url);
+              }
+            }
+
+            return {
+              embeds: [embed],
+              components: [
+                new ActionRowBuilder<MessageActionRowComponentBuilder>()
+                  .addComponents(
+                    new ButtonBuilder()
+                      .setLabel('Make a request')
+                      .setStyle(ButtonStyle.Primary)
+                      .setCustomId(`request:track:${trackId}`)
+                  )
+              ]
+            }
+          }
+
+          break;
+        }
+
+        case 'artist': {
+          const info = await fetchSpotifyInfo(url.href);
+
+          if (info?.type !== 'artist' || !info.artist) {
+            return;
+          }
+
+          const embed = new EmbedBuilder();
+
+          if (info.image) {
+            embed.setThumbnail(info.image);
+          }
+
+          const exactMatches = await station.findTracksByComment(searchKey, id);
+          const searchResult = await station.search({ artist: info.artist }, undefined, true);
+
+          const tracks = uniqBy(
+            [...exactMatches, ...searchResult],
+            t => t.id
+          );
+
+          if (tracks.length) {
+            embed
+              .setTitle(`Found ${tracks.length} track(s) for this artist`)
+              .addFields(
+                { name: 'Artist', value: quote(hyperlink(info.artist, url.href)) },
+              )
+
+            return {
+              embeds: [embed],
+              components: [
+                new ActionRowBuilder<MessageActionRowComponentBuilder>()
+                  .addComponents(
+                    new ButtonBuilder()
+                      .setLabel('Make a request')
+                      .setStyle(ButtonStyle.Primary)
+                      .setCustomId(`request:search:artist$${info.artist}`)
+                  )
+              ]
+            }
+          }
+
+          break;
+        }
+
+        default:
+          return;
+      }
+    }
+
+    for (const match of matches) {
+      const reply = await createReply(match.url, match.paths);
+
+      if (reply) {
+        message.reply(reply);
+      }
+    }
   }
 }
 

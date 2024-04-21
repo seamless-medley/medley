@@ -1,5 +1,5 @@
 import { CommandDescriptor, OptionType, SubCommandLikeOption } from "../../type";
-import { createCommandHandler } from './main';
+import { createCommandHandler, createButtonHandler } from './main';
 import { createAutocompleteHandler } from './autocomplete';
 
 const declaration: SubCommandLikeOption = {
@@ -36,6 +36,7 @@ const declaration: SubCommandLikeOption = {
 const descriptor: CommandDescriptor = {
   declaration,
   createCommandHandler,
+  createButtonHandler,
   createAutocompleteHandler
 }
 

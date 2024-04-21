@@ -572,3 +572,44 @@ async function clarifySelection(selections: Selection[], processors: Clarificati
 
   return result;
 }
+
+export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, action, ...args: string[]) => {
+  const { guildId, station } = guildStationGuard(automaton, interaction);
+
+  switch (action) {
+    case 'track': {
+      const [trackId] = args;
+
+      if (!trackId) {
+        deny(interaction, 'Invalid track id');
+        return;
+      }
+
+      makeRequest({
+        automaton,
+        interaction,
+        station,
+        guildId,
+        noSweep: false,
+        trackId,
+        done: async () => {}
+      })
+
+      return;
+    }
+
+    case 'search': {
+      const params = fromPairs(args.map(a => a.split('$', 2)));
+
+      handleRequestCommand({
+        automaton,
+        interaction,
+        artist: params.artist,
+        title: params.title,
+        query: params.query
+      });
+
+      return;
+    }
+  }
+}

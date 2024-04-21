@@ -5,7 +5,9 @@ import {
   Client, Guild,
   GatewayIntentBits, Message,
   OAuth2Guild,
-  Snowflake, ChannelType, PermissionsBitField, PartialMessage, TextChannel, MessageReaction, PartialMessageReaction, Emoji
+  Snowflake, ChannelType, PermissionsBitField, PartialMessage, TextChannel, MessageReaction, PartialMessageReaction, Emoji,
+  MessageType,
+  EmbedBuilder
 } from "discord.js";
 
 import {
@@ -190,6 +192,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#client.on('guildDelete', this.#handleGuildDelete);
     this.#client.on('interactionCreate', createInteractionHandler(this));
 
+    this.#client.on('messageCreate', this.#handleMessageCreation);
     this.#client.on('messageDelete', this.#handleMessageDeletion);
     this.#client.on('messageDeleteBulk', async messages => void messages.mapValues(this.#handleMessageDeletion));
 
@@ -589,6 +592,28 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     })
   }
 
+  #handleMessageCreation = async (message: Message<boolean> | PartialMessage) => {
+    if (message.system || message.author?.bot || message.author?.system) {
+      return;
+    }
+
+    if (message.type !== MessageType.Default) {
+      return;
+    }
+
+    if (!message.inGuild() || message.channel.type !== ChannelType.GuildText) {
+      return;
+    }
+
+    const state = this.#guildStates.get(message.guildId);
+    if (!state) {
+      return;
+    }
+
+    await message.fetch();
+    state.handleIncomingMessage(message);
+  }
+
   #handleMessageDeletion = (message: Message<boolean> | PartialMessage) => {
     const { guildId } = message;
 
@@ -828,6 +853,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         return;
       }
 
+      // FIXME: This only works when skip by the automaton itself, perhaps using event might help
       return {
         title: 'Skipped',
         status: TrackMessageStatus.Skipped,

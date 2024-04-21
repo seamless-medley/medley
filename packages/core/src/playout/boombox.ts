@@ -820,5 +820,14 @@ export function trackRecordOf(track: BoomBoxTrack): TrackRecord {
   }
 }
 
+export const extractCommentMetadata = (track: BoomBoxTrack, prefix: string) => (track.extra?.tags?.comments
+  .filter(([key]) => key.startsWith(prefix))
+  .map(([key, value]) => [key.substring(prefix.length), value])
+  .reduce<Record<string, string>>((o, [key, value]) => {
+    o[key] = value;
+    return o;
+  }, {})
+  ?? {}) as Partial<Record<string, string>>;
+
 const trackHelper = new MetadataHelper();
 const helper = new MetadataHelper();
