@@ -11,10 +11,11 @@ import {
 import { Lyrics, parseLyrics } from "@seamless-medley/utils";
 
 import type { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
+import { Collection } from "../collection";
 
 type IdOnly<T extends { id: any }> = Writable<Pick<T, 'id'>>;
 
-export type TrackCollection = IdOnly<BoomBoxTrack['collection']>;
+export type TrackCollection = Pick<Collection, 'id' | 'description'>;
 
 export type Track = Simplify<Writable<
   ConditionalPick<BoomBoxTrack, Jsonifiable | undefined> & {
@@ -84,7 +85,14 @@ export const toTrack = async (
     disableNextLeadIn,
     extra: actualExtra ? await toTrackExtra(actualExtra, noCover) : undefined,
     sequencing: sequencing ? toTrackSequencing(sequencing): undefined,
-    collection: pickId(collection)
+    collection: toTrackCollection(collection)
+  }
+}
+
+export const toTrackCollection = (collection: BoomBoxTrack['collection']): TrackCollection => {
+  return {
+    id: collection.id,
+    description: collection.extra?.description
   }
 }
 
@@ -141,5 +149,5 @@ export const toLatchSession = (
   uuid,
   count,
   max: max,
-  collection: pickId(collection)
+  collection: toTrackCollection(collection)
 })

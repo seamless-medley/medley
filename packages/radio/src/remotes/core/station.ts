@@ -1,5 +1,6 @@
 import { DeckIndex, DeckPositions, PlayState } from "@seamless-medley/core";
 import * as deckPO from "./po/deck";
+import { TrackCollection } from "./po/track";
 
 export interface Station {
   readonly id: string;
@@ -21,7 +22,7 @@ export interface Station {
   getDeckInfo(deckIndex: DeckIndex): Promise<deckPO.DeckInfoWithPositions>;
 
   getCurrentCollection(): string | undefined;
-  getCollections(): string[];
+  getCollections(): TrackCollection[];
 
   ϟdeckLoaded(deckIndex: number, info: deckPO.DeckInfoWithPositions): void;
   ϟdeckUnloaded(deckIndex: number): void;
