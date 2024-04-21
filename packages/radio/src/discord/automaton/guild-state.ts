@@ -195,7 +195,6 @@ export class GuildState {
 
     const bitrate = (this.adapter.getConfig(this.guildId)?.bitrate ?? 256) * 1000;
     const exciter = new DiscordAudioPlayer(preferredStation, bitrate);
-    await exciter.start(this.adapter.getAudioDispatcher());
     exciter.setKaraokeParams({ enabled: this.#karaokeEnabled, dontTransit: true });
 
     const newLink: StationLink = {
@@ -299,6 +298,10 @@ export class GuildState {
 
       const result = await retryable<JoinResult>(async() => {
         await conn.waitForState(VoiceConnectorStatus.Ready, timeout);
+
+        if (!link.exciter.started) {
+          await link.exciter.start(this.adapter.getAudioDispatcher());
+        }
 
         link.exciter.addCarrier(conn);
         this.#voiceConnector = conn;
