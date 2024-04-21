@@ -137,7 +137,7 @@ export async function createStation(stationConfig: StationConfig & { id: string;
 
 export async function createAutomaton(cfg: AutomatonConfig & { id: string; createdStations: Station[] }) {
   return new Promise<MedleyAutomaton>(async (resolve) => {
-    const { id, botToken, clientId, baseCommand, guilds, createdStations } = cfg;
+    const { id, botToken, clientId, baseCommand, owners, guilds, createdStations } = cfg;
 
     const allowedStations = cfg.stations?.length ? createdStations.filter(s => cfg.stations!.includes(s.id)) : createdStations;
     const stationRepo = new StationRegistry(...allowedStations);
@@ -146,7 +146,8 @@ export async function createAutomaton(cfg: AutomatonConfig & { id: string; creat
       botToken,
       clientId,
       baseCommand,
-      guilds
+      owners,
+      guilds,
     });
 
     automaton.once('ready', () => resolve(automaton));
