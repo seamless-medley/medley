@@ -107,6 +107,10 @@ export class AudioWebSocketServer extends EventEmitter {
 
     const exciter = this.#published.get(station);
     if (exciter) {
+      if (!exciter.started) {
+        await exciter.start(this.#dispatcher);
+      }
+
       socket.sendLatency(exciter.audioLatency);
     }
 
@@ -168,9 +172,7 @@ export class AudioWebSocketServer extends EventEmitter {
       for (const listener of listeners) {
         listener.sendLatency(latency);
       }
-    })
-
-    exciter.start(this.#dispatcher)
+    });
 
     this.#published.set(station, exciter);
   }

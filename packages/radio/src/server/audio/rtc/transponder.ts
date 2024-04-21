@@ -136,8 +136,6 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
       bitrate: this.#bitrate
     });
 
-    exciter.start(this.#dispatcher)
-
     this.#published.set(station, exciter);
   }
 
@@ -291,6 +289,10 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
 
     if (!producerId) {
       return;
+    }
+
+    if (!exciter.started) {
+      await exciter.start(this.#dispatcher);
     }
 
     station.addAudience(
