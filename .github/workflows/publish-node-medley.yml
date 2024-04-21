@@ -12,7 +12,7 @@ env:
   PREBUILDS_DIR: ./packages/node-medley/prebuilds
 jobs:
   pack-and-publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Install Node
         uses: actions/setup-node@v3

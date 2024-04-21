@@ -33,7 +33,7 @@ function parseLine(line: string): MaybeLine {
 
   while (m = line.match(tagExpr)) {
     tags.push(m[2]);
-    line = line.substring(m[1].length);
+    line = line.substring(line.indexOf(']') + 1).trim();
   }
 
   const infos: [string, string][] = [];
@@ -195,4 +195,17 @@ export function parseLyrics(s: string, { bpm = 90 }: ParseLyricOptions = {}): Ly
 export const lyricsToText = (lyrics: Lyrics, removeEmptyLine: boolean = true) => {
   const texts = lyrics.timeline.map(({ text }) => text);
   return removeEmptyLine ? texts.filter(text => !!text) : texts;
+}
+
+export function findLyricLine(timeline: Timeline, posMs: number, from: number = 0) {
+  for (let i = Math.max(0, from); i < timeline.length; i++) {
+    const { time: l } = timeline[i];
+    const { time: r } = timeline[i + 1] ?? { time: 1e7 };
+
+    if (l <= posMs && posMs <= r) {
+      return i;
+    }
+  }
+
+  return -1;
 }
