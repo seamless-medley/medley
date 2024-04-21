@@ -854,11 +854,6 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#boombox.removeLatch(session);
   }
 
-  /** @deprecated */
-  isCollectionLatchable(collection: StationTrackCollection): boolean {
-    return !collection.latchDisabled && this.#boombox.isKnownCollection(collection);
-  }
-
   get isLatchActive(): boolean {
     return this.#boombox.isLatchActive;
   }
