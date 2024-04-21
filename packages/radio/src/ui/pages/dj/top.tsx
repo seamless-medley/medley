@@ -1,18 +1,23 @@
+import { random, take, zip } from "lodash";
 import React, { PropsWithChildren, useCallback, useEffect, useRef, useState } from "react";
-import { ActionIcon, Box, Center,  Flex, HoverCard, Image, Stack, Text, TextProps, Tooltip, rem } from "@mantine/core";
+import { ActionIcon, Box, Center, Flex, Image, Stack, Text, TextProps, Tooltip, rem } from "@mantine/core";
+import { useElementSize, useForceUpdate, useId, useMove } from "@mantine/hooks";
 import { IconPlayerPause, IconPlayerPlayFilled, IconPlayerTrackNext, IconVolume, IconVolumeOff } from "@tabler/icons-react";
+import { adjustHue, hsl, linearGradient, setLightness, transparentize } from "polished";
 import { AnimatePresence, motion } from "framer-motion";
 import TextTransition, { presets, TextTransitionProps } from 'react-text-transition';
 
 import { VUBar } from "../../components";
-import { theme } from "../../theme/theme";
 import { useRemotableProp } from "../../hooks/remotable";
-import { useDeck, useDeckInfo } from "../../hooks/useDeck";
+import { useDeck, useDeckCover, useDeckInfo } from "../../hooks/useDeck";
 
 import { useStation } from "../../hooks/useStation";
 import { client } from "../../init";
 import { usePlayingStationId } from "../../hooks/useClient";
-import { useElementSize, useMove } from "@mantine/hooks";
+
+import { PlayHeadText } from "../../components/PlayHeadText";
+import { DeckBanner } from "../../components/DeckBanner";
+import { findLyricLine } from "@seamless-medley/utils";
 
 type TransitionTextProps = PropsWithChildren<TextProps & TextTransitionProps> & {
   component?: any;
@@ -36,12 +41,53 @@ const TransitionText: React.FC<TransitionTextProps> = React.memo((props) => {
   )
 });
 
-const VolumeControl: React.FC<{ height: number }> = ({ height }) => {
-  // const { ref } = useMove(({ y }));
+const VolumeControl: React.FC<{ color: string }> = ({ color }) => {
+  const [gain, setGain] = useState(client.volume);
+
+  const { ref } = useMove(({ y }) => {
+    const v = 1 - y;
+    client.volume = v;
+  });
+
+  useEffect(() => {
+    client.on('volume', setGain);
+
+    return () => {
+      client.off('volume', setGain);
+    }
+  }, []);
+
+  const borderRadius = '1000px';
+  const w = 8;
+  const tw = w * 1.75;
+  const thumbAlign = (tw - w) / 2;
 
   return (
-    <Box h={height} style={{ width: '5px', backgroundColor: 'red' }}>
+    <Box ref={ref} h="100%" style={{ width: w, backgroundColor: 'rgb(0 0 0 / 0.2)', borderRadius }}>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          height: `${gain * 100}%`,
+          width: '100%',
+          borderRadius,
+          backgroundColor: transparentize(0.5, color),
+          transition: 'background-color 2s ease'
+        }}
+      />
 
+      <div
+        style={{
+          position: 'absolute',
+          bottom: `calc(${gain * 100}% - ${tw}px)`,
+          width: tw,
+          height: tw,
+          borderRadius,
+          backgroundColor: color,
+          transform: `translate(-${thumbAlign}px, -${tw / 2}px)`,
+          transition: 'background-color 2s ease'
+        }}
+      />
     </Box>
   )
 }
@@ -50,7 +96,7 @@ type StationIdProps = {
   stationId: string;
 }
 
-const StationBanner: React.FC<StationIdProps> = React.memo(({ stationId }) => {
+const StationBanner: React.FC<StationIdProps & { colors: string[] }> = React.memo(({ stationId, colors }) => {
   const { station } = useStation(stationId);
   const name = useRemotableProp(station, 'name');
   const description = useRemotableProp(station, 'description');
@@ -96,7 +142,7 @@ const StationBanner: React.FC<StationIdProps> = React.memo(({ stationId }) => {
             px={16}
             fw={900}
             variant="gradient"
-            gradient={{ from: '#FFF638', to: '#38FFF6', deg: -45 }}
+            gradient={{ from: colors[0] ?? '#FFF638', to: colors[1] ?? '#38FFF6', deg: -45 }}
             style={textAlignmentStyle}
             truncate="end"
           >
@@ -134,84 +180,61 @@ const StationBanner: React.FC<StationIdProps> = React.memo(({ stationId }) => {
         </Stack>
       </Center>
 
-      <HoverCard position="top">
-        <HoverCard.Target>
-          <Tooltip withArrow label={!isListening ? 'Listen' : 'Stop Listening'} position="bottom">
-            <ActionIcon
-              aria-label="Listen"
-              variant="outline"
-              size={"32px"}
-              color="white"
-              pos="absolute"
-              m={4}
-              bottom={0}
-              right={0}
-              onClick={toggleListen}
-            >
-              {!isListening
-                ? <IconVolume stroke={iconStroke} />
-                : <IconVolumeOff stroke={iconStroke} />
-              }
-            </ActionIcon>
-          </Tooltip>
-        </HoverCard.Target>
-        <HoverCard.Dropdown p={0} m={0} bg={"red"} style={{ border: 0 }}>
-          <VolumeControl height={elementSize.height - 32 - 16 - 4 } />
-        </HoverCard.Dropdown>
-      </HoverCard>
+      <Tooltip withArrow label={!isListening ? 'Listen' : 'Stop Listening'} position="bottom">
+        <ActionIcon
+          aria-label="Listen"
+          variant="outline"
+          size={"32px"}
+          color={colors[1]}
+          pos="absolute"
+          m={4}
+          bottom={0}
+          right={0}
+          onClick={toggleListen}
+        >
+          {!isListening
+            ? <IconVolume stroke={iconStroke} />
+            : <IconVolumeOff stroke={iconStroke} />
+          }
+        </ActionIcon>
+      </Tooltip>
+
+      <Box pos="absolute" h={elementSize.height - 32 - 16 - 16 } top={16} right={16}>
+        <VolumeControl color={colors[1]} />
+      </Box>
+
     </Flex>
   )
 });
 
-const DeckBanner: React.FC<{ deckIndex: number }> = React.memo(({ deckIndex }) => (
-  <Box
-    c={theme.white}
-    style={{
-      writingMode: 'vertical-lr',
-      userSelect: 'none',
-      textAlign: 'center',
-      textTransform: 'uppercase',
-      fontWeight: 'bold',
-      backgroundImage: 'linear-gradient(to bottom, #fc466b, #3f5efb)'
-    }}
-  >
-    <Text display="inline-block" h="5ch" fw="bold">
-      Deck
-    </Text>
-    <TransitionText inline span
-      display="inline-block"
-      h="1ch"
-      direction={deckIndex > 0 ? 'up' : 'down' }
-      fw="bold"
-    >
-      {deckIndex !== undefined ? deckIndex + 1 : '?'}
-    </TransitionText>
-  </Box>
-));
-
 const Cover: React.FC<StationIdProps> = React.memo(({ stationId }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
-  const { info, cover } = useDeckInfo(stationId, activeDeck, 'trackPlay');
+  const info = useDeckInfo(stationId, activeDeck, 'trackPlay');
+  const cover = useDeckCover(stationId, activeDeck);
+  const uid = useId();
+
+  console.log('Cover', uid);
 
   return (
     <Box component={motion.div}
       style={{ aspectRatio: 1, zIndex: 10, overflow: 'visible' }}
       whileHover={{
-        scale: 1.5,
+        scale: 1.6,
         boxShadow: '0px 0px 34px 0px var(--mantine-color-dark-6)',
         transition: { duration: 0.4, delay: 0.2  }
       }}
     >
       <AnimatePresence mode="wait">
         <Image component={motion.img}
-          key={info.trackPlay?.uuid}
+          key={`${info.trackPlay?.uuid}`}
           src={cover}
           h="100%"
           fit="cover"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          fallbackSrc="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
         />
       </AnimatePresence>
     </Box>
@@ -223,8 +246,10 @@ const ActiveDeck: React.FC<StationIdProps> = React.memo(({ stationId }) => {
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
 
   return (
-    <Flex>
-      <DeckBanner deckIndex={activeDeck} />
+    <Flex pos="relative">
+      <Box w={24}>
+        <DeckBanner deckIndex={activeDeck} />
+      </Box>
       <Cover stationId={stationId} />
     </Flex>
   );
@@ -285,67 +310,10 @@ const TransportControl: React.FC<StationIdProps> = React.memo(({ stationId }) =>
   )
 });
 
-const PlayHead: React.FC<StationIdProps> = React.memo(({ stationId }) => {
-  const { station } = useStation(stationId);
-  const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
-
-  const { deck } = useDeck(stationId, activeDeck);
-
-  const [time, setTime] = useState(0);
-
-  const handlePosChange = useCallback((pos: number) => {
-    setTime(Math.trunc(pos));
-  }, [deck]);
-
-  useEffect(() => {
-    if (!deck) {
-      return;
-    }
-
-    setTime(deck.cp());
-
-    return deck.addPropertyChangeListener('cp', handlePosChange);
-  }, [deck]);
-
-  const mm = Math.trunc(time / 60).toString();
-  const ss = Math.trunc(time % 60).toString();
-
-  const textProps = {
-    span: true,
-    display: "inline-block",
-    fw: 700,
-    size: "1.8em",
-    w: "1ch"
-  }
-
-  return (
-    <Box c="violet.9">
-      {mm.padStart(2, '0').split('').map((c, index) => (
-        <Text {...textProps} key={index} style={{ textAlign: 'center', userSelect: 'none' }}>
-          {c}
-        </Text>
-      ))}
-
-      <Text
-        {...{...textProps, w: '0.5ch' }}
-        style={{ transform: 'translateY(-2.5px)', textAlign: 'center', userSelect: 'none' }}
-      >
-        :
-      </Text>
-
-      {ss.padStart(2, '0').split('').map((c, index) => (
-        <Text {...textProps} key={index} style={{ textAlign: 'center', userSelect: 'none' }}>
-          {c}
-        </Text>
-      ))}
-    </Box>
-  )
-});
-
 const TrackInfo: React.FC<StationIdProps> = ({ stationId }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
-  const { info: { trackPlay } } = useDeckInfo(stationId, activeDeck, 'trackPlay');
+  const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
 
   const [nowrapStyle] = useState<any>({ textWrap: 'nowrap' });
   const title = trackPlay?.track?.extra?.tags?.title;
@@ -379,26 +347,145 @@ const TrackInfo: React.FC<StationIdProps> = ({ stationId }) => {
   )
 }
 
-export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
-  console.log('TopBar');
+const LyricsBar: React.FC<StationIdProps> = ({ stationId }) => {
+  const { station } = useStation(stationId);
+  const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
+  const { deck } = useDeck(stationId, activeDeck);
+
+  const line = useRef(-1);
+  const update = useForceUpdate();
+
+  const [style] = useState<any>({ alignItems: 'center' });
+
+  const lyrics = deck?.trackPlay?.()?.track?.extra?.coverAndLyrics?.lyrics;
+
+  const handlePosChange = useCallback((pos: number) => {
+    if (!lyrics) {
+      line.current = -1;
+      return;
+    }
+
+    const found = findLyricLine(lyrics.timeline, (pos - client.transportLatency) * 1000, line.current);
+
+    if (found !== -1 && found !== line.current) {
+      line.current = found;
+      update();
+    }
+  }, [lyrics]);
+
+  useEffect(() => {
+    if (!deck) {
+      return;
+    }
+
+    line.current = -1;
+    update();
+
+    handlePosChange(deck.cp());
+
+    return deck.addPropertyChangeListener('cp', handlePosChange);
+  }, [deck]);
+
+  const lyricLine = line.current > -1 ? lyrics?.timeline?.[line.current] : undefined;
 
   return (
-    <>
-      <Flex
-        h="100%"
-        bg="linear-gradient(45deg, #FA8BFF 0%, #2BD2FF 52%, #2BFF88 90%)"
-        c="dark.7"
+    <Box pl={12}>
+      <TransitionText
+        size="1.2em"
+        display="flex"
+        truncate="end"
+        style={style}
       >
-        <StationBanner stationId={stationId} />
-        <VUBar orientation="vertical" size={12} />
-        <ActiveDeck stationId={stationId} />
+        {lyricLine?.text}
+      </TransitionText>
+    </Box>
+  )
+}
 
-        <Flex direction="column" justify="space-evenly" pl={10}>
-          <TrackInfo stationId={stationId} />
-          <PlayHead stationId={stationId} />
+function makeColorStops(colors: string[], stops: number[]) {
+  const count = Math.min(colors.length, stops.length);
+  return zip(take(colors, count), take(stops, count)).map(([c, s]) => `${c} ${s!.toFixed(2)}%`);
+}
+
+async function generateColors() {
+  const a = random(0, 360);
+  const b = a + random(45, 120);
+  const c = a - random(45, 120);
+  const lightness = random(0.75, 0.82, true);
+  return [a, b, c].map(v => hsl(v % 360, 1, lightness));
+}
+
+export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
+  const { station } = useStation(stationId);
+  const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
+
+  const [stationColors, setStationColors] = useState(['#FFF638', '#38FFF6']);
+
+  const elRef = useRef<HTMLDivElement>(null);
+  const altElRef = useRef<HTMLDivElement>(null);
+
+  const alt = useRef(false);
+
+  useEffect(() => {
+    async function changeBg() {
+      const colors = await generateColors()
+
+      const bg = linearGradient({
+        colorStops: makeColorStops(colors, [0, 52, 90]),
+        toDirection: '45deg'
+      }).backgroundImage as string
+
+      (alt.current ? altElRef : elRef).current!.style.backgroundImage = bg;
+      altElRef.current!.style.opacity = alt.current ? '1' : '0';
+      alt.current = !alt.current;
+
+      setStationColors([
+        setLightness(0.36, adjustHue(120, colors[0])),
+        setLightness(0.40, adjustHue(60, colors[0])),
+      ]);
+    }
+
+    if (elRef.current && altElRef.current) {
+      changeBg();
+    }
+
+  }, [activeDeck, elRef.current, altElRef.current]);
+
+  return (
+    <Flex ref={elRef}
+      pos="relative"
+      h="100%"
+      c="dark.7"
+      bg="linear-gradient(45deg, #FA8BFF 0%, #2BD2FF 52%, #2BFF88 90%)"
+    >
+      <Box ref={altElRef}
+        w="100%"
+        h="100%"
+        pos="absolute"
+        style={{ transition: 'opacity 2s ease', opacity: 0 }}
+      />
+
+      <StationBanner stationId={stationId} colors={stationColors} />
+      <VUBar orientation="vertical" size={12} />
+      <ActiveDeck stationId={stationId} />
+
+      <Flex direction="column" justify="space-evenly" pl={10}>
+        <TrackInfo stationId={stationId} />
+        <Box >
+          <PlayHeadText
+            stationId={stationId}
+            deckIndex={activeDeck}
+            c="indigo.9"
+            fw={700}
+            size="1.8em"
+          />
+        </Box>
+
+        <Flex direction="row" align="center">
           <TransportControl stationId={stationId} />
+          <LyricsBar stationId={stationId} />
         </Flex>
       </Flex>
-    </>
+    </Flex>
   )
 }

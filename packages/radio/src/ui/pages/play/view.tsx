@@ -3,7 +3,7 @@ import { useParams } from "@tanstack/react-router";
 import { prominent } from 'color.js'
 import { Cover, CoverProps } from "../../components/play/cover/Cover";
 import { route } from "./route";
-import { useDeck, useDeckInfo } from "../../hooks/useDeck";
+import { useDeck, useDeckCover, useDeckInfo } from "../../hooks/useDeck";
 import { useStation } from "../../hooks/useStation";
 import { Title } from "../../components/play/title/Title";
 
@@ -91,7 +91,8 @@ export const Play: React.FC = () => {
 
   const activeDeck = maybyActiveDeck ?? 0;
 
-  const { info, cover } = useDeckInfo(stationId, activeDeck);
+  const info = useDeckInfo(stationId, activeDeck);
+  const cover = useDeckCover(stationId, activeDeck);
   const nextDeckIndex = getNextDeck(activeDeck);
   const { deck: nextDeck } = useDeck(stationId, nextDeckIndex);
 
@@ -246,8 +247,8 @@ export const Play: React.FC = () => {
           colors
         }}
       />
-      <Title text={titleText} bg={titleBg} center={simple} />
-      <PlayHead
+      {/* <Title text={titleText} bg={titleBg} center={simple} /> */}
+      {/* <PlayHead
         backgroundColor={colors?.background ?? defaultLyricsColors.background}
         textColor={colors?.line?.text ?? defaultLyricsColors.line.text}
         activeColor={colors?.line?.active ?? defaultLyricsColors.line.active}
@@ -256,7 +257,7 @@ export const Play: React.FC = () => {
 
         position={info.cp * 1000}
         duration={(info.duration ?? 0) * 1000}
-      />
+      /> */}
     </div>
   )
 }

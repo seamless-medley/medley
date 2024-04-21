@@ -1,37 +1,32 @@
-import { Outlet, createRoute, lazyRouteComponent } from '@tanstack/react-router';
+import { Outlet, createRoute, lazyRouteComponent, notFound, useRouter } from '@tanstack/react-router';
 import { rootRoute } from '../rootRoute';
 import { AppShell, Box } from '@mantine/core';
-import { TopBar } from './top';
+import { client } from '../../init';
 
 export const djRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dj',
   component: () => {
+    const r = useRouter();
+    const notFoundMatch = r.state.matches.find(({ error }) => (error as any)?.isNotFound);
+
     return (
       <AppShell
         header={{ height: 60 }}
-        navbar={{
-          width: 100,
+        navbar={!notFoundMatch ? {
+          width: 200,
           breakpoint: 20,
           collapsed: {
             mobile: false,
             desktop: false
           },
-        }}
+        } : undefined}
       >
         <AppShell.Header>
           Header
         </AppShell.Header>
 
-        <div>
-          <AppShell.Navbar p="sm">
-            Navbar
-          </AppShell.Navbar>
-
-          <AppShell.Main>
-            <Outlet />
-          </AppShell.Main>
-        </div>
+        <Outlet />
       </AppShell>
     );
   }
@@ -40,9 +35,35 @@ export const djRoute = createRoute({
 export const stationRoute = createRoute({
   getParentRoute: () => djRoute,
   path: '$station',
+  loader: async ({ params }) => {
+    const x = await client.remoteGet('station', params.station, 0, 'id').catch(() => notFound());
+    console.log(x);
+    return x;
+  },
+  notFoundComponent: () => {
+    return (
+      <AppShell.Main>
+        No Such Station
+      </AppShell.Main>
+    )
+  },
   component: lazyRouteComponent(() => import('./station'))
 });
 
+export const stationIndexRoute = createRoute({
+  getParentRoute: () => stationRoute,
+  path: '/',
+  component: lazyRouteComponent(() => import('./index'))
+});
+
+export const collectionRoute = createRoute({
+  getParentRoute: () => stationRoute,
+  path: 'collection/$collectionId',
+  component: lazyRouteComponent(() => import('./collection'))
+});
+
 djRoute.addChildren([
-  stationRoute
+  stationRoute,
+  stationIndexRoute,
+  collectionRoute
 ])

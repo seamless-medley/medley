@@ -15,27 +15,11 @@ export function useDeck(stationId: string | undefined, index: DeckIndex | undefi
   }
 }
 
-export function useDeckInfo(stationId: string | undefined, index: DeckIndex, ...onlyProps: (keyof Deck)[]) {
-  type PV = Deck[keyof Deck];
-
+export function useDeckCover(stationId: string | undefined, index: DeckIndex) {
   const { deck } = useDeck(stationId, index);
-
-  const [info, setInfo] = useSetState<Deck>({
-    active: false,
-    playing: false,
-    cp: 0,
-    duration: 0,
-    first: 0,
-    last: 0,
-    cuePoint: 0,
-    leading: 0,
-    trailing: 0,
-    transitionStart: 0,
-    transitionEnd: 0,
-    trackPlay: undefined
-  });
-
   const [cover, setCover] = useState<string | undefined>();
+
+  // console.log('useDeckCover', { stationId, index, cover });
 
   const updateCover = (newURL?: string) => setCover((oldCover) => {
     if (oldCover) {
@@ -58,11 +42,54 @@ export function useDeckInfo(stationId: string | undefined, index: DeckIndex, ...
     );
   }
 
-  const handleChange = useCallback((newValue: PV, oldValue: PV, prop: keyof Deck) => {
-    if (prop === 'trackPlay') {
-      handleTrackPlay(newValue as TrackPlay);
+
+  useEffect(() => {
+    if (!deck) {
+      return;
     }
 
+    deck.getProperty('trackPlay').then(handleTrackPlay);
+
+    return deck.addPropertyChangeListener('trackPlay', handleTrackPlay);
+  }, [deck]);
+
+  useEffect(() => {
+    return () => {
+
+      if (cover) {
+        URL.revokeObjectURL(cover);
+      }
+    }
+  }, [stationId, index]);
+
+  return cover;
+}
+
+export type UseDeckInfoResult<K extends keyof Deck> = {
+  [P in K]: Deck[P];
+}
+
+export function useDeckInfo<Only extends keyof Deck = keyof Deck>(stationId: string | undefined, index: DeckIndex, ...onlyProps: Only[]): UseDeckInfoResult<Only> {
+  type PV = Deck[keyof Deck];
+
+  const { deck } = useDeck(stationId, index);
+
+  const [info, setInfo] = useSetState<Deck>({
+    active: false,
+    playing: false,
+    cp: 0,
+    duration: 0,
+    first: 0,
+    last: 0,
+    cuePoint: 0,
+    leading: 0,
+    trailing: 0,
+    transitionStart: 0,
+    transitionEnd: 0,
+    trackPlay: undefined
+  });
+
+  const handleChange = useCallback((newValue: PV, oldValue: PV, prop: keyof Deck) => {
     if (onlyProps.length && !onlyProps.includes(prop as any)) {
       return;
     }
@@ -79,22 +106,9 @@ export function useDeckInfo(stationId: string | undefined, index: DeckIndex, ...
 
     const info = deck.getProperties();
     setInfo(info);
-    handleTrackPlay(info.trackPlay);
 
     return deck.addPropertyChangeListener($AnyProp, handleChange);
   }, [deck]);
 
-  useEffect(() => {
-    return () => {
-
-      if (cover) {
-        URL.revokeObjectURL(cover);
-      }
-    }
-  }, [stationId, index]);
-
-  return {
-    info,
-    cover
-  }
+  return info;
 }

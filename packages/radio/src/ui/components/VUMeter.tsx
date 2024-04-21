@@ -8,6 +8,7 @@ import { parseToRgb, rgbToColorString, transparentize } from "polished";
 import { RgbColor } from "polished/lib/types/color";
 import { easeOut } from "framer-motion";
 import { Box, Flex, FlexProps, MantineStyleProps } from "@mantine/core";
+import { colorInterpolate, isSameRgb } from "../utils/utils";
 
 const Container = styled.div`
   width: 100%;
@@ -282,22 +283,6 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
 
     </canvas>
   );
-}
-
-const isSameRgb = (a: RgbColor, b: RgbColor) => !(
-  (a.red !== b.red) ||
-  (a.green !== b.green) ||
-  (a.blue !== b.blue)
-)
-
-function colorInterpolate(a: RgbColor, b: RgbColor, p: number): RgbColor {
-  const lerp = (v1: number, v2: number) => Math.round(v1 * (1 - p) + v2 * p);
-
-  return {
-    red: lerp(a.red, b.red),
-    green: lerp(a.green, b.green),
-    blue: lerp(a.blue, b.blue),
-  }
 }
 
 export const VUBar: React.FC<{ size?: number; orientation: VUMeterProps['orientation'] }> = ({ orientation, size = 6 }) => {
