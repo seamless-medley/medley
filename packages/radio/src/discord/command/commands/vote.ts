@@ -3,7 +3,7 @@ import { Audience, AudienceType, getTrackBanner, makeAudience, RequestTrackLockP
 import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, PermissionsBitField, userMention, time as formatTime, quote, } from "discord.js";
 import { chain, isEqual, keyBy, noop, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
-import * as emojis from "../../emojis";
+import * as emojis from "../../helpers/emojis";
 import { CommandDescriptor, GuildHandlerFactory, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, isTrackRequestedFromGuild, joinStrings, makeRequestPreview, reply, warn } from "../utils";
 

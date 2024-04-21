@@ -26,7 +26,7 @@ import {
 import { chain, chunk, clamp, Dictionary, flatten, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
-import { toEmoji } from "../../../emojis";
+import { toEmoji } from "../../../helpers/emojis";
 import { InteractionHandlerFactory } from "../../type";
 import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
 import { ansi } from "../../../format/ansi";
