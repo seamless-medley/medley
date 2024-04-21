@@ -312,7 +312,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         case 'pick':
           rows.push(
             new ActionRowBuilder<MessageActionRowComponentBuilder>()
-              .addComponents(trackPickerBuilder.addOptions(await makeTrackSelections(choices))),
+              .addComponents(trackPickerBuilder.setOptions(await makeTrackSelections(choices))),
 
             new ActionRowBuilder<MessageActionRowComponentBuilder>()
               .addComponents(cancelButtonBuilder, backButtonBuilder)
