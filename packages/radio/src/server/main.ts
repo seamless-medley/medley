@@ -109,8 +109,6 @@ async function startServer(configs: Config) {
           httpServer.off('error', listenErrorHandler);
           logger.info(`Listening on port ${listeningPort}`);
 
-          const streamingRouter = express.Router();
-
           const { streamers } = server;
 
           for (const streamer of streamers) {
@@ -126,12 +124,6 @@ async function startServer(configs: Config) {
 
             streamer.start();
           }
-
-          expressApp.use(
-            '/streams',
-            streamingRouter,
-            (_, res) => void res.status(503).end('Unknown stream')
-          );
 
           resolve([server, httpServer]);
         });
@@ -172,12 +164,12 @@ async function main() {
         const path = issue.path.join('.') || 'root';
         logger.fatal(`Issue: ${path} - ${issue.message}`)
       }
-
-      return;
+    } else {
+      logger.fatal(configs.message);
     }
 
-    logger.fatal(configs.message);
-    process.exit(1);
+    setTimeout(() => process.exit(1), 1e3);
+    return;
   }
 
   if (program.opts().register) {
@@ -205,19 +197,21 @@ async function main() {
 
   logger.info('Initializing');
 
-  const [medleyServer, httpServer] = await startServer(configs)
-    .catch(e => {
-      logger.error(e, 'Error starting server');
-      process.exit(1);
-    });
+  try {
+    const [medleyServer, httpServer] = await startServer(configs);
 
-  process.on('SIGINT', () => {
-    medleyServer.terminate();
-    httpServer.close();
-    //
-    process.exitCode = 0;
-    process.kill(process.pid);
-  });
+    process.on('SIGINT', () => {
+      medleyServer.terminate();
+      httpServer.close();
+      //
+      process.exitCode = 0;
+      process.kill(process.pid);
+    });
+  }
+  catch (e: any) {
+    logger.error(e.stack, 'Error starting server: %s', e.message);
+    setTimeout(() => process.exit(1), 1e3);
+  }
 }
 
 main();
