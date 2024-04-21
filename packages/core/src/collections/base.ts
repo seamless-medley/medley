@@ -62,7 +62,7 @@ export const supportedExts = ['mp3', 'flac', 'wav', 'ogg', 'aiff'];
 
 export const knownExtRegExp = new RegExp(`\\.(${supportedExts.join('|')})$`, 'i');
 
-export type ChunkHandler<T> = (chunk: T[], chunkIndex: number, totalChunks: number) => Promise<void>;
+export type ChunkHandler<T> = (chunk: T[], chunkIndex: number, totalChunks: number) => Promise<T[]>;
 
 export class TrackCollection<
   T extends Track<any>,
@@ -184,10 +184,14 @@ export class TrackCollection<
 
     if (!validPaths?.length) {
       onChunkCreated([], 0, 0);
-      return [];
+      return {
+        scanned: [],
+        added: []
+      };
     }
 
     const immediateTracks: T[] = [];
+    const newTracks: T[] = [];
 
     const buckets = chunk(validPaths, 25 * os.cpus().length);
 
@@ -200,18 +204,24 @@ export class TrackCollection<
         created[i] = await this.createTrack(p, trackId);
       }
 
-      await onChunkCreated(created, index, buckets.length);
+      const added = await onChunkCreated(created, index, buckets.length);
       await waitFor(10);
       immediateTracks.push(...created);
+      newTracks.push(...added);
     }
 
-    return immediateTracks;
+    return {
+      scanned: immediateTracks,
+      added: newTracks
+    };
   }
 
-  async add(paths: string[], mode?: TrackAddingMode, onChunkAdded?: ChunkHandler<T>): Promise<T[]> {
+  async add(paths: string[], mode?: TrackAddingMode, onChunkAdded?: ChunkHandler<T>) {
     return this.#transform(paths, async (chunk, chunkIndex, totalChunks) => {
-      await this.#addTracks(chunk, chunkIndex, totalChunks, mode);
+      const added = await this.#addTracks(chunk, chunkIndex, totalChunks, mode);
       await onChunkAdded?.(chunk, chunkIndex, totalChunks);
+
+      return added;
     });
   }
 
@@ -222,7 +232,7 @@ export class TrackCollection<
     const mapped = await tracksMapper?.(newTracks) ?? newTracks;
 
     if (!mapped.length) {
-      return;
+      return [];
     }
 
     switch (mode ?? this.options.newTracksAddingMode ?? 'spread') {
@@ -253,6 +263,8 @@ export class TrackCollection<
 
     this.logger.info(`${mapped.length} track(s) added`);
     this.emit('tracksAdd', mapped, chunkIndex, totalChunks);
+
+    return mapped;
   }
 
   async update(paths: string[]) {
@@ -263,6 +275,8 @@ export class TrackCollection<
         this.logger.info(`${existing.length} track(s) updated`);
         this.emit('tracksUpdate', existing);
       }
+
+      return existing;
     });
   }
 

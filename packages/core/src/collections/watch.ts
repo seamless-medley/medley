@@ -207,10 +207,9 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       return;
     }
 
-    this.logger.info(`Watching ${normalized}`);
-
     await this.#scan(normalized, async () => {
-      await this.#subscribeToPath(normalized);
+      this.logger.info(`Watching ${normalized}`);
+      await this.#subscribeToPath(normalized, options);
       this.becomeReady();
     });
   }
@@ -248,32 +247,60 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     return glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
   }
 
+  #scanning = 0;
+
   async #scan(dir: string, onFirstChunkAdded?: () => any) {
-    this.emit('scan' as any);
+    if (this.#scanning === 0) {
+      this.emit('scan' as any);
+    }
+
+    this.#scanning++;
 
     const notifyOnce = once(onFirstChunkAdded ?? noop) as ChunkHandler<T>;
 
     const scanners = [this.#extScanner, this.#globScanner];
+    const counter = {
+      scanned: 0,
+      added: 0
+    }
 
     for (const scanner of scanners) {
       const files = await scanner.call(this, dir);
 
       if (files !== false) {
-        await this.add(shuffle(files), undefined, notifyOnce).then(breath);
+        const { scanned, added } = await this.add(shuffle(files), undefined, notifyOnce);
+        await breath();
+
+        counter.scanned += scanned.length;
+        counter.added += added.length;
+
         break;
       }
     }
 
-    this.emit('scan-done' as any);
+    this.#scanning--;
+
+    if (this.#scanning === 0) {
+      this.emit('scan-done' as any);
+    }
+
+    return counter;
   }
 
   async rescan(full?: boolean) {
+    if (this.#scanning) {
+      return;
+    }
+
     if (full) {
       this.clear();
     }
 
-    for (const dir of this.#watchInfos.keys()) {
-      this.#scan(dir);
+    const results = await Promise.all([...this.#watchInfos.keys()].map(dir => this.#scan(dir)))
+
+    return {
+      scanned: sumBy(results, c => c.scanned),
+      added: sumBy(results, c => c.added)
     }
   }
 
