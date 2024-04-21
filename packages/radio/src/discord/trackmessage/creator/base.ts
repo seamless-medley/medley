@@ -5,7 +5,7 @@ import {
   isRequestTrack,
   Metadata,
   MetadataFields,
-  MetadataHelper,
+
   Station,
   StationTrack,
   StationTrackPlay,
@@ -13,11 +13,11 @@ import {
   TrackWithRequester
 } from "@seamless-medley/core";
 
-import { AttachmentBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
+import { ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import { chain, get, isEmpty, sample } from "lodash";
-import mime from 'mime-types';
 import { parse as parsePath } from 'node:path';
 import { TrackMessage, TrackMessageStatus } from "../types";
+import { CoverImageAttachment } from "../../helpers/message";
 
 export type CreateTrackMessageOptions = {
   station: Station;
@@ -36,7 +36,7 @@ export type CreateTrackMessageOptionsEx = CreateTrackMessageOptions & {
 
 export type CreatedTrackMessage = CreateTrackMessageOptionsEx & {
   embed: EmbedBuilder;
-  cover?: CoverImageAttachment
+  cover?: CoverImageAttachment;
 }
 
 export abstract class TrackMessageCreator {
@@ -112,31 +112,6 @@ export abstract class TrackMessageCreator {
   }
 }
 
-export type CoverImageAttachment = {
-  builder: AttachmentBuilder;
-  url: string;
-}
-
-export async function createCoverImageAttachment({ extra, path }: StationTrack): Promise<CoverImageAttachment | undefined> {
-  if (!extra) {
-    return;
-  }
-
-  const coverAndLyrics = await (extra.maybeCoverAndLyrics ?? MetadataHelper.coverAndLyrics(path));
-
-  if (coverAndLyrics) {
-    const { cover, coverMimeType } = coverAndLyrics;
-
-    if (cover.length) {
-      const ext = mime.extension(coverMimeType);
-      const builder = new AttachmentBuilder(cover, { name: `cover.${ext}` });
-      return {
-        builder,
-        url: `attachment://${builder.name}`
-      }
-    }
-  }
-}
 
 type EmbedDataForTrack = {
   description: string;

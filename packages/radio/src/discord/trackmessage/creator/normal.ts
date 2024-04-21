@@ -2,11 +2,14 @@ import { MetadataFields } from "@seamless-medley/core";
 import { APIEmbedField, bold, hyperlink, quote, userMention } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
 import { formatDuration } from "../../format/format";
-import { extractSpotifyMetadata, formatSpotifyField, metadataFields, spotifySearchLink, spotifyURI } from "../fields";
-import { createCoverImageAttachment, CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
+import { CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
+import { createCoverImageAttachment } from "../../helpers/message";
+import { extractSpotifyMetadata, formatSpotifyField, spotifySearchLink, spotifyURI } from "../../helpers/spotify";
 
 const emptyField = { name: '\u200B', value: '\u200B', inline: true };
 const emptyRows = Array(3).fill(0).map<APIEmbedField>(_ => emptyField);
+
+export const metadataFields: MetadataFields[] = ['artist', 'album', 'albumArtist', 'originalArtist'];
 
 const fieldCaptionFuncs: Partial<Record<MetadataFields, () => any>> = {
   bpm: upperCase,
