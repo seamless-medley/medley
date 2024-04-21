@@ -6,6 +6,7 @@ import {
   getTrackBanner,
   makeAudience,
   MetadataHelper,
+  Station,
   StationTrack
 } from "@seamless-medley/core";
 
@@ -20,19 +21,23 @@ import {
   PermissionsBitField,
   bold,
   inlineCode,
-  MessageComponentInteraction
+  MessageComponentInteraction,
+  ButtonInteraction,
+  userMention,
+  CommandInteractionOption
 } from "discord.js";
 
-import { chain, chunk, clamp, Dictionary, flatten, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
+import { chain, chunk, clamp, Dictionary, flatten, fromPairs, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../helpers/emojis";
 import { InteractionHandlerFactory } from "../../type";
-import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
+import { deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply, ReplyableInteraction } from "../../utils";
 import { ansi } from "../../../format/ansi";
 import { getVoteMessage } from "../vote";
 import { interact } from "../../interactor";
 import { groupByAsync } from "@seamless-medley/utils";
+import { MedleyAutomaton } from "../../../automaton";
 
 type Selection = {
   title: string;
@@ -51,14 +56,109 @@ type State = {
   choices: SelectionsWithChunk;
 }
 
-export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
-  const { guildId, station } = guildStationGuard(automaton, interaction);
+type MakeRequestOptions = {
+  station: Station;
+  automaton: MedleyAutomaton;
+  guildId: string;
+  trackId: string;
+  noSweep: boolean;
+  interaction: MessageComponentInteraction;
+  done: () => Promise<void>
+}
 
-  const options = ['artist', 'title', 'query'].map(f => interaction.options.getString(f) ?? undefined);
+const makeRequest = async ({ station, automaton, trackId, guildId, noSweep, interaction, done }: MakeRequestOptions) => {
+  const result = await station.request(
+    trackId,
+    makeAudience(
+      AudienceType.Discord,
+      { automatonId: automaton.id, guildId },
+      interaction.user.id
+    ),
+    noSweep
+  );
+
+  if (typeof result === 'string' || result.index < 0) {
+    await done();
+
+    const reason = typeof result === 'string'
+      ? result
+      : 'invalid';
+
+    interaction.update({
+      content: makeColoredMessage(
+        'red',
+        `The track could not be requested: ${reason}`
+      ),
+      components: []
+    });
+
+    return;
+  }
+
+  const preview = await makeRequestPreview(station, {
+    bottomIndex: result.index,
+    focusIndex: result.index,
+    guildId
+  });
+
+  await interaction.update({
+    content: `${userMention(interaction.user.id)} Request accepted: ${bold(inlineCode(getTrackBanner(result.track)))}`,
+    components: []
+  });
+
+  const peekings = peekRequestsForGuild(station, 0, 20, guildId);
+
+  const canVote = interaction.appPermissions?.any([PermissionsBitField.Flags.AddReactions]);
+
+  if (preview) {
+    interaction.followUp({
+      content: joinStrings(preview),
+      components: canVote && (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
+        ? [
+          new ActionRowBuilder<MessageActionRowComponentBuilder>()
+            .addComponents(
+              new ButtonBuilder()
+                .setLabel('Vote')
+                .setEmoji(sample(['✋🏼', '🤚🏼', '🖐🏼', '🙋🏼‍♀️', '🙋🏼‍♂️'])!)
+                .setStyle(ButtonStyle.Secondary)
+                .setCustomId(`vote:-`)
+            )
+        ]
+        : undefined
+    })
+  }
+
+  await done();
+}
+
+export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
+  const [artist, title, query] = ['artist', 'title', 'query'].map(f => interaction.options.getString(f) ?? undefined);
 
   const noSweep = interaction.options.getBoolean('no-sweep') ?? undefined;
 
-  if (options.every(isUndefined)) {
+  handleRequestCommand({
+    automaton,
+    interaction,
+    artist,
+    title,
+    query,
+    noSweep
+  })
+}
+
+export type RequestCommandOptions = {
+  automaton: MedleyAutomaton;
+  interaction: ReplyableInteraction;
+  artist?: string;
+  title?: string;
+  query?: string;
+  noSweep?: boolean;
+}
+
+export const handleRequestCommand = async ({ automaton, interaction, artist, title, query, noSweep }: RequestCommandOptions) => {
+  const { guildId, station } = guildStationGuard(automaton, interaction);
+
+  if ([artist, title, query].every(isUndefined)) {
     const preview = await makeRequestPreview(station, { guildId, count: 20 });
 
     if (preview) {
@@ -71,8 +171,6 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   }
 
   await interaction.deferReply();
-
-  const [artist, title, query] = options;
 
   const results = await station.search(
     {
@@ -183,79 +281,14 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
     .setStyle(ButtonStyle.Secondary);
 
   const backButtonBuilder = new ButtonBuilder()
-    .setCustomId('request:back')
+    .setCustomId('request_back')
     .setLabel('Back')
     .setStyle(ButtonStyle.Secondary)
     .setEmoji('↩');
 
   const trackPickerBuilder = new StringSelectMenuBuilder()
-    .setCustomId('request:pick')
+    .setCustomId('request_pick')
     .setPlaceholder('Select a track')
-
-  const makeRequest = async (trackId: string, interaction: MessageComponentInteraction, runningKey: string, done: () => Promise<void>) => {
-    const result = await station.request(
-      trackId,
-      makeAudience(
-        AudienceType.Discord,
-        { automatonId: automaton.id, guildId },
-        interaction.user.id
-      ),
-      noSweep
-    );
-
-    if (typeof result === 'string' || result.index < 0) {
-      await done();
-
-      const reason = typeof result === 'string'
-        ? result
-        : 'invalid';
-
-      interaction.update({
-        content: makeColoredMessage(
-          'red',
-          `The track could not be requested: ${reason}`
-        ),
-        components: []
-      });
-
-      return;
-    }
-
-    const preview = await makeRequestPreview(station, {
-      bottomIndex: result.index,
-      focusIndex: result.index,
-      guildId
-    });
-
-    await interaction.update({
-      content: `Request accepted: ${bold(inlineCode(getTrackBanner(result.track)))}`,
-      components: []
-    });
-
-    const peekings = peekRequestsForGuild(station, 0, 20, guildId);
-
-    const canVote = interaction.appPermissions?.any([PermissionsBitField.Flags.AddReactions]);
-
-    if (preview) {
-      interaction.followUp({
-        content: joinStrings(preview),
-        components: canVote && (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
-          ? [
-            new ActionRowBuilder<MessageActionRowComponentBuilder>()
-              .addComponents(
-                new ButtonBuilder()
-                  .setLabel('Vote')
-                  .setEmoji(sample(['✋🏼', '🤚🏼', '🖐🏼', '🙋🏼‍♀️', '🙋🏼‍♂️'])!)
-                  .setStyle(ButtonStyle.Secondary)
-                  .setCustomId(`vote:-`)
-              )
-          ]
-          : undefined
-      })
-    }
-
-    await done();
-  }
 
   await interact({
     commandName: 'request',
@@ -296,12 +329,12 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
           rows.push(
             new ActionRowBuilder<MessageActionRowComponentBuilder>()
-            .addComponents(
-              new StringSelectMenuBuilder()
-                .setCustomId(isGrouped ? 'request' : 'request:pick')
-                .setPlaceholder(isGrouped ? 'Select a result' : 'Select a track')
-                .addOptions(resultSelectionChunks[page])
-            ),
+              .addComponents(
+                new StringSelectMenuBuilder()
+                  .setCustomId(isGrouped ? 'request' : 'request_pick')
+                  .setPlaceholder(isGrouped ? 'Select a result' : 'Select a track')
+                  .addOptions(resultSelectionChunks[page])
+              ),
             new ActionRowBuilder<MessageActionRowComponentBuilder>()
               .addComponents(components),
           )
@@ -341,7 +374,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
       // Paginate
       const paginationNavigation: Partial<Record<string, number>> = {
-        'request:back': 0,
+        'request_back': 0,
         'request_prevPage': -1,
         'request_nextPage': 1
       };
@@ -361,13 +394,16 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
         const doneMakingRequest = () => done(false);
 
         // A track was picked
-        if (customId === 'request:pick') {
-          makeRequest(
-            collected.values[0],
-            collected,
-            runningKey,
-            doneMakingRequest
-          );
+        if (customId === 'request_pick') {
+          makeRequest({
+            station,
+            automaton,
+            trackId: collected.values[0],
+            guildId,
+            noSweep: noSweep ?? false,
+            interaction: collected,
+            done: doneMakingRequest
+          });
 
           return;
         }
@@ -386,12 +422,16 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
           }
 
           if (choices.length === 1 && !choices.fromChunk) {
-            makeRequest(
-              choices[0].track.id,
-              collected,
-              runningKey,
-              doneMakingRequest
-            );
+
+            makeRequest({
+              station,
+              automaton,
+              guildId,
+              trackId: choices[0].track.id,
+              noSweep: noSweep ?? false,
+              interaction: collected,
+              done: doneMakingRequest
+            });
             return;
           }
 
