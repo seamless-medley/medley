@@ -40,6 +40,8 @@ export interface MusicDb {
 
   findByISRC(musicId: string): Promise<MusicDbTrack | undefined>;
 
+  findByComment(field: string, value: string, limit: number): Promise<MusicDbTrack[]>;
+
   update(trackId: string, update: Omit<MusicDbTrack, 'trackId'>): Promise<void>;
 
   delete(trackId: string): Promise<void>;
@@ -70,6 +72,10 @@ export class InMemoryMusicDb implements MusicDb {
 
   async findByISRC(musicId: string) {
     return undefined;
+  }
+
+  async findByComment(field: string, value: string, limit: number): Promise<MusicDbTrack[]> {
+    return [];
   }
 
   async update(trackId: string, update: Omit<MusicDbTrack, "trackId">) {

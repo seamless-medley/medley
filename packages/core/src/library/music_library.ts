@@ -291,6 +291,12 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
   }
 
   async search(q: Partial<Record<'artist' | 'title' | 'query', string>>, limit?: number): Promise<Array<MusicTrack<O>>> {
+  async findTracksByComment(key: string, value: string, limit: number = 0) {
+    const found = await this.musicDb.findByComment(key, value, limit);
+    return found
+      .map(({ trackId }) => this.findTrackById(trackId))
+      .filter((t): t is MusicTrack<O> => t !== undefined)
+  }
     const { artist, title, query } = q;
 
     const mainQueries: Array<Query> = [];

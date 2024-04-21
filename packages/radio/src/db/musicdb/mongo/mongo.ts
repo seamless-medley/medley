@@ -56,6 +56,10 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
     return this.exec('findByISRC', musicId);
   }
 
+  async findByComment(field: string, value: string, limit: number = 1): Promise<MusicDbTrack[]> {
+    return this.exec('findByComment', field, value, limit);
+  }
+
   async update(trackId: string, fields: Omit<MusicDbTrack, 'trackId'>) {
     return this.exec('update', trackId, fields);
   }

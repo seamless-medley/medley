@@ -3,7 +3,7 @@
 const argon2 = require('@node-rs/argon2');
 const workerpool = require('workerpool');
 const { threadId } = require('node:worker_threads');
-const { MongoClient, Db, Collection } = require('mongodb');
+const { MongoClient, Db, Collection, AggregationCursor } = require('mongodb');
 const { random, omitBy } = require('lodash');
 const { createLogger } = require('@seamless-medley/logging');
 
@@ -162,6 +162,65 @@ async function find(value, by) {
 
   // @ts-ignore
   return omitBy(found, (v, p) => ['expires', 'path'].includes(p));
+}
+
+/**
+ *
+ * @param {string} field
+ * @param {string} value
+ * @param {number} limit
+ * @return {Promise<MusicDbTrack[]>}
+ */
+async function findByComment(field, value, limit = 1) {
+  if (!musics) {
+    throw new Error('Not initialized');
+  }
+
+  /** @type {import('mongodb').Document[]} */
+  const pipelines = [
+    {
+      $addFields: {
+        comments: { $arrayToObject: "$comments" }
+      }
+    },
+    {
+      $match: {
+        [`comments.${field}`]: value
+      }
+    },
+    {
+      $sort: {
+        expires: -1
+      }
+    }
+  ];
+
+  if (limit) {
+    pipelines.push({ $limit: limit });
+  }
+
+  pipelines.push({ $project: { _id: 0 }});
+
+  /**
+   * @type {MusicDbTrack[]}
+   */
+  const result = [];
+
+  try {
+    /**
+     * @type {AggregationCursor<MusicDbTrack>}
+     */
+    const cursor = musics.aggregate(pipelines);
+
+    for await (const doc of cursor) {
+      result.push({ ...doc })
+    }
+  }
+  catch (e) {
+    logger.error(e, 'Error in findByComment');
+  }
+
+  return result;
 }
 
 /**
@@ -416,6 +475,7 @@ workerpool.worker({
   findById,
   findByPath,
   findByISRC,
+  findByComment,
   update,
   delete: _delete,
   search_add,
