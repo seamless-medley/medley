@@ -11,10 +11,12 @@ import { KaraokeFx } from './audio/fx/karaoke';
 import { StubStation } from './stubs/core/station';
 import { Station as RemoteStation } from '../remotes/core/station';
 import { createNamedFunc } from '@seamless-medley/utils';
+import { clamp } from 'lodash';
 
 type MedleyClientEvents = {
   audioTransport(transport: IAudioTransport): void;
   playingStation(id?: string): void;
+  volume(gain: number): void;
 }
 
 export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
@@ -23,6 +25,8 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
     sampleRate: 48_000,
     latencyHint: 'playback'
   });
+
+  #output: GainNode;
 
   #audioTransport?: IAudioTransport;
 
@@ -41,8 +45,13 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
   constructor() {
     super();
 
+    this.#output = new GainNode(this.#audioContext);
+    this.#output.connect(this.#audioContext.destination);
+
     this.#karaokeFx = this.#prepareKaraoke();
     this.karaokeEnabled = false;
+
+    this.volume = +(localStorage.getItem("volume") ?? 1.0);
   }
 
   override set latency(ms: number) {
@@ -57,7 +66,7 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
 
   async #prepareKaraoke() {
     await KaraokeFx.prepare(this.#audioContext);
-    return new KaraokeFx(this.#audioContext).connect(this.#audioContext.destination);
+    return new KaraokeFx(this.#audioContext).connect(this.#output);
   }
 
   protected override async handleSocketConnect() {
@@ -227,6 +236,18 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
 
     this.#karaokeEnabled = v;
     this.#restoreKaraoke();
+  }
+
+  get volume() {
+    return this.#output.gain.value;
+  }
+
+  set volume(gain: number) {
+    gain = clamp(gain, 0, 1);
+    this.emit('volume', gain);
+    this.#output.gain.setTargetAtTime(gain, this.#audioContext.currentTime + 0.08, 0.08 * 0.33);
+
+    localStorage.setItem("volume", gain.toFixed(3));
   }
 
 }
