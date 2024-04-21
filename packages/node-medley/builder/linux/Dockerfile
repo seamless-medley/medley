@@ -3,7 +3,7 @@
 
 FROM node:18.16.0
 
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@8.15.5
 
 RUN apt -y update \
     && apt -y install \

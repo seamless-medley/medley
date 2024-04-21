@@ -1,6 +1,6 @@
 FROM node:18.16.0 as builder
 
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@8.15.5
 
 # install build dependencies
 RUN apt update \
@@ -33,7 +33,6 @@ RUN apt update \
         tzdata \
         libasound2 \
         libfreetype6 \
-        watchman \
         -y \
     && rm -rf /var/lib/apt/lists/*
 

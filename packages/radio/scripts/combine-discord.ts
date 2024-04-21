@@ -50,7 +50,7 @@ async function combine() {
       ].map(name => (require(`../../${name}/package.json`) as PackageJson).dependencies),
       mainPackage.dependencies
     )
-    .omitBy((_, name) => /^(socket\.io|react|express|@mantine|framer-motion|ffmpeg|reflect-metadata|notepack.io|opus-decoder|mediasoup|polished|@tanstack)/.test(name ?? ''))
+    .omitBy((_, name) => /^(socket\.io|react|express|@mantine|framer-motion|ffmpeg|reflect-metadata|notepack.io|opus-decoder|mediasoup|polished|@tanstack|@fontsource|@linaria|@tabler|@wyw|overlayscrollbars)/.test(name ?? ''))
     .transform((o, value, key) => {
       if (key.startsWith('@seamless-medley/') && value?.startsWith('..')) {
         o[key] = value.substring(1);
