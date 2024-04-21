@@ -61,7 +61,7 @@ export function createStationProfile(station: Station, config: StationProfileCon
   });
 
   profile.noRequestSweeperOnIdenticalCollection = config.noRequestSweeperOnIdenticalCollection ?? true;
-  profile.followCrateAfterRequestTrack = config.followCrateAfterRequestTrack ?? true;
+  profile.followCollectionAfterRequestTrack = config.followCollectionAfterRequestTrack ?? true;
 
   profile.intros = createTrackCollection(
     '$_intros',
