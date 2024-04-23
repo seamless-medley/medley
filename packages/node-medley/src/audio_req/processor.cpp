@@ -24,16 +24,12 @@ void AudioRequestProcessor::Process(uint64_t requestedNumSamples)
     auto outputBytesPerSample = request->outputBytesPerSample;
     auto numChannels = request->numChannels;
 
-    while (request->buffer.getNumReady() < request->buffering) {
-        std::this_thread::sleep_for(5ms);
+    auto numSamples = juce::jmin((uint64_t)request->buffer.getNumReady(), requestedNumSamples);
 
-        if (!request->running) {
-            break;
-        }
+    if (numSamples == 0) {
+        return;
     }
 
-
-    auto numSamples = juce::jmin((uint64_t)request->buffer.getNumReady(), requestedNumSamples);
     juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
     request->buffer.read(tempBuffer, numSamples);
 

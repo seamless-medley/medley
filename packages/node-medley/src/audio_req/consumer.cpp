@@ -20,7 +20,10 @@ void AudioConsumer::Execute()
 
 std::vector<napi_value> AudioConsumer::GetResult(Napi::Env env)
 {
-    auto result = Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)request->scratch.getData(), bytesReady);
+    auto result = bytesReady == 0
+        ? Napi::Buffer<uint8_t>::New(env, 0)
+        : Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)request->scratch.getData(), bytesReady);
+
     return { result };
 }
 

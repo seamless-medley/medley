@@ -73,6 +73,7 @@ void Medley::Initialize(Object& exports) {
         InstanceMethod<&Medley::getDeckPositions>("getDeckPositions"),
         //
         InstanceMethod<&Medley::requestAudioStream>("*$reqAudio"),
+        InstanceMethod<&Medley::reqAudioGetSamplesReady>("*$reqAudio$getSamplesReady"),
         InstanceMethod<&Medley::reqAudioConsume>("*$reqAudio$consume"),
         InstanceMethod<&Medley::updateAudioStream>("updateAudioStream"),
         InstanceMethod<&Medley::reqAudioGetlatency>("*$reqAudio$getLatency"),
@@ -661,22 +662,6 @@ Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {
         }
     }
 
-    uint32_t buffering = (uint32_t)(sampleRate * 0.01f);
-    {
-        auto jsValue = options.Get("buffering");
-        if (jsValue.IsNumber()) {
-            auto value = jsValue.ToNumber().Int32Value();
-            if (value >= 0) {
-                buffering = value;
-            }
-        }
-    }
-
-    if (bufferSize <= buffering) {
-        TypeError::New(env, "bufferSize is too small").ThrowAsJavaScriptException();
-        return env.Undefined();
-    }
-
     auto gainJS = options.Has("gain") ? options.Get("gain") : env.Undefined();
     auto gain = (!gainJS.IsNull() && !gainJS.IsUndefined()) ? gainJS.ToNumber().FloatValue() : 1.0f;
     auto fx = options.Has("fx") ? options.Get("fx") : env.Undefined();
@@ -686,7 +671,6 @@ Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {
         audioFormat,
         outSampleRate,
         bufferSize,
-        buffering,
         gain,
         fx
     );
@@ -702,7 +686,7 @@ Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {
     return result;
 }
 
-std::shared_ptr<audio_req::AudioRequest> Medley::registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, double outSampleRate, uint32_t bufferSize, uint32_t buffering, float gain, Napi::Value fx) {
+std::shared_ptr<audio_req::AudioRequest> Medley::registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, double outSampleRate, uint32_t bufferSize, float gain, Napi::Value fx) {
     auto audioConveter = audioConverters.find(audioFormat);
     if (audioConveter == audioConverters.end()) {
         switch (audioFormat) {
@@ -750,10 +734,6 @@ std::shared_ptr<audio_req::AudioRequest> Medley::registerAudioRequest(uint32_t i
         bufferSize = (uint32_t)(outputSampleRate * 0.25f);
     }
 
-    if (buffering == 0) {
-        buffering = (uint32_t)(outputSampleRate * 0.01f);
-    }
-
     std::shared_ptr<PostProcessor> processor = std::make_shared<PostProcessor>();
     ProcessSpec audioSpec{ config.sampleRate, (uint32)numSamples, (uint32)numChannels };
 
@@ -772,7 +752,6 @@ std::shared_ptr<audio_req::AudioRequest> Medley::registerAudioRequest(uint32_t i
     auto request = std::make_shared<audio_req::AudioRequest>(
         id,
         bufferSize,
-        buffering,
         numChannels,
         deviceSampleRate,
         outSampleRate,
@@ -804,6 +783,19 @@ Napi::Value Medley::reqAudioConsume(const CallbackInfo& info) {
     return deferred.Promise();
 }
 
+Napi::Value Medley::reqAudioGetSamplesReady(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    auto streamId = static_cast<uint32_t>(info[0].As<Number>().Int32Value());
+
+    auto it = audioRequests.find(streamId);
+    if (it == audioRequests.end()) {
+        return env.Undefined();
+    }
+
+    return Number::New(env, it->second->buffer.getNumReady());
+}
+
 Napi::Value Medley::updateAudioStream(const CallbackInfo& info) {
     auto env = info.Env();
 
@@ -827,13 +819,9 @@ Napi::Value Medley::updateAudioStream(const CallbackInfo& info) {
         //
         auto startTime = request->currentTime + 100;
         auto endTime = startTime + 1000;
+
         request->fader.start(startTime, endTime, request->preferredGain, newGain, 2.0f, newGain);
-
         request->preferredGain = newGain;
-    }
-
-    if (options.Has("buffering")) {
-        request->buffering = options.Get("buffering").ToNumber().Uint32Value();
     }
 
     if (options.Has("fx")) {
@@ -871,7 +859,7 @@ Napi::Value Medley::reqAudioGetlatency(const CallbackInfo& info) {
     auto outputLatency = (double)engine->getOutputLatency();
     auto bufferedSize = (double)request->buffer.getNumReady();
 
-    auto latencyMs = (jmax(bufferedSize, (double)request->buffering) + outputLatency) / sampleRate * 1000;
+    auto latencyMs = outputLatency / sampleRate * 1000;
 
     return Number::New(env, latencyMs);
 }

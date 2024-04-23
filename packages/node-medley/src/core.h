@@ -103,6 +103,8 @@ public:
 
     Napi::Value reqAudioConsume(const CallbackInfo& info);
 
+    Napi::Value reqAudioGetSamplesReady(const CallbackInfo& info);
+
     Napi::Value reqAudioGetlatency(const CallbackInfo& info);
 
     Napi::Value updateAudioStream(const CallbackInfo& info);
@@ -138,7 +140,7 @@ private:
 
     void emitDeckEvent(const std::string& name, medley::Deck& deck, medley::TrackPlay& track);
 
-    std::shared_ptr<audio_req::AudioRequest> registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, double outSampleRate, uint32_t bufferSize, uint32_t buffering, float gain, Napi::Value fx);
+    std::shared_ptr<audio_req::AudioRequest> registerAudioRequest(uint32_t id, AudioRequestFormat audioFormat, double outSampleRate, uint32_t bufferSize, float gain, Napi::Value fx);
 
     static uint32_t audioRequestId;
 

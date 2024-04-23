@@ -48,18 +48,45 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
   const result = this['*$reqAudio'](options) as RequestAudioResult;
   const streamId = result.id;
 
-  const bytesPerSample = formatToBytesPerSample(options.format);
+  const sampleRate = Number(options.sampleRate ?? 44100);
+  let buffering = Number(options.buffering ?? sampleRate) * 0.01;
+  const bufferSize = Number(options.bufferSize ?? sampleRate) * 0.25;
 
-  const consume = async (size: number) => {
-    return await this['*$reqAudio$consume'](streamId, Math.max(size, (options.buffering ?? 0) * bytesPerSample * 2)) as Buffer;
+  if (buffering < 1) {
+    throw new Error('buffering cannot be less than 1');
   }
 
-  const { sampleRate = 44100 } = options;
+  if (bufferSize <= buffering) {
+    throw new Error('bufferSize is too small');
+  }
+
+  const bytesPerSample = formatToBytesPerSample(options.format);
+
+  const getSamplesReady = () => (this['*$reqAudio$getSamplesReady'](streamId) ?? 0);
+
+  const waitForBuffer = (sampleSize: number) => new Promise<void>((resolve) => {
+    const check = () => {
+      if (getSamplesReady() >= sampleSize) {
+        resolve();
+        return;
+      }
+
+      setTimeout(check, 10);
+    }
+
+    check();
+  });
+
+  const consume = async (size: number) => {
+    return await this['*$reqAudio$consume'](streamId, Math.max(size, buffering * bytesPerSample * 2)) as Buffer;
+  }
 
   const stream = new Readable({
-    highWaterMark: sampleRate * bytesPerSample * 2,
+    // 50% higher than the bufferSize
+    highWaterMark: bufferSize * 1.5 * bytesPerSample * 2,
     objectMode: false,
     read: async (size: number) => {
+      await waitForBuffer(buffering);
       stream.push(await consume(size));
     }
   });
@@ -75,9 +102,25 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
   const streamResult: RequestAudioStreamResult = {
     stream,
     ...result,
-    update: options => this.updateAudioStream(streamId, options),
+    update: (newOptions) => {
+      if (newOptions.buffering) {
+        const newBuffering = Number(newOptions.buffering ?? sampleRate) * 0.01;
+
+        if (newBuffering < 1) {
+          throw new Error('buffering cannot be less than 1');
+        }
+
+        if (bufferSize <= newBuffering) {
+          throw new Error('bufferSize is too small');
+        }
+
+        buffering = newBuffering;
+      }
+
+      return this.updateAudioStream(streamId, newOptions)
+    },
     getLatency: () => {
-      const r = (stream.readableLength / bytesPerSample / 2);
+      const r = buffering + (stream.readableLength / bytesPerSample / 2);
       const bufferDelay = (r / sampleRate * 1000);
       return bufferDelay + this['*$reqAudio$getLatency'](streamId);
 

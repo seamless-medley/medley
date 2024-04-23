@@ -5,7 +5,6 @@ namespace audio_req {
 AudioRequest::AudioRequest(
     uint32_t id,
     uint32_t bufferSize,
-    uint32_t buffering,
     uint8_t numChannels,
     int inSampleRate,
     int requestedSampleRate,
@@ -15,7 +14,6 @@ AudioRequest::AudioRequest(
     float preferredGain
 ) :
     id(id),
-    buffering(buffering),
     numChannels(numChannels),
     inSampleRate(inSampleRate),
     requestedSampleRate(requestedSampleRate),

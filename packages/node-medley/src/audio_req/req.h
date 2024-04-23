@@ -12,7 +12,6 @@ struct AudioRequest {
     AudioRequest(
         uint32_t id,
         uint32_t bufferSize,
-        uint32_t buffering,
         uint8_t numChannels,
         int inSampleRate,
         int requestedSampleRate,
@@ -28,7 +27,6 @@ struct AudioRequest {
 
     bool running = true;
     uint32_t id;
-    uint32_t buffering;
     uint8_t numChannels;
     int inSampleRate;
     int requestedSampleRate;
