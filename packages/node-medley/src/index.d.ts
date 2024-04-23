@@ -302,12 +302,19 @@ export type RequestAudioOptions = {
   buffering?: number;
 
   /**
-   * @deprecated
-   *
-   * No longer supported
+   * @deprecated No longer supported
    */
   preFill?: number;
 
+  /**
+   * Audio sample format, possible values are:
+   * - `Int16LE` - 16 bit signed integer, little endian
+   * - `Int16BE` - 16 bit signed integer, big endian
+   * - `FloatLE` - 32 bit floating point, little endian
+   * - `FloatBE` - 32 bit floating point, big endian
+   *
+   * @default FloatLE
+   */
   format: AudioFormat;
 
   /**
