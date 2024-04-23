@@ -32,13 +32,12 @@ void AudioRequestProcessor::Process(uint64_t requestedNumSamples)
         }
     }
 
-    request->currentTime = Time::getMillisecondCounterHiRes();
 
     auto numSamples = juce::jmin((uint64_t)request->buffer.getNumReady(), requestedNumSamples);
-
     juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
     request->buffer.read(tempBuffer, numSamples);
 
+    request->currentTime += (numSamples / (double)request->inSampleRate) * 1000;
     auto gain = request->fader.update(request->currentTime);
 
     tempBuffer.applyGainRamp(0, numSamples, request->lastGain, gain);
