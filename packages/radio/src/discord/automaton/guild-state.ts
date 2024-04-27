@@ -1,4 +1,4 @@
-import { chain, uniqBy } from "lodash";
+import { chain, noop, uniqBy } from "lodash";
 
 import {
   AudienceGroupId,
@@ -553,7 +553,7 @@ export class GuildState {
             const searchResult = await station.search({
               title: info.title,
               artist: info.artist
-            });
+            }, 1);
 
             tracks.push(...searchResult);
           }
@@ -650,7 +650,7 @@ export class GuildState {
       const reply = await createReply(match.url, match.paths);
 
       if (reply) {
-        message.reply(reply);
+        message.reply(reply).catch(noop);
       }
     }
   }
