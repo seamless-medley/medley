@@ -32,7 +32,7 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
   #latencyBuffer: number[] = [];
 
   override prepare(): void {
-    const opus = this.read();
+    const { opus } = this.read();
 
     if (!opus) {
       this.#preparedPacket = undefined;

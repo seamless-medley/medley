@@ -8,6 +8,10 @@ export type OpusPacketEncoderOptions = OpusOptions & {
   backlog?: number
 }
 
+export type EncodedPacketInfo = {
+  opus?: Buffer;
+}
+
 /**
  * Transform PCM stream into Raw Opus Packet
  *
@@ -96,7 +100,9 @@ export class OpusPacketEncoder extends Transform {
 
     // emit results
     while (packets.length > 0) {
-      this.push(packets.shift());
+      this.push({
+        opus: packets.shift()
+      });
     }
   }
 

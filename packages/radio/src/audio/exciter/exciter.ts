@@ -2,7 +2,7 @@ import { KaraokeUpdateParams, RequestAudioOptions, RequestAudioStreamResult, Sta
 import { isEqual, noop } from 'lodash';
 import { pipeline, Readable } from 'node:stream';
 import { ListenerSignature, TypedEmitter } from 'tiny-typed-emitter';
-import { OpusPacketEncoder, OpusPacketEncoderOptions } from '../codecs/opus/stream';
+import { EncodedPacketInfo, OpusPacketEncoder, OpusPacketEncoderOptions } from '../codecs/opus/stream';
 import { AudioDispatcher, DispatcherPrivate } from './dispatcher';
 
 export interface IExciter {
@@ -218,8 +218,8 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     return this.request?.stream?.readable ?? false;
   }
 
-  protected read() {
-    return this.outlet?.read() as (Buffer | undefined | null);
+  protected read(): EncodedPacketInfo {
+    return this.outlet?.read() || {};
   }
 
   protected get playableCarriers() {
@@ -231,7 +231,7 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
   }
 
   prepare(): void {
-    const opus = this.read();
+    const { opus } = this.read();
 
     if (!opus) {
       return;
