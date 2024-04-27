@@ -83,6 +83,7 @@ type SpotifyInfo = SpotifyTrackInfo | SpotifyArtistInfo | SpotifyUserInfo | Spot
 
 export async function fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo['type']): Promise<SpotifyInfo | undefined> {
   const res = await axios.get(url, { timeout: 5000 }).catch(() => false as const);
+
   if (res === false || res.status !== 200) {
     return;
   }
@@ -97,10 +98,6 @@ export async function fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo['
     return el?.attributes.content;
   }
 
-  const getSongList = () => parsed.querySelectorAll(`head meta[name='music:song']`)
-    .map(el => el.attributes.content)
-    .filter((s): s is string => typeof s === 'string' && s.length > 0)
-
   const type = ((t) => {
     switch (t) {
       case 'profile':
@@ -113,6 +110,14 @@ export async function fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo['
         return 'playlist';
     }
   })(get('og:type')?.toLowerCase())
+
+  if (expectedType && type !== expectedType) {
+    return;
+  }
+
+  const getSongList = () => parsed.querySelectorAll(`head meta[name='music:song']`)
+    .map(el => el.attributes.content)
+    .filter((s): s is string => typeof s === 'string' && s.length > 0)
 
   switch (type) {
     case 'artist':
