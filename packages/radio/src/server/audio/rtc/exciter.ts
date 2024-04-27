@@ -1,6 +1,5 @@
 import { Station } from "@seamless-medley/core";
 import { Logger, createLogger } from "@seamless-medley/logging";
-import { mean, random } from "lodash";
 import { encode } from 'notepack.io';
 import { type types } from 'mediasoup';
 import { Exciter, IExciter } from "../../../audio/exciter";
@@ -27,6 +26,7 @@ export type RTCExciterOptions = {
   station: Station;
   transport: types.DirectTransport;
   bitrate: number;
+  backlog?: number;
 }
 
 export class RTCExciter extends Exciter implements IExciter {
@@ -36,9 +36,6 @@ export class RTCExciter extends Exciter implements IExciter {
   #audioLevelDataProducer?: types.DataProducer;
   #eventDataProducer?: types.DataProducer;
 
-  #audioLatency = 0;
-  #lastAudioLatencyUpdated = 0;
-
   #rtpData: RTPData;
   #preparedPacket?: Buffer;
   #preparedAudioLevelInfo?: Buffer;
@@ -46,16 +43,16 @@ export class RTCExciter extends Exciter implements IExciter {
 
   #logger: Logger;
 
-  constructor({ station, transport, bitrate }: RTCExciterOptions) {
+  constructor({ station, transport, bitrate, backlog = 12 }: RTCExciterOptions) {
     super(
       station,
       {
         format: 'Int16LE',
         sampleRate: 48_000,
         bufferSize: 960 * 24,
-        buffering: 960 * 12, // Opus packet size x number of Opus packets
+        buffering: 960 * Math.max(1, backlog / 4)
       },
-      { bitrate }
+      { bitrate, backlog }
     );
 
     this.#logger = createLogger({ name: 'rtc-exciter', id: station.id })
@@ -118,8 +115,6 @@ export class RTCExciter extends Exciter implements IExciter {
     return this.#eventDataProducer?.id;
   }
 
-  #latencyBuffer: number[] = [];
-
   override prepare(): void {
     const { opus } = this.read();
 
@@ -150,26 +145,12 @@ export class RTCExciter extends Exciter implements IExciter {
 
     this.#preparedAudioLevelInfo = encode(extra) as Buffer;
 
-    if ((performance.now() - this.#lastAudioLatencyUpdated > 1000)) {
-      const streamLatency = this.request?.getLatency() ?? 0;
-
-      this.#latencyBuffer.push(streamLatency);
-      if (this.#latencyBuffer.length >= 10) {
-        this.#latencyBuffer.shift();
-      }
-
-      const audioLatency = Math.trunc(mean(this.#latencyBuffer));
-
-      if (this.#audioLatency !== audioLatency) {
-        this.#audioLatency = audioLatency;
-        this.#lastAudioLatencyUpdated = performance.now();
-
-        this.#preparedAudioLatencyInfo = encode({
-          type: 'audio-latency',
-          latency: audioLatency
-        }) as Buffer;
-      }
-    }
+    this.updateAudioLatency((latency) => {
+      this.#preparedAudioLatencyInfo = encode({
+        type: 'audio-latency',
+        latency
+      }) as Buffer;
+    });
   }
 
   override dispatch(): void {
@@ -206,9 +187,5 @@ export class RTCExciter extends Exciter implements IExciter {
     super.stop();
 
     this.#transport.close();
-  }
-
-  get audioLatency() {
-    return this.#audioLatency;
   }
 }

@@ -1,5 +1,4 @@
 import { Station } from "@seamless-medley/core";
-import { mean } from "lodash";
 import { encode } from 'notepack.io';
 import { IExciter, Exciter } from "../../../audio/exciter";
 import { AudioTransportExtraPayload } from "../../../audio/types";
@@ -10,26 +9,22 @@ interface WebSocketExciterEvents {
 }
 
 export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements IExciter {
-  constructor(station: Station, bitrate = 256_000) {
+  constructor(station: Station, bitrate = 256_000, backlog = 12) {
     super(
       station,
       {
         format: 'Int16LE',
         sampleRate: 48_000,
         bufferSize: 48_000 * 2.5,
-        buffering: 12 * 960 // number of Opus packets x Opus packet size
+        buffering: 960 * Math.max(1, backlog / 4)
       },
-      { bitrate }
+      { bitrate, backlog }
     );
   }
 
   #preparedPacket?: Buffer;
 
-  #audioLatency = 0;
-  #lastAudioLatencyUpdated = 0;
   #preparedAudioLatencyInfo?: number;
-
-  #latencyBuffer: number[] = [];
 
   override prepare(): void {
     const { opus } = this.read();
@@ -58,23 +53,9 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
 
     this.#preparedPacket = resultPacket;
 
-    if ((performance.now() - this.#lastAudioLatencyUpdated) > 1000) {
-      const streamLatency = this.request?.getLatency() ?? 0;
-
-      this.#latencyBuffer.push(streamLatency);
-      if (this.#latencyBuffer.length >= 10) {
-        this.#latencyBuffer.shift();
-      }
-
-      const audioLatency = Math.trunc(mean(this.#latencyBuffer));
-
-      if (this.#audioLatency !== audioLatency) {
-        this.#audioLatency = audioLatency;
-        this.#lastAudioLatencyUpdated = performance.now();
-
-        this.#preparedAudioLatencyInfo = audioLatency;
-      }
-    }
+    this.updateAudioLatency((latency) => {
+      this.#preparedAudioLatencyInfo = latency;
+    });
   }
 
   override dispatch(): void {
@@ -88,9 +69,5 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
 
     this.#preparedPacket = undefined;
     this.#preparedAudioLatencyInfo = undefined;
-  }
-
-  get audioLatency() {
-    return this.#audioLatency;
   }
 }

@@ -1,5 +1,5 @@
 import { KaraokeUpdateParams, RequestAudioOptions, RequestAudioStreamResult, Station } from '@seamless-medley/core';
-import { isEqual, noop } from 'lodash';
+import { isEqual, mean, noop } from 'lodash';
 import { pipeline, Readable } from 'node:stream';
 import { ListenerSignature, TypedEmitter } from 'tiny-typed-emitter';
 import { EncodedPacketInfo, OpusPacketEncoder, OpusPacketEncoderOptions } from '../codecs/opus/stream';
@@ -229,6 +229,41 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
 
   protected prepareAudioPacket(opus: Buffer): Buffer {
     return opus;
+  }
+
+  #calculateLatency() {
+    const blocksInEncoder = this.opusEncoder?.blocksInBuffer ?? 0;
+    const packetsInOutlet = (this.outlet?.readableLength ?? 0)
+    const encoderLatency = (blocksInEncoder + packetsInOutlet) * 960 / 48_000 * 1000;
+    const streamLatency = this.request?.getLatency() ?? 0;
+    return streamLatency + encoderLatency;
+  }
+
+  #audioLatency = 0;
+  #lastAudioLatencyUpdated = 0;
+  #latencyBuffer: number[] = [];
+
+  protected updateAudioLatency(cb: (latency: number) => any) {
+    if ((performance.now() - this.#lastAudioLatencyUpdated > 1000)) {
+      this.#latencyBuffer.push(this.#calculateLatency());
+      if (this.#latencyBuffer.length >= 30) {
+        this.#latencyBuffer.shift();
+      }
+
+      // Reduce resolution by a decade
+      const audioLatency = Math.trunc(mean(this.#latencyBuffer) / 10) * 10;
+
+      if (this.#audioLatency !== audioLatency) {
+        this.#audioLatency = audioLatency;
+        this.#lastAudioLatencyUpdated = performance.now();
+
+        cb(audioLatency);
+      }
+    }
+  }
+
+  get audioLatency() {
+    return this.#audioLatency;
   }
 
   prepare(): void {
