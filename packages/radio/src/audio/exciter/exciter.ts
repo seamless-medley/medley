@@ -155,10 +155,11 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     return new Promise<void>(async (resolve, reject) => {
       this.dispatcher = dispatcher;
       try {
-        this.request = await this.station.requestAudioStream(this.audioOptions);
         this.opusEncoder = new OpusPacketEncoder(this.encoderOptions);
 
-        this.opusEncoder.on('ready', () => {
+        this.opusEncoder.once('ready', async () => {
+          this.request = await this.station.requestAudioStream(this.audioOptions);
+
           this.outlet = pipeline(
             [
               this.request!.stream,
