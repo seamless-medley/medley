@@ -120,6 +120,7 @@ export type StationEvents = {
   trackStarted: (deck: DeckIndex, trackPlay: StationTrackPlay, lastTrackPlay?: StationTrackPlay) => void;
   trackActive: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
   trackFinished: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
+  trackSkipped: (trackPlay: StationTrackPlay) => void;
   collectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, transitingFromRequestTrack: boolean) => void;
   crateChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
   sequenceProfileChange: (oldProfile: StationProfile | undefined, newProfile: StationProfile) => void;
@@ -487,6 +488,10 @@ export class Station extends TypedEmitter<StationEvents> {
     if (ok) {
       this.playState = PlayState.Playing;
       this.#logger.info('Skipping track: %s', this.trackPlay?.track?.path);
+
+      if (this.trackPlay) {
+        this.emit('trackSkipped', this.trackPlay);
+      }
     }
 
     return ok;
