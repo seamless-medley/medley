@@ -214,6 +214,11 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
       this.#logger.warn(`Rescue, removing ${n} artist history entries`);
       this.artistHistory = this.artistHistory.slice(n);
+
+      if (!this.medley.playing && !this.medley.paused) {
+        this.#logger.warn('Rescued, but playback was stalled, starting again...');
+        this.medley.play();
+      }
     });
 
     this.#sweeperInserter = new SweeperInserter(this, []);
