@@ -138,6 +138,13 @@ export type StationEvents = {
 
 type BoomBoxEventsForStation = BoomBoxEvents<StationProfile>;
 
+export type StationSearchOptions = {
+  q: SearchQuery;
+  limit?: number;
+  exactMatch?: boolean;
+  noHistory?: boolean;
+}
+
 export class Station extends TypedEmitter<StationEvents> {
   readonly id: string;
 
@@ -662,10 +669,12 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.findTracksByComment(key, value, limit);
   }
 
-  async search(q: SearchQuery, limit?: number, exactMatch?: boolean) {
+  async search({ q, limit, exactMatch, noHistory }: StationSearchOptions) {
     const result = await this.#library.search(q, limit, exactMatch);
 
-    this.#musicDb.searchHistory.add(this.id, { ...q, resultCount: result.length });
+    if (!noHistory) {
+      this.#musicDb.searchHistory.add(this.id, { ...q, resultCount: result.length });
+    }
 
     return result as StationTrack[];
   }

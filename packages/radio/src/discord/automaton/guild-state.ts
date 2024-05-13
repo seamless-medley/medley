@@ -551,9 +551,13 @@ export class GuildState {
 
           if (tracks.length < 1) {
             const searchResult = await station.search({
-              title: info.title,
-              artist: info.artist
-            }, 1);
+              q: {
+                title: info.title,
+                artist: info.artist
+              },
+              limit: 1,
+              noHistory: true
+            });
 
             tracks.push(...searchResult);
           }
@@ -610,7 +614,10 @@ export class GuildState {
           }
 
           const exactMatches = await station.findTracksByComment(searchKey, id);
-          const searchResult = await station.search({ artist: info.artist }, undefined, true);
+          const searchResult = await station.search({
+            q: { artist: info.artist },
+            exactMatch: true
+          });
 
           const tracks = uniqBy(
             [...exactMatches, ...searchResult],
