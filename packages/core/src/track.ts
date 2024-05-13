@@ -15,6 +15,7 @@ export interface Track<E extends TrackExtra> extends TrackInfo {
 
 export type TrackExtra = {
   source?: string;
+  timestamp?: number;
 }
 
 export type TrackExtraOf<T extends Track<any>> = T extends Track<infer E> ? E : never;
@@ -43,6 +44,6 @@ export type SequencedTrack<T extends Track<any>> = Omit<T, 'sequencing'> & {
   sequencing: TrackSequencing<T, T['extra']>;
 }
 
-export type TrackWithCollectionExtra<T extends Track<any>, Extra> = Omit<T, 'collection'> & {
-  readonly collection: TrackCollection<T, Extra>;
+export type TrackWithCollectionExtra<T extends Track<TE>, TE extends TrackExtra, Extra> = Omit<T, 'collection'> & {
+  readonly collection: TrackCollection<T, TE, Extra>;
 }

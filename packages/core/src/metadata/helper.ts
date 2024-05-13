@@ -5,7 +5,7 @@ import { WorkerPoolAdapter } from '../worker_pool_adapter';
 import { MusicDb } from '../library/music_db';
 import { omitBy, negate } from 'lodash/fp';
 import { BoomBoxCoverAnyLyrics } from '../playout';
-import { stubFalse } from 'lodash';
+import { isEqual, omit, stubFalse } from 'lodash';
 import { LyricProviderName, LyricsSearchResult } from './lyrics/types';
 
 let instance: MetadataHelper;
@@ -22,6 +22,8 @@ type WorkerCoverAndLyrics = Omit<CoverAndLyrics, 'cover'> & {
 export type FetchResult = {
   hit: boolean;
   metadata: Metadata;
+  timestamp?: number;
+  modified?: boolean;
 }
 
 interface Methods {
@@ -122,19 +124,30 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   }
 
   async fetchMetadata(track: Track<any>, musicDb: MusicDb | undefined, refresh = false): Promise<FetchResult> {
+    const cached = await musicDb?.findById(track.id);
+    const metadata = omit(cached, 'trackId', 'timestamp');
+
     if (!refresh) {
-      const cached = await musicDb?.findById(track.id);
       if (cached) {
-        return { hit: true, metadata: cached }
+        return {
+          hit: true,
+          timestamp: cached.timestamp,
+          metadata
+        }
       }
     }
 
     const fresh = await this.metadata(track.path);
-    fresh.comments = fresh.comments?.filter(([key]) => /^[^:]+:(?!\/\/)/i.test(key)) ?? []; //
+    fresh.comments = fresh.comments?.filter(([key]) => /^[^:]+:(?!\/\/)/i.test(key)) ?? [];
 
-    musicDb?.update(track.id, { ...fresh, path: track.path });
+    const updated = await musicDb?.update(track.id, { ...fresh, path: track.path });
 
-    return { hit: false, metadata: fresh };
+    return {
+      hit: false,
+      timestamp: updated?.timestamp,
+      modified: refresh ? !isEqual(metadata, fresh) : false,
+      metadata: fresh
+    };
   }
 
   async isTrackLoadable(path: string, timeout = 500) {

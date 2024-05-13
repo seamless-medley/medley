@@ -865,6 +865,10 @@ export class Station extends TypedEmitter<StationEvents> {
   get allLatches(): ReadonlyArray<LatchSession<StationTrack, BoomBoxTrackExtra>> {
     return this.#boombox.allLatches;
   }
+
+  async rescan(full?: boolean, scanningCb?: (collection: MusicTrackCollection<Station>) => any) {
+    return this.#library.rescan(full, scanningCb);
+  }
 }
 
 export class StationRegistry<S extends Station> extends Library<S, {}, S['id']> {

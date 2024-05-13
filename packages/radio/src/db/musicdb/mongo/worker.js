@@ -227,19 +227,29 @@ async function findByComment(field, value, limit = 1) {
  * @type {MusicDb['update']}
  */
 const update = async (trackId, fields) => {
+  const track = {
+    ...fields,
+    timestamp: fields.timestamp ?? Date.now(),
+  }
+
   await musics.updateOne({ trackId }, {
     $set: {
-      ...fields,
+      ...track,
       expires: Date.now() + random(...ttls) * 1000
     }
   }, { upsert: true })
   .catch((e) => {
     logger.error(e, 'Error in update');
   });
+
+  return {
+    trackId,
+    ...track
+  }
 }
 
 /**
- * @type {MusicDb['update']}
+ * @type {MusicDb['delete']}
  */
 const _delete = async (trackId) => {
   await musics.deleteOne({ trackId })

@@ -1,4 +1,4 @@
-import { Crate, MusicCollectionWatch, MusicDb, Station, StationProfile, StationRegistry, StationTrack, WatchPathWithOption, WatchTrackCollection, crateLimitFromSequenceLimit, createChanceable, scanDir } from "@seamless-medley/core";
+import { BoomBoxTrack, Crate, MusicCollectionWatch, MusicDb, Station, StationProfile, StationRegistry, StationTrack, WatchPathWithOption, WatchTrackCollection, crateLimitFromSequenceLimit, createChanceable, scanDir } from "@seamless-medley/core";
 import { readFile } from 'node:fs/promises';
 
 import {
@@ -27,7 +27,7 @@ function createCrateFromSequence(id: string, station: Station, sequence: Sequenc
 }
 
 function createTrackCollection(id: string, paths: MusicCollectionWatch[] = [], logPrefix: string) {
-  const collection = new WatchTrackCollection(id, undefined, { logPrefix, scanner: scanDir });
+  const collection = new WatchTrackCollection<BoomBoxTrack>(id, undefined, { logPrefix, scanner: scanDir });
 
   for (const path of paths) {
     collection.watch(isString(path) ? { dir: path } : path);
