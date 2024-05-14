@@ -2,6 +2,7 @@ import { CommandInteraction, blockQuote, inlineCode, unorderedList } from "disco
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deny, guildStationGuard, joinStrings, reply } from "../utils";
 import { LibraryRescanStats, MusicTrackCollection, Station } from "@seamless-medley/core";
+import { once } from "lodash";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -23,12 +24,12 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
 
   const { station } = guildStationGuard(automaton, interaction);
 
-  const stats = await station.rescan(true, (col) => {
+  const stats = await station.rescan(true, once(() => {
      reply(interaction, {
       ephemeral: true,
-      content: `Re-scanning: ${col.extra.description}`
+      content: `Re-scanning...`
     });
-  })
+  }));
 
   type Stat = Omit<LibraryRescanStats<Station>, 'collection'>;
 
