@@ -78,7 +78,7 @@ export enum AudienceType {
 
 export type AudienceOfGroup<A extends AudienceType, G extends string[]> = `${A}$${Join<G, '/'>}`;
 
-export type DiscordAudienceGroupId = AudienceOfGroup<AudienceType.Discord, [string, string]>;
+export type DiscordAudienceGroupId = AudienceOfGroup<AudienceType.Discord, [automatonId: string, guildId: string]>;
 
 export type AudienceGroupId = DiscordAudienceGroupId | AudienceOfGroup<Exclude<AudienceType, AudienceType.Discord>, [string]>;
 
