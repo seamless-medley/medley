@@ -1,4 +1,4 @@
-import { chain, noop, uniqBy } from "lodash";
+import { noop, sortBy, uniqBy } from "lodash";
 
 import {
   AudienceGroupId,
@@ -547,7 +547,7 @@ export class GuildState {
             embed.setThumbnail(info.image);
           }
 
-          const tracks = await station.findTracksByComment(searchKey, id, 1);
+          const tracks = await station.findTracksByComment(searchKey, id);
 
           if (tracks.length < 1) {
             const searchResult = await station.search({
@@ -562,7 +562,7 @@ export class GuildState {
             tracks.push(...searchResult);
           }
 
-          const [track] = tracks;
+          const [track] = sortBy(tracks, t => t.collection.options.auxiliary ? 1 : 0);
 
           if (track) {
             const { id: trackId, extra } = track;
