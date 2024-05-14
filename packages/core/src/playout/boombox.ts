@@ -46,7 +46,7 @@ export type BoomBoxTrackExtra = TrackExtra & {
 export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
 export type BoomBoxTrackPlay = TrackPlay<BoomBoxTrack>;
 export type BoomBoxCrate = Crate<BoomBoxTrack>;
-export type BoomBoxTrackCollection = TrackCollection<BoomBoxTrack, any>;
+export type BoomBoxTrackCollection = TrackCollection<BoomBoxTrack>;
 
 export type Requester = any;
 
@@ -169,7 +169,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
   readonly #onInsertRequestTrack?: OnInsertRequestTrack<BoomBoxTrack, R>;
 
-  readonly #profileBook = new CrateProfileBook<BoomBoxProfile>();
+  readonly #profileBook = new CrateProfileBook<P>();
 
   artistHistory: Array<string[]> = [];
 
