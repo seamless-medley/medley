@@ -29,6 +29,18 @@
         "infra",
         "platform"
       ]
+    },
+    {
+      "login": "priesdelly",
+      "name": "Priesdelly",
+      "avatar_url": "https://avatars.githubusercontent.com/u/304075?v=4",
+      "profile": "https://github.com/priesdelly",
+      "contributions": [
+        "code",
+        "ideas",
+        "infra",
+        "platform"
+      ]
     }
   ],
   "contributorsPerLine": 7,
@@ -36,5 +48,6 @@
   "repoType": "github",
   "repoHost": "https://github.com",
   "projectName": "medley",
-  "projectOwner": "seamless-medley"
+  "projectOwner": "seamless-medley",
+  "commitType": "docs"
 }
