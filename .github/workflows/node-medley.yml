@@ -21,11 +21,6 @@ jobs:
             node_arch: x64
             build-arch: linux-x64
 
-          - runs-on: ubuntu-20.04
-            node_version: 18
-            node_arch: arm64
-            build-arch: linux-arm64
-
           - runs-on: windows-latest
             node_version: 18
             node_arch: x64
@@ -36,7 +31,7 @@ jobs:
             node_arch: arm64
             build-arch: darwin-arm64
 
-            # macos-14 runner is arm64, use macos-13 instead
+          # macos-14 runner is arm64, use macos-13 instead
           - runs-on: macos-13
             node_version: 18
             node_arch: x64
@@ -116,16 +111,9 @@ jobs:
           pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Build native
-        if: matrix.build-arch != 'linux-arm64'
         working-directory: ./packages/node-medley
         run: |
           pnpm prebuild
-
-      - name: Build native (Linux/ARM64)
-        if: matrix.build-arch == 'linux-arm64'
-        working-directory: ./packages/node-medley
-        run: |
-          pnpm prebuild:linux-arm64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
@@ -133,4 +121,15 @@ jobs:
           name: ${{ matrix.build-arch }}
           path: ./packages/node-medley/prebuilds
 
+  build-linux-arm64:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
+      - name: Build native (Linux/ARM64)
+        working-directory: ./packages/node-medley
+        run: |
+          pnpm prebuild:linux-arm64
