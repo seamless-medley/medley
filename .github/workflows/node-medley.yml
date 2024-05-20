@@ -36,8 +36,15 @@ jobs:
             node_arch: arm64
             build-arch: darwin-arm64
 
+          - runs-on: [self-hosted, macOS, ARM64]
+            container: ubuntu:20.04
+            node_version: 18
+            node_arch: arm64
+            build-arch: linux-arm64
+
     name: Build ${{ matrix.build-arch }}
     runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container }}
     env:
       BUILD_ARCH: ${{ matrix.build-arch }}
       DEPS_INSTALL: ./packages/node-medley/scripts/install-deps.sh
