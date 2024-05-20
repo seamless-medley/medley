@@ -150,6 +150,12 @@ jobs:
       #   run: |
       #     pnpm install --no-frozen-lockfile --ignore-scripts
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build native
         working-directory: ./packages/node-medley
         run: |
