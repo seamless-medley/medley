@@ -21,6 +21,11 @@ jobs:
             node_arch: x64
             build-arch: linux-x64
 
+          - runs-on: ubuntu-20.04
+            node_version: 18
+            node_arch: arm64
+            build-arch: linux-arm64
+
           - runs-on: windows-latest
             node_version: 18
             node_arch: x64
@@ -111,9 +116,16 @@ jobs:
           pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Build native
+        if: matrix.build-arch != 'linux-arm64'
         working-directory: ./packages/node-medley
         run: |
-          pnpm run prebuild
+          pnpm prebuild
+
+      - name: Build native (Linux/ARM64)
+        if: matrix.build-arch == 'linux-arm64'
+        working-directory: ./packages/node-medley
+        run: |
+          pnpm prebuild:linux-arm64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3

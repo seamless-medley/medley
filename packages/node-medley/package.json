@@ -26,6 +26,7 @@
     "build": "tsc",
     "prebuild": "cross-env JOBS=max prebuildify -t 18.0.0 --tag-libc --napi --strip",
     "prebuild:linux": "docker build -f ./builder/linux/Dockerfile --progress=plain -t node-medley-prebuild ../.. && docker container create --name node-medley-prebuild-cp node-medley-prebuild && docker cp node-medley-prebuild-cp:/src/packages/node-medley/prebuilds ./ && docker rm node-medley-prebuild-cp",
+    "prebuild:linux-arm64": "docker build --platform=linux/arm64 -f ./builder/linux/Dockerfile --progress=plain -t node-medley-prebuild ../.. && docker container create --name node-medley-prebuild-cp node-medley-prebuild && docker cp node-medley-prebuild-cp:/src/packages/node-medley/prebuilds ./ && docker rm node-medley-prebuild-cp",
     "package": "tsx scripts/package.ts",
     "bump-version": "tsx scripts/bump.ts",
     "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts",
