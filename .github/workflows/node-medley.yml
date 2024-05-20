@@ -122,7 +122,7 @@ jobs:
           path: ./packages/node-medley/prebuilds
 
   build-linux-arm64:
-    name: Build Linux/ARM64
+    name: Build linux-arm64
     runs-on: ubuntu-24.04
     steps:
       - name: Install Node
