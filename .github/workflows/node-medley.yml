@@ -31,7 +31,8 @@ jobs:
             node_arch: arm64
             build-arch: darwin-arm64
 
-          - runs-on: macos-14
+            # macos-14 runner is arm64, use macos-13 instead
+          - runs-on: macos-13
             node_version: 18
             node_arch: x64
             build-arch: darwin-x64
