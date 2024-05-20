@@ -38,7 +38,6 @@ jobs:
 
     name: Build ${{ matrix.build-arch }}
     runs-on: ${{ matrix.runs-on }}
-    container: ${{ matrix.container }}
     env:
       BUILD_ARCH: ${{ matrix.build-arch }}
       DEPS_INSTALL: ./packages/node-medley/scripts/install-deps.sh
