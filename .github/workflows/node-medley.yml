@@ -26,17 +26,17 @@ jobs:
             node_arch: x64
             build-arch: win32-x64
 
-          - runs-on: macos-12
+          - runs-on: macos-14
             node_version: 18
             node_arch: x64
             build-arch: darwin-x64
 
-          - runs-on: [self-hosted, macOS, ARM64]
+          - runs-on: macos-14
             node_version: 18
-            node_arch: arm64
-            build-arch: darwin-arm64
+            node_arch: x64
+            build-arch: darwin-x64
 
-          - runs-on: [self-hosted, macOS, ARM64]
+          - runs-on: macos-14
             container: ubuntu:20.04
             node_version: 18
             node_arch: arm64
