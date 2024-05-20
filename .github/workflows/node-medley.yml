@@ -125,35 +125,35 @@ jobs:
     name: Build linux-arm64
     runs-on: ubuntu-24.04
     steps:
-      - name: Install Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          architecture: x64
+      # - name: Install Node
+      #   uses: actions/setup-node@v3
+      #   with:
+      #     node-version: 18
+      #     architecture: x64
 
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8.15.5
+      # - uses: pnpm/action-setup@v2
+      #   with:
+      #     version: 8.15.5
 
-      - name: Make sure pnpm fetch Node
-        shell: bash
-        run: |
-          pnpm &>/dev/null || true
+      # - name: Make sure pnpm fetch Node
+      #   shell: bash
+      #   run: |
+      #     pnpm &>/dev/null || true
 
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - name: Prepare
-        working-directory: ./packages/node-medley
-        run: |
-          pnpm install --no-frozen-lockfile --ignore-scripts
+      # - name: Prepare
+      #   working-directory: ./packages/node-medley
+      #   run: |
+      #     pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Build native
         working-directory: ./packages/node-medley
         run: |
-          pnpm prebuild:linux-arm64
+          docker build --platform=linux/arm64 -f ./builder/linux/Dockerfile --progress=plain -t node-medley-prebuild ../.. && docker container create --name node-medley-prebuild-cp node-medley-prebuild && docker cp node-medley-prebuild-cp:/src/packages/node-medley/prebuilds ./ && docker rm node-medley-prebuild-cp
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
