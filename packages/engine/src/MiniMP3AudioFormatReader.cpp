@@ -60,7 +60,13 @@ bool MiniMP3AudioFormatReader::readSamples(int** destSamples, int numDestChannel
     auto dst = (float**)destSamples;
 
     if (framesRead > 0) {
-        AudioDataConverters::deinterleaveSamples(buffer, dst, framesRead, numChannels);
+        using Format = AudioData::Format<AudioData::Float32, AudioData::NativeEndian>;
+        
+        AudioData::deinterleaveSamples(
+            AudioData::InterleavedSource<Format> { buffer.getData(), (int) numChannels },
+            AudioData::NonInterleavedDest<Format> { dst, (int)numChannels },
+            framesRead
+        );        
     }
 
     if (framesRead < (unsigned int)numFrames) {
