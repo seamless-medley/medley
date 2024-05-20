@@ -145,7 +145,18 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Prepare
+        working-directory: ./packages/node-medley
+        run: |
+          pnpm install --no-frozen-lockfile --ignore-scripts
+
       - name: Build native
         working-directory: ./packages/node-medley
         run: |
           pnpm prebuild:linux-arm64
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-arm64
+          path: ./packages/node-medley/prebuilds
