@@ -122,14 +122,30 @@ jobs:
           path: ./packages/node-medley/prebuilds
 
   build-linux-arm64:
+    name: Build Linux/ARM64
     runs-on: ubuntu-20.04
     steps:
+      - name: Install Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          architecture: x64
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.5
+
+      - name: Make sure pnpm fetch Node
+        shell: bash
+        run: |
+          pnpm &>/dev/null || true
+
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - name: Build native (Linux/ARM64)
+      - name: Build native
         working-directory: ./packages/node-medley
         run: |
           pnpm prebuild:linux-arm64
