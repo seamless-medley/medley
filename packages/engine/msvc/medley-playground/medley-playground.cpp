@@ -1465,6 +1465,10 @@ private:
 
         }
 
+        Queue queue;
+        QueueModel model;
+        medley::Medley medley;
+
         OpenGLContext openGLContext;
 
         TextButton btnShuffle;
@@ -1525,10 +1529,6 @@ private:
 
         AudioThumbnailCache thumbnailCache{ 3 };
         std::map<Deck*, std::unique_ptr<AudioThumbnail>> thumbnails;
-
-        Queue queue;
-        QueueModel model;
-        medley::Medley medley;
     };
 
     class MainWindow : public DocumentWindow {
