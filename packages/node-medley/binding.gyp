@@ -169,6 +169,7 @@
                                 '-framework CoreAudio',
                                 '-framework CoreAudioKit',
                                 '-framework CoreMidi',
+                                '-framework DiscRecording',
                                 '-framework WebKit'
                             ]
                         },
