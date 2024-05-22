@@ -284,6 +284,8 @@ void Medley::audioDeviceChanged() {
 }
 
 void Medley::log(medley::LogLevel level, juce::String& name, juce::String& msg) const {
+    std::cout << "Medley::log(C++): " + msg << std::endl;
+
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function emitFn) {
         try {
             emitFn.Call(self.Value(), {
