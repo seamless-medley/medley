@@ -154,7 +154,7 @@ jobs:
           docker rm ${{ env.ephemeral_container_id }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: linux-arm64
           path: ./packages/node-medley/prebuilds
