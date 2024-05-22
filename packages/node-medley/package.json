@@ -30,7 +30,7 @@
     "test": "ava",
     "package": "tsx scripts/package.ts",
     "bump-version": "tsx scripts/bump.ts",
-    "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts",
+    "demo": "cross-env DEBUG=1 MEDLEY_DEV=1 tsx test/demo.ts",
     "demo-electron": "cross-env MEDLEY_DEV=1 ELECTRON_RUN_AS_NODE=1 electron --require ts-node/register test/demo.ts"
   },
   "gypfile": true,
