@@ -29,7 +29,6 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter, bool skipDeviceScanning)
     juce::String error;
 
     if (!skipDeviceScanning) {
-        logger->debug("Initializing default devices");
         error = deviceMgr.initialiseWithDefaultDevices(0, 2);
     }
 
@@ -44,14 +43,12 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter, bool skipDeviceScanning)
 
     deviceMgr.addChangeListener(&mixer);
 
-    logger->debug("Creating decks");
     for (int i = 0; i < numDecks; i++) {
         decks[i] = new Deck(i, "Deck " + String(i), logWriter, formatMgr, loadingThread, readAheadThread);
         decks[i]->addListener(this);
         mixer.addInputSource(decks[i], false);
     }
 
-    logger->debug("Starting threads");
     loadingThread.startThread(6);
     readAheadThread.startThread(9);
     visualizationThread.startThread();
@@ -60,26 +57,14 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter, bool skipDeviceScanning)
     visualizationThread.addTimeSliceClient(&mixer);
     audioInterceptionThread.addTimeSliceClient(&audioInterceptor);
 
-    logger->debug("Setup main output");
     mainOut.setSource(&mixer);
     deviceMgr.addAudioCallback(&mainOut);
     deviceMgr.addChangeListener(this);
 
     if (auto device = deviceMgr.getCurrentAudioDevice()) {
-        auto names = deviceMgr.getCurrentDeviceTypeObject()->getDeviceNames();
-
-        logger->debug("Audio device names");
-        for (const auto& name: names) {
-            logger->debug(name);
-        }
-
         if (!device->isOpen()) {
             throw std::runtime_error(("Audio device is not open, type=" + device->getTypeName() + ", name=" + device->getName()).toStdString());
         }
-
-        // if (!device->isPlaying()) {
-        //     throw std::runtime_error(("Audio device is not playing, type=" + device->getTypeName() + ", name=" + device->getName()).toStdString());
-        // }
     }
 
     setMaximumFadeOutDuration(3.0);
