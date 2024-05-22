@@ -139,8 +139,19 @@ jobs:
 
       - name: Build native
         working-directory: ./packages/node-medley
+        env:
+          ephemeral_container_id: node-medley-prebuild-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          docker build --platform=linux/arm64 -f ./builder/linux/Dockerfile --progress=plain -t node-medley-prebuild ../.. && docker container create --name node-medley-prebuild-cp node-medley-prebuild && docker cp node-medley-prebuild-cp:/src/packages/node-medley/prebuilds ./ && docker rm node-medley-prebuild-cp
+          docker build \
+            --platform=linux/arm64 \
+            -f ./builder/linux/Dockerfile \
+            --progress=plain \
+            -t node-medley-prebuild ../.. && \
+          docker container create \
+            --name ${{ env.ephemeral_container_id }} node-medley-prebuild && \
+          docker cp \
+            ${{ env.ephemeral_container_id }}:/src/packages/node-medley/prebuilds ./ && \
+          docker rm ${{ env.ephemeral_container_id }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
