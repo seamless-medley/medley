@@ -37,3 +37,5 @@ RUN pnpm install
 WORKDIR /src/${PKG_MEDLEY}
 
 RUN pnpm prebuild
+RUN pnpm test
+
