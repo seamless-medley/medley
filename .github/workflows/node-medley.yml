@@ -45,12 +45,12 @@ jobs:
       DEPS_INSTALL: ./packages/node-medley/scripts/install-deps.sh
     steps:
       - name: Install Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node_version }}
           architecture: ${{ matrix.node_arch }}
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: 8.15.5
 
@@ -65,7 +65,7 @@ jobs:
         run: |
           echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Setup pnpm cache
         with:
           path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
@@ -74,7 +74,7 @@ jobs:
             ${{ runner.os }}-${{ runner.arch }}-pnpm-store-native-build
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -93,7 +93,7 @@ jobs:
 
       - name: Cache vcpkg
         if: contains(matrix.build-arch, 'win32')
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             C:\vcpkg\packages
@@ -122,7 +122,7 @@ jobs:
           pnpm test
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.build-arch }}
           path: ./packages/node-medley/prebuilds
@@ -133,7 +133,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64, docker]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
