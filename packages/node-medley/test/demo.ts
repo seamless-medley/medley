@@ -14,13 +14,8 @@ async function main() {
 
   nodeLog(Medley.getInfo());
 
-  nodeLog('Creating Queue object');
   const queue = new Queue();
-  nodeLog('Queue object created');
-
-  nodeLog('Creating Medley instance');
   const medley = new Medley(queue, { logging: true, skipDeviceScanning: isCI });
-  nodeLog('Medley instance created');
 
   const r = await medley.requestAudioStream();
 
