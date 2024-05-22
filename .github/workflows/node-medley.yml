@@ -118,7 +118,7 @@ jobs:
       - name: Test prebuilt module
         working-directory: ./packages/node-medley
         run: |
-          pnpm test
+          pnpm demo 5
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3

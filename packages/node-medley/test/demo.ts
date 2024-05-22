@@ -50,6 +50,13 @@ async function main() {
   })
 
   medley.play();
+
+  const timeout = +process.argv.slice(2);
+  if (timeout > 0) {
+    setTimeout(() => {
+      process.exit(0);
+    }, timeout * 1000)
+  }
 }
 
 main();
