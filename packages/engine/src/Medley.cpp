@@ -62,6 +62,13 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
     deviceMgr.addChangeListener(this);
 
     if (auto device = deviceMgr.getCurrentAudioDevice()) {
+        auto names = deviceMgr.getCurrentDeviceTypeObject()->getDeviceNames();
+
+        logger->debug("Audio device names");
+        for (const auto& name: names) {
+            logger->debug(name);
+        }
+
         if (!device->isOpen()) {
             throw std::runtime_error(("Audio device is not open, type=" + device->getTypeName() + ", name=" + device->getName()).toStdString());
         }

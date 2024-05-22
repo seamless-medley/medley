@@ -1,10 +1,25 @@
 import { Medley, Queue } from '..';
 
+function log(name: string, ...args: any[]) {
+  console.log(`${new Date().toISOString()}> [${name}]:`, ...args)
+}
+
+function nodeLog(...args: any[]) {
+  log('demo', ...args);
+}
+
 async function main() {
-  console.log(Medley.getInfo());
+  nodeLog(Medley.getInfo());
 
   const queue = new Queue();
   const medley = new Medley(queue, { logging: true });
+
+  const env = process.env;
+  const isCI = "CI" in env && ("GITHUB_ACTIONS" in env || "GITLAB_CI" in env || "CIRCLECI" in env);
+
+  if (isCI) {
+    medley.setAudioDevice({ type: 'Null', device: 'Null Device' });
+  }
 
   const r = await medley.requestAudioStream();
 
@@ -30,23 +45,23 @@ async function main() {
   });
 
   medley.on('loaded', (deck) => {
-    console.log('Loaded', deck, medley.getDeckMetadata(deck));
+    nodeLog('Loaded', deck, medley.getDeckMetadata(deck));
   });
 
   medley.on('unloaded', (deck) => {
-    console.log('Unloaded', deck);
+    nodeLog('Unloaded', deck);
   });
 
   medley.on('started', (deck) => {
-    console.log('Started', deck);
+    nodeLog('Started', deck);
   });
 
   medley.on('finished', (deck) => {
-    console.log('Finished', deck);
+    nodeLog('Finished', deck);
   });
 
-  medley.on('log', (level, name, string) => {
-    console.log(`[${name}]: ${string}`)
+  medley.on('log', (level, name, s) => {
+    log(name, s);
   })
 
   medley.play();
