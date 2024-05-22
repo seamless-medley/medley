@@ -66,9 +66,9 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
             throw std::runtime_error(("Audio device is not open, type=" + device->getTypeName() + ", name=" + device->getName()).toStdString());
         }
 
-        if (!device->isPlaying()) {
-            throw std::runtime_error(("Audio device is not playing, type=" + device->getTypeName() + ", name=" + device->getName()).toStdString());
-        }
+        // if (!device->isPlaying()) {
+        //     throw std::runtime_error(("Audio device is not playing, type=" + device->getTypeName() + ", name=" + device->getName()).toStdString());
+        // }
     }
 
     setMaximumFadeOutDuration(3.0);
