@@ -48,7 +48,7 @@ public:
 
     static constexpr int numDecks = 3;
 
-    Medley(IQueue& queue, ILoggerWriter* logWriter);
+    Medley(IQueue& queue, ILoggerWriter* logWriter, bool skipDeviceScanning);
 
     virtual ~Medley();
 

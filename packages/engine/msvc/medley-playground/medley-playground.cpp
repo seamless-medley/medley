@@ -918,7 +918,7 @@ private:
         MainContentComponent(ILoggerWriter* logWriter) :
             Component(),
             model(queue),
-            medley(queue, logWriter),
+            medley(queue, logWriter, false),
             queueListBox(model),
             btnShuffle("Shuffle"),
             btnAdd("Add"),
