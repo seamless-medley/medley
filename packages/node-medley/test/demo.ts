@@ -11,8 +11,13 @@ function nodeLog(...args: any[]) {
 async function main() {
   nodeLog(Medley.getInfo());
 
+  nodeLog('Creating Queue object');
   const queue = new Queue();
+  nodeLog('Queue object created');
+
+  nodeLog('Creating Medley instance');
   const medley = new Medley(queue, { logging: true });
+  nodeLog('Queue object created');
 
   const env = process.env;
   const isCI = "CI" in env && ("GITHUB_ACTIONS" in env || "GITLAB_CI" in env || "CIRCLECI" in env);
