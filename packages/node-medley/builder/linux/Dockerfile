@@ -1,5 +1,5 @@
-# This is for bulding linux native module using docker
-# Usage: pnpm prebuild:docker
+# This is for building linux native module using docker
+# Usage: pnpm prebuild:linux[-arm64]
 
 FROM node:18.16.0
 
@@ -18,7 +18,7 @@ ENV PKG_MINIMP3=packages/minimp3
 ENV PKG_ENGINE=packages/engine
 ENV PKG_MEDLEY=packages/node-medley
 
-RUN mkdir -p /src /src${PKG_JUCE} /src/${PKG_MINIMP3} /src/${PKG_ENGINE} /src/${PKG_MEDLEY}
+RUN mkdir -p /src /src/${PKG_JUCE} /src/${PKG_MINIMP3} /src/${PKG_ENGINE} /src/${PKG_MEDLEY}
 COPY ./package.json /src
 COPY ./pnpm-workspace.yaml /src
 COPY ./${PKG_JUCE} /src/${PKG_JUCE}
@@ -31,11 +31,9 @@ WORKDIR /build-deps
 RUN sh /src/${PKG_MEDLEY}/scripts/install-deps.sh --no-sudo
 
 WORKDIR /src
-
 RUN pnpm install
 
 WORKDIR /src/${PKG_MEDLEY}
-
 RUN pnpm prebuild
 RUN pnpm test
 
