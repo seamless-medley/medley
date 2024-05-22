@@ -17,7 +17,7 @@ async function main() {
 
   nodeLog('Creating Medley instance');
   const medley = new Medley(queue, { logging: true });
-  nodeLog('Queue object created');
+  nodeLog('Medley instance created');
 
   const env = process.env;
   const isCI = "CI" in env && ("GITHUB_ACTIONS" in env || "GITLAB_CI" in env || "CIRCLECI" in env);
