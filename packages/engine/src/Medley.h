@@ -53,19 +53,19 @@ public:
     virtual ~Medley();
 
     inline const auto& getAvailableDeviceTypes() {
-        return deviceMgr.getAvailableDeviceTypes();
+        return deviceMgr->getAvailableDeviceTypes();
     }
 
     inline void setCurrentAudioDeviceType(AudioIODeviceType& type) {
-        deviceMgr.setCurrentAudioDeviceType(type.getTypeName(), true);
+        deviceMgr->setCurrentAudioDeviceType(type.getTypeName(), true);
     }
 
     inline void setCurrentAudioDeviceType(const juce::String& type) {
-        deviceMgr.setCurrentAudioDeviceType(type, true);
+        deviceMgr->setCurrentAudioDeviceType(type, true);
     }
 
     inline auto getCurrentAudioDeviceType() const {
-        return deviceMgr.getCurrentDeviceTypeObject();
+        return deviceMgr->getCurrentDeviceTypeObject();
     }
 
     inline auto getDeviceNames() const {
@@ -73,7 +73,7 @@ public:
     }
 
     inline auto getIndexOfCurrentDevice() const {
-        return getCurrentAudioDeviceType()->getIndexOfDevice(deviceMgr.getCurrentAudioDevice(), false);
+        return getCurrentAudioDeviceType()->getIndexOfDevice(deviceMgr->getCurrentAudioDevice(), false);
     }
 
     inline auto getDefaultDeviceIndex() const {
@@ -84,9 +84,9 @@ public:
 
     inline AudioFormatManager& getAudioFormatManager() { return formatMgr; }
 
-    inline AudioIODevice* getCurrentAudioDevice() const { return deviceMgr.getCurrentAudioDevice(); }
+    inline AudioIODevice* getCurrentAudioDevice() const { return deviceMgr->getCurrentAudioDevice(); }
 
-    inline AudioDeviceManager::AudioDeviceSetup getAudioDeviceSetup() const { return deviceMgr.getAudioDeviceSetup(); }
+    inline AudioDeviceManager::AudioDeviceSetup getAudioDeviceSetup() const { return deviceMgr->getAudioDeviceSetup(); }
 
     int getOutputLatency();
 
@@ -292,7 +292,7 @@ private:
         PostProcessor processor;
     };
 
-    AudioDeviceManager deviceMgr;
+    std::unique_ptr<AudioDeviceManager> deviceMgr;
 
     SupportedFormats formatMgr;
 

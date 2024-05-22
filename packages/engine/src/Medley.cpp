@@ -24,12 +24,19 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
 #endif
     logger = std::make_unique<medley::Logger>("medley", logWriter);
 
+    logger->debug("Initializing device manager");
+    deviceMgr = std::make_unique<AudioDeviceManager>();
+
     updateFadingFactor();
 
     logger->debug("Initializing default devices");
-    auto error = deviceMgr.initialiseWithDefaultDevices(0, 2);
+    auto error = deviceMgr->initialiseWithDefaultDevices(0, 2);
 
-    deviceMgr.addAudioDeviceType(std::make_unique<NullAudioDeviceType>());
+    if (error.isNotEmpty()) {
+        logger->debug("Could not initialize with default devices: " + error);
+    }
+
+    deviceMgr->addAudioDeviceType(std::make_unique<NullAudioDeviceType>());
 
     if (error.isNotEmpty() || getCurrentAudioDevice() == nullptr) {
         setCurrentAudioDeviceType("Null");
@@ -38,7 +45,7 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
 
     mixer.updateAudioConfig();
 
-    deviceMgr.addChangeListener(&mixer);
+    deviceMgr->addChangeListener(&mixer);
 
     logger->debug("Creating decks");
     for (int i = 0; i < numDecks; i++) {
@@ -58,11 +65,11 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
 
     logger->debug("Setup main output");
     mainOut.setSource(&mixer);
-    deviceMgr.addAudioCallback(&mainOut);
-    deviceMgr.addChangeListener(this);
+    deviceMgr->addAudioCallback(&mainOut);
+    deviceMgr->addChangeListener(this);
 
-    if (auto device = deviceMgr.getCurrentAudioDevice()) {
-        auto names = deviceMgr.getCurrentDeviceTypeObject()->getDeviceNames();
+    if (auto device = deviceMgr->getCurrentAudioDevice()) {
+        auto names = deviceMgr->getCurrentDeviceTypeObject()->getDeviceNames();
 
         logger->debug("Audio device names");
         for (const auto& name: names) {
@@ -93,7 +100,9 @@ Medley::~Medley() {
     readAheadThread.stopThread(100);
     visualizationThread.stopThread(100);
 
-    deviceMgr.closeAudioDevice();
+    deviceMgr->closeAudioDevice();
+
+    deviceMgr.release();
 
     for (auto deck : decks) {
         delete deck;
@@ -674,9 +683,9 @@ void Medley::doTransition(Deck* deck, double position) {
 }
 
 void Medley::setAudioDeviceByIndex(int index) {
-    auto config = deviceMgr.getAudioDeviceSetup();
+    auto config = deviceMgr->getAudioDeviceSetup();
     config.outputDeviceName = getDeviceNames()[index];
-    auto error = deviceMgr.setAudioDeviceSetup(config, true);
+    auto error = deviceMgr->setAudioDeviceSetup(config, true);
     if (error.isNotEmpty()) {
         throw std::runtime_error(error.toStdString());
     }
