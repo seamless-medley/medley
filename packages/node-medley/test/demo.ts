@@ -9,6 +9,9 @@ function nodeLog(...args: any[]) {
 }
 
 async function main() {
+  const env = process.env;
+  const isCI = "CI" in env && ("GITHUB_ACTIONS" in env || "GITLAB_CI" in env || "CIRCLECI" in env);
+
   nodeLog(Medley.getInfo());
 
   nodeLog('Creating Queue object');
@@ -16,15 +19,8 @@ async function main() {
   nodeLog('Queue object created');
 
   nodeLog('Creating Medley instance');
-  const medley = new Medley(queue, { logging: true });
+  const medley = new Medley(queue, { logging: true, skipDeviceScanning: isCI });
   nodeLog('Medley instance created');
-
-  const env = process.env;
-  const isCI = "CI" in env && ("GITHUB_ACTIONS" in env || "GITLAB_CI" in env || "CIRCLECI" in env);
-
-  if (isCI) {
-    medley.setAudioDevice({ type: 'Null', device: 'Null Device' });
-  }
 
   const r = await medley.requestAudioStream();
 
