@@ -1,7 +1,7 @@
 {
   "name": "@seamless-medley/medley",
   "description": "Audio engine for Node.js, with built-in \"radio like\" gapless/seamless playback",
-  "version": "0.4.3",
+  "version": "0.4.4-juce7.0",
   "author": {
     "name": "Wittawas Nakkasem",
     "email": "vittee@hotmail.com",
@@ -50,7 +50,9 @@
     "files": [
       "test/test.ts"
     ],
-    "require": ["test/_force-exit.mjs"],
+    "require": [
+      "test/_force-exit.mjs"
+    ],
     "environmentVariables": {
       "NODE_NO_WARNINGS": "1",
       "MEDLEY_DEV": "1"
