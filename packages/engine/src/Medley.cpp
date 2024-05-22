@@ -59,11 +59,11 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
 
     if (auto device = deviceMgr.getCurrentAudioDevice()) {
         if (!device->isOpen()) {
-            throw std::runtime_error("Audio device is not open");
+            throw std::runtime_error(String::formatted("Audio device is not open, type=%s, name=%s", device->getTypeName(), device->getName()).toStdString());
         }
 
         if (!device->isPlaying()) {
-            throw std::runtime_error("Audio device is not playing");
+            throw std::runtime_error(String::formatted("Audio device is not playing, type=%s, name=%s", device->getTypeName(), device->getName()).toStdString());
         }
     }
 
