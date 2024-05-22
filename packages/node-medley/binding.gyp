@@ -167,6 +167,7 @@
                                 '-framework AppKit',
                                 '-framework CoreGraphics',
                                 '-framework CoreAudio',
+                                '-framework CoreAudioKit',
                                 '-framework CoreMidi',
                                 '-framework WebKit'
                             ]
