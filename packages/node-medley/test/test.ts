@@ -15,7 +15,7 @@ test('Track loading', t => {
 
 test('Null Audio Device playback', t => {
   const queue = new Queue();
-  const medley = new Medley(queue);
+  const medley = new Medley(queue, { skipDeviceScanning: true });
 
   t.is(medley.constructor, Medley, `${Medley.name} instance expected`);
 
