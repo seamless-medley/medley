@@ -26,6 +26,7 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
 
     updateFadingFactor();
 
+    logger->debug("Initializing default devices");
     auto error = deviceMgr.initialiseWithDefaultDevices(0, 2);
 
     deviceMgr.addAudioDeviceType(std::make_unique<NullAudioDeviceType>());
@@ -39,12 +40,14 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
 
     deviceMgr.addChangeListener(&mixer);
 
+    logger->debug("Creating decks");
     for (int i = 0; i < numDecks; i++) {
         decks[i] = new Deck(i, "Deck " + String(i), logWriter, formatMgr, loadingThread, readAheadThread);
         decks[i]->addListener(this);
         mixer.addInputSource(decks[i], false);
     }
 
+    logger->debug("Starting threads");
     loadingThread.startThread(6);
     readAheadThread.startThread(9);
     visualizationThread.startThread();
@@ -53,6 +56,7 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
     visualizationThread.addTimeSliceClient(&mixer);
     audioInterceptionThread.addTimeSliceClient(&audioInterceptor);
 
+    logger->debug("Setup main output");
     mainOut.setSource(&mixer);
     deviceMgr.addAudioCallback(&mainOut);
     deviceMgr.addChangeListener(this);
