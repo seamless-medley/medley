@@ -918,7 +918,7 @@ private:
         MainContentComponent(ILoggerWriter* logWriter) :
             Component(),
             model(queue),
-            medley(queue, logWriter),
+            medley(queue, logWriter, false),
             queueListBox(model),
             btnShuffle("Shuffle"),
             btnAdd("Add"),
@@ -1465,6 +1465,10 @@ private:
 
         }
 
+        Queue queue;
+        QueueModel model;
+        medley::Medley medley;
+
         OpenGLContext openGLContext;
 
         TextButton btnShuffle;
@@ -1525,10 +1529,6 @@ private:
 
         AudioThumbnailCache thumbnailCache{ 3 };
         std::map<Deck*, std::unique_ptr<AudioThumbnail>> thumbnails;
-
-        Queue queue;
-        QueueModel model;
-        medley::Medley medley;
     };
 
     class MainWindow : public DocumentWindow {

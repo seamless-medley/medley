@@ -272,6 +272,7 @@ new Medley(queue, options)
 
 #### Options?
 - `logging` *(boolean?)* - Enable logging, See [*log* event](#log)
+- `skipDeviceScanning` *(boolean?)* - Skip scanning for audio devices
 
 **Methods**
 ### `play(shouldFade = true)`

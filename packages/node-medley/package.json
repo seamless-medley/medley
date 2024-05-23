@@ -1,7 +1,7 @@
 {
   "name": "@seamless-medley/medley",
   "description": "Audio engine for Node.js, with built-in \"radio like\" gapless/seamless playback",
-  "version": "0.4.3",
+  "version": "0.4.4-juce7.0",
   "author": {
     "name": "Wittawas Nakkasem",
     "email": "vittee@hotmail.com",
@@ -24,11 +24,13 @@
   "scripts": {
     "clean": "rimraf build out dist",
     "build": "tsc",
-    "prebuild": "cross-env JOBS=max prebuildify -t 16.0.0 --tag-libc --napi --strip",
+    "prebuild": "cross-env JOBS=max prebuildify -t 18.0.0 --tag-libc --napi --strip",
     "prebuild:linux": "docker build -f ./builder/linux/Dockerfile --progress=plain -t node-medley-prebuild ../.. && docker container create --name node-medley-prebuild-cp node-medley-prebuild && docker cp node-medley-prebuild-cp:/src/packages/node-medley/prebuilds ./ && docker rm node-medley-prebuild-cp",
+    "prebuild:linux-arm64": "docker build --platform=linux/arm64 -f ./builder/linux/Dockerfile --progress=plain -t node-medley-prebuild ../.. && docker container create --name node-medley-prebuild-cp node-medley-prebuild && docker cp node-medley-prebuild-cp:/src/packages/node-medley/prebuilds ./ && docker rm node-medley-prebuild-cp",
+    "test": "ava",
     "package": "tsx scripts/package.ts",
     "bump-version": "tsx scripts/bump.ts",
-    "demo": "cross-env MEDLEY_DEV=1 tsx test/demo.ts",
+    "demo": "cross-env DEBUG=1 MEDLEY_DEV=1 tsx test/demo.ts",
     "demo-electron": "cross-env MEDLEY_DEV=1 ELECTRON_RUN_AS_NODE=1 electron --require ts-node/register test/demo.ts"
   },
   "gypfile": true,
@@ -36,10 +38,33 @@
     "node-gyp-build": "^4.6.1"
   },
   "devDependencies": {
+    "@ava/typescript": "^5.0.0",
     "@types/semver": "^7.5.4",
+    "ava": "^6.1.3",
     "node-addon-api": "7.0.0",
     "node-gyp": "^10.0.1",
     "prebuildify": "^5.0.1",
     "semver": "^7.5.4"
+  },
+  "ava": {
+    "files": [
+      "test/test.ts"
+    ],
+    "require": [
+      "test/_force-exit.mjs"
+    ],
+    "environmentVariables": {
+      "NODE_NO_WARNINGS": "1",
+      "MEDLEY_DEV": "1"
+    },
+    "typescript": {
+      "rewritePaths": {
+        "src/": "build/"
+      },
+      "compile": false
+    },
+    "nodeArguments": [
+      "--loader=tsx"
+    ]
   }
 }
