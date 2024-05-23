@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - feature/node-medley-arm64
     paths:
       - .github/workflows/node-medley.yml
       - packages/engine/src/**
