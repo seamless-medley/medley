@@ -15,13 +15,13 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Install Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           architecture: x64
           registry-url: https://registry.npmjs.org
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: 8.15.5
 
@@ -37,7 +37,7 @@ jobs:
         run: |
           echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Setup pnpm cache
         # if: ${{ !github.event.act }}
         with:
@@ -47,7 +47,7 @@ jobs:
             ${{ runner.os }}-${{ runner.arch }}-pnpm-store-native-build
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 

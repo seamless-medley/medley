@@ -9,7 +9,7 @@ import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
 
 import { ChunkHandler, TrackCollection, TrackCollectionOptions } from "./base";
-import { Track } from "../track";
+import { Track, TrackExtra, TrackExtraOf } from "../track";
 import { breath } from '@seamless-medley/utils';
 
 export type WatchOptions = {
@@ -31,7 +31,20 @@ export type WatchTrackCollectionOptions<T extends Track<any>> = TrackCollectionO
   scanner?: (dir: string) => Promise<false | string[]>;
 }
 
-export class WatchTrackCollection<T extends Track<any>, Extra = any> extends TrackCollection<T, Extra, WatchTrackCollectionOptions<T>> {
+export type RescanStats = {
+  scanned: number;
+  added: number;
+  removed: number;
+  updated: number;
+}
+
+type ScanOptions = {
+  dir: string;
+  updateExisting?: boolean;
+  chunkSize?: number;
+  onFirstChunkAdded?: () => any;
+}
+export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = TrackExtraOf<T>, Extra = any> extends TrackCollection<T, TE, Extra, WatchTrackCollectionOptions<T>> {
   constructor(id: string, extra: Extra, options: WatchTrackCollectionOptions<T> = {}) {
     super(id, extra, {
       tracksMapper: async (tracks) => shuffle(tracks),
@@ -61,7 +74,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     return result;
   }
 
-  #storeNewFiles = debounce(() => this.add(this.#fetchNewPaths()), 2000);
+  #storeNewFiles = debounce(() => this.add({ paths: this.#fetchNewPaths() }), 2000);
 
   #fetchUpdatePaths(): string[] {
     const result = uniq(this.#updatePaths);
@@ -149,7 +162,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
 
       if (stats.isDirectory()) {
         // A sub folder rename results in a single create event, explicitly scan the path now
-        this.#scan(path);
+        this.#scan({ dir: path });
         continue;
       }
 
@@ -188,7 +201,7 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
 
     if (info.subscription) {
       this.logger.info(`Resume subscription for ${dir}`);
-      await this.#scan(dir);
+      await this.#scan({ dir });
     }
   }
 
@@ -207,10 +220,13 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
       return;
     }
 
-    await this.#scan(normalized, async () => {
-      this.logger.info(`Watching ${normalized}`);
-      await this.#subscribeToPath(normalized, options);
-      this.becomeReady();
+    await this.#scan({
+      dir: normalized,
+      onFirstChunkAdded: async () => {
+        this.logger.info(`Watching ${normalized}`);
+        await this.#subscribeToPath(normalized, options);
+        this.becomeReady();
+      }
     });
   }
 
@@ -249,30 +265,38 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
 
   #scanning = 0;
 
-  async #scan(dir: string, onFirstChunkAdded?: () => any) {
+  async #scan({ dir, onFirstChunkAdded, chunkSize, updateExisting }: ScanOptions) {
     if (this.#scanning === 0) {
       this.emit('scan' as any);
     }
 
     this.#scanning++;
 
-    const notifyOnce = once(onFirstChunkAdded ?? noop) as ChunkHandler<T>;
+    const onChunkAdded = once(onFirstChunkAdded ?? noop) as ChunkHandler<T>;
 
     const scanners = [this.#extScanner, this.#globScanner];
     const counter = {
       scanned: 0,
-      added: 0
+      added: 0,
+      updatedCount: 0
     }
 
     for (const scanner of scanners) {
       const files = await scanner.call(this, dir);
 
       if (files !== false) {
-        const { scanned, added } = await this.add(shuffle(files), undefined, notifyOnce);
+        const { scanned, added, updatedCount } = await this.add({
+          paths: shuffle(files),
+          updateExisting,
+          chunkSize,
+          onChunkAdded
+        });
+
         await breath();
 
         counter.scanned += scanned.length;
         counter.added += added.length;
+        counter.updatedCount += updatedCount;
 
         break;
       }
@@ -287,20 +311,25 @@ export class WatchTrackCollection<T extends Track<any>, Extra = any> extends Tra
     return counter;
   }
 
-  async rescan(full?: boolean) {
+  async rescan(full?: boolean): Promise<RescanStats | undefined> {
     if (this.#scanning) {
       return;
     }
 
-    if (full) {
-      this.clear();
-    }
+    const removed = !full
+      ? await this.removeNonExistent()
+      : []
 
-    const results = await Promise.all([...this.#watchInfos.keys()].map(dir => this.#scan(dir)))
+    const results = await Promise.all([...this.#watchInfos.keys()].map(dir => this.#scan({
+      dir,
+      updateExisting: full
+    })));
 
     return {
       scanned: sumBy(results, c => c.scanned),
-      added: sumBy(results, c => c.added)
+      added: sumBy(results, c => c.added),
+      updated: sumBy(results, c => c.updatedCount),
+      removed: removed.length
     }
   }
 

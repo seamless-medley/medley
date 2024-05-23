@@ -129,6 +129,7 @@ Medley::Medley(const CallbackInfo& info)
     }
 
     bool logging = false;
+    bool skipDeviceScanning = false;
 
     auto arg2 = info[1];
     if (arg2.IsObject()) {
@@ -137,6 +138,13 @@ Medley::Medley(const CallbackInfo& info)
             auto l = options.Get("logging");
             if (l.IsBoolean()) {
                 logging = l.ToBoolean().Value();
+            }
+        }
+
+        if (options.Has("skipDeviceScanning")) {
+            auto l = options.Get("skipDeviceScanning");
+            if (l.IsBoolean()) {
+                skipDeviceScanning = l.ToBoolean().Value();
             }
         }
     }
@@ -152,7 +160,7 @@ Medley::Medley(const CallbackInfo& info)
         );
 
         queue = Queue::Unwrap(queueObj);
-        engine = new Engine(*queue, logging ? this : nullptr);
+        engine = new Engine(*queue, logging ? this : nullptr, skipDeviceScanning);
         engine->addListener(this);
         engine->setAudioCallback(this);
     }
@@ -1071,7 +1079,7 @@ Napi::Value Medley::static_getInfo(const Napi::CallbackInfo& info) {
 
 #ifdef MEDLEY_VERSION_PRE_RELEASE
         version.Set("prerelease", Napi::String::New(env, MEDLEY_VERSION_PRE_RELEASE));
-        versionString += juce::String("." MEDLEY_VERSION_PRE_RELEASE);
+        versionString += juce::String("-" MEDLEY_VERSION_PRE_RELEASE);
 #endif
 
         result.Set("version", version);

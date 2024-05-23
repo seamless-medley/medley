@@ -1,11 +1,12 @@
 import os from 'node:os';
+import { access, stat } from 'node:fs/promises';
 import { createHash } from 'crypto';
 import { TypedEmitter } from "tiny-typed-emitter";
-import { castArray, chain, chunk, clamp, findLastIndex, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
+import { castArray, chain, chunk, clamp, findLastIndex, omit, partition, random, sample, shuffle, sortBy, stubFalse, stubTrue, zip } from "lodash";
 import normalizePath from 'normalize-path';
 import { Logger, createLogger } from '@seamless-medley/logging';
-import { Track } from "../track";
 import { moveArrayElements, moveArrayIndexes, waitFor } from '@seamless-medley/utils';
+import { Track, TrackExtra, TrackExtraOf } from "../track";
 
 export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 
@@ -48,6 +49,12 @@ export type TrackPeek<T extends Track<any>> = TrackIndex<T> & {
   localIndex: number;
 }
 
+export type TracksUpdateEvent<T extends Track<any>> = {
+  tracks: Array<T>;
+  updatedTracks: Array<T>;
+  promises: Array<Promise<any>>;
+}
+
 export type TrackCollectionEvents<T extends Track<any>> = {
   ready: () => void;
   refresh: () => void;
@@ -55,7 +62,7 @@ export type TrackCollectionEvents<T extends Track<any>> = {
   trackPush: (track: T) => void;
   tracksAdd: (tracks: T[], chunkIndex: number, totalChunks: number) => void;
   tracksRemove: (tracks: T[]) => void;
-  tracksUpdate: (tracks: T[]) => void;
+  tracksUpdate: (event: TracksUpdateEvent<T>) => void;
 }
 
 export const supportedExts = ['mp3', 'flac', 'wav', 'ogg', 'aiff'];
@@ -65,7 +72,8 @@ export const knownExtRegExp = new RegExp(`\\.(${supportedExts.join('|')})$`, 'i'
 export type ChunkHandler<T> = (chunk: T[], chunkIndex: number, totalChunks: number) => Promise<T[]>;
 
 export class TrackCollection<
-  T extends Track<any>,
+  T extends Track<TE>,
+  TE extends TrackExtra = TrackExtraOf<T>,
   Extra = any,
   Options extends TrackCollectionOptions<T> = TrackCollectionOptions<T>
 > extends TypedEmitter<TrackCollectionEvents<T>>
@@ -174,7 +182,12 @@ export class TrackCollection<
     return knownExtRegExp.test(filename);
   }
 
-  async #transform(paths: string[], onChunkCreated: ChunkHandler<T>) {
+  async #transform(options: {
+    paths: string[];
+    chunkSize?: number;
+    onChunkCreated: ChunkHandler<T>
+  }) {
+    const { paths, onChunkCreated, chunkSize = 25 * os.cpus().length } = options;
     const validPaths = chain(paths)
       .castArray()
       .map(p => normalizePath(p))
@@ -193,7 +206,7 @@ export class TrackCollection<
     const immediateTracks: T[] = [];
     const newTracks: T[] = [];
 
-    const buckets = chunk(validPaths, 25 * os.cpus().length);
+    const buckets = chunk(validPaths, Math.max(os.cpus().length, chunkSize));
 
     for (const [index, bucket] of buckets.entries()) {
       const created = new Array<T>(bucket.length);
@@ -216,67 +229,147 @@ export class TrackCollection<
     };
   }
 
-  async add(paths: string[], mode?: TrackAddingMode, onChunkAdded?: ChunkHandler<T>) {
-    return this.#transform(paths, async (chunk, chunkIndex, totalChunks) => {
-      const added = await this.#addTracks(chunk, chunkIndex, totalChunks, mode);
-      await onChunkAdded?.(chunk, chunkIndex, totalChunks);
+  async add(options: {
+    paths: string[];
+    mode?: TrackAddingMode;
+    updateExisting?: boolean;
+    chunkSize?: number;
+    onChunkAdded?: ChunkHandler<T>;
+  }) {
+    const { paths, mode, updateExisting, chunkSize, onChunkAdded } = options;
 
-      return added;
+    let totalUpdatedCount = 0;
+
+    const transformed = await this.#transform({
+      paths,
+      chunkSize,
+      onChunkCreated: async (tracks, chunkIndex, totalChunks) => {
+        const { added, updatedCount } = await this.#addTracks({
+          tracks,
+          chunkIndex,
+          totalChunks,
+          mode,
+          updateExisting
+        });
+
+        await onChunkAdded?.(tracks, chunkIndex, totalChunks);
+
+        totalUpdatedCount += updatedCount;
+
+        return added;
+      }
     });
+
+    return {
+      ...transformed,
+      updatedCount: totalUpdatedCount
+    }
   }
 
-  async #addTracks(tracks: T[], chunkIndex: number, totalChunks: number, mode?: TrackAddingMode) {
+  async #addTracks(options: {
+    tracks: T[];
+    chunkIndex: number;
+    totalChunks: number;
+    mode?: TrackAddingMode;
+    updateExisting?: boolean;
+  }) {
+    const { tracks, chunkIndex, totalChunks, mode, updateExisting } = options;
     const { tracksMapper } = this.options;
 
     const newTracks = tracks.filter(it => !this.trackIdMap.has(it.id));
+    let updatedCount = 0;
+
+    if (updateExisting) {
+      const tracksToUpdate = (await Promise.all(tracks
+        .filter(it => this.trackIdMap.has(it.id))
+        .map(async (track) => {
+          const s = await stat(track.path);
+          return (s.mtimeMs > (track.extra?.timestamp ?? 0))
+            ? track
+            : undefined
+        })
+      )).filter((t): t is Awaited<T> => t !== undefined)
+
+      const updated = tracksToUpdate.length > 0
+        ? await this.#internalUpdate(tracksToUpdate)
+        : undefined;
+
+      if (updated !== undefined)  {
+        updatedCount = updated.length;
+      }
+    }
+
     const mapped = await tracksMapper?.(newTracks) ?? newTracks;
 
-    if (!mapped.length) {
-      return [];
-    }
+    if (mapped.length) {
+      switch (mode ?? this.options.newTracksAddingMode ?? 'spread') {
+        case 'append':
+          this.tracks.push(...mapped);
+          break;
 
-    switch (mode ?? this.options.newTracksAddingMode ?? 'spread') {
-      case 'append':
-        this.tracks.push(...mapped);
-        break;
+        case 'prepend':
+          this.tracks.unshift(...mapped);
+          break;
 
-      case 'prepend':
-        this.tracks.unshift(...mapped);
-        break;
+        case 'spread':
+          {
+            let index = 0;
 
-      case 'spread':
-        {
-          let index = 0;
-
-          for (const track of mapped) {
-            const width = Math.ceil(this.tracks.length / mapped.length) + 1;
-            index = clamp(random(index, index + width), 0, this.tracks.length - 1);
-            this.tracks.splice(index, 0, track);
+            for (const track of mapped) {
+              const width = Math.ceil(this.tracks.length / mapped.length) + 1;
+              index = clamp(random(index, index + width), 0, this.tracks.length - 1);
+              this.tracks.splice(index, 0, track);
+            }
           }
-        }
-        break;
+          break;
+      }
+
+      for (const track of mapped) {
+        this.trackIdMap.set(track.id, track);
+      }
+
+      this.logger.info(`${mapped.length} track(s) added`);
+      this.emit('tracksAdd', mapped, chunkIndex, totalChunks);
     }
 
-    for (const track of mapped) {
-      this.trackIdMap.set(track.id, track);
+    return {
+      added: mapped,
+      updatedCount
+    };
+  }
+
+  async #internalUpdate(tracks: T[]) {
+    if (tracks.length <= 0) {
+      return;
     }
 
-    this.logger.info(`${mapped.length} track(s) added`);
-    this.emit('tracksAdd', mapped, chunkIndex, totalChunks);
+    const e: TracksUpdateEvent<T> = {
+      tracks,
+      updatedTracks: [],
+      promises: [],
+    };
 
-    return mapped;
+    this.emit('tracksUpdate', e);
+
+    await Promise.all(e.promises);
+
+    if (e.updatedTracks.length > 0) {
+      this.logger.info(`${e.updatedTracks.length} track(s) updated`);
+    }
+
+    return e.updatedTracks;
   }
 
   async update(paths: string[]) {
-    return this.#transform(paths, async updated => {
-      const existing = updated.filter(it => this.trackIdMap.has(it.id));
+    return this.#transform({
+      paths,
+      onChunkCreated: async updated => {
+        const existing = updated.filter(it => this.trackIdMap.has(it.id));
 
-      if (existing.length > 0) {
-        this.logger.info(`${existing.length} track(s) updated`);
-        this.emit('tracksUpdate', existing);
+        this.#internalUpdate(existing);
+
+        return existing;
       }
-
-      return existing;
     });
   }
 
@@ -308,6 +401,26 @@ export class TrackCollection<
   async removeTrack(tracks: T | T[]): Promise<T[]> {
     const toRemove = castArray(tracks).map(track => track.path);
     return this.remove(toRemove);
+  }
+
+  async removeNonExistent() {
+    const existences = await Promise.all(this.tracks.map(async track => ({
+      track,
+      exists: await access(track.path).then(stubTrue).catch(stubFalse)
+    })));
+
+    const [existing, removed] = partition(existences, e => e.exists);
+
+    this.tracks = existing.map(t => t.track);
+    const removedTracks = removed.map(t => t.track);
+
+    for (const track of removedTracks) {
+      this.trackIdMap.delete(track.id);
+    }
+
+    this.emit('tracksRemove', removedTracks);
+
+    return removedTracks;
   }
 
   move(newPosition: number, indexes: number[]) {

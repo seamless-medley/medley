@@ -206,6 +206,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       station.on('trackStarted', this.#handleTrackStarted(station));
       station.on('trackActive', this.#handleTrackActive(station));
       station.on('trackFinished', this.#handleTrackFinished(station));
+      station.on('trackSkipped', this.#handleTrackSkipped(station))
       station.on('collectionChange', this.#handleCollectionChange(station));
     }
 
@@ -571,6 +572,26 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     });
   }
 
+  #handleTrackSkipped = (station: Station): StationEvents['trackSkipped'] => (trackPlay) => {
+    this.updateTrackMessage(async (msg) => {
+      if (msg.station !== station) {
+        return;
+      }
+
+      if (trackPlay.uuid !== msg.trackPlay.uuid) {
+        return;
+      }
+
+      return {
+        title: 'Skipped',
+        status: TrackMessageStatus.Skipped,
+        showSkip: false,
+        showMore: false,
+        showLyrics: false
+      }
+    });
+  }
+
   #handleCollectionChange = (station: Station): StationEvents['collectionChange'] => (oldCollection, newCollection) => {
     // Hide "more like this" button for this currently playing track
     this.updateTrackMessage(async (msg) =>  {
@@ -843,25 +864,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.#logger.warn({ guildId }, 'Deny skipping: denied by engine');
       return false;
     }
-
-    this.updateTrackMessage(async (msg) => {
-      if (msg.station !== station) {
-        return;
-      }
-
-      if (trackPlay.uuid !== msg.trackPlay.uuid) {
-        return;
-      }
-
-      // FIXME: This only works when skip by the automaton itself, perhaps using event might help
-      return {
-        title: 'Skipped',
-        status: TrackMessageStatus.Skipped,
-        showSkip: false,
-        showMore: false,
-        showLyrics: false
-      }
-    });
 
     return true;
   }

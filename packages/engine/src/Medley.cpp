@@ -9,7 +9,7 @@
 
 namespace medley {
 
-Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
+Medley::Medley(IQueue& queue, ILoggerWriter* logWriter, bool skipDeviceScanning)
     :
     audioInterceptor(*this),
     mixer(*this),
@@ -26,11 +26,15 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
 
     updateFadingFactor();
 
-    auto error = deviceMgr.initialiseWithDefaultDevices(0, 2);
+    juce::String error;
+
+    if (!skipDeviceScanning) {
+        error = deviceMgr.initialiseWithDefaultDevices(0, 2);
+    }
 
     deviceMgr.addAudioDeviceType(std::make_unique<NullAudioDeviceType>());
 
-    if (error.isNotEmpty() || getCurrentAudioDevice() == nullptr) {
+    if (skipDeviceScanning || error.isNotEmpty() || getCurrentAudioDevice() == nullptr) {
         setCurrentAudioDeviceType("Null");
         setAudioDeviceByIndex(0);
     }
@@ -59,11 +63,7 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter)
 
     if (auto device = deviceMgr.getCurrentAudioDevice()) {
         if (!device->isOpen()) {
-            throw std::runtime_error("Audio device is not open");
-        }
-
-        if (!device->isPlaying()) {
-            throw std::runtime_error("Audio device is not playing");
+            throw std::runtime_error(("Audio device is not open, type=" + device->getTypeName() + ", name=" + device->getName()).toStdString());
         }
     }
 

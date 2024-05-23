@@ -2,6 +2,7 @@ import type { Metadata } from "@seamless-medley/medley";
 import normalizePath from "normalize-path";
 import type { TrackRecord } from "../playout";
 import type { SearchQuery, SearchQueryKey } from "./search";
+import { isEqual } from "lodash";
 
 export type RecentSearchRecord = [term: string, count: number, timestamp: Date];
 
@@ -31,6 +32,10 @@ export interface TrackHistory {
   getAll(scope: string): Promise<TimestampedTrackRecord[]>;
 }
 
+export type UpdateInfo = {
+  modified: number;
+}
+
 export interface MusicDb {
   dispose(): void;
 
@@ -42,7 +47,7 @@ export interface MusicDb {
 
   findByComment(field: string, value: string, limit: number): Promise<MusicDbTrack[]>;
 
-  update(trackId: string, update: Omit<MusicDbTrack, 'trackId'>): Promise<void>;
+  update(trackId: string, update: Omit<MusicDbTrack, 'trackId'>): Promise<MusicDbTrack>;
 
   delete(trackId: string): Promise<void>;
 
@@ -54,6 +59,7 @@ export interface MusicDb {
 export interface MusicDbTrack extends Metadata {
   trackId: string;
   path: string;
+  timestamp?: number;
 }
 
 /**
@@ -79,11 +85,17 @@ export class InMemoryMusicDb implements MusicDb {
   }
 
   async update(trackId: string, update: Omit<MusicDbTrack, "trackId">) {
-    const existing = this.#tracks.get(trackId) ?? {};
-    this.#tracks.set(trackId, {
+    const existing = this.#tracks.get(trackId);
+
+    const track: MusicDbTrack = {
+      trackId,
       ...existing,
       ...update
-    } as MusicDbTrack)
+    };
+
+    this.#tracks.set(trackId, track);
+
+    return track;
   }
 
   async delete(trackId: string){

@@ -15,7 +15,7 @@ import {
 
 import { createLogger, Logger } from "@seamless-medley/logging";
 
-import { TrackCollectionBasicOptions, TrackIndex } from "../collections";
+import { TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
 import { Crate, LatchOptions, LatchSession } from "../crate";
 import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "../library";
 import {
@@ -78,7 +78,7 @@ export enum AudienceType {
 
 export type AudienceOfGroup<A extends AudienceType, G extends string[]> = `${A}$${Join<G, '/'>}`;
 
-export type DiscordAudienceGroupId = AudienceOfGroup<AudienceType.Discord, [string, string]>;
+export type DiscordAudienceGroupId = AudienceOfGroup<AudienceType.Discord, [automatonId: string, guildId: string]>;
 
 export type AudienceGroupId = DiscordAudienceGroupId | AudienceOfGroup<Exclude<AudienceType, AudienceType.Discord>, [string]>;
 
@@ -120,6 +120,7 @@ export type StationEvents = {
   trackStarted: (deck: DeckIndex, trackPlay: StationTrackPlay, lastTrackPlay?: StationTrackPlay) => void;
   trackActive: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
   trackFinished: (deck: DeckIndex, trackPlay: StationTrackPlay) => void;
+  trackSkipped: (trackPlay: StationTrackPlay) => void;
   collectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, transitingFromRequestTrack: boolean) => void;
   crateChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
   sequenceProfileChange: (oldProfile: StationProfile | undefined, newProfile: StationProfile) => void;
@@ -137,6 +138,13 @@ export type StationEvents = {
 }
 
 type BoomBoxEventsForStation = BoomBoxEvents<StationProfile>;
+
+export type StationSearchOptions = {
+  q: SearchQuery;
+  limit?: number;
+  exactMatch?: boolean;
+  noHistory?: boolean;
+}
 
 export class Station extends TypedEmitter<StationEvents> {
   readonly id: string;
@@ -480,6 +488,10 @@ export class Station extends TypedEmitter<StationEvents> {
     if (ok) {
       this.playState = PlayState.Playing;
       this.#logger.info('Skipping track: %s', this.trackPlay?.track?.path);
+
+      if (this.trackPlay) {
+        this.emit('trackSkipped', this.trackPlay);
+      }
     }
 
     return ok;
@@ -662,10 +674,12 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.findTracksByComment(key, value, limit);
   }
 
-  async search(q: SearchQuery, limit?: number, exactMatch?: boolean) {
+  async search({ q, limit, exactMatch, noHistory }: StationSearchOptions) {
     const result = await this.#library.search(q, limit, exactMatch);
 
-    this.#musicDb.searchHistory.add(this.id, { ...q, resultCount: result.length });
+    if (!noHistory) {
+      this.#musicDb.searchHistory.add(this.id, { ...q, resultCount: result.length });
+    }
 
     return result as StationTrack[];
   }
@@ -864,6 +878,22 @@ export class Station extends TypedEmitter<StationEvents> {
 
   get allLatches(): ReadonlyArray<LatchSession<StationTrack, BoomBoxTrackExtra>> {
     return this.#boombox.allLatches;
+  }
+
+  async rescan(full?: boolean, scanningCb?: (collection: BoomBoxTrackCollection) => any) {
+    const jingleCollections = this.profiles
+      .flatMap(profile => ([
+        profile.intros,
+        profile.requestSweepers,
+        ...profile.sweeperRules.map(r => r.collection),
+      ]))
+      .filter((c): c is WatchTrackCollection<BoomBoxTrack> => c instanceof WatchTrackCollection)
+
+    for (const col of jingleCollections) {
+      col.rescan(full);
+    }
+
+    return this.#library.rescan(full, scanningCb);
   }
 }
 

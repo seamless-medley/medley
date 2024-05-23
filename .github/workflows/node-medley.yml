@@ -11,6 +11,7 @@ on:
       - packages/node-medley/binding.gyp
       - packages/node-medley/package.json
 jobs:
+  # This job builds on each platform directly
   build:
     strategy:
       matrix:
@@ -25,15 +26,16 @@ jobs:
             node_arch: x64
             build-arch: win32-x64
 
-          - runs-on: macos-12
-            node_version: 18
-            node_arch: x64
-            build-arch: darwin-x64
-
-          - runs-on: [self-hosted, macOS, ARM64]
+          - runs-on: macos-14
             node_version: 18
             node_arch: arm64
             build-arch: darwin-arm64
+
+          # macos-14 runner is arm64, use macos-13 instead
+          - runs-on: macos-13
+            node_version: 18
+            node_arch: x64
+            build-arch: darwin-x64
 
     name: Build ${{ matrix.build-arch }}
     runs-on: ${{ matrix.runs-on }}
@@ -42,12 +44,12 @@ jobs:
       DEPS_INSTALL: ./packages/node-medley/scripts/install-deps.sh
     steps:
       - name: Install Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node_version }}
           architecture: ${{ matrix.node_arch }}
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: 8.15.5
 
@@ -62,7 +64,7 @@ jobs:
         run: |
           echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Setup pnpm cache
         with:
           path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
@@ -71,7 +73,7 @@ jobs:
             ${{ runner.os }}-${{ runner.arch }}-pnpm-store-native-build
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -90,7 +92,7 @@ jobs:
 
       - name: Cache vcpkg
         if: contains(matrix.build-arch, 'win32')
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             C:\vcpkg\packages
@@ -111,12 +113,47 @@ jobs:
       - name: Build native
         working-directory: ./packages/node-medley
         run: |
-          pnpm run prebuild
+          pnpm prebuild
+
+      - name: Test prebuilt module
+        working-directory: ./packages/node-medley
+        run: |
+          pnpm test
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.build-arch }}
           path: ./packages/node-medley/prebuilds
 
+  # This job builds with Docker multi-platform on a self-hosted Apple Silicon machine
+  build-linux-arm64:
+    name: Build linux-arm64
+    runs-on: [self-hosted, macOS, ARM64, docker]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
+      - name: Build native
+        working-directory: ./packages/node-medley
+        env:
+          ephemeral_container_id: node-medley-prebuild-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          docker build \
+            --platform=linux/arm64 \
+            -f ./builder/linux/Dockerfile \
+            --progress=plain \
+            -t node-medley-prebuild ../.. && \
+          docker container create \
+            --name ${{ env.ephemeral_container_id }} node-medley-prebuild && \
+          docker cp \
+            ${{ env.ephemeral_container_id }}:/src/packages/node-medley/prebuilds ./ && \
+          docker rm ${{ env.ephemeral_container_id }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: ./packages/node-medley/prebuilds

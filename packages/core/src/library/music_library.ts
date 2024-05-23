@@ -1,13 +1,12 @@
-import { castArray, chain, isString, noop, partition } from 'lodash';
-import normalizePath from 'normalize-path';
-import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents, WatchPathWithOption } from '../collections';
+import { castArray, chain, isString, partition, stubFalse } from 'lodash';
+import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents, WatchPathWithOption, RescanStats, TracksUpdateEvent } from '../collections';
 import { Logger, createLogger } from '@seamless-medley/logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
 import { SearchEngine, Query, TrackDocumentFields } from './search';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from './music_db';
-import { TrackWithCollectionExtra } from '../track';
+import { TrackExtraOf, TrackWithCollectionExtra } from '../track';
 import { scanDir } from './scanner';
 
 export type MusicCollectionWatch = WatchPathWithOption | string;
@@ -23,9 +22,9 @@ export type MusicLibraryExtra<O> = {
   owner: O;
 }
 
-export type MusicTrack<O> = TrackWithCollectionExtra<BoomBoxTrack, MusicLibraryExtra<O>>;
+export type MusicTrack<O> = TrackWithCollectionExtra<BoomBoxTrack, TrackExtraOf<BoomBoxTrack>, MusicLibraryExtra<O>>;
 
-export type MusicTrackCollection<O> = WatchTrackCollection<MusicTrack<O>, MusicLibraryExtra<O>>;
+export type MusicTrackCollection<O> = WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>;
 
 export type MusicTrackCollectionEvents<O> = TrackCollectionEvents<MusicTrack<O>>;
 
@@ -36,6 +35,11 @@ type IndexInfo<O> = {
 }
 
 type Stats = Record<'discovered' | 'indexing' | 'indexed', number>;
+
+export type LibraryRescanStats<O> = RescanStats & {
+  elapsedTime: number;
+  collection: MusicTrackCollection<O>;
+}
 
 export interface MusicLibraryEvents {
   stats(stats: Stats): void;
@@ -82,7 +86,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       return;
     }
 
-    const { trackId: id, ...tags } = fromDb;
+    const { trackId: id, timestamp, ...tags } = fromDb;
 
     return {
       id,
@@ -90,12 +94,13 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       musicId: fromDb.isrc,
       extra: {
         kind: TrackKind.Normal,
+        timestamp,
         tags
       }
     }
   }
 
-  #handleTrackAddition = (collection: WatchTrackCollection<MusicTrack<O>, MusicLibraryExtra<O>>) => (tracks: Array<MusicTrack<O>>, chunkIndex: number, totalChunks: number) => {
+  #handleTrackAddition = (collection: WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>) => (tracks: Array<MusicTrack<O>>, chunkIndex: number, totalChunks: number) => {
     this.stats = {
       discovered: this.#stats.discovered + tracks.length
     }
@@ -145,12 +150,20 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     }
   }
 
-  #handleTrackUpdates = async (tracks: Array<MusicTrack<O>>) => {
-    await this.#searchEngine.removeAll(tracks).catch(e => this.#logger.error(e));
+  #handleTrackUpdates = async (event: TracksUpdateEvent<MusicTrack<O>>) => {
+    event.promises.push(new Promise<void>(async (resolve) => {
+      await this.#searchEngine.removeAll(event.tracks).catch(e => this.#logger.error(e));
 
-    for (const track of tracks) {
-      await this.#indexTrack({ track }, true).catch(noop);
-    }
+      for (const track of event.tracks) {
+        const modified = await this.#indexTrack({ track }, true).then(r => r.modified).catch(stubFalse);
+
+        if (modified) {
+          event.updatedTracks.push(track);
+        }
+      }
+
+      resolve();
+    }))
   }
 
   remove(...collections: Array<string | MusicTrackCollection<O>>) {
@@ -195,23 +208,26 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
   }
 
   async #indexTrack({ track, retried }: IndexInfo<O>, force: boolean = false) {
+    let modified = false;
+
     if (force || !track.extra?.tags) {
-      const { metadata } = await MetadataHelper.fetchMetadata(track, this.musicDb, force);
+      const { metadata, timestamp, modified: metadataUpdated } = await MetadataHelper.fetchMetadata(track, this.musicDb, force);
       track.musicId = metadata.isrc,
       track.extra = {
         ...track.extra,
         tags: metadata,
+        timestamp,
         kind: TrackKind.Normal
       };
+
+      modified = metadataUpdated === true;
     }
 
-    try {
-      await this.#searchEngine.add(track);
-    }
-    catch (e) {
+    this.#searchEngine.add(track).catch((e) => {
       this.#logger.error(e);
-      throw e;
-    }
+    });
+
+    return { modified };
   }
 
   async addCollection(descriptor: MusicCollectionDescriptor, onceReady?: () => void): Promise<MusicTrackCollection<O> | undefined> {
@@ -227,7 +243,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
         owner: this.owner
       }
 
-      const newCollection = new WatchTrackCollection<MusicTrack<O>, MusicLibraryExtra<O>>(
+      const newCollection = new WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>(
         id, extra,
         {
           ...options,
@@ -395,5 +411,26 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     );
 
     return result.map(s => s.suggestion);
+  }
+
+  async rescan(full?: boolean, scanningCb?: (collection: MusicTrackCollection<O>) => any): Promise<LibraryRescanStats<O>[]> {
+    const stats: LibraryRescanStats<O>[] = [];
+
+    for (const collection of this) {
+      scanningCb?.(collection);
+
+      const started = performance.now();
+      const result = await collection.rescan(full);
+
+      if (result) {
+        stats.push({
+          ...result,
+          collection,
+          elapsedTime: (performance.now() - started) / 1000
+        });
+      }
+    }
+
+    return stats;
   }
 }

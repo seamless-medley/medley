@@ -129,10 +129,11 @@ void NullAudioDevice::run()
             const ScopedTryLock sl(startStopLock);
 
             if (callback) {
-                callback->audioDeviceIOCallback(
+                callback->audioDeviceIOCallbackWithContext(
                     const_cast<const float**>(inputBuffers), 0,
                     outputBuffers, 2,
-                    480
+                    480,
+                    {}
                 );
             }
 

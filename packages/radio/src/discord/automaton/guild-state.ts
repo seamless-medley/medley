@@ -1,4 +1,4 @@
-import { chain, noop, uniqBy } from "lodash";
+import { noop, sortBy, uniqBy } from "lodash";
 
 import {
   AudienceGroupId,
@@ -39,7 +39,7 @@ import { GuildSpecificConfig, MedleyAutomaton } from "./automaton";
 import { TrackMessageCreator } from "../trackmessage/creator/base";
 import { makeCreator } from "../trackmessage/creator";
 import { createCoverImageAttachment } from "../helpers/message";
-import { extractSpotifyMetadata, extractSpotifyUrl, fetchSpotifyInfo, formatSpotifyField, spotifyURI } from "../helpers/spotify";
+import { extractSpotifyUrl, fetchSpotifyInfo, formatSpotifyField } from "../helpers/spotify";
 
 export type GuildStateAdapter = {
   getAutomaton(): MedleyAutomaton;
@@ -132,7 +132,13 @@ export class GuildState {
     this.#voiceConnector = undefined;
   }
 
-  #updateChannelAudiences(channel: VoiceBasedChannel | null | undefined, muted: boolean) {
+  /**
+   * Just joined a voice channel, audiences for this guild should be reset to this channel's members
+   */
+  #joinedVoiceChannel(channel: VoiceBasedChannel | null | undefined, muted: boolean) {
+    this.#voiceChannelId = channel?.id;
+    this.#serverMuted = muted;
+
     const station = this.tunedStation;
 
     if (!station) {
@@ -143,16 +149,15 @@ export class GuildState {
 
     if (muted || !channel) {
       station.removeAudiencesForGroup(audienceGroup);
-    } else {
-      updateStationAudiences(station, audienceGroup, channel);
+      return;
     }
-  }
 
-  #joinedVoiceChannel(channel: VoiceBasedChannel | null | undefined, muted: boolean) {
-    this.#voiceChannelId = channel?.id;
-    this.#serverMuted = muted;
-
-    this.#updateChannelAudiences(channel, muted);
+    station.updateAudiences(
+      audienceGroup,
+      channel.members
+        .filter(member => !member.user.bot && !member.voice.deaf)
+        .map(member => member.id)
+    );
   }
 
   #leftVoiceChannel() {
@@ -352,10 +357,11 @@ export class GuildState {
     const channel = this.adapter.getChannel(this.voiceChannelId);
 
     if (channel?.type === ChannelType.GuildVoice) {
-      updateStationAudiences(
-        this.preferredStation,
+      this.preferredStation.updateAudiences(
         this.adapter.makeAudienceGroup(this.guildId),
-        channel
+        channel.members
+          .filter(member => !member.user.bot && !member.voice.deaf)
+          .map(member => member.id)
       );
     }
   }
@@ -409,7 +415,42 @@ export class GuildState {
     // Stationary
     if (oldState.serverMute !== newState.serverMute) {
       this.#serverMuted = newState.serverMute === true;
-      this.#updateChannelAudiences(newState.channel, this.#serverMuted);
+      this.#serverMuteStateChanged(newState.channel);
+    }
+  }
+
+  #serverMuteStateChanged(channel: VoiceBasedChannel | null) {
+    const station = this.tunedStation;
+
+    if (!station) {
+      return;
+    }
+
+    const audienceGroup = this.adapter.makeAudienceGroup(this.guildId);
+
+    if (this.#serverMuted || !channel) {
+      station.removeAudiencesForGroup(audienceGroup);
+      return;
+    }
+
+    const updateAudience = !this.#serverMuted
+      ? ((member: GuildMember) => {
+        if (!member.user.system && !member.user.bot && !member.voice.deaf) {
+          station.addAudience(audienceGroup, member.id);
+        }
+      })
+      : (mmeber: GuildMember) => station.removeAudience(audienceGroup, mmeber.id)
+
+    channel.members.forEach(updateAudience);
+
+    // Remove invalid audiences, any audience that does not belong to this channel
+    const audiences = station.getAudiences(audienceGroup);
+    if (audiences) {
+      for (const memberId of audiences) {
+        if (!channel.members.has(memberId)) {
+          station.removeAudience(audienceGroup, memberId);
+        }
+      }
     }
   }
 
@@ -547,18 +588,22 @@ export class GuildState {
             embed.setThumbnail(info.image);
           }
 
-          const tracks = await station.findTracksByComment(searchKey, id, 1);
+          const tracks = await station.findTracksByComment(searchKey, id);
 
           if (tracks.length < 1) {
             const searchResult = await station.search({
-              title: info.title,
-              artist: info.artist
-            }, 1);
+              q: {
+                title: info.title,
+                artist: info.artist
+              },
+              limit: 1,
+              noHistory: true
+            });
 
             tracks.push(...searchResult);
           }
 
-          const [track] = tracks;
+          const [track] = sortBy(tracks, t => t.collection.options.auxiliary ? 1 : 0);
 
           if (track) {
             const { id: trackId, extra } = track;
@@ -610,7 +655,10 @@ export class GuildState {
           }
 
           const exactMatches = await station.findTracksByComment(searchKey, id);
-          const searchResult = await station.search({ artist: info.artist }, undefined, true);
+          const searchResult = await station.search({
+            q: { artist: info.artist },
+            exactMatch: true
+          });
 
           const tracks = uniqBy(
             [...exactMatches, ...searchResult],
@@ -666,15 +714,6 @@ export type JoinResult = {
 export type StationLink = {
   station: Station;
   exciter: DiscordAudioPlayer;
-}
-
-export function updateStationAudiences(station: Station, groupId: AudienceGroupId, channel: VoiceBasedChannel) {
-  station.updateAudiences(
-    groupId,
-    channel.members
-      .filter(member => !member.user.bot && !member.voice.deaf)
-      .map(member => member.id)
-  );
 }
 
 interface VoiceStateWithMember extends VoiceState {

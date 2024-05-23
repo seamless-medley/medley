@@ -115,6 +115,7 @@ export type LogListener = (level: number, name: string, msg: string) => void;
 
 export type MedleyOptions = {
   logging?: boolean;
+  skipDeviceScanning?: boolean;
 }
 
 export declare class Medley<T extends TrackInfo = TrackInfo> {

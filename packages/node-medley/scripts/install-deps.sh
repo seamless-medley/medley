@@ -2,6 +2,7 @@
 
 TAGLIB_VERSION=1.13.1
 LIBSAMPLERATE_VERSION=0.2.2
+MACOSX_DEPLOYMENT_TARGET=10.9
 
 SUDO=sudo
 if [ "$1" = "--no-sudo" ]; then
@@ -17,6 +18,7 @@ cd taglib \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_BUILD_TYPE=Release \
+        -DMACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET}
         . \
     && make -j 2 \
     && ${SUDO} make install
@@ -32,7 +34,9 @@ wget https://github.com/libsndfile/libsamplerate/releases/download/0.2.2/libsamp
 tar xvf libsamplerate.tar.gz
 mv libsamplerate-* libsamplerate
 cd libsamplerate \
-    && cmake . \
+    && cmake \
+        -DMACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
+        . \
     && make -j 2 \
     && ${SUDO} make install
 

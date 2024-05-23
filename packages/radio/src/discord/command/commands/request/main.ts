@@ -172,15 +172,15 @@ export const handleRequestCommand = async ({ automaton, interaction, artist, tit
 
   await interaction.deferReply();
 
-  const results = await station.search(
-    {
+  const results = await station.search({
+    q: {
       artist,
       title,
       query
     },
     // 10 pages
-    maxSelectMenuOptions * 10
-  );
+    limit: maxSelectMenuOptions * 10
+  });
 
   if (results.length < 1) {
     const highlight = (n: string, v: string)  => ansi`({{yellow}}${n} {{cyan}}~ {{pink}}{{bgDarkBlue|b}}${v}{{reset}})`

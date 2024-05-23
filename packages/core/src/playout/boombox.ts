@@ -40,12 +40,13 @@ export type BoomBoxTrackExtra = TrackExtra & {
   maybeAudioProperties?: Promise<AudioProperties>;
   maybeCoverAndLyrics?: Promise<BoomBoxCoverAnyLyrics>;
   kind: TrackKind;
+  timestamp?: number;
 }
 
 export type BoomBoxTrack = Track<BoomBoxTrackExtra>;
 export type BoomBoxTrackPlay = TrackPlay<BoomBoxTrack>;
 export type BoomBoxCrate = Crate<BoomBoxTrack>;
-export type BoomBoxTrackCollection = TrackCollection<BoomBoxTrack, any>;
+export type BoomBoxTrackCollection = TrackCollection<BoomBoxTrack>;
 
 export type Requester = any;
 
@@ -168,7 +169,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
 
   readonly #onInsertRequestTrack?: OnInsertRequestTrack<BoomBoxTrack, R>;
 
-  readonly #profileBook = new CrateProfileBook<BoomBoxProfile>();
+  readonly #profileBook = new CrateProfileBook<P>();
 
   artistHistory: Array<string[]> = [];
 
@@ -213,6 +214,11 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
       const n = Math.max(1, Math.min(ignored, scanned) - 1);
       this.#logger.warn(`Rescue, removing ${n} artist history entries`);
       this.artistHistory = this.artistHistory.slice(n);
+
+      if (!this.medley.playing && !this.medley.paused) {
+        this.#logger.warn('Rescued, but playback was stalled, starting again...');
+        this.medley.play();
+      }
     });
 
     this.#sweeperInserter = new SweeperInserter(this, []);
@@ -269,18 +275,29 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
     return index !== -1 ? index : undefined;
   }
 
-  #requests: TrackCollection<TrackWithRequester<BoomBoxTrack, R>> = new WatchTrackCollection('$_requests', undefined);
+  #requests = new WatchTrackCollection<TrackWithRequester<BoomBoxTrack, R>>('$_requests', undefined);
 
   #isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path, 1000);
 
   #verifyTrack: TrackVerifier<BoomBoxTrackExtra> = async (track): Promise<TrackVerifierResult<BoomBoxTrackExtra>> => {
     try {
-      const metadata = track.extra?.tags ?? (await helper.fetchMetadata(track, this.musicDb, true)).metadata;
+      let timestamp: number | undefined;
+      let tags: Metadata;
+
+      if (track.extra?.tags) {
+        timestamp = track.extra.timestamp;
+        tags = track.extra?.tags;
+      } else {
+        const fetched = await helper.fetchMetadata(track, this.musicDb, true);
+        timestamp = fetched.timestamp;
+        tags = fetched.metadata;
+      }
 
       const boomboxExtra: BoomBoxTrackExtra = {
         kind: TrackKind.Normal,
         ...track.extra,
-        tags: metadata
+        tags,
+        timestamp
       }
 
       const playedArtists = flatten(this.artistHistory).map(toLower);
