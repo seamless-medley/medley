@@ -10,17 +10,19 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push-image:
+  build-image:
     strategy:
       matrix:
         include:
           - runs-on: ubuntu-latest
             arch: amd64
             platforms: linux/amd64
+
           - runs-on: [self-hosted, macOS, ARM64, docker]
             arch: arm64
             platforms: linux/arm64
 
+    name: Build ${{ matrix.arch }} image
     runs-on: ${{ matrix.runs-on }}
     permissions:
       contents: read
@@ -46,6 +48,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,suffix=-${{ matrix.arch }}
+            type=raw,value=latest,suffix=-${{ matrix.arch }}
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -63,4 +66,23 @@ jobs:
           # tags: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.SHORT_SHA }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          push: true
+
+  push-images:
+    runs-on: ubuntu-latest
+    needs: build-image
+    steps:
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push manifest images
+        uses: Noelware/docker-manifest-action@master
+        with:
+          inputs: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-multi-arch
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-amd64,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-arm64
           push: true
