@@ -17,6 +17,9 @@ jobs:
           - runs-on: ubuntu-latest
             arch: amd64
             platforms: linux/amd64
+          - runs-on: [self-hosted, macOS, ARM64, docker]
+            arch: arm64
+            platforms: linux/arm64
 
     runs-on: ${{ matrix.runs-on }}
     permissions:
