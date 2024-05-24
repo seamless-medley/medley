@@ -11,7 +11,14 @@ env:
 
 jobs:
   build-and-push-image:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            arch: amd64
+            platforms: linux/amd64
+
+    runs-on: ${{ matrix.runs-on }}
     permissions:
       contents: read
       packages: write
@@ -35,7 +42,7 @@ jobs:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha
+            type=sha,suffix=${{ matrix.arch }}
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -49,7 +56,8 @@ jobs:
         with:
           context: .
           file: ./packages/radio/docker/discord/Dockerfile
-          push: true
+          platforms: ${{ matrix.platforms }}
           # tags: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.SHORT_SHA }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          push: true
