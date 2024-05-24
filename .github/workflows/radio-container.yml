@@ -62,6 +62,8 @@ jobs:
         with:
           context: .
           file: ./packages/radio/docker/discord/Dockerfile
+          build-args: |
+            ARCH=${{ matrix.arch }}
           platforms: ${{ matrix.platforms }}
           # tags: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.SHORT_SHA }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
           tags: ${{ steps.meta.outputs.tags }}
