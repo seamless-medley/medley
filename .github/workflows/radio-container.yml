@@ -35,11 +35,6 @@ jobs:
         with:
           submodules: recursive
 
-      # - name: Get image repository short commit
-      #   id: version
-      #   run: |
-      #     echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c 1-8)" >> $GITHUB_OUTPUT
-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -65,7 +60,6 @@ jobs:
           build-args: |
             ARCH=${{ matrix.arch }}
           platforms: ${{ matrix.platforms }}
-          # tags: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.SHORT_SHA }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: false
