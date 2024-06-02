@@ -17,6 +17,13 @@
 - Play directly to audio device
 - Consume PCM data directly from audio pipeline via Node.js stream
 
+# Supported platforms
+- `linux/amd64`
+- `linux/arm64`
+- `win32/x64`
+- `macOS/x64`
+- `macOS/arm64`
+
 # Table of contents
 - [Installation](#installation)
 - [Getting started](#getting-started)
