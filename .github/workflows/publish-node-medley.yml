@@ -12,6 +12,7 @@ env:
   PREBUILDS_DIR: ./packages/node-medley/prebuilds
 jobs:
   pack-and-publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-20.04
     steps:
       - name: Install Node
@@ -53,7 +54,7 @@ jobs:
 
       - name: Download
         id: download
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
           run_id: ${{ github.event.workflow_run.id }}
           name_is_regexp: true

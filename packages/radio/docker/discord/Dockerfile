@@ -28,6 +28,8 @@ RUN pnpm install
 # ----------------------------------------------------------------------------------------------------
 FROM node:18.16.0-slim as application
 
+ARG ARCH=amd64
+
 RUN apt update \
     && apt install \
         tzdata \
@@ -42,7 +44,7 @@ RUN mkdir -p /data/musics /data/drops
 
 # Add Tini
 ENV TINI_VERSION v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${ARCH} /tini
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
 
