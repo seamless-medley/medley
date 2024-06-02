@@ -48,9 +48,9 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
   const result = this['*$reqAudio'](options) as RequestAudioResult;
   const streamId = result.id;
 
-  const sampleRate = Number(options.sampleRate ?? 44100);
-  let buffering = Number(options.buffering ?? sampleRate) * 0.01;
-  const bufferSize = Number(options.bufferSize ?? sampleRate) * 0.25;
+  const sampleRate = Number(options.sampleRate) ?? 44100;
+  let buffering = Number(options.buffering) ?? (sampleRate * 0.01);
+  const bufferSize = Number(options.bufferSize) ?? (sampleRate * 0.25);
 
   if (buffering < 1) {
     throw new Error('buffering cannot be less than 1');
@@ -104,7 +104,7 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
     ...result,
     update: (newOptions) => {
       if (newOptions.buffering) {
-        const newBuffering = Number(newOptions.buffering ?? sampleRate) * 0.01;
+        const newBuffering = Number(newOptions.buffering) ?? (sampleRate * 0.01);
 
         if (newBuffering < 1) {
           throw new Error('buffering cannot be less than 1');
