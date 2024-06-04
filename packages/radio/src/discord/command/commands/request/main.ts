@@ -136,14 +136,14 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
   const noSweep = interaction.options.getBoolean('no-sweep') ?? undefined;
 
-  handleRequestCommand({
+  await handleRequestCommand({
     automaton,
     interaction,
     artist,
     title,
     query,
     noSweep
-  })
+  });
 }
 
 export type RequestCommandOptions = {
@@ -585,7 +585,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         return;
       }
 
-      makeRequest({
+      return makeRequest({
         automaton,
         interaction,
         station,
@@ -594,22 +594,18 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         trackId,
         done: async () => {}
       })
-
-      return;
     }
 
     case 'search': {
       const params = fromPairs(args.map(a => a.split('$', 2)));
 
-      handleRequestCommand({
+      return handleRequestCommand({
         automaton,
         interaction,
         artist: params.artist,
         title: params.title,
         query: params.query
       });
-
-      return;
     }
   }
 }
