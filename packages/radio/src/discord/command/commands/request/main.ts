@@ -242,15 +242,25 @@ export const handleRequestCommand = async ({ automaton, interaction, artist, tit
     return [true, chain(entries)
       .map(([key, grouped]) => {
         const sel = grouped[0];
-        const f = (grouped.length > 1) || (grouped.fromChunk) ? ` 💿 ${toEmoji(grouped.length.toString())} found` : '';
 
-        const title = (sel.title.length + f.length > 100) ? truncate(sel.title, { length: 100 - f.length }) : sel.title;
-        const artist = sel.artist !== undefined ? truncate(sel.artist, { length: 100 }) : 'Unknown Artist';
+        const truncateFirst = (first: string, last: string = '') => (first.length + last.length) > 100
+          ? truncate(first, { length: 100 - last.length }) + last
+          : first + last;
+
+        const label = truncateFirst(
+          sel.title,
+          (grouped.length > 1) || (grouped.fromChunk) ? ` 💿 ${toEmoji(grouped.length.toString())} found` : ''
+        );
+
         const originalArtist = sel.track.extra?.tags?.originalArtist;
 
+        const description = truncateFirst(
+          (sel.artist ?? 'Unknown Artist') + originalArtist ? ` (Original by ${originalArtist})` : ''
+        );
+
         return {
-          label: `${title}${f}`,
-          description: `${artist}${originalArtist ? ` (Original by ${originalArtist})` : ''}`,
+          label,
+          description,
           value: key
         }
       })
@@ -527,7 +537,7 @@ function selectionToComponentData(selection: Selection, [collection, ...clarifie
   const description = [collection, clarified.filter(Boolean).join('; ')].filter(Boolean).join(' - ');
 
   return {
-    label: `${title} - ${artist}`,
+    label: truncate(`${title} - ${artist}`, { length: 100 }),
     description,
     value: track.id
   };
