@@ -114,7 +114,11 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
     }
     catch (e) {
       if (!(e instanceof CommandError)) {
-        logger.error(e);
+        logger.error(e,
+          interaction.isChatInputCommand()
+            ? `Error in ${interaction.options.getSubcommand()} command`
+            : 'Error in interaction'
+        );
       }
 
       if (isReplyable(interaction)) {
