@@ -255,7 +255,7 @@ export const handleRequestCommand = async ({ automaton, interaction, artist, tit
         const originalArtist = sel.track.extra?.tags?.originalArtist;
 
         const description = truncateFirst(
-          (sel.artist ?? 'Unknown Artist') + originalArtist ? ` (Original by ${originalArtist})` : ''
+          (sel.artist ?? 'Unknown Artist') + (originalArtist ? ` (Original by ${originalArtist})` : '')
         );
 
         return {
