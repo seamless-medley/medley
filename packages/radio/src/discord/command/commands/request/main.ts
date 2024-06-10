@@ -154,9 +154,20 @@ export type RequestCommandOptions = {
   title?: string;
   query?: string;
   noSweep?: boolean;
+  noHistory?: boolean;
 }
 
-export const handleRequestCommand = async ({ automaton, interaction, artist, title, query, noSweep }: RequestCommandOptions) => {
+export const handleRequestCommand = async (options: RequestCommandOptions) => {
+  const {
+    automaton,
+    interaction,
+    artist,
+    title,
+    query,
+    noSweep,
+    noHistory
+  } = options;
+
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
   if ([artist, title, query].every(isUndefined)) {
@@ -180,7 +191,8 @@ export const handleRequestCommand = async ({ automaton, interaction, artist, tit
       query
     },
     // 10 pages
-    limit: maxSelectMenuOptions * 10
+    limit: maxSelectMenuOptions * 10,
+    noHistory
   });
 
   if (results.length < 1) {
@@ -621,5 +633,48 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         query: params.query
       });
     }
+
+    case 'cross_search': {
+      if (!interaction.channel) {
+        return;
+      }
+
+      const originalMessage = await interaction.message.fetchReference()
+        .then(ref => ref.fetch())
+        .catch(() => undefined);
+
+      if (!originalMessage) {
+        return;
+      }
+
+      const [matched] = extractSpotifyUrl(originalMessage.content);
+      if (!matched?.url || matched?.paths?.[0] !== 'track') {
+        return
+      }
+
+      const info = await fetchSpotifyInfo(matched.url.href);
+
+      if (!info || info.type !== 'track' || !info.artist || !info.title) {
+        return;
+      }
+
+      return handleRequestCommand({
+        automaton,
+        interaction,
+        artist: info.artist,
+        title: info.title,
+        noHistory: true
+      })
+      .catch(e => new CrossSearchError(automaton, guildId, e.message));
+    }
+  }
+}
+
+class CrossSearchError extends AutomatonCommandError {
+  readonly state?: GuildState;
+
+  constructor(automaton: MedleyAutomaton, guildId: string, message: string) {
+    super(automaton, message);
+    this.state = automaton.getGuildState(guildId);
   }
 }
