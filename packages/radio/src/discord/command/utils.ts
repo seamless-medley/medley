@@ -1,27 +1,33 @@
-import { getTrackBanner, TrackPeek, Station, StationRequestedTrack, AudienceType, TrackWithRequester, BoomBoxTrack, Audience } from "@seamless-medley/core";
+import {
+  getTrackBanner,
+  TrackPeek,
+  Station,
+  StationRequestedTrack,
+  AudienceType,
+  TrackWithRequester,
+  BoomBoxTrack,
+  Audience
+} from "@seamless-medley/core";
+
 import {
   BaseInteraction,
-  CommandInteraction,
+  InteractionDeferReplyOptions,
   InteractionEditReplyOptions,
   InteractionReplyOptions,
   InteractionResponse,
-  InteractionType,
   Message,
-  MessageComponentInteraction,
   MessagePayload,
   PermissionResolvable,
   PermissionsBitField
 } from "discord.js";
 
-import { castArray, isString, maxBy, padStart } from "lodash";
+import { castArray, isString, maxBy, noop, padStart } from "lodash";
 import { MedleyAutomaton } from "../automaton";
 import { ansi, Colors, ColorsAndFormat, Formats, simpleFormat } from "../format/ansi";
 import { formatMention, MentionType } from "../format/format";
-import { CommandError, Strings } from "./type";
+import { AutomatonCommandError, CommandError, GuardError, Strings } from "./type";
 
 export const maxSelectMenuOptions = 25;
-
-export type ReplyableInteraction = CommandInteraction | MessageComponentInteraction;
 
 export function makeCodeBlockMessage(s: string | Strings, lang: string): Strings {
   const items = castArray(s);
@@ -47,10 +53,25 @@ export function makeColoredMessage(color: ColorsAndFormat, s: string | Strings) 
   return makeAnsiCodeBlock(formatted).join('\n')
 }
 
-export const reply = async (interaction: ReplyableInteraction, options: string | MessagePayload | InteractionReplyOptions | InteractionEditReplyOptions) =>
-  !interaction.replied && !interaction.deferred
+export const deferReply = async (interaction: BaseInteraction, options?: InteractionDeferReplyOptions) => {
+  if (!interaction.isRepliable()) {
+    return;
+  }
+
+  if (!interaction.deferred && !interaction.replied) {
+    return interaction.deferReply(options).catch(noop);
+  }
+}
+
+export const reply = async (interaction: BaseInteraction, options: string | MessagePayload | InteractionReplyOptions | InteractionEditReplyOptions) => {
+  if (!interaction.isRepliable()) {
+    return;
+  }
+
+  return !interaction.replied && !interaction.deferred
     ? interaction.reply(options as string | MessagePayload | InteractionReplyOptions)
     : interaction.editReply(options);
+}
 
 type DeclareOptions = {
   ephemeral?: boolean;
@@ -60,7 +81,7 @@ type DeclareOptions = {
   }
 }
 
-type SimpleDeclareFn = (interaction: ReplyableInteraction, s: string | Strings, options?: DeclareOptions) => Promise<Message<boolean> | InteractionResponse<boolean>>;
+type SimpleDeclareFn = (interaction: BaseInteraction, s: string | Strings, options?: DeclareOptions) => Promise<void | Message<boolean> | InteractionResponse<boolean>>;
 
 export const joinStrings = (s: string | Strings) => castArray(s).filter(isString).join('\n');
 
@@ -87,10 +108,6 @@ export function permissionGuard(permissions: PermissionsBitField | null, perm: P
   }
 }
 
-export function isReplyable(interaction: BaseInteraction): interaction is ReplyableInteraction {
-  return interaction.type === InteractionType.ApplicationCommand || interaction.type === InteractionType.MessageComponent;
-}
-
 export function guildIdGuard(interaction: BaseInteraction): string {
 
   const { guildId } = interaction;
@@ -102,19 +119,19 @@ export function guildIdGuard(interaction: BaseInteraction): string {
   return guildId;
 }
 
-export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseInteraction): { guildId: string, station: Station } {
+export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseInteraction, errorMessage?: string): { guildId: string, station: Station } {
   const guildId = guildIdGuard(interaction);
 
   const state = automaton.getGuildState(guildId);
 
   if (!state) {
-    throw new CommandError('Unknown guild ' + interaction.guild?.name);
+    throw new AutomatonCommandError(automaton, 'Unknown guild ' + interaction.guild?.name);
   }
 
   const station = state.tunedStation;
 
   if (!station) {
-    throw new CommandError('No station linked');
+    throw new GuardError(automaton, errorMessage ?? 'No station linked');
   }
 
   return {

@@ -109,4 +109,12 @@ export type CommandDescriptor = {
 
 export class CommandError extends Error { };
 
+export class AutomatonCommandError extends CommandError {
+  constructor(readonly automaton: MedleyAutomaton, message?: string, options?: ErrorOptions) {
+    super(message, options)
+  }
+};
+
+export class GuardError extends AutomatonCommandError { }
+
 export type Strings = (string | undefined)[];

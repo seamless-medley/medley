@@ -582,33 +582,20 @@ export class GuildState {
             return;
           }
 
-          const embed = new EmbedBuilder();
+          const dedicatedTracks = await station.findTracksByComment(searchKey, id);
 
-          if (info.image) {
-            embed.setThumbnail(info.image);
-          }
-
-          const tracks = await station.findTracksByComment(searchKey, id);
-
-          if (tracks.length < 1) {
-            const searchResult = await station.search({
-              q: {
-                title: info.title,
-                artist: info.artist
-              },
-              limit: 1,
-              noHistory: true
-            });
-
-            tracks.push(...searchResult);
-          }
-
-          const [track] = sortBy(tracks, t => t.collection.options.auxiliary ? 1 : 0);
+          const [track] = sortBy(dedicatedTracks, t => t.collection.options.auxiliary ? 1 : 0);
 
           if (track) {
             const { id: trackId, extra } = track;
 
             const { title = info.title || 'Unknown', artist = info.artist || 'Unknown' } = extra?.tags ?? {};
+
+            const embed = new EmbedBuilder();
+
+            if (info.image) {
+              embed.setThumbnail(info.image);
+            }
 
             embed
               .setTitle('Found a dedicated track for this link')
@@ -633,6 +620,33 @@ export class GuildState {
                       .setLabel('Make a request')
                       .setStyle(ButtonStyle.Primary)
                       .setCustomId(`request:track:${trackId}`)
+                  )
+              ]
+            }
+          }
+
+          // Search and show the potentials
+          const searchResult = await station.search({
+            q: {
+              title: info.title,
+              artist: info.artist
+            },
+            limit: 1,
+            noHistory: true
+          });
+
+          if (searchResult.length) {
+            return {
+              embeds: [new EmbedBuilder()
+                .setTitle(`Found ${searchResult.length} potential track(s) for this title`)
+              ],
+              components: [
+                new ActionRowBuilder<MessageActionRowComponentBuilder>()
+                  .addComponents(
+                    new ButtonBuilder()
+                      .setLabel('Search')
+                      .setStyle(ButtonStyle.Primary)
+                      .setCustomId(`request:cross_search`)
                   )
               ]
             }
@@ -680,7 +694,7 @@ export class GuildState {
                     new ButtonBuilder()
                       .setLabel('Make a request')
                       .setStyle(ButtonStyle.Primary)
-                      .setCustomId(`request:search:artist$${info.artist}`)
+                      .setCustomId(`request:search:artist$${info.artist}`.slice(0, 100))
                   )
               ]
             }

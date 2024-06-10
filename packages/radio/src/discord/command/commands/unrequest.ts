@@ -1,8 +1,8 @@
 import { parse as parsePath } from 'node:path';
-import { CommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageActionRowComponentBuilder, StringSelectMenuBuilder } from "discord.js";
+import { ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageActionRowComponentBuilder, StringSelectMenuBuilder } from "discord.js";
 import { chain, truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, reply, makeAnsiCodeBlock, joinStrings } from "../utils";
+import { guildStationGuard, reply, makeAnsiCodeBlock, joinStrings, deferReply } from "../utils";
 import { AudienceType, BoomBoxTrack, TrackWithRequester, getTrackBanner, isRequestTrack, makeAudience } from '@seamless-medley/core';
 import { ansi } from '../../format/ansi';
 import { interact } from '../interactor';
@@ -15,7 +15,7 @@ const declaration: SubCommandLikeOption = {
 
 const onGoing = new Set<string>();
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
   const requests = station.getRequestsOf(
@@ -34,7 +34,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     return;
   }
 
-  await interaction.deferReply();
+  await deferReply(interaction);
 
   const selections = requests.slice(0, 25).map(request => ({
     label: truncate(request.extra?.tags?.title || parsePath(request.path).name, { length: 100 }),

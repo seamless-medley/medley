@@ -8,7 +8,7 @@ import {
   StringSelectMenuBuilder,
 } from "discord.js";
 
-import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply, warn } from "../../utils";
+import { deferReply, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply, warn } from "../../utils";
 import { isString, range, startCase } from "lodash";
 import { ansi } from "../../../format/ansi";
 import { onGoing } from "./on-going";
@@ -39,7 +39,7 @@ export async function set(options: SubCommandHandlerOptions) {
     return;
   }
 
-  await interaction.deferReply();
+  await deferReply(interaction);
 
   const selections: Record<string, string | undefined> = {
     collection: station.trackPlay?.track?.collection?.id,

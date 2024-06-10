@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, CommandInteraction, MessageActionRowComponentBuilder, PermissionsBitField, SelectMenuComponentOptionData, StringSelectMenuBuilder } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageActionRowComponentBuilder, PermissionsBitField, SelectMenuComponentOptionData, StringSelectMenuBuilder } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, permissionGuard, warn } from "../utils";
 import { chain, startCase } from "lodash";
@@ -14,7 +14,7 @@ const declaration: SubCommandLikeOption = {
 
 const onGoing = new Set<string>();
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const isOwnerOverride = automaton.owners.includes(interaction.user.id);
 
   if (!isOwnerOverride) {

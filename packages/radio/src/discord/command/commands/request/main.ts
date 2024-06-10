@@ -2,7 +2,6 @@ import {
   AudienceType,
   AudioProperties,
   BoomBoxTrack,
-  BoomBoxTrackExtra,
   getTrackBanner,
   makeAudience,
   MetadataHelper,
@@ -24,20 +23,22 @@ import {
   MessageComponentInteraction,
   ButtonInteraction,
   userMention,
-  CommandInteractionOption
+  RepliableInteraction
 } from "discord.js";
 
 import { chain, chunk, clamp, Dictionary, flatten, fromPairs, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../helpers/emojis";
-import { InteractionHandlerFactory } from "../../type";
-import { deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply, ReplyableInteraction } from "../../utils";
+import { AutomatonCommandError, InteractionHandlerFactory } from "../../type";
+import { declare, deferReply, deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
 import { ansi } from "../../../format/ansi";
 import { getVoteMessage } from "../vote";
 import { interact } from "../../interactor";
-import { groupByAsync } from "@seamless-medley/utils";
+import { groupByAsync, waitFor } from "@seamless-medley/utils";
 import { MedleyAutomaton } from "../../../automaton";
+import { extractSpotifyUrl, fetchSpotifyInfo } from "../../../helpers/spotify";
+import { GuildState } from "../../../automaton/guild-state";
 
 type Selection = {
   title: string;
@@ -136,7 +137,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
   const noSweep = interaction.options.getBoolean('no-sweep') ?? undefined;
 
-  await handleRequestCommand({
+  return handleRequestCommand({
     automaton,
     interaction,
     artist,
@@ -148,14 +149,25 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
 export type RequestCommandOptions = {
   automaton: MedleyAutomaton;
-  interaction: ReplyableInteraction;
+  interaction: RepliableInteraction;
   artist?: string;
   title?: string;
   query?: string;
   noSweep?: boolean;
+  noHistory?: boolean;
 }
 
-export const handleRequestCommand = async ({ automaton, interaction, artist, title, query, noSweep }: RequestCommandOptions) => {
+export const handleRequestCommand = async (options: RequestCommandOptions) => {
+  const {
+    automaton,
+    interaction,
+    artist,
+    title,
+    query,
+    noSweep,
+    noHistory
+  } = options;
+
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
   if ([artist, title, query].every(isUndefined)) {
@@ -170,7 +182,7 @@ export const handleRequestCommand = async ({ automaton, interaction, artist, tit
     return;
   }
 
-  await interaction.deferReply();
+  await deferReply(interaction);
 
   const results = await station.search({
     q: {
@@ -179,7 +191,8 @@ export const handleRequestCommand = async ({ automaton, interaction, artist, tit
       query
     },
     // 10 pages
-    limit: maxSelectMenuOptions * 10
+    limit: maxSelectMenuOptions * 10,
+    noHistory
   });
 
   if (results.length < 1) {
@@ -194,12 +207,15 @@ export const handleRequestCommand = async ({ automaton, interaction, artist, tit
       .filter(t => !!t)
       .join(' OR ');
 
-    reply(interaction, joinStrings([
-      'Your search:',
-      ...makeAnsiCodeBlock(queryString),
-      'Did not match any tracks'
-    ]))
-    return;
+    return declare(
+      interaction,
+      joinStrings([
+        'Your search:',
+        ...makeAnsiCodeBlock(queryString),
+        'Did not match any tracks'
+      ]),
+      { mention: { type: 'user', subject: interaction.user.id } }
+    )
   }
 
   const groupedSelections = chain(results)
@@ -255,7 +271,7 @@ export const handleRequestCommand = async ({ automaton, interaction, artist, tit
         const originalArtist = sel.track.extra?.tags?.originalArtist;
 
         const description = truncateFirst(
-          (sel.artist ?? 'Unknown Artist') + originalArtist ? ` (Original by ${originalArtist})` : ''
+          (sel.artist ?? 'Unknown Artist') + (originalArtist ? ` (Original by ${originalArtist})` : '')
         );
 
         return {
@@ -617,5 +633,48 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         query: params.query
       });
     }
+
+    case 'cross_search': {
+      if (!interaction.channel) {
+        return;
+      }
+
+      const originalMessage = await interaction.message.fetchReference()
+        .then(ref => ref.fetch())
+        .catch(() => undefined);
+
+      if (!originalMessage) {
+        return;
+      }
+
+      const [matched] = extractSpotifyUrl(originalMessage.content);
+      if (!matched?.url || matched?.paths?.[0] !== 'track') {
+        return
+      }
+
+      const info = await fetchSpotifyInfo(matched.url.href);
+
+      if (!info || info.type !== 'track' || !info.artist || !info.title) {
+        return;
+      }
+
+      return handleRequestCommand({
+        automaton,
+        interaction,
+        artist: info.artist,
+        title: info.title,
+        noHistory: true
+      })
+      .catch(e => new CrossSearchError(automaton, guildId, e.message));
+    }
+  }
+}
+
+class CrossSearchError extends AutomatonCommandError {
+  readonly state?: GuildState;
+
+  constructor(automaton: MedleyAutomaton, guildId: string, message: string) {
+    super(automaton, message);
+    this.state = automaton.getGuildState(guildId);
   }
 }
