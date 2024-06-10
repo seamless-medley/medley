@@ -1,6 +1,6 @@
-import { ActionRowBuilder, CollectedMessageInteraction, CommandInteraction, InteractionCollector, InteractionReplyOptions, MappedInteractionTypes, Message, MessageActionRowComponentBuilder, MessageComponentInteraction, time as formatTime, userMention } from "discord.js";
+import { ActionRowBuilder, BaseInteraction, CollectedMessageInteraction, InteractionCollector, InteractionReplyOptions, MappedInteractionTypes, Message, MessageActionRowComponentBuilder, MessageComponentInteraction, RepliableInteraction, time as formatTime, userMention } from "discord.js";
 import { MedleyAutomaton } from "../automaton";
-import { ReplyableInteraction, guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
+import { guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
 import { noop } from "lodash";
 import { Strings } from "./type";
 
@@ -25,7 +25,7 @@ export type InteractorHookParams = {
 export type InteractorOptions<D = unknown> = {
   automaton: MedleyAutomaton;
   commandName: string;
-  interaction: ReplyableInteraction,
+  interaction: RepliableInteraction,
   onGoing?: Set<string>;
   ttl?: number;
   data?: D;
@@ -66,6 +66,7 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
   const buildMessage: InteractorMessageBuilder = async () => ({
     fetchReply: true,
     content: joinStrings([
+      !interaction.isChatInputCommand() ? `${userMention(issuer)} ` : undefined,
       makeTimeout(),
       ...await makeCaption(options.data)
     ]),

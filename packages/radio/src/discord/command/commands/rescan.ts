@@ -1,6 +1,6 @@
 import { CommandInteraction, blockQuote, inlineCode, unorderedList } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { deny, guildStationGuard, joinStrings, reply } from "../utils";
+import { deferReply, deny, guildStationGuard, joinStrings, reply } from "../utils";
 import { LibraryRescanStats, MusicTrackCollection, Station } from "@seamless-medley/core";
 import { once } from "lodash";
 
@@ -18,9 +18,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     return;
   }
 
-  await interaction.deferReply({
-    ephemeral: true
-  });
+  await deferReply(interaction, { ephemeral: true });
 
   const { station } = guildStationGuard(automaton, interaction);
 

@@ -7,7 +7,7 @@ import {
   StringSelectMenuBuilder,
 } from "discord.js";
 
-import { guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply } from "../../utils";
+import { deferReply, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply } from "../../utils";
 import { onGoing } from "./on-going";
 import { getLatchSessionsListing } from "./list";
 import { interact } from "../../interactor";
@@ -37,7 +37,7 @@ export async function remove(options: SubCommandHandlerOptions) {
     return;
   }
 
-  await interaction.deferReply();
+  await deferReply(interaction);
 
   const selections = sessions.slice(0, 25).map(session => ({
     label: `${session.count}/${session.max} from ${session.collection.extra.description} collection`,

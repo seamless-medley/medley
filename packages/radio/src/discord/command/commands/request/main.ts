@@ -2,7 +2,6 @@ import {
   AudienceType,
   AudioProperties,
   BoomBoxTrack,
-  BoomBoxTrackExtra,
   getTrackBanner,
   makeAudience,
   MetadataHelper,
@@ -24,20 +23,22 @@ import {
   MessageComponentInteraction,
   ButtonInteraction,
   userMention,
-  CommandInteractionOption
+  RepliableInteraction
 } from "discord.js";
 
 import { chain, chunk, clamp, Dictionary, flatten, fromPairs, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
 import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../helpers/emojis";
-import { InteractionHandlerFactory } from "../../type";
-import { deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply, ReplyableInteraction } from "../../utils";
+import { AutomatonCommandError, InteractionHandlerFactory } from "../../type";
+import { declare, deferReply, deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
 import { ansi } from "../../../format/ansi";
 import { getVoteMessage } from "../vote";
 import { interact } from "../../interactor";
-import { groupByAsync } from "@seamless-medley/utils";
+import { groupByAsync, waitFor } from "@seamless-medley/utils";
 import { MedleyAutomaton } from "../../../automaton";
+import { extractSpotifyUrl, fetchSpotifyInfo } from "../../../helpers/spotify";
+import { GuildState } from "../../../automaton/guild-state";
 
 type Selection = {
   title: string;
@@ -136,7 +137,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
   const noSweep = interaction.options.getBoolean('no-sweep') ?? undefined;
 
-  await handleRequestCommand({
+  return handleRequestCommand({
     automaton,
     interaction,
     artist,
@@ -148,7 +149,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
 
 export type RequestCommandOptions = {
   automaton: MedleyAutomaton;
-  interaction: ReplyableInteraction;
+  interaction: RepliableInteraction;
   artist?: string;
   title?: string;
   query?: string;
@@ -170,7 +171,7 @@ export const handleRequestCommand = async ({ automaton, interaction, artist, tit
     return;
   }
 
-  await interaction.deferReply();
+  await deferReply(interaction);
 
   const results = await station.search({
     q: {
@@ -194,12 +195,15 @@ export const handleRequestCommand = async ({ automaton, interaction, artist, tit
       .filter(t => !!t)
       .join(' OR ');
 
-    reply(interaction, joinStrings([
-      'Your search:',
-      ...makeAnsiCodeBlock(queryString),
-      'Did not match any tracks'
-    ]))
-    return;
+    return declare(
+      interaction,
+      joinStrings([
+        'Your search:',
+        ...makeAnsiCodeBlock(queryString),
+        'Did not match any tracks'
+      ]),
+      { mention: { type: 'user', subject: interaction.user.id } }
+    )
   }
 
   const groupedSelections = chain(results)

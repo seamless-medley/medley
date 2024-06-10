@@ -3,8 +3,8 @@ import { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction
 import { createLogger } from "@seamless-medley/logging";
 
 import { all as descriptors  } from './commands';
-import { deny, isReplyable, makeColoredMessage } from "./utils";
 import { Command, CommandError, CommandType, GuardError, GuildHandler, InteractionHandler, SubCommandLikeOption } from "./type";
+import { deny, makeColoredMessage } from "./utils";
 import { MedleyAutomaton } from "../automaton";
 
 export const createCommandDeclarations = (name: string = 'medley', description: string = 'Medley'): Command => {
@@ -84,7 +84,9 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
 
         interaction.reply({
           content: makeColoredMessage('red', `Sorry I don't understand that`)
-        })
+        });
+
+        return;
       }
 
       if (interaction.isButton()) {
@@ -94,7 +96,9 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
 
         const handler = commandHandlers.get(tag);
 
-        return await handler?.button?.(interaction, ...params);
+        if (handler?.button) {
+          return await handler.button(interaction, ...params);
+        }
       }
 
       if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
@@ -104,12 +108,12 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
 
         const handler = commandHandlers.get(interaction.options.getSubcommand().toLowerCase());
 
-        if (!handler) {
+        if (!handler?.autocomplete) {
           interaction.respond([]);
           return;
         }
 
-        return await handler.autocomplete?.(interaction);
+        return await handler.autocomplete(interaction);
       }
     }
     catch (e) {
@@ -121,7 +125,7 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
         );
       }
 
-      if (isReplyable(interaction)) {
+      if (interaction.isRepliable()) {
         if (e instanceof CommandError) {
           deny(interaction, `Command Error: ${e.message}`).catch(noop);
           return;

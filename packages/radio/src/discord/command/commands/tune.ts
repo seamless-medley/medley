@@ -9,7 +9,8 @@ import {
   StringSelectMenuBuilder,
   StringSelectMenuInteraction,
   SelectMenuComponentOptionData,
-  hyperlink
+  hyperlink,
+  RepliableInteraction
 } from "discord.js";
 import { stubTrue } from "lodash";
 
@@ -86,7 +87,7 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
 
 const onGoing = new Set<string>();
 
-export async function createStationSelector(automaton: MedleyAutomaton, interaction: CommandInteraction, onDone?: (ok: boolean) => Promise<any>) {
+export async function createStationSelector(automaton: MedleyAutomaton, interaction: RepliableInteraction, onDone?: (ok: boolean) => Promise<any>) {
   const stations = automaton.stations.all();
 
   if (stations.length <= 0) {
@@ -149,7 +150,7 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
   });
 }
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<RepliableInteraction> = (automaton) => (interaction) => {
   const isOwnerOverride = automaton.owners.includes(interaction.user.id);
 
   if (!isOwnerOverride) {

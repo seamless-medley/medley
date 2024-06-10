@@ -2,7 +2,7 @@ import { BoomBoxCoverAnyLyrics, getTrackBanner, MetadataHelper, searchLyrics, St
 import { ButtonInteraction, Message, AttachmentBuilder, EmbedBuilder, hyperlink, messageLink, inlineCode } from "discord.js";
 import { findLast } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory } from "../type";
-import { deny, guildStationGuard, joinStrings, reply, warn } from "../utils";
+import { deferReply, deny, guildStationGuard, joinStrings, reply, warn } from "../utils";
 import { LyricsSearchResult } from "@seamless-medley/core/src/metadata/lyrics/types";
 import { lyricsToText, parseLyrics } from "@seamless-medley/utils";
 
@@ -48,7 +48,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
       const title = trackExtra.tags.title;
 
       if (artist && title) {
-        await interaction.deferReply();
+        await deferReply(interaction);
 
         searchResult = await searchLyrics(artist, title).catch(() => undefined);
 
