@@ -1,10 +1,10 @@
-import { map } from "lodash";
+import { map, noop } from "lodash";
 import { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Interaction, InteractionType } from "discord.js";
 import { createLogger } from "@seamless-medley/logging";
 
 import { all as descriptors  } from './commands';
-import { Command, CommandError, CommandType, GuildHandler, InteractionHandler, SubCommandLikeOption } from "./type";
 import { deny, isReplyable, makeColoredMessage } from "./utils";
+import { Command, CommandError, CommandType, GuardError, GuildHandler, InteractionHandler, SubCommandLikeOption } from "./type";
 import { MedleyAutomaton } from "../automaton";
 
 export const createCommandDeclarations = (name: string = 'medley', description: string = 'Medley'): Command => {
@@ -113,7 +113,7 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
       }
     }
     catch (e) {
-      if (!(e instanceof CommandError)) {
+      if (!(e instanceof GuardError)) {
         logger.error(e,
           interaction.isChatInputCommand()
             ? `Error in ${interaction.options.getSubcommand()} command`
@@ -123,11 +123,11 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
 
       if (isReplyable(interaction)) {
         if (e instanceof CommandError) {
-          deny(interaction, `Command Error: ${e.message}`, { ephemeral: true });
+          deny(interaction, `Command Error: ${e.message}`).catch(noop);
           return;
         }
 
-        deny(interaction, 'Internal Error', { ephemeral: true });
+        deny(interaction, 'Internal Error').catch(noop);
         return;
       }
     }

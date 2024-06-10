@@ -17,7 +17,7 @@ import { castArray, isString, maxBy, padStart } from "lodash";
 import { MedleyAutomaton } from "../automaton";
 import { ansi, Colors, ColorsAndFormat, Formats, simpleFormat } from "../format/ansi";
 import { formatMention, MentionType } from "../format/format";
-import { CommandError, Strings } from "./type";
+import { AutomatonCommandError, CommandError, GuardError, Strings } from "./type";
 
 export const maxSelectMenuOptions = 25;
 
@@ -102,19 +102,19 @@ export function guildIdGuard(interaction: BaseInteraction): string {
   return guildId;
 }
 
-export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseInteraction): { guildId: string, station: Station } {
+export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseInteraction, errorMessage?: string): { guildId: string, station: Station } {
   const guildId = guildIdGuard(interaction);
 
   const state = automaton.getGuildState(guildId);
 
   if (!state) {
-    throw new CommandError('Unknown guild ' + interaction.guild?.name);
+    throw new AutomatonCommandError(automaton, 'Unknown guild ' + interaction.guild?.name);
   }
 
   const station = state.tunedStation;
 
   if (!station) {
-    throw new CommandError('No station linked');
+    throw new GuardError(automaton, errorMessage ?? 'No station linked');
   }
 
   return {
