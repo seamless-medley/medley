@@ -326,7 +326,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
   #lastRequestId = 0;
 
   async request(track: BoomBoxTrack, requestedBy?: R): Promise<TrackIndex<TrackWithRequester<BoomBoxTrack, R>> | undefined> {
-    const existing = this.#requests.fromId(track.id);
+    const existing = this.#requests.fromTrack(track);
 
     if (existing) {
       existing.priority = (existing.priority || 0) + 1;
