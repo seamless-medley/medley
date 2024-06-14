@@ -1,5 +1,5 @@
 import { MetadataFields } from "@seamless-medley/core";
-import { APIEmbedField, bold, hyperlink, quote, userMention } from "discord.js";
+import { APIEmbedField, bold, hyperlink, inlineCode, quote, userMention } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase } from "lodash";
 import { formatDuration } from "../../format/format";
 import { CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
@@ -64,16 +64,21 @@ export class Normal extends TrackMessageCreator {
       value: data.collection
     });
 
-
     if (data.latch) {
       const { order: [count, max] } = data.latch;
       embed.addFields({ name: 'Latch', value: `${count} of ${max}` });
     }
 
-    const requesters = extractRequestersForGuild(guildId, requestedBy || []);
-
     if (requestedBy?.length) {
-      const mentions =  requesters.length > 0 ? requesters.map(userMention).join(' ') : quote('Someone else');
+      const requesters = extractRequestersForGuild(guildId, requestedBy);
+
+      const mentions = [
+          requesters.map(userMention).join(' '),
+          requestedBy.length > requesters.length
+            ? inlineCode(`${requestedBy.length - requesters.length} others`)
+            : undefined
+        ].filter(Boolean).join(' and ')
+
       embed.addFields({ name: 'Requested by', value: mentions });
     }
 
