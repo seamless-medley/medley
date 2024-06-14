@@ -516,6 +516,21 @@ export class TrackCollection<
     return this.trackIdMap.get(id);
   }
 
+  fromMusicId(musicId: string): T | undefined {
+    return this.find(t => t.musicId === musicId);
+  }
+
+  fromTrack(track: Track<any>): T | undefined {
+    const found = this.fromId(track.id);
+    if (found) {
+      return found;
+    }
+
+    if (track.musicId) {
+      return this.fromMusicId(track.musicId);
+    }
+  }
+
   filter(fn: (track: T) => boolean) {
     return this.tracks.filter(fn);
   }
