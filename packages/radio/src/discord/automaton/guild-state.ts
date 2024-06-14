@@ -172,23 +172,25 @@ export class GuildState {
   }
 
   async tune(station: Station): Promise<Station | undefined> {
+    const { guildId, adapter, stationLink: oldLink } = this;
+
     this.preferredStation = station;
+    const newLink = await this.createStationLink();
 
-    const { guildId, adapter, stationLink } = this;
-    const oldStation = stationLink?.station;
+    if (newLink && this.#voiceConnector) {
+      if (!newLink.exciter.started) {
+        await newLink.exciter.start(this.adapter.getAudioDispatcher());
+      }
 
-    const link = await this.createStationLink();
-
-    if (link && this.#voiceConnector) {
-      link.exciter.addCarrier(this.#voiceConnector);
+      newLink.exciter.addCarrier(this.#voiceConnector);
     }
 
     this.#updateAudiences();
 
-    const newStation = link?.station;
+    const newStation = newLink?.station;
 
     if (newStation) {
-      adapter.getAutomaton().emit('stationTuned', guildId, oldStation, newStation);
+      adapter.getAutomaton().emit('stationTuned', guildId, oldLink?.station, newStation);
     }
 
     return newStation;
