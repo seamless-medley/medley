@@ -17,7 +17,7 @@ import { createLogger, Logger } from "@seamless-medley/logging";
 
 import { TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
 import { Crate, LatchOptions, LatchSession } from "../crate";
-import { Library, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicTrack, MusicTrackCollection } from "../library";
+import { Library, LibraryStats, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicLibraryEvents, MusicTrack, MusicTrackCollection } from "../library";
 import {
   BoomBox,
   BoomBoxEvents,
@@ -134,6 +134,8 @@ export type StationEvents = {
   collectionRemoved: (collection: StationTrackCollection) => void;
   collectionUpdated: (collection: StationTrackCollection) => void;
   //
+  libraryStats: (stats: LibraryStats) => void;
+  //
   audienceChanged: () => void;
 }
 
@@ -227,6 +229,8 @@ export class Station extends TypedEmitter<StationEvents> {
       this.#musicDb
     );
 
+    this.#library.on('stats', this.#handleLibraryStats);
+
     // Create boombox
     const boombox = new BoomBox<Audience, StationProfile>({
       id: this.id,
@@ -283,6 +287,10 @@ export class Station extends TypedEmitter<StationEvents> {
       ...levels,
       reduction
     }
+  }
+
+  #handleLibraryStats: MusicLibraryEvents['stats'] = (stats) => {
+    this.emit('libraryStats', stats);
   }
 
   #handleTrackQueued: BoomBoxEventsForStation['trackQueued'] = (track: StationTrack) => {
@@ -894,6 +902,10 @@ export class Station extends TypedEmitter<StationEvents> {
     }
 
     return this.#library.rescan(full, scanningCb);
+  }
+
+  get libraryStats() {
+    return this.#library.stats;
   }
 }
 
