@@ -93,14 +93,14 @@ export const declare: SimpleDeclareFn = (interaction, s, options) => reply(inter
   ephemeral: options?.ephemeral
 });
 
-export const accept: SimpleDeclareFn = (interaction, s, ephemeral?) =>
-  declare(interaction, makeColoredMessage('blue', s), ephemeral);
+export const accept: SimpleDeclareFn = (interaction, s, options?) =>
+  declare(interaction, makeColoredMessage('blue', s), options);
 
-export const deny: SimpleDeclareFn = (interaction, s, ephemeral?) =>
-  declare(interaction, makeColoredMessage('red', s), ephemeral);
+export const deny: SimpleDeclareFn = (interaction, s, options?) =>
+  declare(interaction, makeColoredMessage('red', s), options);
 
-export const warn: SimpleDeclareFn = (interaction, s, ephemeral?) =>
-  declare(interaction, makeColoredMessage('yellow', s), ephemeral);
+export const warn: SimpleDeclareFn = (interaction, s, options?) =>
+  declare(interaction, makeColoredMessage('yellow', s), options);
 
 export function permissionGuard(permissions: PermissionsBitField | null, perm: PermissionResolvable, checkAdmin: boolean = true) {
   if (permissions && !permissions.any(perm, checkAdmin)) {
