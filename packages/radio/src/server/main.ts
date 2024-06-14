@@ -181,7 +181,7 @@ async function main() {
         intents: [GatewayIntentBits.Guilds]
       });
 
-      client.login(botToken)
+      await client.login(botToken);
 
       await MedleyAutomaton.registerGuildCommands({
         botToken,
