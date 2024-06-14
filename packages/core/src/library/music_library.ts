@@ -34,7 +34,7 @@ type IndexInfo<O> = {
   succeeded?: boolean;
 }
 
-type Stats = Record<'discovered' | 'indexing' | 'indexed', number>;
+export type LibraryStats = Record<'discovered' | 'indexing' | 'indexed', number>;
 
 export type LibraryRescanStats<O> = RescanStats & {
   elapsedTime: number;
@@ -42,7 +42,7 @@ export type LibraryRescanStats<O> = RescanStats & {
 }
 
 export interface MusicLibraryEvents {
-  stats(stats: Stats): void;
+  stats(stats: LibraryStats): void;
 }
 
 export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicLibraryEvents> {
@@ -60,13 +60,13 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     this.#logger = createLogger({ name: 'library', id: this.id });
   }
 
-  #stats: Stats = {
+  #stats: LibraryStats = {
     discovered: 0,
     indexing: 0,
     indexed: 0
   }
 
-  private set stats(newStats: Partial<Stats>) {
+  private set stats(newStats: Partial<LibraryStats>) {
     this.#stats = {
       ...this.#stats,
       ...newStats
