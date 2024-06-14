@@ -332,7 +332,7 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
       existing.priority = (existing.priority || 0) + 1;
 
       if (requestedBy) {
-        existing.requestedBy.push(requestedBy)
+        existing.requestedBy.push(requestedBy);
       }
 
       this.sortRequests();

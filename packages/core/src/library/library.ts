@@ -141,6 +141,6 @@ export class Library<T extends { id: ID }, Events extends ListenerSignature<Even
   }
 
   last(): T | undefined {
-    return super.last()
+    return super.last();
   }
 }
