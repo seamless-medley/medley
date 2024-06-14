@@ -1,8 +1,14 @@
 import { ListenerSignature, TypedEmitter } from "tiny-typed-emitter";
 
-type IDOf<T> = T extends { id: infer ID } ? ID : any;
+type IDOf<T> = T extends { id: infer ID } ? ID : never;
 
-export interface IReadonlyLibrary<T extends { id: ID }, ID = IDOf<T>> extends Iterable<T> {
+type LibraryEvents<E extends ListenerSignature<any>, T> = E & {
+  changed: () => void;
+  add: (element: T) => void;
+  delete: (element: T) => void;
+}
+
+export interface IReadonlyLibrary<T extends { id: ID }, Events extends ListenerSignature<Events> = {}, ID = IDOf<T>> extends Iterable<T> {
   get size(): number;
 
   has(id: ID): boolean;
@@ -12,9 +18,13 @@ export interface IReadonlyLibrary<T extends { id: ID }, ID = IDOf<T>> extends It
   all(): T[];
 
   first(): T | undefined;
+
+  on<U extends keyof LibraryEvents<Events, T>>(event: U, listener: LibraryEvents<Events, T>[U]): this;
+
+  off<U extends keyof LibraryEvents<Events, T>>(event: U, listener: LibraryEvents<Events, T>[U]): this;
 }
 
-export class BaseLibrary<T extends { id: ID }, Events extends ListenerSignature<Events> = {}, ID = IDOf<T>> extends TypedEmitter<Events> implements Iterable<T> {
+export class BaseLibrary<T extends { id: ID }, Events extends ListenerSignature<Events> = {}, ID = IDOf<T>> extends TypedEmitter<LibraryEvents<Events, T>> implements Iterable<T> {
   protected elements = new Map<ID, T>();
 
   constructor(...elements: T[]) {
@@ -31,14 +41,40 @@ export class BaseLibrary<T extends { id: ID }, Events extends ListenerSignature<
   }
 
   protected add(...elements: T[]) {
+    let changed = false;
+
     for (const e of elements) {
+      if (!this.elements.has(e.id)) {
+        (this.emit as any)('add', e);
+        changed = true;
+      }
+      else if (this.elements.get(e.id) !== e) {
+        changed = true;
+      }
+
       this.elements.set(e.id, e);
+    }
+
+    if (changed) {
+      (this.emit as any)('changed');
     }
   }
 
-  protected remove(...elements: (T | ID)[]) {
+  protected remove(...elements: Array<T | ID>) {
+    let changed = false;
+
     for (const e of elements) {
-      this.elements.delete(this.isType(e) ? e.id : e);
+      const key = this.isType(e) ? e.id : e;
+      const item = this.elements.get(key);
+
+      if (this.elements.delete(key)) {
+        (this.emit as any)('delete', item);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      (this.emit as any)('changed');
     }
   }
 
@@ -71,7 +107,7 @@ export class BaseLibrary<T extends { id: ID }, Events extends ListenerSignature<
   }
 }
 
-export class Library<T extends { id: ID }, Events extends ListenerSignature<Events>, ID = IDOf<T>> extends BaseLibrary<T, Events, ID> implements IReadonlyLibrary<T, ID> {
+export class Library<T extends { id: ID }, Events extends ListenerSignature<Events>, ID = IDOf<T>> extends BaseLibrary<T, Events, ID> implements IReadonlyLibrary<T, Events, ID> {
   get size() {
     return super.size;
   }
