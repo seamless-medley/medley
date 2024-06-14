@@ -631,7 +631,6 @@ export class GuildState {
               title: info.title,
               artist: info.artist
             },
-            limit: 1,
             noHistory: true
           });
 
