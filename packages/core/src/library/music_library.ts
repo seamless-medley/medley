@@ -100,6 +100,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     }
   }
 
+  #collectionEventHandlers = new WeakMap<WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>, Record<any, Function>>();
+
   #handleTrackAddition = (collection: WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>) => (tracks: Array<MusicTrack<O>>, chunkIndex: number, totalChunks: number) => {
     this.stats = {
       discovered: this.#stats.discovered + tracks.length
@@ -166,12 +168,29 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     }))
   }
 
+  #handleCollectionScanStart = (collection: WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>) => () => {
+    this.#logger.info('Start scanning collection \`%s\`', collection.extra.description);
+  }
+
+  #handleCollectionScanDone = (collection: WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>) => () => {
+    this.#logger.info('Finish scanning collection \'%s\'', collection.extra.description);
+  }
+
   remove(...collections: Array<string | MusicTrackCollection<O>>) {
     for (const c of collections) {
       const collection =  (typeof c === 'string') ? this.get(c) : c;
 
       if (collection) {
         collection.unwatchAll();
+
+        const handlers = this.#collectionEventHandlers.get(collection);
+        if (handlers) {
+          for (const [event, handler] of Object.entries(handlers)) {
+            collection.off(event as any, handler);
+          }
+        }
+
+        this.#collectionEventHandlers.delete(collection);
       }
     }
 
@@ -258,19 +277,20 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
         resolve(newCollection);
       });
 
-      newCollection.on('tracksAdd', this.#handleTrackAddition(newCollection));
-      newCollection.on('tracksRemove', this.#handleTrackRemoval);
-      newCollection.on('tracksUpdate', this.#handleTrackUpdates);
+      const handlers: Record<string, Function> = {
+        tracksAdd: this.#handleTrackAddition(newCollection),
+        tracksRemove: this.#handleTrackRemoval,
+        tracksUpdate: this.#handleTrackUpdates,
+        scan: this.#handleCollectionScanStart(newCollection),
+        'scan-done': this.#handleCollectionScanDone(newCollection),
+      }
 
-      newCollection.on('scan' as any, () => {
-        this.#logger.info('Start scanning collection \`%s\`', newCollection.extra.description);
-      });
-
-      newCollection.on('scan-done' as any, () => {
-        this.#logger.info('Finish scanning collection \'%s\'', newCollection.extra.description);
-      });
+      for (const [event, handler] of Object.entries(handlers)) {
+        newCollection.on(event as any, handler);
+      }
 
       this.add(newCollection);
+      this.#collectionEventHandlers.set(newCollection, handlers);
 
       for (const path of paths) {
         newCollection.watch(!isString(path)
