@@ -212,6 +212,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         trackFinished: this.#handleTrackFinished(station),
         trackSkipped: this.#handleTrackSkipped(station),
         collectionChange: this.#handleCollectionChange(station),
+        libraryStats: this.#updateStats
       }
 
       for (const [name, handler] of Object.entries(handlers)) {
@@ -1074,5 +1075,16 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     return url;
   }
+
+  #updateStats =  throttle(() => {
+    const totalTracks = sumBy(this.stations.all(), station => station.libraryStats.indexed ?? 0);
+
+    const formatter = new Intl.NumberFormat();
+
+    this.#client.user?.setActivity({
+      name: `Serving ${formatter.format(totalTracks)} tracks from ${formatter.format(this.stations.size)} stations`,
+      type: ActivityType.Custom
+    });
+  }, 5000);
 }
 
