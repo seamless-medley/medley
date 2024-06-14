@@ -7,7 +7,7 @@ import {
   OAuth2Guild,
   Snowflake, ChannelType, PermissionsBitField, PartialMessage, TextChannel, MessageReaction, PartialMessageReaction, Emoji,
   MessageType,
-  EmbedBuilder
+  ActivityType
 } from "discord.js";
 
 import {
@@ -34,6 +34,7 @@ import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
 import { AudioDispatcher } from "../../audio/exciter";
 import { CreatorNames } from "../trackmessage/creator";
 import { Logger, createLogger } from "@seamless-medley/logging";
+import { sumBy, throttle } from "lodash";
 
 export type GuildSpecificConfig = {
   autotune?: string;
@@ -133,6 +134,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #audioDispatcher: AudioDispatcher;
 
+  #stationEventHandlers = new Map<Station, Partial<StationEvents>>;
+
   constructor(readonly stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
     super();
 
@@ -202,12 +205,20 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#client.on('messageReactionRemoveAll', this.#handleMessageReactionRemoveAll);
 
     for (const station of stations) {
-      station.on('deckStarted', this.#handleDeckStarted(station))
-      station.on('trackStarted', this.#handleTrackStarted(station));
-      station.on('trackActive', this.#handleTrackActive(station));
-      station.on('trackFinished', this.#handleTrackFinished(station));
-      station.on('trackSkipped', this.#handleTrackSkipped(station))
-      station.on('collectionChange', this.#handleCollectionChange(station));
+      const handlers: Partial<StationEvents> = {
+        deckStarted: this.#handleDeckStarted(station),
+        trackStarted: this.#handleTrackStarted(station),
+        trackActive: this.#handleTrackActive(station),
+        trackFinished: this.#handleTrackFinished(station),
+        trackSkipped: this.#handleTrackSkipped(station),
+        collectionChange: this.#handleCollectionChange(station),
+      }
+
+      for (const [name, handler] of Object.entries(handlers)) {
+        station.on(name as any, handler);
+      }
+
+      this.#stationEventHandlers.set(station, handlers);
     }
 
     this.#logger.info('OAUthURL: %s', this.oAuth2Url.toString());
@@ -216,11 +227,17 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       Object.keys(this.#guildConfigs).map(async (guildId) => {
         await this.#autoTuneStation(guildId);
         await this.#autoJoinVoiceChannel(guildId);
-      })
+      });
     });
   }
 
   destroy() {
+    for (const [station, handlers] of this.#stationEventHandlers) {
+      for (const [name, handler] of Object.entries(handlers)) {
+        station.off(name as any, handler);
+      }
+    }
+
     this.#client.destroy();
     this.#audioDispatcher.clear();
   }
