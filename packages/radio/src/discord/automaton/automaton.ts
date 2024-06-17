@@ -226,6 +226,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#logger.info('OAUthURL: %s', this.oAuth2Url.toString());
 
     this.#client.once('ready', async () => {
+      this.#updateStats();
+
       Object.keys(this.#guildConfigs).map(async (guildId) => {
         await this.#autoTuneStation(guildId);
         await this.#autoJoinVoiceChannel(guildId);
@@ -1078,11 +1080,15 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   #updateStats =  throttle(() => {
+    if (!this.#client.user) {
+      return;
+    }
+
     const totalTracks = sumBy(this.stations.all(), station => station.libraryStats.indexed ?? 0);
 
     const formatter = new Intl.NumberFormat();
 
-    this.#client.user?.setActivity({
+    this.#client.user.setActivity({
       name: `Serving ${formatter.format(totalTracks)} tracks from ${formatter.format(this.stations.size)} stations`,
       type: ActivityType.Custom
     });
