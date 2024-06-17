@@ -156,7 +156,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.GuildVoiceStates
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.MessageContent
       ]
     });
 
