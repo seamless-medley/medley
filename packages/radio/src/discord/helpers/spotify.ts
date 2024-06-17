@@ -38,7 +38,11 @@ export const formatSpotifyField = (field: MetadataFields, text: string, id: stri
 }
 
 export const extractSpotifyUrl = (s: string) => chain(s.match(/(https:\/\/open.spotify.com\/[^ ]+)/ig))
-  .map(u => new URL(u))
+  .map((h) => {
+    const u = new URL(h);
+    u.search = '';
+    return u;
+  })
   .map(url => ({ url, paths: url.pathname.substring(1).split('/') as [string, string] }))
   .filter(({ paths }) => Boolean(paths[0]) && Boolean(paths[1]) && ['track', 'artist'].includes(paths[0]))
   .take(3)
