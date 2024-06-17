@@ -566,8 +566,18 @@ export class GuildState {
   }
 
   async handleIncomingMessage(message: Message<true>) {
+    this.#handleSpotifyUrl(message);
+  }
+
+  async #handleSpotifyUrl(message: Message<true>) {
     const station = this.tunedStation;
     if (!station) {
+      return;
+    }
+
+    const audiences = station.getAudiences(this.adapter.makeAudienceGroup(this.guildId));
+
+    if (!audiences?.has(message.author.id)) {
       return;
     }
 
