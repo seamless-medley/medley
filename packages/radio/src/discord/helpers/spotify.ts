@@ -85,7 +85,25 @@ type SpotifyPlaylistInfo = {
 
 type SpotifyInfo = SpotifyTrackInfo | SpotifyArtistInfo | SpotifyUserInfo | SpotifyAlbumInfo | SpotifyPlaylistInfo;
 
+const cache = new Map<string, Promise<SpotifyInfo | undefined>>;
+
 export async function fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo['type']): Promise<SpotifyInfo | undefined> {
+  if (cache.has(url)) {
+    return cache.get(url)!;
+  }
+
+  const promise = internal_fetchSpotifyInfo(url, expectedType);
+
+  cache.set(url, promise);
+
+  promise.finally(() => {
+    cache.delete(url);
+  });
+
+  return promise;
+}
+
+async function internal_fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo['type']): Promise<SpotifyInfo | undefined> {
   const res = await axios.get(url, { timeout: 5000 }).catch(() => false as const);
 
   if (res === false || res.status !== 200) {
