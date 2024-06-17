@@ -45,10 +45,9 @@ export const extractSpotifyUrl = (s: string) => chain(s.match(/(https:\/\/open.s
   })
   .uniqBy(u => u.href)
   .map(url => ({ url, paths: url.pathname.substring(1).split('/') as [string, string] }))
-  .filter(({ paths }) => Boolean(paths[0]) && Boolean(paths[1]) && ['track', 'artist'].includes(paths[0]))
+  .filter(({ paths: [type, id] }) => Boolean(type) && Boolean(id) && ['track', 'artist'].includes(type))
   .take(3)
   .value();
-
 
 type SpotifyTrackInfo = {
   type: 'track';
