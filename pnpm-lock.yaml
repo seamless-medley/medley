@@ -332,8 +332,8 @@ importers:
         specifier: ^8.0.0
         version: 8.0.0
       ws:
-        specifier: ^8.14.2
-        version: 8.16.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+        specifier: ^8.17.1
+        version: 8.17.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       yaml:
         specifier: ^2.3.3
         version: 2.4.0
@@ -1188,7 +1188,7 @@ packages:
       '@vladfrangu/async_event_emitter': 2.2.4
       discord-api-types: 0.37.61
       tslib: 2.6.2
-      ws: 8.16.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      ws: 8.17.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -7900,8 +7900,8 @@ packages:
       utf-8-validate: 5.0.10
     dev: false
 
-  /ws@8.16.0(bufferutil@4.0.8)(utf-8-validate@5.0.10):
-    resolution: {integrity: sha512-HS0c//TP7Ina87TfiPUz1rQzMhHrl/SG2guqRcTOIUYD2q8uhUdNHZYJUaQ8aTGPzCh+c6oawMKW35nFl1dxyQ==}
+  /ws@8.17.1(bufferutil@4.0.8)(utf-8-validate@5.0.10):
+    resolution: {integrity: sha512-6XQFvXTkbfUOZOKKILFG1PDK2NDQs4azKQl26T0YS5CxqWLgXajbPZ+h4gZekJyRqFU8pvnbAbbs/3TgRPy+GQ==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
