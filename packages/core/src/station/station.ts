@@ -82,27 +82,27 @@ export type DiscordAudienceGroupId = AudienceOfGroup<AudienceType.Discord, [auto
 
 export type AudienceGroupId = DiscordAudienceGroupId | AudienceOfGroup<Exclude<AudienceType, AudienceType.Discord>, [string]>;
 
-type AudienceT<T extends AudienceType, G = string> = {
+type RequesterT<T extends AudienceType, G> = {
   type: T;
   group: G;
-  id: string;
+  requesterId: string;
 }
 
-export type DiscordAudience = AudienceT<AudienceType.Discord, {
+export type DiscordRequester = RequesterT<AudienceType.Discord, {
   automatonId: string;
   guildId: string;
 }>
 
-export type StreamingAudience = AudienceT<AudienceType.Icy | AudienceType.Streaming>;
+export type StreamingRequester = RequesterT<AudienceType.Icy | AudienceType.Streaming, string>;
 
-export type WebAudience = AudienceT<AudienceType.Web>;
+export type WebRequester = RequesterT<AudienceType.Web, string>;
 
-export type Audience = DiscordAudience | StreamingAudience | WebAudience;
+export type Requester = DiscordRequester | StreamingRequester | WebRequester;
 
 export type StationTrack = MusicTrack<Station>;
 export type StationTrackPlay = TrackPlay<StationTrack>;
 export type StationTrackCollection = MusicTrackCollection<Station>;
-export type StationRequestedTrack = TrackWithRequester<StationTrack, Audience> & {
+export type StationRequestedTrack = TrackWithRequester<StationTrack, Requester> & {
   disallowSweepers?: boolean;
 }
 
@@ -160,7 +160,7 @@ export class Station extends TypedEmitter<StationEvents> {
   readonly queue: Queue<StationTrack>;
   readonly medley: Medley<StationTrack>;
 
-  readonly #boombox: BoomBox<Audience, StationProfile>;
+  readonly #boombox: BoomBox<Requester, StationProfile>;
 
   readonly #musicDb: MusicDb;
 
@@ -232,7 +232,7 @@ export class Station extends TypedEmitter<StationEvents> {
     this.#library.on('stats', this.#handleLibraryStats);
 
     // Create boombox
-    const boombox = new BoomBox<Audience, StationProfile>({
+    const boombox = new BoomBox<Requester, StationProfile>({
       id: this.id,
       medley: this.medley,
       queue: this.queue,
@@ -704,7 +704,7 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.autoSuggest(q, field, narrowBy, narrowTerm);
   }
 
-  async request(trackId: StationTrack['id'], requestedBy: Audience, noSweep?: boolean): Promise<StationTrackIndex | string> {
+  async request(trackId: StationTrack['id'], requestedBy: Requester, noSweep?: boolean): Promise<StationTrackIndex | string> {
     const track = this.findTrackById(trackId);
 
     if (!track) {
@@ -744,11 +744,11 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#boombox.allRequests.peek(bottomIndex, n, filterFn ?? (() => true));
   }
 
-  lockRequests(by: RequestTrackLockPredicate<Audience>) {
+  lockRequests(by: RequestTrackLockPredicate<Requester>) {
     this.#boombox.lockRequests(by);
   }
 
-  unlockRequests(by: RequestTrackLockPredicate<Audience>): boolean {
+  unlockRequests(by: RequestTrackLockPredicate<Requester>): boolean {
     return this.#boombox.unlockRequests(by);
   }
 
@@ -760,7 +760,7 @@ export class Station extends TypedEmitter<StationEvents> {
     );
   }
 
-  getRequestsOf(requester: Audience) {
+  getRequestsOf(requester: Requester) {
     return this.#boombox.getRequestsOf(requester);
   }
 
@@ -931,8 +931,8 @@ export function makeAudienceGroupId(type: AudienceType, ...groupIds: string[]): 
   return `${type}$${groupIds.join('/')}` as AudienceGroupId;
 }
 
-export const extractAudienceGroupFromId = (id: AudienceGroupId) => {
-  const [type, groupId] = id.split('$', 2);
+export const extractAudienceGroupFromId = (agid: AudienceGroupId) => {
+  const [type, groupId] = agid.split('$', 2);
 
   return {
     type: type as AudienceType,
@@ -940,13 +940,13 @@ export const extractAudienceGroupFromId = (id: AudienceGroupId) => {
   }
 }
 
-export function extractAudienceGroup({ group }: Audience): Audience['group'] { return group; }
+export function extractRequesterGroup({ group }: Requester): Requester['group'] { return group; }
 
-export function makeAudience(type: AudienceType.Discord, group: DiscordAudience['group'], id: string): DiscordAudience
-export function makeAudience(type: AudienceType, group: any, id: string): Audience {
+export function makeRequester(type: AudienceType.Discord, group: DiscordRequester['group'], snowflake: string): DiscordRequester;
+export function makeRequester(type: AudienceType, group: any, requesterId: string): Requester {
   return {
     type,
     group: group as any,
-    id
+    requesterId
   }
 }

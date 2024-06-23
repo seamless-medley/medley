@@ -6,7 +6,7 @@ import {
   AudienceType,
   TrackWithRequester,
   BoomBoxTrack,
-  Audience
+  Requester
 } from "@seamless-medley/core";
 
 import {
@@ -147,7 +147,7 @@ const previewTrackPeek = ({ index, localIndex, track }: TrackPeek<StationRequest
   return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)}${priority}`;
 }
 
-export function isTrackRequestedFromGuild(track: TrackWithRequester<BoomBoxTrack, Audience>, guildId: string) {
+export function isTrackRequestedFromGuild(track: TrackWithRequester<BoomBoxTrack, Requester>, guildId: string) {
   return track.requestedBy.some(({ type, group }) => (type === AudienceType.Discord) && (group.guildId === guildId));
 }
 

@@ -3,7 +3,7 @@ import {
   AudioProperties,
   BoomBoxTrack,
   getTrackBanner,
-  makeAudience,
+  makeRequester,
   MetadataHelper,
   Station,
   StationTrack
@@ -70,7 +70,7 @@ type MakeRequestOptions = {
 const makeRequest = async ({ station, automaton, trackId, guildId, noSweep, interaction, done }: MakeRequestOptions) => {
   const result = await station.request(
     trackId,
-    makeAudience(
+    makeRequester(
       AudienceType.Discord,
       { automatonId: automaton.id, guildId },
       interaction.user.id

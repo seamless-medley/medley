@@ -1,5 +1,5 @@
 import { createLogger } from "@seamless-medley/logging";
-import { Audience, AudienceType, getTrackBanner, makeAudience, RequestTrackLockPredicate, StationRequestedTrack, TrackIndex, TrackPeek } from "@seamless-medley/core";
+import { Requester, AudienceType, getTrackBanner, makeRequester, RequestTrackLockPredicate, StationRequestedTrack, TrackIndex, TrackPeek } from "@seamless-medley/core";
 import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, PermissionsBitField, userMention, time as formatTime, quote, } from "discord.js";
 import { chain, isEqual, keyBy, noop, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
@@ -75,7 +75,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
     nominatees.map(n => [n.emoji, n])
   );
 
-  const requestLock: RequestTrackLockPredicate<Audience> = (t) => nominatees.some(track => track.rid === t.rid);
+  const requestLock: RequestTrackLockPredicate<Requester> = (t) => nominatees.some(track => track.rid === t.rid);
 
   station.lockRequests(requestLock);
   try {
@@ -261,9 +261,9 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
                 contributors = contributors.concat(userIds);
 
                 request.requestedBy = chain(request.requestedBy)
-                  .concat(userIds.map(id => makeAudience(AudienceType.Discord, { automatonId: automaton.id, guildId }, id)))
+                  .concat(userIds.map(id => makeRequester(AudienceType.Discord, { automatonId: automaton.id, guildId }, id)))
                   .uniqWith(isEqual)
-                  .reject(audience => audience.id === automaton.client.user!.id)
+                  .reject(audience => audience.requesterId === automaton.client.user!.id)
                   .value();
               }
             }

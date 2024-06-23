@@ -1,5 +1,5 @@
 import {
-  Audience,
+  Requester,
   AudienceType,
   DeckPositions,
   isRequestTrack,
@@ -28,8 +28,8 @@ export type CreateTrackMessageOptions = {
 
 export type CreateTrackMessageOptionsEx = CreateTrackMessageOptions & {
   embed: EmbedBuilder;
-  requested?: TrackWithRequester<StationTrack, Audience>;
-  requestedBy?: Audience[];
+  requested?: TrackWithRequester<StationTrack, Requester>;
+  requestedBy?: Requester[];
   track: StationTrack;
   playDuration: number;
 }
@@ -47,7 +47,7 @@ export abstract class TrackMessageCreator {
   async create(options: CreateTrackMessageOptions): Promise<TrackMessage> {
     const { guildId, station, trackPlay, positions } = options;
 
-    const requested = isRequestTrack<StationTrack, Audience>(trackPlay.track) ? trackPlay.track : undefined;
+    const requested = isRequestTrack<StationTrack, Requester>(trackPlay.track) ? trackPlay.track : undefined;
     const requestedBy = requested?.requestedBy;
 
     // Find the best track object by looking up the maybeCoverAndLyrics in which is already defined
@@ -164,14 +164,14 @@ export function getEmbedDataForTrack({ path, extra, sequencing, collection }: St
   }
 }
 
-export function extractRequestersForGuild(guildId: string, requesters: Audience[]) {
+export function extractRequestersForGuild(guildId: string, requesters: Requester[]) {
   return chain(requesters)
-    .map(({ type, group, id }) => {
+    .map(({ type, group, requesterId }) => {
       if (type !== AudienceType.Discord) {
         return;
       }
 
-      return group.guildId === guildId ? id : undefined;
+      return (group.guildId === guildId) ? requesterId : undefined;
     })
     .filter((id): id is string => !!id)
     .uniq()

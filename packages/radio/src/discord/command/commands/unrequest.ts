@@ -3,7 +3,7 @@ import { ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonSty
 import { chain, truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, reply, makeAnsiCodeBlock, joinStrings, deferReply } from "../utils";
-import { AudienceType, BoomBoxTrack, TrackWithRequester, getTrackBanner, isRequestTrack, makeAudience } from '@seamless-medley/core';
+import { AudienceType, BoomBoxTrack, TrackWithRequester, getTrackBanner, isRequestTrack, makeRequester } from '@seamless-medley/core';
 import { ansi } from '../../format/ansi';
 import { interact } from '../interactor';
 
@@ -19,7 +19,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
   const requests = station.getRequestsOf(
-    makeAudience(
+    makeRequester(
       AudienceType.Discord,
       { automatonId: automaton.id, guildId },
       interaction.user.id

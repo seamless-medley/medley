@@ -48,9 +48,11 @@ export type BoomBoxTrackPlay = TrackPlay<BoomBoxTrack>;
 export type BoomBoxCrate = Crate<BoomBoxTrack>;
 export type BoomBoxTrackCollection = TrackCollection<BoomBoxTrack>;
 
-export type Requester = any;
+type BaseRequester = {
 
-export type TrackWithRequester<T extends BoomBoxTrack, R extends Requester> = T & {
+};
+
+export type TrackWithRequester<T extends BoomBoxTrack, R extends BaseRequester> = T & {
   rid: number;
   priority?: number;
   requestedBy: R[];
@@ -58,9 +60,9 @@ export type TrackWithRequester<T extends BoomBoxTrack, R extends Requester> = T 
   original: T; // Store the original track as a RequestTrack is likely to be a clone
 }
 
-export type OnInsertRequestTrack<T extends BoomBoxTrack, R extends Requester> = (track: TrackWithRequester<T, R>) => Promise<void>;
+export type OnInsertRequestTrack<T extends BoomBoxTrack, R extends BaseRequester> = (track: TrackWithRequester<T, R>) => Promise<void>;
 
-export function isRequestTrack<T extends BoomBoxTrack, R extends Requester>(o: any): o is TrackWithRequester<T, R> {
+export function isRequestTrack<T extends BoomBoxTrack, R extends BaseRequester>(o: any): o is TrackWithRequester<T, R> {
   return !!o && !!o.requestedBy;
 }
 
@@ -113,7 +115,7 @@ export type BoomBoxEvents<P extends BoomBoxProfile = BoomBoxProfile> = {
   error: (error: Error) => void;
 }
 
-type BoomBoxOptions<T extends BoomBoxTrack, R extends Requester> = {
+type BoomBoxOptions<T extends BoomBoxTrack, R extends BaseRequester> = {
   id: string;
 
   medley: Medley<BoomBoxTrack>;
@@ -150,9 +152,9 @@ export type DeckInfoWithPositions = DeckInfo & {
   positions: DeckPositions;
 }
 
-export type RequestTrackLockPredicate<R extends Requester> = (t: TrackWithRequester<BoomBoxTrack, R>) => boolean;
+export type RequestTrackLockPredicate<R extends BaseRequester> = (t: TrackWithRequester<BoomBoxTrack, R>) => boolean;
 
-export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfile<BoomBoxTrack>> extends TypedEmitter<BoomBoxEvents<P>> {
+export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CrateProfile<BoomBoxTrack>> extends TypedEmitter<BoomBoxEvents<P>> {
   readonly id: string;
 
   readonly #sequencer: CrateSequencer<BoomBoxTrack, BoomBoxTrackExtra, P>;

@@ -1,4 +1,4 @@
-import { isRequestTrack, Audience, StationTrack } from "@seamless-medley/core";
+import { isRequestTrack, Requester, StationTrack } from "@seamless-medley/core";
 import { ButtonInteraction, CommandInteraction, PermissionsBitField, userMention } from "discord.js";
 import { MedleyAutomaton } from "../../automaton";
 import { extractRequestersForGuild } from "../../trackmessage/creator/base";
@@ -28,13 +28,13 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
 
   const { trackPlay } = station;
 
-  if (trackPlay && isRequestTrack<StationTrack, Audience>(trackPlay.track)) {
+  if (trackPlay && isRequestTrack<StationTrack, Requester>(trackPlay.track)) {
     const canSkip = automaton.owners.includes(interaction.user.id);
 
     if (!canSkip) {
       const { requestedBy } = trackPlay.track;
 
-      const isRequester = requestedBy.some(r => r.id === interaction.user.id);
+      const isRequester = requestedBy.some(r => r.requesterId === interaction.user.id);
 
       if (!isRequester) {
         const requesters = extractRequestersForGuild(guildId, requestedBy);
