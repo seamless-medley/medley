@@ -1,4 +1,4 @@
-import { noop, sortBy, uniqBy } from "lodash";
+import { chain, noop, sortBy } from "lodash";
 
 import {
   AudienceGroupId,
@@ -685,10 +685,10 @@ export class GuildState {
             exactMatch: true
           });
 
-          const tracks = uniqBy(
-            [...exactMatches, ...searchResult],
-            t => t.id
-          );
+          const tracks = chain([...exactMatches, ...searchResult])
+            .filter(t => (info.artist && t.extra?.tags?.artist?.toLowerCase()?.includes(info.artist?.toLowerCase())) === true)
+            .uniqBy(t => t.musicId ?? t.id)
+            .value();
 
           if (tracks.length) {
             embed
@@ -703,9 +703,9 @@ export class GuildState {
                 new ActionRowBuilder<MessageActionRowComponentBuilder>()
                   .addComponents(
                     new ButtonBuilder()
-                      .setLabel('Make a request')
+                      .setLabel('Search')
                       .setStyle(ButtonStyle.Primary)
-                      .setCustomId(`request:search:artist$${info.artist}`.slice(0, 100))
+                      .setCustomId(`request:artist_search`)
                   )
               ]
             }

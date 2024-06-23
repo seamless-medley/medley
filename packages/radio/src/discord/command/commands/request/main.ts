@@ -153,6 +153,7 @@ export type RequestCommandOptions = {
   artist?: string;
   title?: string;
   query?: string;
+  exactMatch?: boolean;
   noSweep?: boolean;
   noHistory?: boolean;
 }
@@ -164,6 +165,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
     artist,
     title,
     query,
+    exactMatch,
     noSweep,
     noHistory
   } = options;
@@ -192,6 +194,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
     },
     // 10 pages
     limit: maxSelectMenuOptions * 10,
+    exactMatch,
     noHistory
   });
 
@@ -634,14 +637,37 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
       });
     }
 
-    case 'cross_search': {
-      if (!interaction.channel) {
+    case 'artist_search': {
+      const originalMessage = await fetchOriginalMessage(interaction);
+
+      if (!originalMessage) {
         return;
       }
 
-      const originalMessage = await interaction.message.fetchReference()
-        .then(ref => ref.fetch())
-        .catch(() => undefined);
+      const [matched] = extractSpotifyUrl(originalMessage.content);
+      if (!matched?.url || matched?.paths?.[0] !== 'artist') {
+        return
+      }
+
+      const info = await fetchSpotifyInfo(matched.url.href);
+
+      if (!info || info.type !== 'artist' || !info.artist) {
+        return;
+      }
+
+
+      return handleRequestCommand({
+        automaton,
+        interaction,
+        exactMatch: true,
+        artist: info.artist,
+        noHistory: true
+      })
+      .catch(e => new CrossSearchError(automaton, guildId, e.message));
+    }
+
+    case 'cross_search': {
+      const originalMessage = await fetchOriginalMessage(interaction);
 
       if (!originalMessage) {
         return;
@@ -668,6 +694,16 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
       .catch(e => new CrossSearchError(automaton, guildId, e.message));
     }
   }
+}
+
+async function fetchOriginalMessage(interaction: MessageComponentInteraction) {
+  if (!interaction.channel) {
+    return;
+  }
+
+  return interaction.message.fetchReference()
+    .then(ref => ref.fetch())
+    .catch(() => undefined);
 }
 
 class CrossSearchError extends AutomatonCommandError {
