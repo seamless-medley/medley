@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'node:path';
-import { castArray, chain, flatten, mapValues, matches, some, toLower, trim, uniq, without } from "lodash";
+import { castArray, chain, flatten, isEqual, mapValues, matches, some, toLower, trim, uniq, without } from "lodash";
 import { isString } from 'lodash/fp';
 import { compareTwoStrings } from "string-similarity";
 import { TypedEmitter } from "tiny-typed-emitter";
@@ -332,7 +332,11 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
       existing.priority = (existing.priority || 0) + 1;
 
       if (requestedBy) {
-        existing.requestedBy.push(requestedBy);
+        const existingRequester = existing.requestedBy.find(r => isEqual(r, requestedBy));
+
+        if (existingRequester === undefined) {
+          existing.requestedBy.push(requestedBy);
+        }
       }
 
       this.sortRequests();
