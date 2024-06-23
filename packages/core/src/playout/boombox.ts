@@ -373,20 +373,20 @@ export class BoomBox<R extends Requester, P extends BoomBoxProfile = CrateProfil
   }
 
   sortRequests(scopedBy?: (t: TrackWithRequester<BoomBoxTrack, R>) => string[]) {
-    const functions = [
-      (t: TrackWithRequester<BoomBoxTrack, R>) => -(t.priority || 0),
-      (t: TrackWithRequester<BoomBoxTrack, R>) => (t.firstRequestTime?.valueOf() || 0)
+    const sortFuncs: Array<(t: TrackWithRequester<BoomBoxTrack, R>) => number> = [
+      t => -(t.priority || 0),
+      t => (t.firstRequestTime?.valueOf() || 0)
     ];
 
     if (!scopedBy) {
-      this.#requests.sort(functions);
+      this.#requests.sort(sortFuncs);
       return;
     }
 
     const scopes = uniq(this.#requests.all().flatMap(scopedBy));
     for (const [index, scope] of scopes.entries()) {
       this.#requests.sort(
-        functions,
+        sortFuncs,
         t => scopedBy(t).includes(scope),
         index === scopes.length - 1
       );
