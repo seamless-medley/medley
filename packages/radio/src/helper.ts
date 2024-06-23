@@ -150,9 +150,7 @@ export async function createAutomaton(cfg: AutomatonConfig & { id: string; creat
       guilds,
     });
 
-    automaton.once('ready', () => resolve(automaton));
-
-    await automaton.login();
+    await automaton.login().finally(() => resolve(automaton));
   });
 }
 
