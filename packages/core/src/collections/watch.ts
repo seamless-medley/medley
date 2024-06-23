@@ -316,9 +316,7 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
       return;
     }
 
-    const removed = !full
-      ? await this.removeNonExistent()
-      : []
+    const removed = await this.removeNonExistent();
 
     const results = await Promise.all([...this.#watchInfos.keys()].map(dir => this.#scan({
       dir,
