@@ -188,12 +188,15 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
   const topItem = peekings.at(0)!;
 
   const topMost = (topItem.localIndex > 0) ? station.allRequests.find(track => isTrackRequestedFromGuild(track, guildId)) : undefined;
+  const firstPeekLocalIndex = peekings.at(0)?.localIndex ?? -1;
 
-  if (topMost) {
-    peekings.splice(0, 1);
-
+  if (topMost && firstPeekLocalIndex > 0) {
     lines.push(previewTrackPeek({ index: -1, localIndex: 0, track: topMost }, padding, undefined));
-    lines.push(padStart('...', padding));
+
+    if (firstPeekLocalIndex > 1) {
+      peekings.splice(0, 1);
+      lines.push(padStart('...', padding));
+    }
   }
 
   for (const peek of peekings) {
