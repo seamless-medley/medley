@@ -121,11 +121,7 @@ async function main() {
     }))
   );
 
-  if (automatons.some(a => !a.isReady)) {
-    logger.warn('Started, with some malfunctioning automatons');
-  } else {
-    logger.info('Started');
-  }
+  logger.info('Started');
 
   process.on('SIGINT', () => {
     process.exitCode = 0;

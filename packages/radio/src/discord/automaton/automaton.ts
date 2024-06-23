@@ -169,28 +169,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.#logger.error(error, 'Automaton Error');
     });
 
-    this.#client.on('shardError', this.#handleShardError);
-
-    this.#client.on('shardReconnecting', (shardId) => {
-      this.#logger.debug(`Shard ${shardId}, reconnecting`);
-    })
-
-    this.#client.on('shardResume', (shardId) => {
-      this.#logger.debug(`Shard ${shardId}, resume`);
-
-      if (!this.#shardReady) {
-        this.#rejoinVoiceChannels(30);
-      }
-
-      this.#shardReady = true;
-    });
-
-    this.#client.on('shardReady', (shardId) => {
-      this.#shardReady = true;
-      this.#logger.debug(`Shard ${shardId}, ready`);
-      this.#rejoinVoiceChannels(30);
-    })
-
     this.#client.on('ready', this.#handleClientReady);
     this.#client.on('guildCreate', this.#handleGuildCreate);
     this.#client.on('guildDelete', this.#handleGuildDelete);
@@ -226,6 +204,28 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#logger.info('OAUthURL: %s', this.oAuth2Url.toString());
 
     this.#client.once('ready', async () => {
+      this.#client.on('shardError', this.#handleShardError);
+
+      this.#client.on('shardReconnecting', (shardId) => {
+        this.#logger.debug(`Shard ${shardId}, reconnecting`);
+      })
+
+      this.#client.on('shardResume', (shardId) => {
+        this.#logger.debug(`Shard ${shardId}, resume`);
+
+        if (!this.#shardReady) {
+          this.#rejoinVoiceChannels(30);
+        }
+
+        this.#shardReady = true;
+      });
+
+      this.#client.on('shardReady', (shardId) => {
+        this.#shardReady = true;
+        this.#logger.debug(`Shard ${shardId}, ready`);
+        this.#rejoinVoiceChannels(30);
+      });
+
       this.#updateStats();
 
       Object.keys(this.#guildConfigs).map(async (guildId) => {
@@ -374,20 +374,30 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#loginAbortController?.abort();
     this.#loginAbortController = new AbortController();
 
-    try {
+    // This promise resolves right after the first attempt
+    return new Promise<void>(async (notifyLoginAttempted) => {
+      // Keep retrying
       const result = await retryable(async () => {
         this.#logger.info('Login');
 
-        return this.client.login(this.botToken);
-      }, { wait: 5000, signal: this.#loginAbortController.signal });
+        // Resolve the `login` method as soon as a login attempt is finish
+        const attemptResult = this.client.login(this.botToken).finally(notifyLoginAttempted);
+
+        // Catch any error during a login attempt
+        await attemptResult.catch((e) => {
+          this.#logger.error('Login error: %s', e.message);
+          // Let the `retryable` know about this error, so it can retry
+          throw e;
+        });
+
+        return attemptResult;
+
+      }, { wait: 5_000, maxWait: 60_000, factor: 1.09, signal: this.#loginAbortController?.signal });
 
       if (result !== undefined) {
         this.#logger.info('Login OK');
       }
-    }
-    catch (e) {
-      this.#logger.error(e, 'Login error');
-    }
+    })
   }
 
   #baseAdapter: Omit<GuildStateAdapter, 'getChannel'> = {

@@ -140,11 +140,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
         .map(args => this.createAutomaton(...args)
     ));
 
-    if (automatons.some(a => !a.isReady)) {
-      logger.warn('Started, with some malfunctioning automatons');
-    } else {
-      logger.info('Started');
-    }
+    logger.info('Started');
 
     return new Map<string, MedleyAutomaton>(automatons.map(s => [s.id, s]));
   }

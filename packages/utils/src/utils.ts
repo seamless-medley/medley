@@ -131,10 +131,8 @@ export function interpolate(sourceValue: number, sourceRange: [min: number, max:
 
 type WaitOption = {
   wait: number;
-} | {
-  wait?: undefined;
-  factor: number;
-  maxWait: number;
+  factor?: number;
+  maxWait?: number;
 }
 
 export type RetryOptions = {
@@ -157,7 +155,9 @@ export function retryable<R>(fn: () => Promise<R>, options: RetryOptions) {
         throw e;
       }
 
-      const wait = options.wait ?? Math.min(options.maxWait, Math.pow(options.factor, ++attempts));
+      ++attempts;
+
+      const wait = Math.min(options.maxWait ?? options.wait, options.wait * (options.factor ? Math.pow(options.factor, attempts) : 0));
 
       return delayed(() => wrapper(n !== undefined ? n - 1 : n), wait)();
     }
