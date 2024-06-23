@@ -686,7 +686,6 @@ export class GuildState {
           });
 
           const tracks = chain([...exactMatches, ...searchResult])
-            .filter(t => (info.artist && t.extra?.tags?.artist?.toLowerCase()?.includes(info.artist?.toLowerCase())) === true)
             .uniqBy(t => t.musicId ?? t.id)
             .value();
 
