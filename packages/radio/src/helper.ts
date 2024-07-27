@@ -143,6 +143,7 @@ export async function createAutomaton(cfg: AutomatonConfig & { id: string; creat
     const stationRepo = new StationRegistry(...allowedStations);
     const automaton = new MedleyAutomaton(stationRepo, {
       id,
+      globalMode: !Boolean(process.env.DEBUG),
       botToken,
       clientId,
       baseCommand,
