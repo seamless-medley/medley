@@ -10,7 +10,8 @@ import {
   StationTrack,
   StationTrackPlay,
   TrackSequencingLatch,
-  TrackWithRequester
+  TrackWithRequester,
+  CrateProfile
 } from "@seamless-medley/core";
 
 import { ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
@@ -117,6 +118,7 @@ type EmbedDataForTrack = {
   description: string;
   fields: Partial<Record<MetadataFields, string>>;
   collection: string;
+  profile?: CrateProfile<StationTrack>;
   latch?: TrackSequencingLatch<StationTrack, NonNullable<StationTrack['extra']>>;
 }
 
@@ -156,10 +158,13 @@ export function getEmbedDataForTrack({ path, extra, sequencing, collection }: St
     latch = sequencing?.latch;
   }
 
+  const profile = sequencing?.crate?.profile;
+
   return {
     description,
     fields,
     collection: collectionField,
+    profile,
     latch
   }
 }

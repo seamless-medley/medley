@@ -59,10 +59,22 @@ export class Normal extends TrackMessageCreator {
       }
     }
 
+    const profileDisplay = data.profile ? data.profile.description || data.profile.name : undefined;
+    const hasProfile = profileDisplay !== undefined;
+
     embed.addFields({
       name: 'Collection',
-      value: data.collection
+      value: data.collection,
+      inline: hasProfile
     });
+
+    if (hasProfile) {
+      embed.addFields({
+        name: 'Profile',
+        value: profileDisplay,
+        inline: true
+      });
+    }
 
     if (data.latch) {
       const { order: [count, max] } = data.latch;
