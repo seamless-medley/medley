@@ -593,8 +593,13 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
     }
 
     // clean up memory holding the cover, lyrics and extra
-    if (trackIsActuallyUnloaded && trackPlay.track?.extra) {
-      trackPlay.track.extra.maybeCoverAndLyrics = undefined;
+    if (trackIsActuallyUnloaded) {
+      trackPlay.track.sequencing = undefined;
+
+      if (trackPlay.track.extra) {
+        trackPlay.track.extra.maybeCoverAndLyrics = undefined;
+        trackPlay.track.extra.maybeAudioProperties = undefined;
+      }
 
       if (isRequestTrack(trackPlay.track) && trackPlay.track.original.extra?.maybeCoverAndLyrics) {
         trackPlay.track.original.extra.maybeCoverAndLyrics = undefined;
