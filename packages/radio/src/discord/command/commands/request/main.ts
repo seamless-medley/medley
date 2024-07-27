@@ -233,11 +233,11 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
       }
     })
     .groupBy(({ title, artist = '' }) => createHash('sha256').update(`${title}:${artist}`.toLowerCase()).digest('base64'))
-    .transform((d, selection, groupKey) => {
+    .transform((groups, selection, groupKey) => {
       selection = sortBy(selection, selectionOrder);
 
       if (selection.length <= maxSelectMenuOptions) {
-        d[groupKey] = selection;
+        groups[groupKey] = selection;
         return;
       }
 
@@ -245,8 +245,8 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
       for (const [page, chunk] of chunks.entries()) {
         const pagedGroupKey = `${groupKey}:${page}`;
 
-        d[pagedGroupKey] = chunk;
-        d[pagedGroupKey].fromChunk = true;
+        groups[pagedGroupKey] = chunk;
+        groups[pagedGroupKey].fromChunk = true;
       }
     }, {} as Dictionary<SelectionsWithChunk>)
     .value();

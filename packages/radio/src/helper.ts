@@ -147,7 +147,7 @@ export async function createAutomaton(cfg: AutomatonConfig & { id: string; creat
       clientId,
       baseCommand,
       owners,
-      guilds,
+      guilds
     });
 
     await automaton.login().finally(() => resolve(automaton));

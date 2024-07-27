@@ -12,7 +12,6 @@ const emptyRows = Array(3).fill(0).map<APIEmbedField>(_ => emptyField);
 export const metadataFields: MetadataFields[] = ['artist', 'album', 'albumArtist', 'originalArtist'];
 
 const fieldCaptionFuncs: Partial<Record<MetadataFields, () => any>> = {
-  bpm: upperCase,
   isrc: upperCase
 };
 
