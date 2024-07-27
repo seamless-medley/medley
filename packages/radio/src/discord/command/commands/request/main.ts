@@ -259,6 +259,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
     }
 
     return [true, chain(entries)
+      .sortBy(([, grouped]) => -grouped.length)
       .map(([key, grouped]) => {
         const sel = grouped[0];
 
