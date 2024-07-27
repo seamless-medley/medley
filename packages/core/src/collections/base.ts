@@ -374,7 +374,10 @@ export class TrackCollection<
   }
 
   clear() {
-    this.emit('tracksRemove', this.tracks);
+    if (this.tracks.length) {
+      this.emit('tracksRemove', this.tracks);
+      this.logger.info('%d track(s) deleted', this.tracks.length);
+    }
 
     this.tracks = [];
     this.trackIdMap.clear();
@@ -388,7 +391,10 @@ export class TrackCollection<
       this.trackIdMap.delete(id);
     }
 
-    this.emit('tracksRemove', removed);
+    if (removed.length) {
+      this.emit('tracksRemove', removed);
+      this.logger.info('%d track(s) deleted', removed.length);
+    }
 
     return removed;
   }
@@ -418,7 +424,10 @@ export class TrackCollection<
       this.trackIdMap.delete(track.id);
     }
 
-    this.emit('tracksRemove', removedTracks);
+    if (removedTracks.length) {
+      this.emit('tracksRemove', removedTracks);
+      this.logger.info('%d track(s) deleted', removedTracks.length);
+    }
 
     return removedTracks;
   }
