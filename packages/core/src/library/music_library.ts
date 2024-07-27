@@ -406,6 +406,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
       if (tracks) {
         return chain(tracks)
+          .shuffle()
+          .sortBy(t => t.collection.options.auxiliary ? 1 : 0)
           .map(t => (t.extra?.tags as any)?.[field])
           .filter(isString)
           .uniq()
