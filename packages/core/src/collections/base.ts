@@ -409,10 +409,10 @@ export class TrackCollection<
     return this.remove(toRemove);
   }
 
-  async removeNonExistent() {
+  async removeNonExistent(options: { fileExistentChecker: (path: string) => Promise<boolean>}) {
     const existences = await Promise.all(this.tracks.map(async track => ({
       track,
-      exists: await access(track.path).then(stubTrue).catch(stubFalse)
+      exists: await options.fileExistentChecker(track.path)
     })));
 
     const [existing, removed] = partition(existences, e => e.exists);

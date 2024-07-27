@@ -1,10 +1,10 @@
 import os from 'node:os';
 import { dirname } from 'node:path';
-import { stat } from "node:fs/promises";
+import { stat, access } from "node:fs/promises";
 
 import fg from 'fast-glob';
 import { minimatch } from 'minimatch';
-import { chain, debounce, noop, once, shuffle, stubFalse, sum, sumBy, uniq } from "lodash";
+import { chain, debounce, noop, once, shuffle, stubTrue, stubFalse, sumBy, uniq } from "lodash";
 import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
 
@@ -29,6 +29,7 @@ type WatchInfo = {
 
 export type WatchTrackCollectionOptions<T extends Track<any>> = TrackCollectionOptions<T> & {
   scanner?: (dir: string) => Promise<false | string[]>;
+  fileExistentChecker?: (path: string) => Promise<boolean>;
 }
 
 export type ScanStats = {
@@ -313,12 +314,22 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
     return counter;
   }
 
+  async #checkFileExistent(path: string) {
+    if (this.options.fileExistentChecker) {
+      return this.options.fileExistentChecker(path);
+    }
+
+    return access(path).then(stubTrue).catch(stubFalse);
+  }
+
   async rescan(full?: boolean): Promise<RescanStats | undefined> {
     if (this.#scanning) {
       return;
     }
 
-    const removed = await this.removeNonExistent();
+    const removed = await this.removeNonExistent({
+      fileExistentChecker: (path) => this.#checkFileExistent(path)
+    });
 
     const results: ScanStats[] = [];
 

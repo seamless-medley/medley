@@ -3,6 +3,7 @@ import { WorkerPoolAdapter } from "../worker_pool_adapter";
 
 interface Methods {
   scanDir(dir: string): false | string[];
+  fileExists(path: string): boolean;
 }
 
 class Scanner extends WorkerPoolAdapter<Methods> {
@@ -12,6 +13,10 @@ class Scanner extends WorkerPoolAdapter<Methods> {
 
   async scanDir(dir: string) {
     return this.exec('scanDir', dir).catch(stubFalse);
+  }
+
+  async fileExists(path: string) {
+    return this.exec('fileExists', path).catch(stubFalse);
   }
 }
 
@@ -27,4 +32,8 @@ function getDefaultInstance() {
 
 export async function scanDir(dir: string) {
   return getDefaultInstance().scanDir(dir);
+}
+
+export async function fileExists(path: string) {
+  return getDefaultInstance().fileExists(path);
 }
