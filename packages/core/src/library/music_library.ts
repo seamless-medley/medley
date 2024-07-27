@@ -3,7 +3,7 @@ import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackC
 import { Logger, createLogger } from '@seamless-medley/logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
-import { SearchEngine, Query, TrackDocumentFields } from './search';
+import { SearchEngine, Query, TrackDocumentFields, SearchQuery } from './search';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from './music_db';
 import { TrackExtraOf, TrackWithCollectionExtra } from '../track';
@@ -39,6 +39,12 @@ export type LibraryStats = Record<'discovered' | 'indexing' | 'indexed', number>
 export type LibraryRescanStats<O> = RescanStats & {
   elapsedTime: number;
   collection: MusicTrackCollection<O>;
+}
+
+export type LibrarySearchParams = {
+  q: SearchQuery;
+  limit?: number;
+  exactMatch?: boolean;
 }
 
 export interface MusicLibraryEvents {
@@ -334,7 +340,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       .filter((t): t is MusicTrack<O> => t !== undefined)
   }
 
-  async search(q: Partial<Record<'artist' | 'title' | 'query', string>>, limit?: number, exactMatch?: boolean): Promise<Array<MusicTrack<O>>> {
+  async search({ q, limit, exactMatch }: LibrarySearchParams): Promise<Array<MusicTrack<O>>> {
     const { artist, title, query } = q;
 
     const mainQueries: Array<Query> = [];
@@ -393,14 +399,17 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       if (field === 'title' && narrowBy === 'artist') {
         // Start showing title suggestion for a known artist
         tracks = await this.search({
-          artist: narrowTerm
+          q: {
+            artist: narrowTerm
+          },
+          exactMatch: true
         });
       }
 
       if (field === 'artist' && narrowBy === 'title') {
         // Start showing artist suggestion for a known title
         tracks = await this.search({
-          title: narrowTerm
+          q: { title: narrowTerm }
         });
       }
 
