@@ -24,7 +24,6 @@ async function main() {
   const program = new Command()
     .name('medley-discord')
     .argument('<config-file>')
-    .option('-r, --register')
     .parse(process.argv);
 
   const configFile = (program.args[0] || '').trim();
@@ -62,29 +61,6 @@ async function main() {
     return;
   }
 
-  if (program.opts().register) {
-    logger.info('Registering');
-
-    for (const [id, { botToken, clientId, baseCommand }] of Object.entries(configs.automatons)) {
-
-      const client = new Client({
-        intents: [GatewayIntentBits.Guilds]
-      });
-
-      await client.login(botToken);
-
-      await MedleyAutomaton.registerGuildCommands({
-        botToken,
-        clientId,
-        logger: createLogger({ name: 'automaton', id }),
-        baseCommand: baseCommand || 'medley',
-        guilds: [...(await client.guilds.fetch()).values()]
-      });
-    }
-
-    process.exit(0);
-  }
-
   logger.info('Initializing');
 
   const musicDb = await new MongoMusicDb().init({
@@ -120,6 +96,12 @@ async function main() {
       createdStations: stations
     }))
   );
+
+  (async () => {
+    for (const automaton of automatons) {
+      await automaton.registerCommandsIfNeccessary();
+    }
+  })();
 
   logger.info('Started');
 

@@ -1,11 +1,22 @@
-import { OAuth2Scopes, PermissionFlagsBits } from "discord-api-types/v10";
-
 import {
-  REST, Routes,
+  REST, Routes, OAuth2Scopes,
+  RESTGetAPIApplicationCommandsResult,
+  RESTGetAPIApplicationGuildCommandsResult,
+  APIApplicationCommand,
+  APIApplicationCommandOption,
+  ApplicationCommandOptionType,
+  APIApplicationCommandSubcommandOption,
   Client, Guild,
   GatewayIntentBits, Message,
-  OAuth2Guild,
-  Snowflake, ChannelType, PermissionsBitField, PartialMessage, TextChannel, MessageReaction, PartialMessageReaction, Emoji,
+  Snowflake,
+  PermissionsBitField,
+  PermissionFlagsBits,
+  ChannelType,
+  PartialMessage,
+  TextChannel,
+  MessageReaction,
+  PartialMessageReaction,
+  Emoji,
   MessageType,
   ActivityType
 } from "discord.js";
@@ -34,7 +45,8 @@ import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
 import { AudioDispatcher } from "../../audio/exciter";
 import { CreatorNames } from "../trackmessage/creator";
 import { Logger, createLogger } from "@seamless-medley/logging";
-import { sumBy, throttle } from "lodash";
+import { noop, sumBy, throttle } from "lodash";
+import { Command, CommandOption, SubCommandLikeOption } from "../command/type";
 
 export type GuildSpecificConfig = {
   autotune?: string;
@@ -69,6 +81,9 @@ export type GuildSpecificConfig = {
 
 export type MedleyAutomatonOptions = {
   id: string;
+
+  globalMode: boolean;
+
   /**
    * Default to 'medley'
    *
@@ -93,14 +108,6 @@ export type UpdateTrackMessageOptions = {
   showSkip?: boolean;
 }
 
-export type RegisterOptions = {
-  guild: Guild | OAuth2Guild;
-  clientId: string;
-  botToken: string;
-  baseCommand: string;
-  logger: Logger;
-}
-
 export type AutomatonEvents = {
   ready: () => void;
 
@@ -117,6 +124,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   clientId: string;
 
   owners: Snowflake[] = [];
+
+  #globalMode: boolean = false;
 
   #baseCommand: string;
 
@@ -142,6 +151,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#logger = createLogger({ name: 'automaton', id: options.id });
 
     this.id = options.id;
+    this.#globalMode = options.globalMode;
     this.botToken = options.botToken;
     this.clientId = options.clientId;
     this.owners = options.owners || [];
@@ -449,13 +459,15 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.ensureGuildState(guild.id)
     this.#autoJoinVoiceChannel(guild.id);
 
-    MedleyAutomaton.registerCommands(({
-      guild,
-      botToken: this.botToken,
-      clientId: this.clientId,
-      baseCommand: this.baseCommand,
-      logger: this.#logger
-    }));
+    if (!this.#globalMode) {
+      this.#logger.info(`Registering commands with guild id: ${guild.id} (${guild.name})`);
+
+      new REST().setToken(this.botToken).put(Routes.applicationGuildCommands(this.clientId, guild.id),
+        {
+          body: [createCommandDeclarations(this.#baseCommand)]
+        }
+      ).catch(noop);
+    }
 
     guild?.systemChannel?.send(`Greetings :notes:, use \`/${this.baseCommand} join\` command to invite me to a voice channel`);
 
@@ -1028,45 +1040,155 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     return results;
   }
 
-  static async registerGuildCommands(options: Omit<RegisterOptions, 'guild'> & { guilds: OAuth2Guild[] }) {
-    const { guilds } = options;
+  async registerCommandsIfNeccessary() {
+    const rest = new REST().setToken(this.botToken);
 
-    return Promise.all(guilds.map(async guild => {
-      await MedleyAutomaton.registerCommands({
-        ...options,
-        guild
-      });
-      await waitFor(3000);
-    }));
-  }
+    const guilds = [...await this.client.guilds.fetch().then(col => col.values())];
 
-  static async registerCommands(options: RegisterOptions) {
-    const { logger, guild, clientId, botToken, baseCommand } = options;
-    try {
-      if (guild) {
-        logger.info(`Registering commands with guild id: ${guild.id} (${guild.name})`);
-      } else {
-        logger.info('Registering commands');
+    const guildsCommand = new Map<string, APIApplicationCommand>();
+
+    for (const guild of guilds) {
+      const guildCommand = await rest.get(Routes.applicationGuildCommands(this.clientId, guild.id))
+        .then(list => (list as RESTGetAPIApplicationGuildCommandsResult).find(cmd => {
+          return cmd.name === this.#baseCommand
+        }))
+
+      if (guildCommand) {
+        guildsCommand.set(guild.id, guildCommand);
+      }
+    }
+
+    const declaredCommand = createCommandDeclarations(this.#baseCommand);
+
+    const isSubCommandOptionIdentical = (a: APIApplicationCommandSubcommandOption, b: SubCommandLikeOption): string | true => {
+      if (!a.options && !b.options) {
+        return true;
       }
 
-      const rest = new REST();
+      if (!a.options || !b.options) {
+        return 'Options mismatch';
+      }
 
-      rest.setToken(botToken);
+      if (a.options.length !== b.options.length) {
+        return 'Options size mismatch';
+      }
 
-      await rest.put(
-        (guild
-          ? Routes.applicationGuildCommands(clientId, guild.id)
-          : Routes.applicationCommands(clientId)
-        ),
-        {
-          body: [createCommandDeclarations(baseCommand)]
+      for (let i = 0; i < a.options.length; i++) {
+        if ((a.options[i].type as any) !== (b.options[i].type as any)) {
+          return 'Option type mismatch';
         }
-      )
 
-      logger.info({ id: guild?.id, name: guild?.name }, 'Registered');
+        if (a.options[i].name !== b.options[i].name) {
+          return 'Option name mismatch';
+        }
+
+        if (a.options[i].description !== b.options[i].description) {
+          return 'Option description mismatch';
+        }
+      }
+
+      return true;
     }
-    catch (e) {
-      logger.error(e, 'Error registering command');
+
+    const isSubCommandIdentical = (a: APIApplicationCommandOption[], b: CommandOption[]): string | true => {
+      if (a.length !== b.length) {
+        return 'Subcommand mismatch';
+      }
+
+      for (let i = 0; i < a.length; i++) {
+        if (a[i].type as any !== b[i].type as any) {
+          return 'Subcommand type mismatch';
+        }
+
+        if (a[i].type === ApplicationCommandOptionType.Subcommand) {
+          const optionIdentical = isSubCommandOptionIdentical(
+            a[i] as APIApplicationCommandSubcommandOption,
+            b[i] as SubCommandLikeOption
+          );
+
+          if (optionIdentical !== true) {
+            return optionIdentical;
+          }
+        }
+
+        if (a[i].name !== b[i].name) {
+          return 'Subcommand name mismatch';
+        }
+
+        if (a[i].description !== b[i].description) {
+          return 'Subcommand description mismatch';
+        }
+      }
+
+      return true;
+    }
+
+    const isCmdIdentical = (a: APIApplicationCommand, b: Command): string | true => {
+      if (a.type as any !== b.type as any) {
+        return 'Type mismatch';
+      }
+
+      if (a.name !== b.name) {
+        return 'Name mismatch';
+      }
+
+      if (a.description !== b.description) {
+        return 'Description mismatch';
+      }
+
+      return isSubCommandIdentical(a.options ?? [], b.options ?? []);
+    }
+
+    if (this.#globalMode) {
+      const globalCommand = await rest.get(Routes.applicationCommands(this.clientId))
+        .then(list => (list as RESTGetAPIApplicationCommandsResult).find(cmd => cmd.name === this.#baseCommand))
+        .then(command => command as APIApplicationCommand | undefined);
+
+      const registrationCheck = !!globalCommand && isCmdIdentical(globalCommand, declaredCommand);
+
+      if (registrationCheck !== true) {
+        this.#logger.info(`Registering global command, ${registrationCheck || 'not yet registered'}`);
+
+        await rest.put(Routes.applicationCommands(this.clientId),
+          {
+            body: [declaredCommand]
+          }
+        );
+      }
+
+      for (const guild of guilds) {
+        const existing = guildsCommand.get(guild.id);
+
+        if (existing) {
+          this.#logger.info(`Deleting commands for guild id: ${guild.id} (${guild.name})`);
+
+          await rest.delete(Routes.applicationGuildCommand(this.clientId, guild.id, existing.id),
+            {
+              body: [declaredCommand]
+            }
+          )
+
+          await waitFor(2000);
+        }
+      }
+    } else {
+      for (const guild of guilds) {
+        const existing = guildsCommand.get(guild.id);
+
+        const registrationCheck = !!existing && isCmdIdentical(existing, declaredCommand);
+
+        if (registrationCheck !== true) {
+          this.#logger.info(`Registering commands with guild id (${registrationCheck || 'not yet registered'}): ${guild.id} (${guild.name})`);
+
+          await rest.put(Routes.applicationGuildCommands(this.clientId, guild.id),
+            {
+              body: [declaredCommand]
+            }
+          ).catch(noop)
+
+          await waitFor(2000);
+        }
+      }
     }
   }
 

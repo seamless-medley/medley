@@ -135,7 +135,6 @@ async function main() {
   const program = new Command()
     .name('medley')
     .argument('<config-file>')
-    .option('-r, --register')
     .parse(process.argv);
 
   const configFile = (program.args[0] || '').trim();
@@ -170,29 +169,6 @@ async function main() {
 
     setTimeout(() => process.exit(1), 1e3);
     return;
-  }
-
-  if (program.opts().register) {
-    logger.info('Registering');
-
-    for (const [id, { botToken, clientId, baseCommand }] of Object.entries(configs.automatons)) {
-
-      const client = new Client({
-        intents: [GatewayIntentBits.Guilds]
-      });
-
-      await client.login(botToken);
-
-      await MedleyAutomaton.registerGuildCommands({
-        botToken,
-        clientId,
-        logger: createLogger({ name: 'automaton', id }),
-        baseCommand: baseCommand || 'medley',
-        guilds: [...(await client.guilds.fetch()).values()]
-      });
-    }
-
-    process.exit(0);
   }
 
   logger.info('Initializing');
