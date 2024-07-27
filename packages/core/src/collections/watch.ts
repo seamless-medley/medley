@@ -31,11 +31,14 @@ export type WatchTrackCollectionOptions<T extends Track<any>> = TrackCollectionO
   scanner?: (dir: string) => Promise<false | string[]>;
 }
 
-export type RescanStats = {
+export type ScanStats = {
   scanned: number;
   added: number;
-  removed: number;
   updated: number;
+}
+
+export type RescanStats = ScanStats & {
+  removed: number;
 }
 
 type ScanOptions = {
@@ -264,7 +267,7 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
 
   #scanning = 0;
 
-  async #scan({ dir, onFirstChunkAdded, chunkSize, updateExisting }: ScanOptions) {
+  async #scan({ dir, onFirstChunkAdded, chunkSize, updateExisting }: ScanOptions): Promise<ScanStats> {
     if (this.#scanning === 0) {
       this.emit('scan' as any);
     }
@@ -274,7 +277,7 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
     const onChunkAdded = once(onFirstChunkAdded ?? noop) as ChunkHandler<T>;
 
     const scanners = [this.#extScanner, this.#globScanner];
-    const counter = {
+    const counter: ScanStats = {
       scanned: 0,
       added: 0,
       updated: 0
