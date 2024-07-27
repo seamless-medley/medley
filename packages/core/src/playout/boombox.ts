@@ -415,15 +415,19 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
 
   async #fetchRequestTrack(): Promise<TrackWithRequester<BoomBoxTrack, R> | undefined> {
     const predicates = [...this.#requestLockPredicates.values()];
+    const isRequestLocked = (track: TrackWithRequester<BoomBoxTrack, R>) => predicates.some(pred => pred(track));
 
-    for (let i = 0; i < this.#requests.length; i++) {
+    let i = 0;
+    while (i < this.#requests.length) {
       const track = this.#requests.at(i);
 
       if (!track) {
-        break;
+        this.#requests.delete(i);
+        continue;
       }
 
-      if (predicates.some(pred => pred(track))) {
+      if (isRequestLocked(track)) {
+        i++;
         continue;
       }
 
