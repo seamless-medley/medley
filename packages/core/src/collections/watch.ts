@@ -278,14 +278,14 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
     const counter = {
       scanned: 0,
       added: 0,
-      updatedCount: 0
+      updated: 0
     }
 
     for (const scanner of scanners) {
       const files = await scanner.call(this, dir);
 
       if (files !== false) {
-        const { scanned, added, updatedCount } = await this.add({
+        const { scanned, added, updated } = await this.add({
           paths: shuffle(files),
           updateExisting,
           chunkSize,
@@ -296,7 +296,7 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
 
         counter.scanned += scanned.length;
         counter.added += added.length;
-        counter.updatedCount += updatedCount;
+        counter.updated += updated;
 
         break;
       }
@@ -326,7 +326,7 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
     return {
       scanned: sumBy(results, c => c.scanned),
       added: sumBy(results, c => c.added),
-      updated: sumBy(results, c => c.updatedCount),
+      updated: sumBy(results, c => c.updated),
       removed: removed.length
     }
   }

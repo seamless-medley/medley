@@ -244,7 +244,7 @@ export class TrackCollection<
       paths,
       chunkSize,
       onChunkCreated: async (tracks, chunkIndex, totalChunks) => {
-        const { added, updatedCount } = await this.#addTracks({
+        const { added, updated } = await this.#addTracks({
           tracks,
           chunkIndex,
           totalChunks,
@@ -254,7 +254,7 @@ export class TrackCollection<
 
         await onChunkAdded?.(tracks, chunkIndex, totalChunks);
 
-        totalUpdatedCount += updatedCount;
+        totalUpdatedCount += updated;
 
         return added;
       }
@@ -262,7 +262,7 @@ export class TrackCollection<
 
     return {
       ...transformed,
-      updatedCount: totalUpdatedCount
+      updated: totalUpdatedCount
     }
   }
 
@@ -334,7 +334,7 @@ export class TrackCollection<
 
     return {
       added: mapped,
-      updatedCount
+      updated: updatedCount
     };
   }
 
