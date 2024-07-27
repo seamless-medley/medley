@@ -29,19 +29,24 @@ export enum OptionType {
   Channel = 7,
   Role = 8,
   Mentionable = 9,
-  Number = 10
+  Number = 10,
+  Attachment = 11
 }
 
 export enum ChannelType {
   GuildText = 0,
+  DM = 1,
   GuildVoice = 2,
+  GroupDM = 3,
   GuildCategory = 4,
-  GuildNews = 5,
-  GuildStore = 6,
-  GuildNewsThread = 10,
-  GuildPublicThread = 11,
-  GuildPrivateThread = 12,
-  GuildStageVoice = 13
+  GuildAnnouncement = 5,
+  AnnouncementThread = 10,
+  PublicThread = 11,
+  PrivateThread = 12,
+  GuildStageVoice = 13,
+  GuildDirectory = 14,
+  GuildForum = 15,
+  GuildMedia = 16
 }
 
 export type Command = Omit<RESTPostAPIApplicationCommandsJSONBody, 'type' | 'options'> & {
