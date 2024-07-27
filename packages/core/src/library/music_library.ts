@@ -152,7 +152,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     }
   }
 
-  #handleTrackUpdates = async (event: TracksUpdateEvent<MusicTrack<O>>) => {
+  #handleTracksUpdate = async (event: TracksUpdateEvent<MusicTrack<O>>) => {
     event.promises.push(new Promise<void>(async (resolve) => {
       await this.#searchEngine.removeAll(event.tracks).catch(e => this.#logger.error(e));
 
@@ -281,7 +281,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       const handlers: Record<string, Function> = {
         tracksAdd: this.#handleTrackAddition(newCollection),
         tracksRemove: this.#handleTrackRemoval,
-        tracksUpdate: this.#handleTrackUpdates,
+        tracksUpdate: this.#handleTracksUpdate,
         scan: this.#handleCollectionScanStart(newCollection),
         'scan-done': this.#handleCollectionScanDone(newCollection),
       }
