@@ -9,7 +9,7 @@ const { access } = require('node:fs/promises');
  * @param {string} dir
  * @returns {Promise<false | string[]>}
  */
-function scanDir(dir) {
+async function scanDir(dir) {
   return fg(
     `${normalizePath(dir)}/**/*`,
     {
