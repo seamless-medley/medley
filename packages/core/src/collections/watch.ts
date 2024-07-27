@@ -320,10 +320,16 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
 
     const removed = await this.removeNonExistent();
 
-    const results = await Promise.all([...this.#watchInfos.keys()].map(dir => this.#scan({
-      dir,
-      updateExisting: full
-    })));
+    const results: ScanStats[] = [];
+
+    for (const dir of this.#watchInfos.keys()) {
+      results.push(await this.#scan({
+        dir,
+        updateExisting: full
+      }));
+
+      await breath();
+    }
 
     return {
       scanned: sumBy(results, c => c.scanned),
