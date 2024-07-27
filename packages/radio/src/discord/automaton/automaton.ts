@@ -217,6 +217,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
           this.#rejoinVoiceChannels(30);
         }
 
+        this.#updateStats();
+
         this.#shardReady = true;
       });
 
