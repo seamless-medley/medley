@@ -226,7 +226,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     done(failures);
   }
 
-  async #indexTrack({ track, retried }: IndexInfo<O>, force: boolean = false) {
+  async #indexTrack({ track }: IndexInfo<O>, force: boolean = false) {
     let modified = false;
 
     if (force || !track.extra?.tags) {

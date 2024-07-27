@@ -2,7 +2,6 @@ import type { Metadata } from "@seamless-medley/medley";
 import normalizePath from "normalize-path";
 import type { TrackRecord } from "../playout";
 import type { SearchQuery, SearchQueryKey } from "./search";
-import { isEqual } from "lodash";
 
 export type RecentSearchRecord = [term: string, count: number, timestamp: Date];
 

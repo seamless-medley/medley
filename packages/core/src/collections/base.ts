@@ -2,7 +2,7 @@ import os from 'node:os';
 import { access, stat } from 'node:fs/promises';
 import { createHash } from 'crypto';
 import { TypedEmitter } from "tiny-typed-emitter";
-import { castArray, chain, chunk, clamp, findLastIndex, omit, partition, random, sample, shuffle, sortBy, stubFalse, stubTrue, zip } from "lodash";
+import { castArray, chain, chunk, clamp, findLastIndex, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
 import normalizePath from 'normalize-path';
 import { Logger, createLogger } from '@seamless-medley/logging';
 import { moveArrayElements, moveArrayIndexes, waitFor } from '@seamless-medley/utils';
@@ -288,7 +288,7 @@ export class TrackCollection<
             ? track
             : undefined
         })
-      )).filter((t): t is Awaited<T> => t !== undefined)
+      )).filter((t): t is Awaited<T> => t !== undefined);
 
       const updated = tracksToUpdate.length > 0
         ? await this.#internalUpdate(tracksToUpdate)
@@ -346,7 +346,7 @@ export class TrackCollection<
     const e: TracksUpdateEvent<T> = {
       tracks,
       updatedTracks: [],
-      promises: [],
+      promises: []
     };
 
     this.emit('tracksUpdate', e);

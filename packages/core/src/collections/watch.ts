@@ -44,6 +44,7 @@ type ScanOptions = {
   chunkSize?: number;
   onFirstChunkAdded?: () => any;
 }
+
 export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = TrackExtraOf<T>, Extra = any> extends TrackCollection<T, TE, Extra, WatchTrackCollectionOptions<T>> {
   constructor(id: string, extra: Extra, options: WatchTrackCollectionOptions<T> = {}) {
     super(id, extra, {
@@ -144,8 +145,6 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
       // File deletion
       this.#removedIds.add(await this.getTrackId(path));
     }
-
-    this.logger.info('%d track(s) deleted', this.#removedIds.size);
 
     this.#handleFilesRemoval();
   }
