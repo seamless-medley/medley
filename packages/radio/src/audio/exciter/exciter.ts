@@ -162,8 +162,8 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
 
           this.outlet = pipeline(
             [
-              this.request!.stream,
-              this.opusEncoder!
+              this.request!.stream as unknown as NodeJS.ReadableStream,
+              this.opusEncoder! as unknown as NodeJS.WritableStream,
             ],
             noop
           ) as unknown as Readable;
