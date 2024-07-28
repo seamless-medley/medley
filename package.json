@@ -19,7 +19,7 @@
     "@types/copyfiles": "^2.4.2",
     "@types/fs-extra": "^11.0.3",
     "@types/lodash": "^4.14.200",
-    "@types/node": "^18.15.11",
+    "@types/node": "^18.16.0",
     "copyfiles": "^2.4.1",
     "cross-env": "^7.0.3",
     "fs-extra": "^11.2.0",
