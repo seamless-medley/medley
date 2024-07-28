@@ -9,12 +9,6 @@ const declaration: SubCommandLikeOption = {
   options: [
     {
       type: OptionType.String,
-      name: 'query',
-      description: 'Search term',
-      autocomplete: true
-    },
-    {
-      type: OptionType.String,
       name: 'artist',
       description: 'Artist name',
       autocomplete: true
@@ -23,6 +17,12 @@ const declaration: SubCommandLikeOption = {
       type: OptionType.String,
       name: 'title',
       description: 'Song title',
+      autocomplete: true
+    },
+    {
+      type: OptionType.String,
+      name: 'query',
+      description: 'Search term',
       autocomplete: true
     },
     {
