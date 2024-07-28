@@ -6,7 +6,8 @@ import {
   makeRequester,
   MetadataHelper,
   Station,
-  StationTrack
+  StationTrack,
+  TrackKind
 } from "@seamless-medley/core";
 
 import {
@@ -23,7 +24,8 @@ import {
   MessageComponentInteraction,
   ButtonInteraction,
   userMention,
-  RepliableInteraction
+  RepliableInteraction,
+  quote
 } from "discord.js";
 
 import { chain, chunk, clamp, Dictionary, flatten, fromPairs, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
@@ -102,8 +104,24 @@ const makeRequest = async ({ station, automaton, trackId, guildId, noSweep, inte
     guildId
   });
 
+  // When this is the only request track in the list and there are some tracks that are being cued/loaded before it.
+  // The requester must be informed that the track he/she has just requested will not be played right after the currenly playing track
+  let notice: string | undefined;
+  const requests = station.allRequests.all();
+
+  if (requests.length === 1 && requests[0]!.rid === result.track.rid) {
+    const cuedTrackCount = station.getTracksFromQueue().length || station.getTracksFromDecks().length;
+
+    if (cuedTrackCount) {
+      notice = `💡‼️ This request is deferred, some other tracks are about to be played`;
+    }
+  }
+
   await interaction.update({
-    content: `${userMention(interaction.user.id)} Request accepted: ${bold(inlineCode(getTrackBanner(result.track)))}`,
+    content: joinStrings([
+      `${userMention(interaction.user.id)} Request accepted: ${bold(inlineCode(getTrackBanner(result.track)))}`,
+      notice ? quote(notice) : undefined
+    ]),
     components: []
   });
 
