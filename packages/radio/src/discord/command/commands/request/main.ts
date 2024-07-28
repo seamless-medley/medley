@@ -37,7 +37,7 @@ import { declare, deferReply, deny, guildStationGuard, joinStrings, makeAnsiCode
 import { ansi } from "../../../format/ansi";
 import { getVoteMessage } from "../vote";
 import { interact } from "../../interactor";
-import { groupByAsync, waitFor } from "@seamless-medley/utils";
+import { groupByAsync } from "@seamless-medley/utils";
 import { MedleyAutomaton } from "../../../automaton";
 import { extractSpotifyUrl, fetchSpotifyInfo } from "../../../helpers/spotify";
 import { GuildState } from "../../../automaton/guild-state";
