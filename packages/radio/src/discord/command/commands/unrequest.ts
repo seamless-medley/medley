@@ -82,10 +82,8 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
       const unrequested = station.unrequest(requestIds);
 
       const banners = unrequested.removed.map(getTrackBanner);
-      const loadedRequests = chain([0, 1, 2])
-        .map(i => station.getDeckInfo(i).trackPlay?.track)
-        .filter((t): t is TrackWithRequester<BoomBoxTrack, any> => isRequestTrack(t) && requestIds.includes(t.rid))
-        .value();
+      const loadedRequests = station.getFetchedRequests()
+        .filter(({ rid }) => requestIds.includes(rid));
 
       collected.update({
         components: [],
