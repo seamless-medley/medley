@@ -1,6 +1,6 @@
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { Join } from 'type-fest';
-import { sumBy } from 'lodash';
+import { chain, sumBy } from 'lodash';
 
 import {
   AudioLevels,
@@ -771,6 +771,18 @@ export class Station extends TypedEmitter<StationEvents> {
     }
 
     return result;
+  }
+
+  getTracksFromQueue() {
+    return this.queue.toArray();
+  }
+
+  getTracksFromDecks() {
+    return chain([0, 1, 2])
+      .map(i => this.getDeckInfo(i))
+      .map(info => !info.active && info.trackPlay?.track)
+      .filter(track => !!track)
+      .value();
   }
 
   addAudience(groupId: AudienceGroupId, audienceId: string) {
