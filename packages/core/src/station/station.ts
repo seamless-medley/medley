@@ -32,7 +32,7 @@ import {
   TrackWithRequester
 } from "../playout";
 import { MetadataHelper } from "../metadata";
-import { SearchQuery, SearchQueryField } from "../library/search";
+import { SearchQueryField } from "../library/search";
 import { CrateProfile } from "../crate/profile";
 
 export type StationAudioLevels = AudioLevels & {
