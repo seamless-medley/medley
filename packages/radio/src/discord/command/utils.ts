@@ -140,18 +140,31 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
   }
 }
 
-const previewTrackPeek = ({ index, localIndex, track }: TrackPeek<StationRequestedTrack>, padding: number, focus?: number) => {
-  const isFocusing = focus === index;
-  const label = padStart(`${localIndex + 1}`, padding);
-  const priority = track.priority ? ` {{red|b}}[${track.priority}]` : '';
-  return ansi`${isFocusing ? '{{bgDarkBlue|b}}' : ''}{{pink}}${label}{{${isFocusing ? 'blue' : 'white'}}}: ${getTrackBanner(track)}${priority}`;
+function previewTrack(options: { track: BoomBoxTrack; label: string; priority?: number; focused: boolean; padding: number }) {
+  const { track, label, priority, padding, focused } = options;
+  const labelText = padStart(`${label}`, padding);
+  const priorityText = priority ? ` {{red|b}}[${priority}]` : '';
+
+  return ansi`${focused ? '{{bgDarkBlue|b}}' : ''}{{pink}}${labelText}{{${focused ? 'blue' : 'white'}}}: ${getTrackBanner(track)}${priorityText}`;
+}
+
+function previewTrackPeek({ index, localIndex, track }: TrackPeek<StationRequestedTrack>, padding: number, focus?: number) {
+  return previewTrack({
+    track,
+    label: `${localIndex + 1}`,
+    focused: focus === index,
+    padding,
+    priority: track.priority
+  });
 }
 
 export function isTrackRequestedFromGuild(track: TrackWithRequester<BoomBoxTrack, Requester>, guildId: string) {
   return track.requestedBy.some(({ type, group }) => (type === AudienceType.Discord) && (group.guildId === guildId));
 }
 
-export function peekRequestsForGuild(station: Station, bottomIndex: number, count: number, guildId: string) {
+export type GuildTrackPeek = TrackPeek<TrackWithRequester<BoomBoxTrack, Requester>>;
+
+export function peekRequestsForGuild(station: Station, bottomIndex: number, count: number, guildId: string): Array<GuildTrackPeek> {
   return station.allRequests.peek(
     bottomIndex, count,
     track => isTrackRequestedFromGuild(track, guildId)
@@ -177,18 +190,30 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
   const { bottomIndex = 0, focusIndex, count = 5, guildId } = options;
   const peekings = peekRequestsForGuild(station, bottomIndex, count, guildId);
 
-  if (peekings.length <= 0) {
+  const cuedRequests = station.getFetchedRequests()
+    .filter(track => isTrackRequestedFromGuild(track, guildId));
+
+  if (peekings.length + cuedRequests.length <= 0) {
     return;
   }
 
-  const padding = 2 + (maxBy(peekings, 'index')?.index.toString().length || 0);
+  const peekingLabelSize = maxBy(peekings, 'index')?.index.toString().length || 0;
+  const cuedRequestsLabelSize = cuedRequests.length > 0 ? 'CUED'.length : 0;
 
-  const lines: string[] = [];
+  const padding = 2 + Math.max(cuedRequestsLabelSize, peekingLabelSize);
 
   const topItem = peekings.at(0)!;
 
   const topMost = (topItem.localIndex > 0) ? station.allRequests.find(track => isTrackRequestedFromGuild(track, guildId)) : undefined;
   const firstPeekLocalIndex = peekings.at(0)?.localIndex ?? -1;
+
+  const lines: string[] = cuedRequests.map(r => previewTrack({
+    label: 'CUED',
+    track: r,
+    padding,
+    focused: false,
+    priority: r.priority
+  }));
 
   if (topMost && firstPeekLocalIndex > 0) {
     lines.push(previewTrackPeek({ index: -1, localIndex: 0, track: topMost }, padding, undefined));
