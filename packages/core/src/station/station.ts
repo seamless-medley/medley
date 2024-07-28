@@ -24,6 +24,7 @@ import {
   BoomBoxTrack,
   BoomBoxTrackCollection,
   BoomBoxTrackExtra,
+  isRequestTrack,
   RequestTrackLockPredicate,
   SweeperInsertionRule,
   TrackKind,
@@ -783,6 +784,14 @@ export class Station extends TypedEmitter<StationEvents> {
       .map(info => !info.active && info.trackPlay?.track)
       .filter(track => !!track)
       .value();
+  }
+
+  getFetchedRequests() {
+    const tracksFromQueue = this.getTracksFromQueue();
+    const tracksFromDecks = this.getTracksFromDecks();
+
+    return [...tracksFromQueue, ...tracksFromDecks]
+      .filter((t): t is TrackWithRequester<BoomBoxTrack, Requester> => !!t && isRequestTrack(t))
   }
 
   addAudience(groupId: AudienceGroupId, audienceId: string) {
