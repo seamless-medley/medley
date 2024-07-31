@@ -1085,6 +1085,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         if (a.options[i].description !== b.options[i].description) {
           return 'Option description mismatch';
         }
+
+        if ((a.options[i].required ?? false) !== (b.options[i].required ?? false)) {
+          return 'Option required flag mismatch';
+        }
       }
 
       return true;
