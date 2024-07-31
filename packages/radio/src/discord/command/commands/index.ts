@@ -12,6 +12,7 @@ import profile from './profile';
 import collection from './collection';
 import karaoke from './karaoke';
 import rescan from './rescan';
+import volume from './volume';
 
 export const all = {
   join,
@@ -27,5 +28,6 @@ export const all = {
   profile,
   collection,
   karaoke,
-  rescan
+  rescan,
+  volume
 }

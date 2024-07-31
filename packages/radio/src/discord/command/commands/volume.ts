@@ -1,20 +1,13 @@
 import { decibelsToGain, gainToDecibels, interpolate } from "@seamless-medley/utils";
-import { ChatInputCommandInteraction } from "discord.js";
+import { ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
 import { range, round } from "lodash";
 import { ansi } from "../../format/ansi";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { declare, deny, guildIdGuard, makeAnsiCodeBlock, warn } from "../utils";
-
-/*
-This file is DEPRECATED, kept for referencing only.
-
-As setting volume for each Automaton requires separating Exciter and thus requires more CPU power.
-Removing this allow an Exciter for a station to be shared with multiple Automatons
-*/
+import { declare, deny, guildIdGuard, makeAnsiCodeBlock, permissionGuard, warn } from "../utils";
 
 const dbToEmoji = (db: number) => {
   if (db > 3) return '🔊💥';
-  if (db > 0) return '🔊🔊';
+  if (db >= 0) return '🔊🔊';
   if (db > -15) return '🔊';
   if (db > -36) return '🔉';
   if (db > -60) return '🔈';
@@ -38,24 +31,35 @@ const declaration: SubCommandLikeOption = ((list) => ({
       type: OptionType.Number,
       choices: list.map(([, value]) => ({ name: `${value}dB ${dbToEmoji(value)}`, value })),
       name: 'db',
-      description: 'Volume in Decibels, -60 to 6 dB',
+      description: 'Volume in Decibels, -60 to 0 dB',
       min_value: -60,
-      max_value: 6,
+      max_value: 0,
       required: false
     },
     {
       type: OptionType.Number,
       name: 'percent',
       choices: list.map(([value, db]) => ({ name: `${value}% ${dbToEmoji(db)}`, value })),
-      description: 'Volume in percentage, 0 to 110 %',
+      description: 'Volume in percentage, 0 to 100 %',
       min_value: 0,
-      max_value: 110,
+      max_value: 100,
       required: false
     }
   ]
-}))(makeVolumeScale(0, 110, 5).reverse())
+}))(makeVolumeScale(0, 100, 5).reverse())
 
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
+  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+
+  if (!isOwnerOverride) {
+    permissionGuard(interaction.memberPermissions, [
+      PermissionsBitField.Flags.ManageChannels,
+      PermissionsBitField.Flags.ManageGuild,
+      PermissionsBitField.Flags.MuteMembers,
+      PermissionsBitField.Flags.MoveMembers
+    ]);
+  }
+
   const guildId = guildIdGuard(interaction);
 
   const state = automaton.getGuildState(guildId);
@@ -70,7 +74,6 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     return;
   }
 
-  // @ts-ignore
   const oldGain = state.gain;
   const oldDecibels = g2d(oldGain);
 
@@ -91,7 +94,6 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     inDecibels = percentToDb(inPercent!)
   }
 
-  // @ts-ignore
   state.gain = decibelsToGain(inDecibels);
 
   declare(interaction, makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, Fading volume from {{pink}}${volumeToString(oldDecibels)}{{reset}} to {{cyan}}${volumeToString(inDecibels)}`));
