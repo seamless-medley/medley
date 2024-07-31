@@ -197,8 +197,9 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
     return;
   }
 
+  const cuedLabel = 'CUED';
   const peekingLabelSize = maxBy(peekings, 'index')?.index.toString().length || 0;
-  const cuedRequestsLabelSize = cuedRequests.length > 0 ? 'CUED'.length : 0;
+  const cuedRequestsLabelSize = cuedRequests.length > 0 ? cuedLabel.length : 0;
 
   const padding = 2 + Math.max(cuedRequestsLabelSize, peekingLabelSize);
 
@@ -208,7 +209,7 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
   const firstPeekLocalIndex = peekings.at(0)?.localIndex ?? -1;
 
   const lines: string[] = cuedRequests.map(r => previewTrack({
-    label: 'CUED',
+    label: cuedLabel,
     track: r,
     padding,
     focused: false,
