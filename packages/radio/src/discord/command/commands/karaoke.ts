@@ -1,7 +1,7 @@
-import { ChatInputCommandInteraction } from "discord.js";
+import { ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { SubCommandHandlerOptions } from "./latch/type";
-import { deny, guildIdGuard, joinStrings, makeAnsiCodeBlock, reply } from "../utils";
+import { deny, guildIdGuard, joinStrings, makeAnsiCodeBlock, permissionGuard, reply } from "../utils";
 import { GuildState } from "../../automaton/guild-state";
 import { ansi } from "../../format/ansi";
 
@@ -72,6 +72,17 @@ const subCommandHandlers: Partial<Record<string, (options: SubCommandHandlerOpti
 }
 
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
+  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+
+  if (!isOwnerOverride) {
+    permissionGuard(interaction.memberPermissions, [
+      PermissionsBitField.Flags.ManageChannels,
+      PermissionsBitField.Flags.ManageGuild,
+      PermissionsBitField.Flags.MuteMembers,
+      PermissionsBitField.Flags.MoveMembers
+    ]);
+  }
+
   const subCommandName = interaction.options?.getSubcommand(true);
 
   subCommandHandlers[subCommandName]?.({
