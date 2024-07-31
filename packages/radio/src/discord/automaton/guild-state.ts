@@ -215,7 +215,7 @@ export class GuildState {
 
     const bitrate = (this.adapter.getConfig(this.guildId)?.bitrate ?? 256) * 1000;
     const exciter = new DiscordAudioPlayer(preferredStation, bitrate);
-    exciter.setKaraokeParams({ enabled: this.#karaokeEnabled, dontTransit: true });
+    this.#karaokeEnabled = false;
 
     const newLink: StationLink = {
       station: preferredStation,
