@@ -1,4 +1,4 @@
-import { chain, noop, sortBy } from "lodash";
+import { chain, clamp, noop, sortBy } from "lodash";
 
 import {
   AudienceGroupId,
@@ -57,6 +57,7 @@ export class GuildState {
     adapter.getClient().on('voiceStateUpdate', this.#handleVoiceStateUpdate);
 
     const config = adapter.getConfig(guildId);
+    this.#gain = clamp(config?.gain ?? 1.0, 0, 1);
     this.textChannelId = config?.trackMessage?.channel;
   }
 
@@ -81,6 +82,8 @@ export class GuildState {
   #voiceConnector?: VoiceConnector;
 
   #karaokeEnabled = false;
+
+  #gain = 1.0;
 
   get maxTrackMessages() {
     const config = this.adapter.getConfig(this.guildId);
@@ -116,6 +119,18 @@ export class GuildState {
   set bitrate(newBitrate: number) {
     if (this.stationLink?.exciter) {
       this.stationLink.exciter.bitrate = newBitrate;
+    }
+  }
+
+  get gain() {
+    return this.#gain;
+  }
+
+  set gain(newGain: number) {
+    newGain = clamp(newGain, 0, 1);
+    if (newGain !== this.#gain) {
+      this.#gain = newGain;
+      this.stationLink?.exciter?.setGain(newGain);
     }
   }
 
@@ -213,8 +228,12 @@ export class GuildState {
       this.detune();
     }
 
-    const bitrate = (this.adapter.getConfig(this.guildId)?.bitrate ?? 256) * 1000;
-    const exciter = new DiscordAudioPlayer(preferredStation, bitrate);
+    const config = this.adapter.getConfig(this.guildId);
+    const bitrate = (config?.bitrate ?? 256) * 1000;
+    const exciter = new DiscordAudioPlayer(preferredStation, {
+      gain: this.#gain,
+      bitrate
+    });
     this.#karaokeEnabled = false;
 
     const newLink: StationLink = {

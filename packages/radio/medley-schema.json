@@ -636,7 +636,16 @@
           "description": "Bitrate for Opus, in kbps",
           "type": "integer",
           "minimum": 0,
-          "maximum": 256
+          "maximum": 256,
+          "default": 256
+        },
+        "volume": {
+          "title": "Volume",
+          "markdownDescription": "Volume\n- 0 => 0%\n- 0.5 => 50%\n- 1.0 => 100%",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1.0
         }
       },
       "additionalProperties": false

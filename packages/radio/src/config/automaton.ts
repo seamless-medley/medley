@@ -13,7 +13,8 @@ export const GuildSpecificConfig = z.object({
   autotune: z.string().min(1).optional(),
   autojoin: z.string().min(1).optional(),
   trackMessage: TrackMessageConfig.optional(),
-  bitrate: z.number().positive().max(256).optional().default(256)
+  bitrate: z.number().positive().max(256).optional().default(256),
+  gain: z.number().min(0).max(1).optional().default(1.0)
 }).strict();
 
 export const AutomatonConfig = z.object({

@@ -77,6 +77,8 @@ export type GuildSpecificConfig = {
    * Opus bitrate, in kbps
    */
   bitrate: number;
+
+  gain: number;
 }
 
 export type MedleyAutomatonOptions = {
