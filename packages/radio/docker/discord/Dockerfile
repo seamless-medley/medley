@@ -1,6 +1,6 @@
 FROM node:18.16.0 as builder
 
-RUN corepack enable && corepack prepare pnpm@8.15.5
+RUN corepack enable && corepack prepare pnpm@9.6.0
 
 # install build dependencies
 RUN apt update \
