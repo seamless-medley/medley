@@ -21,17 +21,13 @@
     "@types/lodash": "^4.14.200",
     "@types/node": "^18.16.0",
     "copyfiles": "^2.4.1",
-    "cross-env": "^7.0.3",
     "fs-extra": "^11.2.0",
     "husky": "^8.0.3",
     "is-ci": "^3.0.1",
     "mkdirp": "^3.0.1",
-    "rimraf": "^5.0.5",
-    "ts-node": "^10.9.1",
-    "tsx": "^4.6.2",
     "turbo": "^1.11.1",
     "type-fest": "^4.8.3",
-    "typescript": "^5.2.2"
+    "typescript": "5.4.5"
   },
   "workspaces": [
     "packages/*"
@@ -42,14 +38,19 @@
         "@babel/*"
       ],
       "allowedVersions": {
-        "@discordjs/opus": "0.9"
+        "@discordjs/opus": "0.9",
+        "rimraf": "3.0.2"
       }
     },
     "allowedDeprecatedVersions": {
       "@floating-ui/react-dom-interactions": "*",
       "@npmcli/move-file": "*",
       "string-similarity": "*",
-      "babel-merge": "*"
+      "babel-merge": "*",
+      "rimraf": "*"
+    },
+    "overrides": {
+      "typescript": "5.4.5"
     }
   },
   "commitlint": {
