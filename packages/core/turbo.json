@@ -1,6 +1,6 @@
 {
   "extends": ["//"],
-  "pipeline": {
+  "tasks": {
     "build": {
       "dependsOn": ["@seamless-medley/utils#build"],
       "outputs": ["dist/**"]
