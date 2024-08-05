@@ -29,6 +29,9 @@
     "@types/normalize-path": "^3.0.1",
     "@types/string-similarity": "^4.0.1",
     "@types/workerpool": "^6.4.5",
-    "node-gyp-build": "^4.6.1"
+    "node-gyp-build": "^4.6.1",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.6.2",
+    "typescript": "5.4.5"
   }
 }
