@@ -42,6 +42,7 @@ jobs:
     env:
       BUILD_ARCH: ${{ matrix.build-arch }}
       DEPS_INSTALL: ./packages/node-medley/scripts/install-deps.sh
+      HUSKY: 0
     steps:
       - name: Install Node
         uses: actions/setup-node@v4

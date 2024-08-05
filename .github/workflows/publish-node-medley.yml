@@ -10,6 +10,7 @@ on:
 env:
   NODE_MEDLEY_DIR: ./packages/node-medley
   PREBUILDS_DIR: ./packages/node-medley/prebuilds
+  HUSKY: 0
 jobs:
   pack-and-publish:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
