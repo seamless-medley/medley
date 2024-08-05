@@ -1,6 +1,5 @@
-import { Express, Router } from 'express';
 import { noop } from "lodash";
-import { AudienceType, MusicDb, Station, StationEvents, makeAudienceGroupId } from "@seamless-medley/core";
+import { MusicDb, Station, StationEvents } from "@seamless-medley/core";
 import { createLogger } from "@seamless-medley/logging";
 
 import { SettingsDb } from '../db/types';

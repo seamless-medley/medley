@@ -1,8 +1,6 @@
 import { Medley } from "@seamless-medley/core";
-import { Client, GatewayIntentBits } from "discord.js";
 import { Command } from '@commander-js/extra-typings';
 import { MongoMusicDb } from "../db/musicdb/mongo";
-import { MedleyAutomaton } from "./automaton";
 import { loadConfig } from "../config";
 import { ZodError } from "zod";
 import { createAutomaton, createStation, getVersionLine, showVersionBanner } from "../helper";
