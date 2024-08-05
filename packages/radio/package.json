@@ -99,7 +99,6 @@
     "@babel/plugin-transform-private-methods": "^7.23.3",
     "@babel/preset-react": "^7.23.3",
     "@babel/preset-typescript": "^7.23.3",
-    "@electron/rebuild": "^3.2.10",
     "@styled/typescript-styled-plugin": "^1.0.0",
     "@types/audioworklet": "^0.0.54",
     "@types/express": "^4.17.20",
