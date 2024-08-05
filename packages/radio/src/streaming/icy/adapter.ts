@@ -187,7 +187,7 @@ export class IcyAdapter extends FFMpegAdapter {
     transformers.push(mux);
 
     for (let i = 0; i < transformers.length - 1; i++) {
-      transformers[i].pipe(transformers[i + 1]);
+      transformers[i].pipe(transformers[i + 1] as unknown as NodeJS.WritableStream);
     }
 
     const transport = (buffer: Buffer) => res.write(buffer);
@@ -198,17 +198,17 @@ export class IcyAdapter extends FFMpegAdapter {
     }
 
     valve.out.on('data', transport);
-    this.#outlet.pipe(valve.in);
+    this.#outlet.pipe(valve.in  as unknown as NodeJS.WritableStream);
 
     req.socket.on('close', () => {
       this.#multiplexers.delete(mux);
 
-      this.#outlet.unpipe(valve.in);
+      this.#outlet.unpipe(valve.in  as unknown as NodeJS.WritableStream);
 
       valve.out.off('data', transport);
 
       for (let i = 0; i < transformers.length - 1; i++) {
-        transformers[i].unpipe(transformers[i + 1]);
+        transformers[i].unpipe(transformers[i + 1]  as unknown as NodeJS.WritableStream);
       }
 
       const paused = this.station.removeAudience(audienceGroup, audienceId);
@@ -265,7 +265,11 @@ export class IcyAdapter extends FFMpegAdapter {
       fx: this.#options.fx
     });
 
-    pipeline(this.#audioRequest.stream, process.stdin, noop);
+    pipeline(
+      this.#audioRequest.stream as unknown as NodeJS.ReadableStream,
+      process.stdin as unknown as NodeJS.WritableStream,
+      noop
+    );
 
     process.stdout.on('data', buffer => this.#outlet.write(buffer));
   }

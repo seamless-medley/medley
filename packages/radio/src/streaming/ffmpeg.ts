@@ -216,7 +216,7 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
         return;
       }
 
-      const stdErrorLine = createInterface(process.stderr);
+      const stdErrorLine = createInterface(process.stderr as unknown as NodeJS.ReadableStream);
 
       stdErrorLine.on('line', (line) => {
         const parsed = parseStdErr(line);
@@ -313,7 +313,7 @@ export async function getFFmpegCaps<C extends keyof CapabilityFlags>(capsType: C
   const process = spawn(exePath, [`-${capsType}`]);
 
   const lines: string[] = [];
-  createInterface(process.stdout).on('line', line => lines.push(line.trim()));
+  createInterface(process.stdout as unknown as NodeJS.ReadableStream).on('line', line => lines.push(line.trim()));
 
   return new Promise<FFMpegCapabilities<C>>((resolve) => {
     process.on('exit', () => {

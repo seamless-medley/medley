@@ -175,7 +175,11 @@ export class ShoutAdapter extends FFMpegAdapter {
       fx
     });
 
-    pipeline(this.audioRequest.stream, process.stdin, noop);
+    pipeline(
+      this.audioRequest.stream as unknown as NodeJS.ReadableStream,
+      process.stdin as unknown as NodeJS.WritableStream,
+      noop
+    );
   }
 
   protected override started() {

@@ -1,3 +1,5 @@
+/// <reference path="main.d.ts" />
+
 import { createServer } from 'node:net';
 import http from 'node:http';
 import express from 'express';
