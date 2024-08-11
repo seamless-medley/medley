@@ -1,14 +1,15 @@
 import React, { CSSProperties, PropsWithChildren } from 'react';
 import classNames from 'classnames';
 import { linearGradient, rgba } from 'polished';
-import { attrs } from '../../../utils/attrs';
 import { styled } from '@linaria/react';
+import { useElementSize } from '@mantine/hooks';
+import { attrs } from '../../../utils/attrs';
 
-interface BackgroundProp {
+export type BackgroundProp = {
   background: string;
 }
 
-export interface LineColors {
+export type LineColors = {
   text: string;
   active: string;
   shadow: string;
@@ -16,7 +17,7 @@ export interface LineColors {
   dim: string;
 }
 
-interface LineProps {
+export type LineTextProps = {
   active: boolean;
   lineHeight: number;
   zoom: boolean;
@@ -25,26 +26,20 @@ interface LineProps {
   colors: LineColors;
 }
 
-interface LineLayoutProps {
+export type LineLayoutProps = {
   lines: number;
   lineHeight: number;
 }
 
-interface PositionProps {
+export type PositionProps = {
   position: number;
 }
 
-export interface Props extends LineLayoutProps, PositionProps {
+export type BeatProps = {
+  beatInterval?: number;
+}
 
-};
-
-export const InnerContainer = attrs(props => {
-  return {
-    style: {
-      backgroundColor: props.background
-    }
-  }
-}, styled.div<BackgroundProp>`
+export const InnerContainer = styled.div<BackgroundProp>`
   position: relative;
   height: 100%;
   overflow: hidden;
@@ -53,7 +48,7 @@ export const InnerContainer = attrs(props => {
   transform: translateZ(0) rotateZ(360deg);
   z-index: 0;
   opacity: 0.99;
-`);
+`;
 
 const Decorator = styled.div`
   position: absolute;
@@ -96,17 +91,25 @@ export const Container: React.FC<PropsWithChildren<BackgroundProp>> = (props) =>
   const p = { background };
 
   return (
-    <InnerContainer {...p}>
+    <InnerContainer {...p} style={{ width: '100%', background }}>
       <TopDecorator {...p}/>
       { props.children }
       <BottomDecorator {...p}/>
     </InnerContainer>
   )
 }
+const TickerContainer: React.FC<PropsWithChildren<LineLayoutProps & BeatProps>> = (props) => {
+  const { ref, height } = useElementSize();
 
-const TickerContainer = styled.div<LineLayoutProps>`
-  font-size: calc(min(80vw, 100vh) / (${props => props.lines} * ${props => props.lineHeight}));
-`;
+  const fontSize = height / (props.lines * props.lineHeight);
+  const beatInterval = ((props.beatInterval ?? 0.66)).toFixed(2);
+
+  return (
+    <div ref={ref} style={{ fontSize, height: '100%', '--beat-interval': `${beatInterval}ms` } as CSSProperties}>
+      {props.children}
+    </div>
+  )
+}
 
 const TickerScroller = attrs(props => {
   const { position } = props;
@@ -120,6 +123,7 @@ const TickerScroller = attrs(props => {
 }, styled.div<PositionProps>`
   display: flex;
   flex-direction: column;
+  height: 100%;
   text-align: center;
   white-space: nowrap;
   will-change: transform;
@@ -130,29 +134,17 @@ const TickerScroller = attrs(props => {
   perspective: 1000px;
 `);
 
-export class Ticker extends React.Component<PropsWithChildren<Props>> {
-  private el = React.createRef<HTMLDivElement>();
+export const Ticker = React.forwardRef<HTMLDivElement, PropsWithChildren<LineLayoutProps & PositionProps & BeatProps>>(({ lineHeight, lines, position, children, beatInterval }, ref) => {
+  return (
+    <TickerContainer {...{ lines, lineHeight, beatInterval } }>
+      <TickerScroller ref={ref} {...{ position }}>
+        {children}
+      </TickerScroller>
 
-  setPosition(position: number) {
-    const el = this.el.current;
-    if (el) {
-      el.style.transform = `translate3d(0px, ${-position}px, 0px)`;
-    }
-  }
-
-  render() {
-    const { lines, lineHeight, position, children } = this.props;
-    return (
-      <TickerContainer {...{ lines, lineHeight } }>
-        <TickerScroller ref={this.el} {...{ position }}>
-          {children}
-        </TickerScroller>
-
-        <canvas style={{ display: 'none' }} />
-      </TickerContainer>
-    );
-  }
-}
+      <canvas style={{ display: 'none' }} />
+    </TickerContainer>
+  )
+})
 
 const LineText = attrs(props => {
   const { zoom, active, dim } = props;
@@ -174,7 +166,10 @@ const LineText = attrs(props => {
     className: classNames({ zoom: zoom || active, dim })
   });
 
-}, styled.div<LineProps>`
+}, styled.div<LineTextProps>`
+  display: flex;
+  align-items: center;
+
   transition: color 0.3s ease, font-size 1s ease, transform 1s ease, text-shadow 1.5s ease;
   transform: scale(var(--scale)) translateZ(0) rotateZ(360deg);
 
@@ -190,7 +185,7 @@ const LineText = attrs(props => {
   font-size: 1em;
 
   &.zoom {
-    transform: scale(var(--zoomScale)) translateZ(0) rotateZ(360deg);
+    transform: scale(var(--zoomedScale)) translateZ(0) rotateZ(360deg);
   }
 
   &.dim {
@@ -198,26 +193,31 @@ const LineText = attrs(props => {
   }
 `);
 
-interface IndicatorProps {
+type IndicatorProps = {
   color: string;
 }
 
 const LineFarIndicator = attrs(props => {
-  const style: CSSProperties = {
-    borderColor: `transparent transparent transparent ${props.color}`
-  };
+  const style = {
+    borderColor: `${props.color}`
+  } as CSSProperties;
 
   return ({ style });
 
 }, styled.div<IndicatorProps>`
+  --size: 0.2em;
+
   position: absolute;
-  left: -0.75em;
-  bottom: 0.6em;
+  width: var(--size);
+  height: var(--size);
+
+  left: calc(-2 * var(--size) - 0.2em);
 
   border-style: solid;
-  border-width: 0.25em 0 0.25em 0.5em;
+  border-width: var(--size);
+  border-radius: 50%;
 
-  animation: wobble 0.66s infinite alternate linear;
+  animation: wobble var(--beat-interval) infinite reverse linear;
 
   opacity: 0;
   will-change: height, opacity, transform, animation-duration;
@@ -245,8 +245,13 @@ const LineWrapper = styled.div`
   justify-content: center;
 
   --scale: 1.0;
-  --zoomScale: 1.12;
+  --zoomedScale: 1.12;
 `;
+
+type LineProps = LineTextProps & {
+  scale: number;
+  zoomedScale: number
+}
 
 export class Line extends React.Component<PropsWithChildren<LineProps>> {
   private el = React.createRef<HTMLDivElement>();
@@ -260,53 +265,32 @@ export class Line extends React.Component<PropsWithChildren<LineProps>> {
     return this.el.current && this.el.current.offsetTop;
   }
 
-  private get canvas() {
-    return this.el?.current?.parentElement?.parentElement?.querySelector('canvas');
-  }
-
-  private computeScales() {
-    if (!this.el.current) {
-      return;
-    }
-
-    const ctx = this.canvas?.getContext('2d');
-    if (ctx) {
-      ctx.font = window.getComputedStyle(this.el.current).font;
-
-      let scale = 1;
-      let zoomedScale = 1.12;
-
-      const maxWidth = this.el.current.clientWidth - 20;
-
-      const textWidth = ctx.measureText(this.props.children as string).width;
-      const zoomedWidth = textWidth * zoomedScale;
-
-      if ((textWidth >= maxWidth) || (zoomedWidth >= maxWidth)) {
-        zoomedScale = maxWidth / textWidth;
-        scale = zoomedScale / 1.12;
-      }
-
-      this.el.current.style.setProperty('--scale', `${scale}`);
-      this.el.current.style.setProperty('--zoomScale', `${zoomedScale}`);
-    }
-  }
-
   setProgress(progress: number) {
     if (this.farEl.current) {
-      this.farEl.current.style.opacity = `${progress}`;
+      this.farEl.current.style.opacity = progress.toFixed(4);
     }
   }
 
   render() {
-    this.computeScales();
+    const { scale, zoomedScale, ...textProps } = this.props;
+    const { far, active, dim, colors } = textProps;
 
-    const { far, active, dim, colors } = this.props;
+    const zoomAndScale = {
+      '--scale': scale >= 0 ? scale : 0,
+      '--zoomedScale': zoomedScale >= 0 ? zoomedScale : 0
+    } as React.CSSProperties;
+
+
     return (
-      <LineWrapper ref={this.el}>
-        <LineText {...this.props}>
-          { far && <LineFarIndicator ref={this.farEl}
-            color={ active || dim ? colors.dim : colors.active}
-          />}
+      <LineWrapper ref={this.el} style={{ ...zoomAndScale }}>
+        <LineText {...textProps}>
+          { far && (
+              <LineFarIndicator
+                ref={this.farEl}
+                color={ active || dim ? colors.dim : colors.active}
+              />
+            )
+          }
 
           {this.props.children}
         </LineText>

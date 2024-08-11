@@ -91,10 +91,11 @@ export const Play: React.FC = () => {
 
   const activeDeck = maybyActiveDeck ?? 0;
 
-  const info = useDeckInfo(stationId, activeDeck);
   const cover = useDeckCover(stationId, activeDeck);
   const nextDeckIndex = getNextDeck(activeDeck);
   const { deck: nextDeck } = useDeck(stationId, nextDeckIndex);
+
+  const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
 
   const nextTrackPlay = useRemotableProp(nextDeck, 'trackPlay');
 
@@ -119,7 +120,7 @@ export const Play: React.FC = () => {
         colors: sortColors(chain(6).times().map(i => adjustHue((i - 3) * deg, main)).value()),
         url: cover,
         center: (lyrics ? lyrics.timeline.length : 2) < 2,
-        uuid: info.trackPlay?.uuid ?? ''
+        uuid: trackPlay?.uuid ?? ''
       });
 
       return;
@@ -130,7 +131,7 @@ export const Play: React.FC = () => {
         colors: sortColors(out as string[]),
         url: cover,
         center: (lyrics?.timeline?.length ?? 0) < 2,
-        uuid: info.trackPlay?.uuid ?? ''
+        uuid: trackPlay?.uuid ?? ''
       });
     });
   }, [cover]);
@@ -172,10 +173,10 @@ export const Play: React.FC = () => {
   }, [cover]);
 
   useEffect(() => {
-    const tags = info.trackPlay?.track?.extra?.tags;
+    const tags = trackPlay?.track?.extra?.tags;
 
     setTitleText(formatSongBanner(tags) || '');
-  }, [info.trackPlay?.track?.extra?.tags]);
+  }, [trackPlay?.track?.extra?.tags]);
 
   useEffect(() => {
     const overrides = {
@@ -222,7 +223,7 @@ export const Play: React.FC = () => {
 
   }, [coverProps.colors]);
 
-  const lyrics = info?.trackPlay?.track?.extra?.coverAndLyrics?.lyrics;
+  const lyrics = trackPlay?.track?.extra?.coverAndLyrics?.lyrics;
 
   const simple = !!titleText && !cover && !lyrics?.timeline?.length;
 
@@ -239,15 +240,15 @@ export const Play: React.FC = () => {
       <Cover { ...coverProps } />
 
       <Lyrics
-        position={info.cp * 1000}
-        {...{
-          lineHeight: 1.8,
-          lines: 8,
-          lyrics,
-          colors
-        }}
+        stationId={stationId}
+        deckIndex={activeDeck}
+        lyrics={trackPlay?.track?.extra?.coverAndLyrics?.lyrics}
+        bpm={trackPlay?.track?.extra?.tags?.bpm}
+        lineHeight={1.8}
+        lines={8}
+        colors={colors}
       />
-      {/* <Title text={titleText} bg={titleBg} center={simple} /> */}
+      <Title text={titleText} bg={titleBg} center={simple} />
       {/* <PlayHead
         backgroundColor={colors?.background ?? defaultLyricsColors.background}
         textColor={colors?.line?.text ?? defaultLyricsColors.line.text}

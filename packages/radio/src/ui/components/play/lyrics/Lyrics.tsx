@@ -1,8 +1,11 @@
-import React from 'react';
-import { Line, Container, Ticker, LineColors } from './elements';
-import type { LyricLine, Lyrics as CoreLyrics } from '@seamless-medley/utils';
-import { clamp, debounce, findIndex } from 'lodash';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { clamp, findIndex } from 'lodash';
+import type { LyricLine, Lyrics as CoreLyrics, Timeline } from '@seamless-medley/utils';
 import { findLyricLine } from '@seamless-medley/utils';
+import { DeckIndex } from '@seamless-medley/core';
+import { useElementSize } from '@mantine/hooks';
+import { useDeck } from '../../../hooks/useDeck';
+import { Container, LineColors, Ticker, Line } from './elements';
 
 interface Colors {
   background: string;
@@ -12,11 +15,9 @@ interface Colors {
 interface Props {
   lines: number;
   lineHeight: number;
-  // trackInfo: TrackInfo | undefined;
   lyrics: CoreLyrics | undefined;
   colors: Colors | undefined;
   bpm?: number;
-  // latencyCompensation?: number;
 
   position: number;
 }
@@ -32,169 +33,199 @@ export const defaultColors = {
   }
 }
 
-export class Lyrics extends React.Component<Props, { line: number }> {
-  private raf = 0;
-  private lastTick = Date.now();
-  // private position = 0;
-  private lineElements: Line[] = [];
-  private tickerEl = React.createRef<Ticker>();
+const findNextLine = (timeline: Timeline, fromLine: number) => findIndex(timeline, ({ text }) => text.trim().length > 0, fromLine + 1);
 
-  state = {
-    line: -1
-  }
+export type LyricsProps = {
+  stationId?: string; deckIndex:
+  DeckIndex; lyrics:
+  CoreLyrics | undefined;
+  lines: number;
+  lineHeight: number;
+  colors: Colors | undefined;
+  bpm?: number;
+}
 
-  private animate() {
-    this.raf = requestAnimationFrame(() => {
-      // const now = Date.now();
-      // const delta = now - this.lastTick;
-      //
-      // this.position += delta;
-      // this.lastTick = now;
-      this.updateLine();
-      this.animate();
-    });
-  }
+export const Lyrics: React.FC<LyricsProps> = (props) => {
+  const [line, setLine] = useState(-1);
+  const { ref: tickerRef, width, height } = useElementSize();
+  const lineRefs = useRef<(Line | null)[]>([]);
+  const { deck } = useDeck(props.stationId, props.deckIndex);
 
-  private resizeHandler = debounce(() => {
-    if (this.tickerEl.current) {
-      const y = this.getPosition(this.state.line);
-      this.tickerEl.current.setPosition(y);
+  const canvas = useMemo(() => tickerRef.current?.parentElement?.querySelector('canvas'), [tickerRef.current]);
+  const ctx = useMemo(() => canvas?.getContext('2d'), [canvas]);
+
+  useEffect(() => {
+    if (ctx) {
+      ctx.font = window.getComputedStyle(tickerRef.current).font;
     }
-  }, 1000);
+  });
 
-  componentDidMount() {
-    this.animate();
-    window.addEventListener('resize', this.resizeHandler);
-  }
+  // Reset the line and re-render when lyrics changes
+  useEffect(() => {
+    setLine(-1);
+  }, [props.lyrics]);
 
-  componentWillUnmount() {
-    window.removeEventListener('resize', this.resizeHandler);
-    cancelAnimationFrame(this.raf);
-  }
+  // Reset the references to Line components when lyrics changes
+  useEffect(() => {
+    lineRefs.current = Array(props.lyrics?.timeline?.length ?? 0).fill(null);
+  }, [props.lyrics]);
 
-  componentDidUpdate(prev: Props) {
-    const { lyrics, position } = this.props;
+  // calculate ticker position, update on dimensions change
+  const position = useMemo(() => {
+    const stickyLine = props.lines / 2 - 1;
+    const rowHeight = height / props.lines;
 
-    if (prev.lyrics !== lyrics) {
-      const timeline = lyrics?.timeline ?? [];
-
-      // this.position = position;
-
-      this.lastTick = Date.now();
-      this.lineElements = Array(timeline.length).fill(0);
-      this.setState({ line: -1 });
-      this.updateLine();
+    if (line < stickyLine) {
+      return -rowHeight * (stickyLine - line + 1) + (rowHeight / 2);
     }
-  }
 
-  private updateLine() {
-    const latencyCompensation = 0;
-    const { lyrics, bpm = 90 } = this.props;
+    const topLine = Math.max(0, line - (props.lines / 2) + 1);
+    return (topLine * rowHeight) - (rowHeight / 2);
+  }, [height, line, props.lines]);
+
+  // find the next line
+  const nextLine = useMemo(() => {
+    if (!props.lyrics) {
+      return -1;
+    }
+
+    const n = findNextLine(props.lyrics.timeline, line);
+    return n !== line ? n : -1;
+
+  }, [line, props.lyrics]);
+
+  // function to advance the lyric line
+  const updateLine = useCallback((ms: number) => {
+    const { lyrics } = props;
 
     if (!lyrics) {
       return;
     }
 
-    const { line } = this.state;
-
-    const foundLine = findLyricLine(lyrics.timeline, this.props.position + latencyCompensation, line);
+    const foundLine = findLyricLine(lyrics.timeline, ms, line);
 
     if (foundLine > -1 && foundLine !== line) {
-      this.setState({
-        line: foundLine
-      });
+      setLine(foundLine);
+    }
+  }, [deck, props.lyrics]);
+
+  const bpm = props.bpm ?? 90;
+  const beatInterval = useMemo(() => 6e4 / bpm, [bpm])
+
+  // function to update progress of the next line far indicator
+  const updateNextProgress = useCallback((ms: number, line: number) => {
+    if (!props.lyrics || line === -1) {
+      return;
     }
 
-    const nextLine = findIndex(lyrics.timeline, ({ text }) => text.trim().length > 0, foundLine + 1);
+    const { time, far } = props.lyrics.timeline[line];
+    const lineRef = lineRefs.current?.[line];
 
-    if (nextLine !== -1 && nextLine !== foundLine) {
-      const { time, far } = lyrics.timeline[nextLine];
-      const beatTimestamp = time - (8 * (6e4 / bpm));
-
-      if (far) {
-        const realPosition = this.props.position + latencyCompensation;
-        const el = this.lineElements[nextLine];
-        if (el && realPosition >= beatTimestamp) {
-          el.setProgress(clamp((time - realPosition) / (time - beatTimestamp), 0, 1));
-        }
-      }
-    }
-  }
-
-  private storeLine(el: Line | null, index: number) {
-    if (el && this.lineElements[index] !== el) {
-      this.lineElements[index] = el;
-    }
-  }
-
-  private getTopLine(line: number) {
-    return Math.max(0, line - (this.props.lines / 2) + 1);
-  }
-
-  private calculatePosition(line: number) {
-    const heights = Math.floor(window.innerHeight / this.props.lines);
-    return line * heights;
-  }
-
-  private getPosition(index: number) {
-    const heights = Math.floor(window.innerHeight / this.props.lines);
-
-    const stickyLine = this.props.lines / 2 - 1;
-
-    if (index < stickyLine) {
-      return -heights * (stickyLine - index);
+    if (!far || !lineRef) {
+      return;
     }
 
-    const topLine = this.getTopLine(index);
+    const beatTimestamp = time - (8 * beatInterval);
 
-    const el = this.lineElements[topLine];
-    return (el && el.top) || this.calculatePosition(topLine);
-  }
+    if (ms >= beatTimestamp) {
+      const progress = clamp((time - ms) / (time - beatTimestamp), 0, 1);
+      lineRef.setProgress(progress);
+    }
 
-  render() {
-    const {
-      lyrics,
-      lineHeight,
-      lines,
-      // bpm = 90
-    } = this.props;
+  }, [props.lyrics]);
 
-    const { line } = this.state;
+  // Monitor deck's play head
+  const handleChange = useCallback((cp: number) => {
+    const ms = cp * 1000;
+    updateLine(ms);
+    updateNextProgress(ms, nextLine);
+  }, [deck, updateLine, updateNextProgress, nextLine]);
 
-    const colors = this.props.colors || defaultColors;
+  // Intialization
+  useEffect(() => {
+    if (!deck) {
+      return;
+    }
 
-    const mapLine = (lyricLine: LyricLine, i: number) => {
-      const { text, far = false } = lyricLine;
+    const ms = deck.getProperties().cp * 1000;
 
-      return (
-        <Line
-          colors={colors.line}
-          key={i}
-          ref={el => this.storeLine(el, i)}
-          dim={i < line}
-          active={line === i}
-          zoom={line === i}
-          far={far}
-          {...{ lineHeight }}
-        >
-          {text}
-        </Line>
+    updateLine(ms);
+
+    if (props.lyrics?.timeline) {
+      updateNextProgress(
+        ms,
+        findNextLine(props.lyrics.timeline, line)
       );
     }
 
+    return deck.addPropertyChangeListener('cp', handleChange);
+  }, [deck, handleChange]);
+
+  const colors = props.colors || defaultColors;
+
+  // function to create Line component for each lyrics line
+  const mapLine = (lyricLine: LyricLine, index: number) => {
+    // calculate scaling for each line
+    let scale = 1;
+    let zoomedScale = 1.12;
+
+    if (ctx && tickerRef.current) {
+      const textWidth = ctx.measureText(lyricLine.text).width;
+
+      if (textWidth > 0) {
+        const zoomedWidth = textWidth * zoomedScale;
+        const maxWidth = Math.max(0, width - 20);
+
+        if ((textWidth >= maxWidth) || (zoomedWidth >= maxWidth)) {
+          zoomedScale = maxWidth / textWidth;
+          scale = zoomedScale / 1.12;
+        }
+      }
+    }
+
+    const far = (index === nextLine)
+      ? (props.lyrics!.timeline[nextLine].far ?? true)
+      : false;
+
+    const storeRef = (index: number) => (lineRef: Line | null) => {
+      if (lineRefs.current) {
+        lineRefs.current[index] = lineRef;
+      }
+    }
+
     return (
-      <Container
-        background={colors.background}
+      <Line
+        key={index}
+        ref={storeRef(index)}
+        colors={colors.line}
+        scale={scale}
+        zoomedScale={zoomedScale}
+        dim={index < line}
+        active={line === index}
+        zoom={line === index}
+        far={far}
+        lineHeight={props.lineHeight}
       >
-        <Ticker
-          ref={this.tickerEl}
-          position={this.getPosition(line)}
-          {...{ lineHeight, lines }}
-        >
-          {lyrics?.timeline?.map(mapLine)}
-        </Ticker>
-      </Container>
+        {lyricLine.text}
+      </Line>
     );
   }
-}
 
+  // Render
+
+  return (
+    <>
+      <Container background={colors.background}>
+        <Ticker
+          ref={tickerRef}
+          lines={props.lines}
+          lineHeight={props.lineHeight}
+          beatInterval={beatInterval}
+          position={position}
+        >
+          {props.lyrics?.timeline?.map(mapLine)}
+        </Ticker>
+      </Container>
+    </>
+  );
+}
