@@ -1,7 +1,7 @@
 import { createRoute } from "@tanstack/react-router";
 import { rootRoute } from './rootRoute';
 
-export const route = createRoute({
+const route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: () => (
@@ -12,3 +12,5 @@ export const route = createRoute({
     </div>
   )
 });
+
+export const tree = route;

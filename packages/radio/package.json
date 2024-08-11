@@ -48,7 +48,7 @@
     "@seamless-medley/logging": "../logging",
     "@seamless-medley/utils": "../utils",
     "@tabler/icons-react": "^3.1.0",
-    "@tanstack/react-router": "^1.19.12",
+    "@tanstack/react-router": "^1.47.1",
     "@wyw-in-js/babel-preset": "^0.5.0",
     "axios": "1.7.2",
     "cfonts": "^3.2.0",

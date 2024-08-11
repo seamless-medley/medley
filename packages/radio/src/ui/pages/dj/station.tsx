@@ -7,8 +7,7 @@ import { useStation } from '../../hooks/useStation';
 import type { Station as RemoteStation } from '../../../remotes/core/station';
 import { collectionRoute, stationIndexRoute, stationRoute } from './route';
 import { TopBar } from './top';
-import { Link, Outlet, useMatchRoute } from '@tanstack/react-router';
-import { client } from '../../init';
+import { Link, Outlet, useMatchRoute, useParams } from '@tanstack/react-router';
 
 type CollectionInfo = {
   id: string;
@@ -19,9 +18,10 @@ export const Station: React.FC = () => {
   const matchRoute = useMatchRoute()
 
   const stationId = stationRoute.useParams({ select: ({ station }) => station });
-  const collectionId = collectionRoute.useParams({ select: ({ collectionId }) => collectionId });
 
   const { station, error: stationError } = useStation(stationId);
+
+  const { collectionId } = useParams({ strict: false });
 
   const [collections, setCollections] = useState<CollectionInfo[]>([]);
   const [currentCollection, setCurrentCollection] = useState('');
@@ -37,11 +37,16 @@ export const Station: React.FC = () => {
       return;
     }
 
-    station.getCollections().then(all => {
+    station.getCollections().then((all) => {
       setCollections(all);
-      console.log(all);
     });
-    station.getCurrentCollection().then(id => id ? updateCurrentCollection(id) : undefined);
+
+    station.getCurrentCollection().then((id) => {
+      if (id) {
+        updateCurrentCollection(id);
+      }
+    });
+
     station.on('collectionChange', handleCollectionChange);
 
     return () => {
@@ -64,7 +69,7 @@ export const Station: React.FC = () => {
             label="Station"
           />
 
-          <NavLink label="Collections" defaultOpened={matchRoute({ to: collectionRoute.to as any }) !== false}>
+          <NavLink label="Collections" defaultOpened={collectionId !== undefined}>
             {collections.map(({ id, description }) => (
               <NavLink
                 key={id}

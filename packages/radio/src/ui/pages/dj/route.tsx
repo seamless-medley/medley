@@ -3,7 +3,7 @@ import { rootRoute } from '../rootRoute';
 import { AppShell, Box } from '@mantine/core';
 import { client } from '../../init';
 
-export const djRoute = createRoute({
+const route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dj',
   component: () => {
@@ -33,7 +33,7 @@ export const djRoute = createRoute({
 });
 
 export const stationRoute = createRoute({
-  getParentRoute: () => djRoute,
+  getParentRoute: () => route,
   path: '$station',
   loader: async ({ params }) => {
     const x = await client.remoteGet('station', params.station, 0, 'id').catch(() => notFound());
@@ -62,7 +62,7 @@ export const collectionRoute = createRoute({
   component: lazyRouteComponent(() => import('./collection'))
 });
 
-djRoute.addChildren([
+export const tree = route.addChildren([
   stationRoute,
   stationIndexRoute,
   collectionRoute
