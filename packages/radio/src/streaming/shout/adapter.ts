@@ -254,10 +254,11 @@ export class ShoutAdapter extends FFMpegAdapter {
       }
     })
     .catch((e: AxiosError) => {
+      const { url, params } = e.config!;
       if (e.code === 'ERR_BAD_REQUEST') {
         this.#logger.error(e, 'Error updating metadata, mount point might not support metadata');
       } else {
-        this.#logger.error(e, 'Error updating metadata');
+        this.#logger.error({ code: e.code, url, params }, 'Error updating metadata');
       }
     });
   }
