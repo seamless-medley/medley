@@ -594,10 +594,14 @@ export class GuildState {
       return;
     }
 
-    const audiences = station.getAudiences(this.adapter.makeAudienceGroup(this.guildId));
+    const shouldCheckAudiences = this.adapter.getConfig(message.guildId)?.trackMessage?.always !== true;
 
-    if (!audiences?.has(message.author.id)) {
-      return;
+    if (shouldCheckAudiences) {
+      const audiences = station.getAudiences(this.adapter.makeAudienceGroup(this.guildId));
+
+      if (!audiences?.has(message.author.id)) {
+        return;
+      }
     }
 
     const matches = extractSpotifyUrl(message.content);
