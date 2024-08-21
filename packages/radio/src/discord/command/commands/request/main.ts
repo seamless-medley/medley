@@ -158,6 +158,7 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   return handleRequestCommand({
     automaton,
     interaction,
+    type: 'query',
     artist,
     title,
     query,
@@ -165,66 +166,114 @@ export const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInt
   });
 }
 
-export type RequestCommandOptions = {
+type BaseRequestCommandOptions = {
   automaton: MedleyAutomaton;
   interaction: RepliableInteraction;
+  noSweep?: boolean;
+}
+
+export type RequestCommandQueryOptions = BaseRequestCommandOptions & {
+  type: 'query';
   artist?: string;
   title?: string;
   query?: string;
   exactMatch?: boolean;
-  noSweep?: boolean;
   noHistory?: boolean;
 }
+
+export type RequestCommandSpotifyTrackOptions = BaseRequestCommandOptions & {
+  type: 'spotify:track';
+  id: string;
+  title: string;
+}
+
+export type RequestCommandSpotifyArtistOptions = BaseRequestCommandOptions & {
+  type: 'spotify:artist';
+  id: string;
+  artist: string;
+}
+
+export type RequestCommandSpotifyOptions = RequestCommandSpotifyTrackOptions | RequestCommandSpotifyArtistOptions;
+
+export type RequestCommandOptions = RequestCommandQueryOptions | RequestCommandSpotifyOptions;
 
 export const handleRequestCommand = async (options: RequestCommandOptions) => {
   const {
     automaton,
     interaction,
-    artist,
-    title,
-    query,
-    exactMatch,
-    noSweep,
-    noHistory
+    noSweep
   } = options;
 
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
-  if ([artist, title, query].every(isUndefined)) {
-    const preview = await makeRequestPreview(station, { guildId, count: 20 });
+  if (options.type === 'query') {
+    const { artist, title, query } = options;
 
-    if (preview) {
-      reply(interaction, joinStrings([`# Request list`, ...preview]));
-    } else {
-      reply(interaction, station.requestsCount && interaction.guild?.name ? `Request list for ${interaction.guild.name} is empty` : 'Request list is empty');
+    if ([artist, title, query].every(isUndefined)) {
+      const preview = await makeRequestPreview(station, { guildId, count: 20 });
+
+      if (preview) {
+        reply(interaction, joinStrings([`# Request list`, ...preview]));
+      } else {
+        reply(interaction, station.requestsCount && interaction.guild?.name ? `Request list for ${interaction.guild.name} is empty` : 'Request list is empty');
+      }
+
+      return;
     }
-
-    return;
   }
 
   await deferReply(interaction);
 
-  const results = await station.search({
-    q: {
-      artist,
-      title,
-      query
-    },
-    // 10 pages
-    limit: maxSelectMenuOptions * 10,
-    exactMatch,
-    noHistory
-  });
+  const results = await (() => {
+    switch (options.type) {
+      case 'query': {
+        const { title, artist, query, exactMatch, noHistory } = options;
+
+        return station.search({
+          q: {
+            artist,
+            title,
+            query
+          },
+          // 10 pages
+          limit: maxSelectMenuOptions * 10,
+          exactMatch,
+          noHistory
+        });
+      }
+
+      case 'spotify:artist':
+      case 'spotify:track':
+        return station.findTracksByComment(options.type, options.id);
+    }
+  })();
 
   if (results.length < 1) {
     const highlight = (n: string, v: string)  => ansi`({{yellow}}${n} {{cyan}}~ {{pink}}{{bgDarkBlue|b}}${v}{{reset}})`
 
-    const tagTerms = zip(['artist', 'title'], [artist, title])
+    const terms = (() => {
+      switch (options.type) {
+        case 'query':
+          return zip(['artist', 'title'], [options.artist, options.title]);
+
+        case 'spotify:artist':
+          return ['artist', options.artist];
+
+        case 'spotify:track':
+          return ['title', options.title];
+      }
+    })();
+
+    const tagTerms = terms
       .filter((t): t is [name: string, value: string] => !!t[1])
       .map(([n, v]) => highlight(n, v))
       .join(ansi` AND `);
 
-    const queryString = [tagTerms, query ? highlight('any', query) : null]
+    const query = options.type === 'query' ? options.query : undefined;
+
+    const queryTerms = [tagTerms, query ? highlight('any', query) : null];
+
+    const queryString = queryTerms
       .filter(t => !!t)
       .join(' OR ');
 
@@ -650,6 +699,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
       return handleRequestCommand({
         automaton,
         interaction,
+        type: 'query',
         artist: params.artist,
         title: params.title,
         query: params.query
@@ -664,7 +714,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
       }
 
       const [matched] = extractSpotifyUrl(originalMessage.content);
-      if (!matched?.url || matched?.paths?.[0] !== 'artist') {
+      if (!matched?.url || matched?.paths?.[0] !== 'artist' && matched?.paths?.[1]) {
         return
       }
 
@@ -674,13 +724,12 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         return;
       }
 
-
       return handleRequestCommand({
         automaton,
         interaction,
-        exactMatch: true,
-        artist: info.artist,
-        noHistory: true
+        type: 'spotify:artist',
+        id: matched.paths[1],
+        artist: info.artist
       })
       .catch(e => new CrossSearchError(automaton, guildId, e.message));
     }
@@ -706,6 +755,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
       return handleRequestCommand({
         automaton,
         interaction,
+        type: 'query',
         artist: info.artist,
         title: info.title,
         noHistory: true
