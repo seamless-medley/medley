@@ -56,7 +56,7 @@ export async function remove(options: SubCommandHandlerOptions) {
         .addComponents(
           new StringSelectMenuBuilder()
             .setCustomId('latch_remove')
-            .setPlaceholder('Select tracks to cancel')
+            .setPlaceholder('Select latches to cancel')
             .setMinValues(0)
             .setMaxValues(selections.length)
             .addOptions(selections)
