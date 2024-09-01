@@ -310,7 +310,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
   }
 
   #createWebSocket(endpoint: string) {
-    return new WebSocketConnection(`wss://${endpoint}?v=4`)
+    return new WebSocketConnection(`wss://${endpoint}?v=8`)
       .once('open', this.#onWsOpen)
       .once('close', this.#onWsClose)
       .on('error',this.#onError)
