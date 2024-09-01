@@ -2,7 +2,7 @@ import { isString } from "lodash";
 import { TypedEmitter } from "tiny-typed-emitter";
 import WebSocket from 'ws';
 import { VoiceOpcodes } from 'discord-api-types/voice/v4';
-import { VoicePayload, VoiceClientPayload, VoiceServerPayload } from "./payload";
+import { VoiceClientPayload, VoiceServerPayload, HeartbeatAckVoicePayload, HeartbeatVoicePayload, ResumeVoicePayload } from "./payload";
 
 export interface WebSocketConnectionEvents {
   open(event: WebSocket.Event): void;
@@ -16,6 +16,8 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
   readonly #ws: WebSocket;
 
   #heartbeatTimer?: NodeJS.Timeout;
+
+  #lastSeqReceived?: number;
 
   #heartbeatSent = 0;
   #heartbeatAcked = 0;
@@ -63,30 +65,51 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
     }
 
     try {
-			this.#handlePayload(JSON.parse(e.data) as VoicePayload);
+			this.#handlePayload(JSON.parse(e.data) as VoiceServerPayload);
 		} catch (error) {
 			this.emit('error', error as Error);
 		}
   }
 
-  #handlePayload(payload: VoicePayload) {
+  #handlePayload(payload: VoiceServerPayload) {
+    if (payload.seq) {
+      this.#lastSeqReceived = payload.seq;
+    }
+
     if (payload.op === VoiceOpcodes.HeartbeatAck) {
-      this.#updateHeartbeat();
+      this.#updateHeartbeat(payload);
     }
 
     this.emit('payload', payload as VoiceServerPayload);
   }
 
-  #updateHeartbeat() {
+  #updateHeartbeat(payload: HeartbeatAckVoicePayload) {
     this.#heartbeatAcked = Date.now();
     this.#missedHeartbeats = 0;
     this.#ping = this.#heartbeatAcked - this.#heartbeatSent;
     this.emit('ping', this.#ping);
   }
 
+  #preparePayload(payload: VoiceClientPayload) {
+    if (payload.op === VoiceOpcodes.Resume) {
+      const resumePayload: ResumeVoicePayload = {
+        ...payload,
+        d: {
+          ...payload.d,
+          seq_ack: this.#lastSeqReceived
+        }
+      }
+
+      return resumePayload;
+    }
+
+    return payload;
+  }
+
   sendPayload(payload: VoiceClientPayload) {
     try {
-      const raw = JSON.stringify(payload);
+      const prepared = this.#preparePayload(payload);
+      const raw = JSON.stringify(prepared);
       this.#ws.send(raw);
     } catch (error) {
       this.emit('error', error as Error);
@@ -113,10 +136,15 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
     this.#heartbeatSent = Date.now();
 
     const nonce = this.#heartbeatSent;
-    this.sendPayload({
+    const payload: HeartbeatVoicePayload = {
       op: VoiceOpcodes.Heartbeat,
-      d: nonce
-    })
+      d: {
+        t: nonce,
+        seq_ack: this.#lastSeqReceived
+      }
+    };
+
+    this.sendPayload(payload);
   }
 
   get ping() {

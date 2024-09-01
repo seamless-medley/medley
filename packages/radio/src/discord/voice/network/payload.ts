@@ -16,12 +16,21 @@ export interface GatewayVoiceStateUpdatePayload extends GatewayVoicePayload<Gate
 
 }
 
-export const ENCRYPTION_MODES = ['xsalsa20_poly1305_lite', 'xsalsa20_poly1305_suffix', 'xsalsa20_poly1305'] as const;
+export const ENCRYPTION_MODES = [
+  // Required by voice v8
+  'aead_xchacha20_poly1305_rtpsize',
+
+  // Deprecated
+  // TODO: Remove this before Nov 18th 2024
+  'xsalsa20_poly1305_lite',
+  'xsalsa20_poly1305_suffix',
+  'xsalsa20_poly1305'
+] as const;
 
 export type EncryptionMode = typeof ENCRYPTION_MODES[number];
 
 export interface VoicePayload<D = unknown> extends Payload<VoiceOpcodes, D> {
-
+  seq?: number;
 }
 
 type IdentifyData = {
@@ -63,8 +72,16 @@ export interface ReadyVoicePayload extends VoicePayload<ReadyVoiceData> {
   op: VoiceOpcodes.Ready;
 }
 
+// Since voice v8
+export interface HeartbeatVoiceData {
+  // Nonce
+  t: number;
+  // last sequence received
+  seq_ack?: number;
+}
+
 // 3
-export interface HeartbeatVoicePayload extends VoicePayload<number> {
+export interface HeartbeatVoicePayload extends VoicePayload<HeartbeatVoiceData> {
   op: VoiceOpcodes.Heartbeat;
 }
 
@@ -83,13 +100,21 @@ export interface SpeakingVoicePayload extends VoicePayload {
   op: VoiceOpcodes.Speaking;
 }
 
+export interface HeartbeatAckVoiceData {
+  // Previous nonce
+  t: number;
+}
 // 6
-export interface HeartbeatAckVoicePayload extends VoicePayload {
+export interface HeartbeatAckVoicePayload extends VoicePayload<HeartbeatAckVoiceData> {
   op: VoiceOpcodes.HeartbeatAck;
 }
 
+export interface ResumeVoiceData extends Omit<IdentifyData, 'user_id'> {
+  seq_ack?: number;
+}
+
 // 7
-export interface ResumeVoicePayload extends VoicePayload<Omit<IdentifyData, 'user_id'>> {
+export interface ResumeVoicePayload extends VoicePayload<ResumeVoiceData> {
   op: VoiceOpcodes.Resume;
 }
 

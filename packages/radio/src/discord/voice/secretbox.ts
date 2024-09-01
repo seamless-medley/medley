@@ -1,4 +1,6 @@
 import {
+  crypto_aead_xchacha20poly1305_ietf_encrypt,
+  crypto_aead_xchacha20poly1305_ietf_ABYTES,
   crypto_secretbox_open_easy,
   crypto_secretbox_easy,
   randombytes_buf,
@@ -15,6 +17,12 @@ export function open(buffer: Buffer, nonce: Buffer, secretKey: Buffer) {
   }
 
   return null;
+}
+
+export function aeadClose(opusPacket: Buffer, header: Buffer, nonce: Buffer, secretKey: Buffer) {
+  const output = Buffer.allocUnsafe(opusPacket.length + crypto_aead_xchacha20poly1305_ietf_ABYTES);
+  crypto_aead_xchacha20poly1305_ietf_encrypt(output, opusPacket, header, null, nonce, secretKey);
+  return output;
 }
 
 export function close(opusPacket: Buffer, nonce: Buffer, secretKey: Buffer) {
