@@ -323,8 +323,6 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       .on('error', this.#onError)
       .once('close', this.#onUdpClose);
 
-
-
     return udp;
   }
 
@@ -334,6 +332,8 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
         return;
       }
 
+      const mode = chooseEncryptionMode(modes);
+
       this.#state.ws.sendPayload({
         op: VoiceOpcodes.SelectProtocol,
         d: {
@@ -341,7 +341,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
           data: {
             address,
             port,
-            mode: chooseEncryptionMode(modes),
+            mode,
           },
         },
       });
@@ -363,10 +363,12 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
     header.copy(this.#nonceBuffer, 0, 0, 12);
 
-    return Buffer.concat([
+    return Buffer.concat(packVoiceData(
+      opusPacket,
       header,
-      ...encryptOpusPacket(opusPacket, connectionData, this.#nonceBuffer)
-    ])
+      connectionData,
+      this.#nonceBuffer
+    ))
   }
 
 	prepareAudioPacket(opusPacket: Buffer): Buffer | undefined {
@@ -437,20 +439,36 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
   }
 }
 
-function chooseEncryptionMode(options: EncryptionMode[]) {
-	const option = options.find((option) => ENCRYPTION_MODES.includes(option));
+function chooseEncryptionMode(serverModes: EncryptionMode[]) {
+	const mode = serverModes.find(mode => ENCRYPTION_MODES.includes(mode));
 
-	if (!option) {
-		throw new Error(`No compatible encryption modes. Available include: ${options.join(', ')}`);
+	if (!mode) {
+		throw new Error(`No compatible encryption modes. Available include: ${serverModes.join(', ')}`);
 	}
 
-	return option;
+	return mode;
 }
 
-function encryptOpusPacket(opusPacket: Buffer, connectionData: ConnectionData, nonce: Buffer) {
+function packVoiceData(opusPacket: Buffer, header: Buffer, connectionData: ConnectionData, nonce: Buffer) {
   const { secretKey, encryptionMode } = connectionData;
 
   const secretKeyBuffer = Buffer.from(secretKey);
+
+  if (encryptionMode === 'aead_xchacha20_poly1305_rtpsize') {
+    connectionData.nonce++;
+
+    if (connectionData.nonce > 2 ** 32 - 1) {
+      connectionData.nonce = 0;
+    }
+
+    connectionData.nonceBuffer.writeUInt32BE(connectionData.nonce, 0);
+
+    return [
+      header,
+      secretbox.aeadClose(opusPacket, header, connectionData.nonceBuffer, secretKeyBuffer),
+      connectionData.nonceBuffer.subarray(0, 4),
+    ];
+  }
 
   if (encryptionMode === 'xsalsa20_poly1305_lite') {
     connectionData.nonce++;
@@ -462,6 +480,7 @@ function encryptOpusPacket(opusPacket: Buffer, connectionData: ConnectionData, n
     connectionData.nonceBuffer.writeUInt32BE(connectionData.nonce, 0);
 
     return [
+      header,
       secretbox.close(opusPacket, connectionData.nonceBuffer, secretKeyBuffer),
       connectionData.nonceBuffer.subarray(0, 4),
     ];
@@ -470,12 +489,18 @@ function encryptOpusPacket(opusPacket: Buffer, connectionData: ConnectionData, n
   if (encryptionMode === 'xsalsa20_poly1305_suffix') {
     const random = secretbox.random(24, connectionData.nonceBuffer);
     return [
+      header,
       secretbox.close(opusPacket, random, secretKeyBuffer),
       random
     ];
   }
 
-  return [
-    secretbox.close(opusPacket, nonce, secretKeyBuffer)
-  ];
+  if (encryptionMode === 'xsalsa20_poly1305') {
+    return [
+      header,
+      secretbox.close(opusPacket, nonce, secretKeyBuffer)
+    ];
+  }
+
+  return [];
 }

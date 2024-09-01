@@ -16,7 +16,16 @@ export interface GatewayVoiceStateUpdatePayload extends GatewayVoicePayload<Gate
 
 }
 
-export const ENCRYPTION_MODES = ['xsalsa20_poly1305_lite', 'xsalsa20_poly1305_suffix', 'xsalsa20_poly1305'] as const;
+export const ENCRYPTION_MODES = [
+  // Required by voice v8
+  'aead_xchacha20_poly1305_rtpsize',
+
+  // Deprecated
+  // TODO: Remove this before Nov 18th 2024
+  'xsalsa20_poly1305_lite',
+  'xsalsa20_poly1305_suffix',
+  'xsalsa20_poly1305'
+] as const;
 
 export type EncryptionMode = typeof ENCRYPTION_MODES[number];
 
