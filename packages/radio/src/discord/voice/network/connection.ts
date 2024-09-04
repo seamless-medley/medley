@@ -10,7 +10,7 @@ import * as secretbox from '../secretbox';
 import { RTPData, createRTPHeader, incRTPData } from "../../../audio/network/rtp";
 import { randomNBit } from "@seamless-medley/utils";
 
-export enum ConnectionStatus {
+export enum ConnectionStateCode {
 	Opening,
 	Identifying,
 	UdpHandshaking,
@@ -20,49 +20,52 @@ export enum ConnectionStatus {
 	Closed,
 }
 
-interface State {
-  status: ConnectionStatus;
+interface BaseState {
 	connectionOptions: ConnectionOptions;
 	ws: WebSocketConnection;
+  lastSeqReceived?: number;
 }
 
-interface StateWithUDP extends State {
+interface OpeningState extends BaseState {
+  code: ConnectionStateCode.Opening;
+}
+
+interface IdentifyingState extends BaseState {
+  code: ConnectionStateCode.Identifying;
+}
+
+interface UdpHandshakingState extends BaseState {
+  code: ConnectionStateCode.UdpHandshaking;
+  //
   udp: UDPConnection;
   connectionData: Pick<ConnectionData, 'ssrc'>;
 }
 
-interface StateWithPacket extends StateWithUDP {
+interface SelectingProtocolState extends BaseState {
+  code: ConnectionStateCode.SelectingProtocol;
+  //
+  udp: UDPConnection;
+  connectionData: Pick<ConnectionData, 'ssrc'>;
+}
+
+interface ReadyState extends BaseState {
+  code: ConnectionStateCode.Ready;
+  //
+  udp: UDPConnection;
+  connectionData: ConnectionData;
   preparedPacket?: Buffer;
 }
 
-interface OpeningState extends State {
-  status: ConnectionStatus.Opening;
-}
-
-interface IdentifyingState extends State {
-  status: ConnectionStatus.Identifying;
-}
-
-interface UdpHandshakingState extends StateWithUDP {
-  status: ConnectionStatus.UdpHandshaking;
-}
-
-interface SelectingProtocolState extends StateWithUDP {
-  status: ConnectionStatus.SelectingProtocol;
-}
-
-interface ReadyState extends StateWithPacket {
-  status: ConnectionStatus.Ready;
+interface ResumingState extends BaseState {
+  code: ConnectionStateCode.Resuming;
+  //
+  udp: UDPConnection;
   connectionData: ConnectionData;
+  preparedPacket?: Buffer;
 }
 
-interface ResumingState extends StateWithPacket {
-  status: ConnectionStatus.Resuming;
-  connectionData: ConnectionData;
-}
-
-interface ClosedState extends Pick<State, 'status'> {
-  status: ConnectionStatus.Closed;
+interface ClosedState {
+  code: ConnectionStateCode.Closed;
 }
 
 type ConnectionState =
@@ -107,14 +110,14 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
     super();
 
     this.#state = {
-      status: ConnectionStatus.Opening,
+      code: ConnectionStateCode.Opening,
       ws: this.#createWebSocket(connectionOptions.endpoint),
       connectionOptions
     }
   }
 
 	public destroy() {
-		this.state = { status: ConnectionStatus.Closed };
+		this.state = { code: ConnectionStateCode.Closed };
 	}
 
   get state() {
@@ -163,7 +166,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
   }
 
   #onWsOpen: WebSocketConnectionEvents['open'] = () => {
-    if (this.#state.status === ConnectionStatus.Opening) {
+    if (this.#state.code === ConnectionStateCode.Opening) {
 
       const { guildId: server_id, userId: user_id, sessionId: session_id, token } = this.#state.connectionOptions;
 
@@ -179,13 +182,13 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
       this.state = {
 				...this.#state,
-				status: ConnectionStatus.Identifying,
+				code: ConnectionStateCode.Identifying,
 			};
 
       return;
     }
 
-    if (this.#state.status === ConnectionStatus.Resuming) {
+    if (this.#state.code === ConnectionStateCode.Resuming) {
       const { guildId: server_id, sessionId: session_id, token } = this.#state.connectionOptions;
 
       this.#state.ws.sendPayload({
@@ -201,38 +204,38 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
     }
   }
 
-  #onWsClose: WebSocketConnectionEvents['close'] = ({ code }) => {
-    const canResume = code < 4000 || code === 4015;
+  #onWsClose: WebSocketConnectionEvents['close'] = (e) => {
+    const canResume = e.code < 4000 || e.code === 4015;
 
-    if (canResume && this.#state.status === ConnectionStatus.Ready) {
+    if (canResume && this.#state.code === ConnectionStateCode.Ready) {
       this.state = {
 				...this.#state,
-				status: ConnectionStatus.Resuming,
+				code: ConnectionStateCode.Resuming,
 				ws: this.#createWebSocket(this.#state.connectionOptions.endpoint),
 			};
 
       return;
     }
 
-    if (this.#state.status !== ConnectionStatus.Closed) {
+    if (this.#state.code !== ConnectionStateCode.Closed) {
       this.destroy();
-			this.emit('close', code);
+			this.emit('close', e.code);
       return;
     }
   }
 
   #onWsPayload: WebSocketConnectionEvents['payload'] = (payload) => {
-    if (payload.op === VoiceOpcodes.Hello) {
-      const ws = Reflect.get(this.#state, 'ws') as WebSocketConnection | undefined;
+    if (payload.seq && this.state.code !== ConnectionStateCode.Closed) {
+      this.state.lastSeqReceived = payload.seq;
+      this.state.ws.seq = payload.seq;
+    }
 
-      if (ws) {
-        ws.heartbeatInterval = payload.d.heartbeat_interval;
-      }
-
+    if (payload.op === VoiceOpcodes.Hello && this.state.code !== ConnectionStateCode.Closed) {
+      this.state.ws.heartbeatInterval = payload.d.heartbeat_interval;
       return;
     }
 
-    if (payload.op === VoiceOpcodes.Ready && this.#state.status === ConnectionStatus.Identifying) {
+    if (payload.op === VoiceOpcodes.Ready && this.#state.code === ConnectionStateCode.Identifying) {
       const udp = this.#createUDP(payload.d);
 
       udp.performIPDiscovery(payload.d.ssrc)
@@ -243,7 +246,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
 			this.state = {
 				...this.#state,
-				status: ConnectionStatus.UdpHandshaking,
+				code: ConnectionStateCode.UdpHandshaking,
 				udp,
 				connectionData: { ssrc: payload.d.ssrc },
 			};
@@ -251,12 +254,12 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       return;
     }
 
-    if (payload.op === VoiceOpcodes.SessionDescription && this.#state.status === ConnectionStatus.SelectingProtocol) {
+    if (payload.op === VoiceOpcodes.SessionDescription && this.#state.code === ConnectionStateCode.SelectingProtocol) {
       const { mode: encryptionMode, secret_key: secretKey } = payload.d;
 
       this.state = {
 				...this.#state,
-				status: ConnectionStatus.Ready,
+				code: ConnectionStateCode.Ready,
 				connectionData: {
 					...this.#state.connectionData,
 					encryptionMode,
@@ -273,7 +276,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       return;
     }
 
-    if (payload.op === VoiceOpcodes.Resumed && this.#state.status === ConnectionStatus.Resuming) {
+    if (payload.op === VoiceOpcodes.Resumed && this.#state.code === ConnectionStateCode.Resuming) {
       const config = this.#state.udp.config;
       const connectionData = this.#state.connectionData;
 
@@ -288,7 +291,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       this.state = {
 				...this.#state,
         udp,
-				status: ConnectionStatus.Ready,
+				code: ConnectionStateCode.Ready,
 			};
 
 			this.state.connectionData.speaking = false;
@@ -298,19 +301,19 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
   }
 
   #onUdpClose = () => {
-    if (this.#state.status === ConnectionStatus.Ready) {
+    if (this.#state.code === ConnectionStateCode.Ready) {
       this.#state.ws.off('close', this.#onWsClose);
 
 			this.state = {
 				...this.#state,
-				status: ConnectionStatus.Resuming,
+				code: ConnectionStateCode.Resuming,
 				ws: this.#createWebSocket(this.#state.connectionOptions.endpoint),
 			};
 		}
   }
 
   #createWebSocket(endpoint: string) {
-    return new WebSocketConnection(`wss://${endpoint}?v=8`)
+    return new WebSocketConnection(`wss://${endpoint}?v=8`, (this.state as any)?.lastSeqReceived)
       .once('open', this.#onWsOpen)
       .once('close', this.#onWsClose)
       .on('error',this.#onError)
@@ -328,7 +331,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
   #handleIPDiscovery(modes: EncryptionMode[]) {
     return ({ ip: address, port }: SocketConfig) => {
-      if (this.#state.status !== ConnectionStatus.UdpHandshaking) {
+      if (this.#state.code !== ConnectionStateCode.UdpHandshaking) {
         return;
       }
 
@@ -348,7 +351,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
       this.state = {
         ...this.#state,
-        status: ConnectionStatus.SelectingProtocol,
+        code: ConnectionStateCode.SelectingProtocol,
       };
     }
   }
@@ -372,7 +375,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
   }
 
 	prepareAudioPacket(opusPacket: Buffer): Buffer | undefined {
-		if (this.#state.status !== ConnectionStatus.Ready) {
+		if (this.#state.code !== ConnectionStateCode.Ready) {
       return;
     }
 
@@ -381,7 +384,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 	}
 
 	dispatchAudio() {
-		if (this.#state.status !== ConnectionStatus.Ready) {
+		if (this.#state.code !== ConnectionStateCode.Ready) {
       return false;
     }
 
@@ -395,7 +398,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 	}
 
 	#sendAudioPacket(audioPacket: Buffer) {
-		if (this.#state.status !== ConnectionStatus.Ready) {
+		if (this.#state.code !== ConnectionStateCode.Ready) {
       return;
     }
 
@@ -409,7 +412,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 	}
 
   setSpeaking(speaking: boolean) {
-		if (this.#state.status !== ConnectionStatus.Ready) {
+		if (this.#state.code !== ConnectionStateCode.Ready) {
       return;
     }
 
@@ -427,16 +430,6 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 			},
 		});
 	}
-
-  get ping() {
-    const ws = Reflect.get(this.#state, 'ws') as WebSocketConnection | undefined;
-    const udp = Reflect.get(this.#state, 'udp') as UDPConnection | undefined;
-
-    return {
-      ws: ws?.ping,
-      udp: udp?.ping
-    }
-  }
 }
 
 function chooseEncryptionMode(serverModes: EncryptionMode[]) {

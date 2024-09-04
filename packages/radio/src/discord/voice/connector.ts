@@ -2,7 +2,7 @@ import { GatewayVoiceServerUpdateDispatchData, GatewayVoiceStateUpdateData, Gate
 import { TypedEmitter } from "tiny-typed-emitter";
 import { CamelCase } from "type-fest";
 import { makeVoiceStateUpdatePayload, Payload } from "./network/payload";
-import { ConnectionStatus, VoiceConnection, VoiceConnectionEvents } from './network/connection'
+import { ConnectionStateCode, VoiceConnection, VoiceConnectionEvents } from './network/connection'
 import { noop } from "lodash";
 import EventEmitter, { once } from "node:events";
 import { ICarrier } from "../../audio/exciter";
@@ -272,7 +272,7 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
   }
 
   #onConnectionStateChange: VoiceConnectionEvents['stateChange'] = (oldState, newState) => {
-    if (oldState.status === newState.status) {
+    if (oldState.code === newState.code) {
       return;
     }
 
@@ -280,7 +280,7 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 			return;
     }
 
-    if (newState.status === ConnectionStatus.Ready) {
+    if (newState.code === ConnectionStateCode.Ready) {
 			this.state = {
 				...this.state,
 				status: VoiceConnectorStatus.Ready,
@@ -289,7 +289,7 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
       return;
 		}
 
-    if (newState.status !== ConnectionStatus.Closed) {
+    if (newState.code !== ConnectionStateCode.Closed) {
 			this.state = {
 				...this.state,
 				status: VoiceConnectorStatus.Connecting,
@@ -342,12 +342,20 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
   }
 
   get ping() {
-    const connection = Reflect.get(this.#state, 'connection') as VoiceConnection | undefined;
-    const p = connection?.ping;
+    if (this.state.status === VoiceConnectorStatus.Ready) {
+      const { connection } = this.state;
+
+      if (connection.state.code === ConnectionStateCode.Ready) {
+        return {
+          ws: connection.state.ws.ping,
+          udp: connection.state.udp.ping
+        }
+      }
+    }
 
     return {
-      ws: p?.ws,
-      udp: p?.udp
+      ws: undefined,
+      udp: undefined
     }
   }
 

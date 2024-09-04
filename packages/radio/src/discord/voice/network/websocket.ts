@@ -17,7 +17,7 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
 
   #heartbeatTimer?: NodeJS.Timeout;
 
-  #lastSeqReceived?: number;
+  #seq?: number;
 
   #heartbeatSent = 0;
   #heartbeatAcked = 0;
@@ -26,8 +26,10 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
 
   #ping?: number;
 
-  constructor(address: string) {
+  constructor(address: string, seq?: number) {
     super();
+
+    this.#seq = seq;
 
     const ws = new WebSocket(address);
     ws.onopen = this.#onOpen;
@@ -72,10 +74,6 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
   }
 
   #handlePayload(payload: VoiceServerPayload) {
-    if (payload.seq) {
-      this.#lastSeqReceived = payload.seq;
-    }
-
     if (payload.op === VoiceOpcodes.HeartbeatAck) {
       this.#updateHeartbeat(payload);
     }
@@ -96,7 +94,7 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
         ...payload,
         d: {
           ...payload.d,
-          seq_ack: this.#lastSeqReceived
+          seq_ack: this.#seq
         }
       }
 
@@ -140,7 +138,7 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
       op: VoiceOpcodes.Heartbeat,
       d: {
         t: nonce,
-        seq_ack: this.#lastSeqReceived
+        seq_ack: this.#seq
       }
     };
 
@@ -149,5 +147,9 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
 
   get ping() {
     return this.#ping;
+  }
+
+  set seq(value: number) {
+    this.#seq = value;
   }
 }

@@ -110,7 +110,6 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
 		}
 	}
 
-
   send(buffer: Buffer) {
     this.#socket.send(buffer, this.config.port, this.config.ip);
   }
