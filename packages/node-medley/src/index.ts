@@ -48,7 +48,7 @@ Medley.prototype.requestAudioStream = async function(options: RequestAudioOption
   const result = this['*$reqAudio'](options) as RequestAudioResult;
   const streamId = result.id;
 
-  const sampleRate = Number(options.sampleRate) ?? 44100;
+  const sampleRate = Number(options.sampleRate ?? 44100);
   const defaultBuffering = sampleRate * 0.01;
   const defaultBufferSize = sampleRate * 0.25;
   let buffering = Number(options.buffering ?? defaultBuffering);
