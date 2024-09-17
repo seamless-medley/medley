@@ -9,9 +9,25 @@ test('Native module loading', t => {
 
 const track = __dirname + '/bensound-dance.mp3';
 
-test('Track loading', t => {
+test('MP3 Track loading', t => {
   t.true(Medley.isTrackLoadable(track));
 });
+
+test('Exotic MP3 track loading', t => {
+  const testTracks: [string, boolean][] = [
+    ['invalid-frames1.mp3', true],
+    ['invalid-frames2.mp3', true],
+    ['invalid-frames3.mp3', true],
+    ['rare_frames.mp3', true],
+    ['garbage.mp3', true],
+    ['excessive_alloc.mp3', false]
+   ];
+
+   for (const [track, result] of testTracks) {
+    t.is(Medley.isTrackLoadable(__dirname + '/' + track), result, track);
+  }
+});
+
 
 test('Null Audio Device playback', t => {
   const queue = new Queue();
