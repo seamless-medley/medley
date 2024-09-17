@@ -40,7 +40,7 @@ FileType getFileTypeFromFileName(juce::File file) {
     }
 
     if (ext.equalsIgnoreCase(".m4a")) {
-        return FileType::MP4;
+        return FileType::MP4; // OSX Only
     }
 
     if (ext.equalsIgnoreCase(".flac")) {
@@ -55,7 +55,7 @@ FileType getFileTypeFromFileName(juce::File file) {
         return FileType::OGG;
     }
 
-    if (ext.equalsIgnoreCase(".aif")) {
+    if (ext.equalsIgnoreCase(".aif") || ext.equalsIgnoreCase(".aiff")) {
         return FileType::AIFF;
     }
 
