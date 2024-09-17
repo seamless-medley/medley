@@ -2,12 +2,12 @@
 
 [![node-medley native module](https://github.com/seamless-medley/medley/actions/workflows/node-medley.yml/badge.svg?branch=main)](https://github.com/seamless-medley/medley/actions/workflows/node-medley.yml)
 
-`node-medley` is a Node.js native module built on top of [JUCE](https://github.com/juce-framework/JUCE) framework to provide audio playback to either an audio output device or [Node.js stream](https://nodejs.org/api/stream.html)
+`node-medley` is a Node.js native module built on top of [JUCE](https://github.com/juce-framework/JUCE) framework. It provides audio playback to both audio output device and [Node.js stream](https://nodejs.org/api/stream.html)
 
 # Features
 - Cross-platform
-- Seamless playback, automatically transit between tracks
-- Nice transition between tracks, with customizable transition point
+- Seamless playback with automatic track transitions
+- Smooth track transition, with customizable transition points
 - Track metadata reading, including cover art and lyrics
 - ReplayGain support
 - Audio level normalization (in conjunction with ReplayGain)
@@ -15,7 +15,7 @@
 - Built-in Karaoke effect (vocal removal)
 - Audio level measurement
 - Play directly to audio device
-- Consume PCM data directly from audio pipeline via Node.js stream
+- Consumption of PCM data via Node.js streams
 
 # Supported platforms
 - `linux/amd64`
@@ -46,22 +46,22 @@ pnpm add @seamless-medley/medley
 # Getting started
 
 ```ts
-// Import 2 main classes.
+// Import the main classes
 import { Medley, Queue } from '@seamless-medley/medley';
 
-// Then craete a new queue instance and pass it to `Medley` class while instantiating.
+// Create a queue instance and pass it to the Medley class during instantiation
 const queue = new Queue();
 const medley = new Medley(queue);
 
-// Add some tracks to the `queue` and start playing
+// Add tracks to the `queue` and start playing
 queue.add('/path/to/file');
 queue.add('/path/to/file2');
 medley.play();
 ```
-> This will start playing to the default audio device.
+> This will start playback on the default audio device.
 
 # Supported File Formats
-Currently, the supported file formats are limited to: `wav`, `aiff`, `mp3`, `ogg` and `flac`, but more formats might be added in the future.
+Currently, the supported file formats include: `wav`, `aiff`, `mp3`, `ogg` and `flac`. More formats may be added in the future.
 
 # Guide
 
@@ -79,15 +79,15 @@ Currently, the supported file formats are limited to: `wav`, `aiff`, `mp3`, `ogg
 
 ## Getting available audio devices
 
-Just use [getAvailableDevices](#getavailabledevices) method.
+Simply use the [getAvailableDevices](#getavailabledevices) method.
 
 ## Selecting audio device
 
-Use data returned from [getAvailableDevices](#getavailabledevices) method with [setAudioDevice](#setaudiodevicedescriptor) method
+Utilize data returned from the [getAvailableDevices](#getavailabledevices) method with the [setAudioDevice](#setaudiodevicedescriptor) method.
 
 *Example:*
 ```js
-// Use default device of the first type
+// Use the default device of the first type
 
 const allDevices = medley.getAvailableDevices();
 medley.setAudioDevice({
@@ -99,11 +99,9 @@ medley.setAudioDevice({
 
 ## Null Audio device
 
-`node-medley` has a special audio device called `Null Device` which does not play sound to the actual audio device.
+`node-medley` includes a special audio device called `Null Device` which does not output sound to a physical audio device.
 
-This is useful when `node-medley` is being used in an environment without any audio devices installed.
-
-Or simply because you just need to consume the PCM audio data without sending it to the actual audio device. see [requestAudioStream](#requestaudiostreamoptions) method.
+This is useful in environments without installed audio devices or when only PCM audio data consumption is needed, see [requestAudioStream](#requestaudiostreamoptions) method.
 
 *Example:*
 ```js
@@ -113,7 +111,7 @@ medley.setAudioDevice({ type: 'Null', device: 'Null Device' });
 ## Getting PCM data
 
 ```js
-// Request for signed 16 bit, little endian, 48000 sample rate audio stream
+// Request a stream of signed 16-bit, little endian audio at 48000 sample rate
 const result = await medley.requestAudioStream({
     format: 'Int16LE',
     sampleRate: 48000
@@ -122,23 +120,23 @@ const result = await medley.requestAudioStream({
 // Pipe to another stream
 result.stream.pipe(/* destination */);
 
-// Or intercept data with `data` event
+// Or intercept data with the `data` event
 result.stream.on('data', (buffer) => {
     // Do something with `buffer`
 });
 
-// When done, don't forget the delete the stream
+// When finished, don't forget the delete the stream
 medley.deleteAudioStream(result.id);
 ```
 
 ## Dynamic queue
 
-Sometimes adding tracks to the queue upfront can cause [Musical Boredom](https://google.com/search?q=musical%20boredom), so let's make the queue dynamic by leveraging [enqueueNext event](#enqueuenextdone)
+Sometimes, preloading all tracks can lead to monotony, so the queue can dynamically update using the  [enqueueNext event](#enqueuenextdone)
 
 *Example:*
 ```js
 medley.on('enqueueNext', (done) => {
-    const newTrack = getNewFreshTrack(); // Your logic goes here
+    const newTrack = getNewFreshTrack(); // Logic for fetching new track
     queue.add(newTrack);
     done(true);
 });
@@ -150,38 +148,38 @@ Use [isTrackLoadable](#istrackloadabletrack) static method.
 
 ## Getting metadata
 
-There are two ways of getting metadata:
+Metadata can be retrieved in two ways:
 
-1. From file path
+1. From a file path
     - Use [getMetadata](#getmetadatapath) static method
-2. From a deck
+2. From the deck
     - Use [getDeckMetadata](#getdeckmetadatadeckindex) method
 
 ## Getting cover art and lyrics
 
-Use [getCoverAndLyrics](#getcoverandlyricspath) method.
+Utilize the [getCoverAndLyrics](#getcoverandlyricspath) method.
 
 ## Reading audio level information
 
-Real-time audio level information can be retrieved by using [level](#level) property.
+Real-time audio level are accessible via the [level](#level) property.
 
 *Example:*
 ```js
-// Reading audio level at 30 times per second rate
+// Read audio levels at a rate of 30 times per second
 setInterval(() => {
     const audioLevel = medley.level;
-    // Use the returned value
+    // Use the value returned
 }, 1000 / 30);
 
 ```
 
 ## Normalizing tracks audio level
 
-[ReplayGain](https://en.wikipedia.org/wiki/ReplayGain) can be used to analyze for the adjustment to the perceived loudness of audio tracks.
+[ReplayGain](https://en.wikipedia.org/wiki/ReplayGain) analyzes and adjusts perceived loudness.
 
 `node-medley` supports reading ReplayGain `Track-gain` metadata embeded in audio files.
 
-To embed it, you can use one of these [scanners](https://en.wikipedia.org/wiki/ReplayGain#Scanners).
+To embed it, use one of these [scanners](https://en.wikipedia.org/wiki/ReplayGain#Scanners).
 
 Usually, ReplayGain attenuates the played back audio, a `make-up` gain should be applied to boost the audio level back to the normalized level, you can change this `make-up` gain by changing the [replayGainBoost](#replaygainboost) property.
 
@@ -189,7 +187,7 @@ The `make-up` gain will not cause clipping, because there is an audio limiter pr
 
 ## Custom transition point
 
-`node-medley` automatically analyze tracks to find audio positions in which it should start/stop playing and also the positions/durations the transition between track should occur.
+`node-medley` automatically analyzes track to find audio positions in which it should start/stop playing and also the positions/durations the transition between track should occur.
 
 but, sometimes this may not be as intended, you can customize that by giving `node-medley` some hints.
 
@@ -269,7 +267,7 @@ See also:
 
 ## `Medley` class
 
-This is the main class, the constructor accepts an instance of [Queue](#queue-class) class.
+This is the main class, the constructor accepts an instance of the [Queue](#queue-class) class.
 
 ```ts
 new Medley(queue, options)
@@ -286,7 +284,7 @@ new Medley(queue, options)
 
 Start playing, if the playing was previously paused it will be resumed.
 
-The `shouldFade` parameter will be used only when resuming.
+The `shouldFade` parameter is used only when resuming.
 
 ### `stop(shouldFade = true)`
 
@@ -298,23 +296,23 @@ Toggle play/pause.
 
 ### `fadeOut()`
 
-Forcefully transit to the next track with fade-out effect.
+Forcefully transit to the next track with a fade-out effect.
 
 ## `seek(time, deckIndex?)`
 
-- `time` is in seconds
-- `deckIndex` optional deck index, possible values are: `0`, `1`, `2`
+- `time` *(number)* - Time in seconds.
+- `deckIndex` *(number?)* - Deck index, possible values are: `0`, `1`, `2`
 
 ## `seekFractional(fraction, deckIndex?)`
-- `fraction` Fraction of track's length.
+- `fraction` *(number)* - Fraction of the track's length.
     - `0` - Seek to the beginning.
-    - `0.5` Seek to the middle of a track.
+    - `0.5` Seek to the middle of the track.
 
 - `deckIndex` optional deck index, possible values are: `0`, `1`, `2`
 
 ## `getDeckPositions(deckIndex)`
 
-- `deckIndex` deck index, possible values are: `0`, `1`, `2`
+- `deckIndex` *(number)* - Deck index, possible values are: `0`, `1`, `2`
 
 Returns an `object` with:
 
@@ -330,13 +328,13 @@ Returns an `object` with:
 
 ## `getDeckMetadata(deckIndex)`
 
-- `deckIndex` index, possible values are: `0`, `1`, `2`
+- `deckIndex` *(number)* - Deck index, possible values are: `0`, `1`, `2`
 
 Returns [Metadata](#metadata) for the specified `deckIndex`
 
 ## `getAvailableDevices()`
 
-Returns `array` of `object` describing an audio device type.
+Returns `array` of `object` describing audio devices.
 
 - `type` *(string)* - Device type
 - `isCurrent` *(boolean)* - `true` if this device type is currently selected
@@ -346,7 +344,7 @@ Returns `array` of `object` describing an audio device type.
 
 ## `getAudioDevice()`
 
-Get audio device currently being selected, returns `undefined` if none.
+Get the audio device currently being selected, returns `undefined` if none.
 
 If available, returns an `object` with:
 
@@ -372,11 +370,11 @@ Returns `true` if some device is selected.
 
 ## `requestAudioStream(options?)`
 
-Request for PCM audio data stream
+Request a PCM audio data stream
 
 `options?` is an `object` with:
 
-- `sampleRate` *(number)* - Sample rate for the PCM data, if omitted, the default device's sample rate will be used
+- `sampleRate` *(number)* - Sample rate for the PCM data. Defaults to the default device's sample rate if omitted.
 
 - `format` - Audio sample format, possible values are:
     - `Int16LE` - 16 bit signed integer, little endian
@@ -412,7 +410,7 @@ Returns a `Promise` of `object` with:
     - `16` - for `Int16LE` of `Int16BE`
     - `32` - for `FloatLE` of `FloatBE`
 
-- `stream` *(Readable)* - Readable stream, use this field to consume PCM data
+- `stream` *(Readable)* - Readable stream, for consuming PCM data
 
 - `update` *((options) => boolean)* - Update this audio stream, the `options` is the same as [updateAudioStream(id, options)](#updateaudiostreamid-options)
 
@@ -492,7 +490,7 @@ Type: `boolean`
 
 **Read only**
 
-Returns `true` if is playing, but not affected by the `paused` property.
+Returns `true` if playing, but not affected by the `paused` property.
 
 ## `paused`
 
@@ -500,7 +498,7 @@ Type: `boolean`
 
 **Read only**
 
-Returns `true` if is playing but has been paused.
+Returns `true` if playing but has been paused.
 
 ## `volume`
 
@@ -526,13 +524,13 @@ S-Curve value used for fading in/out.
 
 Type: `number`
 
-The maximum duration in seconds for the fade-out transition between tracks.
+Maximum duration in seconds for the fade-out transition between tracks.
 
 ## `minimumLeadingToFade`
 
 Type: `number`
 
-The duration in seconds at the beginning of a track to be considered as having a long intro.
+Duration in seconds at the beginning of a track to be considered as having a long intro.
 
 A track with a long intro will cause a fading-in to occur during transition.
 
@@ -542,7 +540,7 @@ Type: `number`
 
 Default: `9.0`
 
-Gain (in dB) to boost for tracks having ReplayGain metadata embeded, default to 9.0dB.
+Gain (in dB) to boost for tracks with ReplayGain metadata embeded, default to 9.0dB.
 
 If a track has no ReplayGain metadata, this value is ignored.
 
@@ -575,16 +573,12 @@ Audio reduction occur during the internal audio processing
 
 *Parameters:*
 
-- `deckIndex` *(number)* - Deck index in which the event occur
+- `deckIndex` *(number)* - Deck index where the event occur
 
 - `trackPlay` - An object describing detail of the play session for the Deck.
     - `uuid` *(string)* - A unique string identifying the `trackPlay` itself
     - `track` - Track, see [TrackInfo](#trackinfo)
     - `duration` *(number)* - Track duration
-
-## `loaded`
-
-Emits when a track has been loaded into a Deck.
 
 ## `loaded`
 
@@ -596,19 +590,19 @@ Emits when a track has been unloaded from a Deck.
 
 ## `started`
 
-Emits when a Deck has started playing.
+Emits when a Deck starts playing.
 
 ## `finished`
 
-Emits when a Deck has finished playing.
+Emits when a Deck finishes playing.
 
 ## `mainDeckChanged`
 
-Emits when a Deck become the main playing Deck.
+Emits when a Deck becomes the main playing Deck.
 
 ## `enqueueNext(done)`
 
-Emits when the playing queue is exhausted and need to be filled.
+Emits when the playing queue is exhausted and needs to be filled.
 
 See [Dynamic quque](#dynamic-queue)
 
@@ -617,10 +611,10 @@ See [Dynamic quque](#dynamic-queue)
 
 ## `audioDeviceChanged`
 
-Emits when the audio device has changed, use [getAudioDevice](#getaudiodevice) method to get the audio device.
+Emits when the audio device changes, use [getAudioDevice](#getaudiodevice) method to get the current audio device.
 
 ## `log`
-Emits when a log message has been pushed from the native module.
+Emits when a log message is pushed from the native module.
 
 > Logging must be enabled when constructing the Medley instance, see [Medley class options](#options)
 
@@ -683,13 +677,13 @@ Returns an `object` with:
 
 - `cover` *(Buffer)* - Cover art data
 
-- `coverMimeType` *(string)* - Cover art mime type
+- `coverMimeType` *(string)* - Cover art MIME type
 
 - `lyrics` *(string)* - Raw lyrics data
 
 ## `Queue` class
 
-The queue class provides tracks list to the [Medley](#medley-class) class.
+The queue class provides a list of tracks to the [Medley](#medley-class) class.
 
 **Constructor**
 
@@ -697,14 +691,14 @@ The queue class provides tracks list to the [Medley](#medley-class) class.
 
 Create a new instance of the `Queue` class, an optional `tracks` is an array of tracks to initially fill the queue.
 
-The `Queue` class is dead simple, if you need more control over your tracks list, you must manage the list by yourself and provide a track when the `Medley` object requires one, see [enqueueNext event](#enqueuenextdone)
+The `Queue` class is straightforward, For more control over your tracks list, manage it manually and provide a track when the `Medley` object requires one, see [enqueueNext event](#enqueuenextdone)
 
 **Methods**
 
 ### `add(track)`
 Add a track to the queue, see [TrackInfo](#trackinfo)
 ### `add(tracks)`
-Add list of tracks to the queue, see [TrackInfo](#trackinfo)
+Add a list of tracks to the queue, see [TrackInfo](#trackinfo)
 
 ### `insert(index, track)`
 ### `insert(index, tracks)`
@@ -717,11 +711,11 @@ Delete tracks(s) specified by `count` starting from `index`.
 
 ### `swap(index1, index2)`
 
-Swap track.
+Swap tracks.
 
 ### `move(currentIndex, newIndex)`
 
-Move a track to the new location.
+Move a track from `currentIndex` to `newIndex`.
 
 ### `get(index)`
 
@@ -739,20 +733,20 @@ Returns a new shallow copy of all tracks.
 
 ### `length` property
 
-Returns total number of tracks in the queue.
+Total number of tracks in the queue.
 
 # TrackInfo
 
 A `TrackInfo` can be either a `string` to file path, or an `object` with:
 
-- `path` *(string)* - file path
+- `path` *(string)* - File path
 
 - `cueInPosition` *(number?)* - Start position of the track
 
 - `cueOutPosition` *(number?)* - Stop position of the track
 
 - `disableNextLeadIn` *(boolean?)*
-    - Disable lead-in of the next track, useful for transiting from jingle/sweeper
+    - Disables the lead-in of the next track, useful for transitioning from jingles/sweepers.
     - The lead-in is the position where it is considered as the start singing point, usually presented in a track which has smooth/long beginning.
 
 # Metadata
@@ -764,7 +758,7 @@ A `TrackInfo` can be either a `string` to file path, or an `object` with:
   - `originalArtist` *(string?)*
   - `trackGain` *(number?)* - [ReplayGain](https://en.wikipedia.org/wiki/ReplayGain) value in **dB (decibels)**, `0` means no `ReplayGain` value for this track
   - `bpm` *(number?)* - Beats Per Minute
-  - `comments` *([string, string][])* - List of key/value pair for all user-defined comments
+  - `comments` *([string, string][])* - List of key/value pairs for all user-defined comments
 
 # AudioProperties
   - `bitrate` *(number?)* - in **Kbps**
