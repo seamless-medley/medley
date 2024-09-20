@@ -1,6 +1,8 @@
 # node-medley
 
+[![NPM Version](https://img.shields.io/npm/v/%40seamless-medley%2Fmedley?color=5bc664)](https://www.npmjs.com/package/@seamless-medley/medley)
 [![node-medley native module](https://github.com/seamless-medley/medley/actions/workflows/node-medley.yml/badge.svg?branch=main)](https://github.com/seamless-medley/medley/actions/workflows/node-medley.yml)
+
 
 `node-medley` is a Node.js native module built on top of [JUCE](https://github.com/juce-framework/JUCE) framework. It provides audio playback to both audio output device and [Node.js stream](https://nodejs.org/api/stream.html)
 
