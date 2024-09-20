@@ -9,11 +9,11 @@ test('Native module loading', t => {
 
 const track = __dirname + '/bensound-dance.mp3';
 
-test('MP3 Track loading', t => {
+test.serial('MP3 Track loading', t => {
   t.true(Medley.isTrackLoadable(track));
 });
 
-test('Exotic MP3 track loading', t => {
+test.serial('Exotic MP3 tracks loading', async t => {
   const testTracks: [string, boolean][] = [
     ['invalid-frames1.mp3', true],
     ['invalid-frames2.mp3', true],
