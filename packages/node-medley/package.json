@@ -23,7 +23,7 @@
   "types": "src/index.d.ts",
   "scripts": {
     "clean": "rimraf build out dist",
-    "build": "tsc",
+    "build:js": "tsc",
     "prebuild": "cross-env JOBS=max prebuildify -t 18.0.0 --tag-libc --napi --strip",
     "prebuild:linux": "docker build -f ./builder/linux/Dockerfile --progress=plain -t node-medley-prebuild ../.. && docker container create --name node-medley-prebuild-cp node-medley-prebuild && docker cp node-medley-prebuild-cp:/src/packages/node-medley/prebuilds ./ && docker rm node-medley-prebuild-cp",
     "prebuild:linux-arm64": "docker build --platform=linux/arm64 -f ./builder/linux/Dockerfile --progress=plain -t node-medley-prebuild ../.. && docker container create --name node-medley-prebuild-cp node-medley-prebuild && docker cp node-medley-prebuild-cp:/src/packages/node-medley/prebuilds ./ && docker rm node-medley-prebuild-cp",

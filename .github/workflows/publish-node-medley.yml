@@ -73,7 +73,7 @@ jobs:
         working-directory: ${{ env.NODE_MEDLEY_DIR }}
         run: |
           pnpm install --no-frozen-lockfile --ignore-scripts
-          pnpm run build
+          pnpm run build:js
           pnpm run package
 
       - name: Check Tag
