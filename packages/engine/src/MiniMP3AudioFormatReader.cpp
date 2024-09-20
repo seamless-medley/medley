@@ -22,7 +22,10 @@ MiniMP3AudioFormatReader::MiniMP3AudioFormatReader(InputStream* const in)
         return;
     }
 
-    opened = true;
+    if (dec.info.channels <= 0) {
+        return;
+    }
+
     bitsPerSample = 32;
     usesFloatingPointData = true;
     sampleRate = dec.info.hz;
@@ -33,6 +36,8 @@ MiniMP3AudioFormatReader::MiniMP3AudioFormatReader(InputStream* const in)
     if (lengthInSamples <= 0) {
         lengthInSamples = dec.samples / numChannels;
     }
+
+    opened = true;
 
     reallocBuffer();
 }
