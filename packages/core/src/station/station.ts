@@ -966,7 +966,7 @@ export function makeRequester(type: AudienceType.Discord, group: DiscordRequeste
 export function makeRequester(type: AudienceType, group: any, requesterId: string): Requester {
   return {
     type,
-    group: group as any,
+    group,
     requesterId
   }
 }
