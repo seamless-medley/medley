@@ -4,7 +4,7 @@ const argon2 = require('@node-rs/argon2');
 const workerpool = require('workerpool');
 const { threadId } = require('node:worker_threads');
 const { MongoClient, Db, Collection, AggregationCursor } = require('mongodb');
-const { random, omitBy } = require('lodash');
+const { random, omitBy, capitalize } = require('lodash');
 const { createLogger } = require('@seamless-medley/logging');
 
 /** @typedef {import('@seamless-medley/core').MusicDb} MusicDb */
@@ -43,12 +43,25 @@ const logger = createLogger({
   id: `${threadId}`
 });
 
+/**
+ *
+ * @param {*} e
+ * @param {string=} s
+ */
+function logError(e, s) {
+  if (e.cause) {
+    e = e.cause;
+  }
+
+  logger.error(`${s || ''}${'message' in e ? ` - ${e.message}` : ''}`);
+}
+
 process.on('uncaughtException', (e) => {
-  logger.error(e, 'Uncaught exception');
+  logError(e, 'Uncaught exception');
 });
 
 process.on('unhandledRejection', (e) => {
-  logger.error(e, 'Unhandled rejection');
+  logError(e, 'Unhandled rejection');
 });
 
 /**
@@ -60,7 +73,12 @@ async function configure(options) {
     ttls = options.ttls;
   }
 
-  client = new MongoClient(options.url, options.connectionOptions);
+  client?.removeAllListeners();
+
+  client = new MongoClient(options.url, {
+    serverSelectionTimeoutMS: 5000,
+    ...options.connectionOptions
+  });
 
   client.on('connectionPoolCreated', (e) => {
     logger.info('connection pool created');
@@ -79,8 +97,10 @@ async function configure(options) {
   });
 
   client.on('error', (e) => {
-    logger.error(e);
+    logError(e);
   });
+
+  await client.connect();
 
   db = client.db(options.database);
 
@@ -147,13 +167,12 @@ async function find(value, by) {
     throw new Error('Not initialized');
   }
 
-  // @ts-ignore
   const found = await musics.findOne({
     [by]: value,
     expires: { $gte: Date.now() }
-  }, { projection: { _id: 0 }})
+  }, { projection: { _id: 0 } })
   .catch((e) => {
-    logger.error(e, 'Error in find');
+    logError(e, `Error in findBy${capitalize(by)} (${value})`);
   });
 
   if (!found) {
@@ -217,7 +236,7 @@ async function findByComment(field, value, limit = 1) {
     }
   }
   catch (e) {
-    logger.error(e, 'Error in findByComment');
+    logError(e, 'Error in findByComment');
   }
 
   return result;
@@ -239,7 +258,7 @@ const update = async (trackId, fields) => {
     }
   }, { upsert: true })
   .catch((e) => {
-    logger.error(e, 'Error in update');
+    logError(e, 'Error in update');
   });
 
   return {
@@ -254,7 +273,7 @@ const update = async (trackId, fields) => {
 const _delete = async (trackId) => {
   await musics.deleteOne({ trackId })
   .catch((e) => {
-    logger.error(e, 'Error in delete');
+    logError(e, 'Error in delete');
   });
 }
 
@@ -268,7 +287,7 @@ const search_add = async (stationId, query) => {
     timestamp: new Date
   })
   .catch((e) => {
-    logger.error(e, 'Error in insert');
+    logError(e, 'Error in insert');
   });
 }
 
@@ -348,7 +367,7 @@ const search_recentItems = async(stationId, key, $limit) => {
     }
 
   } catch(e) {
-    logger.error(e, 'Error in recent search');
+    logError(e, 'Error in recent search');
   }
   return result;
 }
@@ -392,7 +411,7 @@ const search_unmatchedItems = async(stationId) => {
     }
   }
   catch (e) {
-    logger.error(e, 'Error in unmatched items');
+    logError(e, 'Error in unmatched items');
   }
 
   return result;
@@ -406,19 +425,27 @@ const search_unmatchedItems = async(stationId) => {
     return;
   }
 
-  await trackHistory.insertOne({
-    stationId,
-    ...record
-  })
-  .catch((e) => {
-    logger.error(e, 'Error in TrackHistory::add, while inserting');
-  });
+  try {
+    await trackHistory.insertOne(
+      {
+        stationId,
+        ...record
+      }
+    )
+    .catch((e) => {
+
+    });
+  }
+  catch (e) {
+    logError(e, 'Error in TrackHistory::add, while inserting');
+    return;
+  }
 
   const count = await trackHistory.countDocuments({ stationId })
-  .catch((e) => {
-    logger.error(e, 'Error in TrackHistory::add, while counting');
-    return 0;
-  });
+    .catch((e) => {
+      logError(e, 'Error in TrackHistory::add, while counting');
+      return 0;
+    });
 
   if (count > max) {
     const deleteCount = max - count;
@@ -429,25 +456,26 @@ const search_unmatchedItems = async(stationId) => {
       .map(doc => doc._id)
       .toArray()
       .catch((e) => {
-        logger.error(e, 'Error in TrackHistory::add, while getting result');
+        logError(e, 'Error in TrackHistory::add, while getting result');
         return [];
       });
 
-    await trackHistory.deleteMany({
-      _id: { $in: ids }
-    })
+    await trackHistory.deleteMany(
+      { _id: { $in: ids }}
+    );
   }
  }
 
  /**
   * @type {TrackHistory['getAll']}
   */
- const track_getAll = async (stationId) => await trackHistory.find({ stationId })
+ const track_getAll = async (stationId) => await trackHistory
+    .find({ stationId })
     .sort('playedTime', 'asc')
     .map(({ _id, ...record }) => record)
     .toArray()
     .catch((e) => {
-      logger.error(e, 'Error in getAll');
+      logError(e, 'Error in TrackHistory::getAll');
       return [];
     });
 
