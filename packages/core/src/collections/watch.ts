@@ -79,7 +79,7 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
     return result;
   }
 
-  #storeNewFiles = debounce(() => this.add({ paths: this.#fetchNewPaths() }), 2000);
+  #storeNewFiles = debounce(() => this.add({ paths: this.#fetchNewPaths() }), 3000);
 
   #fetchUpdatePaths(): string[] {
     const result = uniq(this.#updatePaths);
@@ -87,12 +87,12 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
     return result;
   }
 
-  #updateFiles = debounce(() => this.update(this.#fetchUpdatePaths()), 2000);
+  #updateFiles = debounce(() => this.update(this.#fetchUpdatePaths()), 3000);
 
   #handleFilesRemoval = debounce(() => {
     this.removeBy(({ id }) => this.#removedIds.has(id));
     this.#removedIds.clear();
-  }, 2000);
+  }, 3000);
 
   #handleSubscriptionEvents = (dir: string): SubscribeCallback => async (error, events) => {
     if (error) {
