@@ -32,15 +32,6 @@ async function main() {
     return;
   }
 
-  await showVersionBanner('banner.txt');
-
-  const info = Medley.getInfo();
-
-  logger.info(getVersionLine());
-  logger.info('node-medley runtime: %s', Object.entries(info.runtime).map(([p, v]) => `${p}=${v}`).join('; '));
-  logger.info('node-medley version: %s', `${info.versionString}`);
-  logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
-
   const configs = await loadConfig(configFile, true);
 
   if (configs instanceof Error) {
@@ -59,6 +50,15 @@ async function main() {
     process.exit(1);
     return;
   }
+
+  await showVersionBanner('banner.txt');
+
+  const info = Medley.getInfo();
+
+  logger.info(getVersionLine());
+  logger.info('node-medley runtime: %s', Object.entries(info.runtime).map(([p, v]) => `${p}=${v}`).join('; '));
+  logger.info('node-medley version: %s', `${info.versionString}`);
+  logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
 
   logger.info('Initializing');
 
