@@ -37,7 +37,7 @@ export const formatSpotifyField = (field: MetadataFields, text: string, id: stri
   return spotifySearchLink(text, `${spotifyField}s`);
 }
 
-export const extractSpotifyUrl = (s: string) => chain(s.match(/(https:\/\/open.spotify.com\/[^ ]+)/ig))
+export const extractSpotifyUrl = (s: string) => chain(s.match(/(https:\/\/open.spotify.com\/[^\s]+)/ig))
   .map((h) => {
     const u = new URL(h);
     u.search = '';
