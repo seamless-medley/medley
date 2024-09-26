@@ -132,7 +132,8 @@
               "minLength": 1
             },
             "connectionOptions": {
-              "type": "object"
+              "type": "object",
+              "markdownDescription": "See: [Driver Documentation](https://www.mongodb.com/docs/manual/reference/connection-string)"
             },
             "metadataTTL": {
               "description": "Time-To-Live for music metadata",
