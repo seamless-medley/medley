@@ -138,10 +138,17 @@ type WaitOption = {
 export type RetryOptions = {
   retries?: number;
   signal?: AbortSignal;
+  onError?: (err: any, attempts: number) => any;
 } & WaitOption;
 
-export function retryable<R>(fn: () => Promise<R>, options: RetryOptions) {
+export type RetryInfo = {
+  attempts: number;
+  previousError: unknown;
+}
+
+export function retryable<R>(fn: (info: RetryInfo) => Promise<R>, options: RetryOptions) {
   let attempts = 0;
+  let previousError: unknown;
 
   async function wrapper(n?: number): Promise<R | undefined> {
     try {
@@ -149,14 +156,16 @@ export function retryable<R>(fn: () => Promise<R>, options: RetryOptions) {
         return;
       }
 
-      return await fn();
+      return await fn({ attempts, previousError });
     } catch (e) {
       if (n !== undefined && n <= 0) {
         throw e;
       }
 
+      previousError = e;
       ++attempts;
 
+      options?.onError?.(e, attempts);
 
       const wait = Math.min(
         options.maxWait ?? options.wait,
