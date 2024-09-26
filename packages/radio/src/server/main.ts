@@ -141,6 +141,7 @@ async function main() {
 
   if (!configFile) {
     logger.fatal('No configuration file specified');
+    process.exit(1);
     return;
   }
 
