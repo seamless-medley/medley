@@ -157,7 +157,11 @@ export function retryable<R>(fn: () => Promise<R>, options: RetryOptions) {
 
       ++attempts;
 
-      const wait = Math.min(options.maxWait ?? options.wait, options.wait * (options.factor ? Math.pow(options.factor, attempts) : 0));
+
+      const wait = Math.min(
+        options.maxWait ?? options.wait,
+        options.wait * Math.pow(options.factor ?? 1.01, attempts)
+      );
 
       return delayed(() => wrapper(n !== undefined ? n - 1 : n), wait)();
     }
