@@ -348,7 +348,7 @@ export class GuildState {
         this.#updateAudiences();
 
         return { status: 'joined', station: stationLink!.station };
-      }, { retries, wait: 1000 });
+      }, { retries, wait: 1000, factor: 1 });
 
       if (result === undefined) {
         throw new Error('Aborted');
