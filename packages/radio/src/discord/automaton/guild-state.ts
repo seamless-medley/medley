@@ -741,12 +741,16 @@ export class GuildState {
       }
     }
 
-    for (const match of matches) {
+    for (const match of matches.slice(0, 3)) {
       const reply = await createReply(match.url, match.paths);
 
       if (reply) {
         message.reply(reply).catch(noop);
       }
+    }
+
+    if (matches.length > 3) {
+      message.reply(`‼️ Up to 3 Spotify links can be used at a time`);
     }
   }
 }
