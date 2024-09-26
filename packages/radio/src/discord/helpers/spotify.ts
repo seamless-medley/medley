@@ -37,17 +37,19 @@ export const formatSpotifyField = (field: MetadataFields, text: string, id: stri
   return spotifySearchLink(text, `${spotifyField}s`);
 }
 
-export const extractSpotifyUrl = (s: string) => chain(s.match(/(https:\/\/open.spotify.com\/[^\s]+)/ig))
-  .map((h) => {
-    const u = new URL(h);
-    u.search = '';
-    return u;
-  })
-  .uniqBy(u => u.href)
-  .map(url => ({ url, paths: url.pathname.substring(1).split('/') as [string, string] }))
-  .filter(({ paths: [type, id] }) => Boolean(type) && Boolean(id) && ['track', 'artist'].includes(type))
-  .take(3)
-  .value();
+export const extractSpotifyUrl = (s: string, limit?: number) => {
+  const c = chain(s.match(/(https:\/\/open.spotify.com\/[^\s]+)/ig))
+    .map((h) => {
+      const u = new URL(h);
+      u.search = '';
+      return u;
+    })
+    .uniqBy(u => u.href)
+    .map(url => ({ url, paths: url.pathname.substring(1).split('/') as [type: string, id: string] }))
+    .filter(({ paths: [type, id] }) => Boolean(type) && Boolean(id) && ['track', 'artist'].includes(type));
+
+  return ((limit ?? 0) > 0 ? c.take(limit) : c).value();
+}
 
 type SpotifyTrackInfo = {
   type: 'track';
