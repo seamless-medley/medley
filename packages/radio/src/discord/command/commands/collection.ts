@@ -49,7 +49,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     interaction,
     onGoing,
     ttl: 90_000,
-    data: station.currentSequenceCollection,
+    data: station.temporalCollection ?? station.currentSequenceCollection,
 
     makeCaption: async () => [],
     async makeComponents(trackingCollection) {
