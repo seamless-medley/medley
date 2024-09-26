@@ -5,6 +5,7 @@ import { loadConfig } from "../config";
 import { ZodError } from "zod";
 import { createAutomaton, createStation, getVersionLine, showVersionBanner } from "../helper";
 import { createLogger } from "@seamless-medley/logging";
+import { retryable } from "@seamless-medley/utils";
 
 const logger = createLogger({ name: 'main' });
 
@@ -62,14 +63,31 @@ async function main() {
 
   logger.info('Initializing');
 
-  const musicDb = await new MongoMusicDb().init({
-    url: configs.db.url,
-    database: configs.db.database,
-    connectionOptions: configs.db.connectionOptions,
-    ttls: [
-      configs.db.metadataTTL?.min ?? 60 * 60 * 24 * 7,
-      configs.db.metadataTTL?.max ?? 60 * 60 * 24 * 12,
-    ]
+  const musicDb = new MongoMusicDb();
+
+  await retryable(async ({ attempts }) => {
+    if (attempts) {
+      logger.info('Attempting to re-initialize database connections (%d)', attempts);
+    }
+
+    return musicDb.init({
+      url: configs.db.url,
+      database: configs.db.database,
+      connectionOptions: configs.db.connectionOptions,
+      ttls: [
+        configs.db.metadataTTL?.min ?? 60 * 60 * 24 * 7,
+        configs.db.metadataTTL?.max ?? 60 * 60 * 24 * 12,
+      ]
+    });
+  },
+  {
+    wait: 3_000,
+    maxWait: 30_000,
+    onError: (e) => {
+      if (e.msg) {
+        logger.error(e.msg);
+      }
+    }
   });
 
   const stations = await Promise.all(

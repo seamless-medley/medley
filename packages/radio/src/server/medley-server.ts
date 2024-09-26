@@ -27,6 +27,7 @@ import { ShoutAdapter } from "../streaming/shout/adapter";
 import { IcyAdapter } from "../streaming";
 import { User } from '../db/persistent/user';
 import { UserModel } from '../db/models/user';
+import { retryable } from "@seamless-medley/utils";
 
 const logger = createLogger({ name: 'medley-server' });
 
@@ -219,10 +220,16 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   }
 
   async #connectMongoDB() {
-    const dbConfig = this.#configs.db;
+    const musicDb = new MongoMusicDb();
 
-    try {
-      const newInstance = await new MongoMusicDb().init({
+    await retryable(async ({ attempts }) => {
+      if (attempts) {
+        logger.info('Attempting to re-initialize database connections (%d)', attempts);
+      }
+
+      const dbConfig = this.#configs.db;
+
+      return musicDb.init({
         url: dbConfig.url,
         database: dbConfig.database,
         connectionOptions: dbConfig.connectionOptions,
@@ -230,17 +237,20 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
           dbConfig.metadataTTL?.min ?? 60 * 60 * 24 * 7,
           dbConfig.metadataTTL?.max ?? 60 * 60 * 24 * 12,
         ]
-      }) as MongoMusicDb;
+      });
+    },
+    {
+      wait: 3_000,
+      maxWait: 30_000,
+      onError: (e) => {
+        if (e.msg) {
+          logger.error(e.msg);
+        }
+      }
+    });
 
-      this.#musicDb?.dispose();
-      this.#musicDb = newInstance;
-      this.#settingsDb = newInstance.settings;
-
-      logger.info('Connected to MongoDB');
-    }
-    catch (e) {
-      throw e;
-    }
+    this.#musicDb = musicDb;
+    this.#settingsDb = musicDb.settings;
   }
 
   protected override async authenticateSocket(socket: Socket, username: string, password: string) {
