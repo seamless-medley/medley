@@ -594,7 +594,9 @@ export class GuildState {
       return;
     }
 
-    const shouldCheckAudiences = this.adapter.getConfig(message.guildId)?.trackMessage?.always !== true;
+    const isOwnerOverride = this.adapter.getAutomaton().owners.includes(message.author.id);
+
+    const shouldCheckAudiences = !isOwnerOverride && this.adapter.getConfig(message.guildId)?.trackMessage?.always !== true;
 
     if (shouldCheckAudiences) {
       const audiences = station.getAudiences(this.adapter.makeAudienceGroup(this.guildId));
