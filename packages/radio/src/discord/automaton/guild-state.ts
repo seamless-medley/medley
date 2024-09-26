@@ -710,13 +710,16 @@ export class GuildState {
             exactMatch: true
           });
 
-          const tracks = chain([...exactMatches, ...searchResult])
-            .uniqBy(t => t.musicId ?? t.id)
-            .value();
+          if (exactMatches.length + searchResult.length) {
+            const counter = [
+              exactMatches.length ? `${exactMatches.length} track(s)` : undefined,
+              searchResult.length ? `${searchResult.length} potential track(s)` : undefined
+            ]
+            .filter((s): s is string => s !== undefined)
+            .join(' and ');
 
-          if (tracks.length) {
             embed
-              .setTitle(`Found ${tracks.length} track(s) for this artist`)
+              .setTitle(`Found ${counter} for this artist`)
               .addFields(
                 { name: 'Artist', value: quote(hyperlink(info.artist, url.href)) },
               )
