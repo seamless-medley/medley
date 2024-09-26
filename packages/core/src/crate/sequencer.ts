@@ -372,6 +372,10 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
     return true;
   }
 
+  get temporalCollection() {
+    return this.#temporalCollection;
+  }
+
   #latchSessions: Array<LatchSession<T, E>> = [];
 
   getActiveLatch(): LatchSession<T, E> | undefined {

@@ -772,6 +772,10 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
     return this.#sequencer.forcefullySelectCollection(collection);
   }
 
+  get temporalCollection() {
+    return this.#sequencer.temporalCollection;
+  }
+
   get isLatchActive(): boolean {
     return this.#sequencer.getActiveLatch() !== undefined;
   }

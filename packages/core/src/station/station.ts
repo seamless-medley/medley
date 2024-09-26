@@ -625,6 +625,10 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#boombox.currentSequenceCrate;
   }
 
+  get temporalCollection() {
+    return this.#boombox.temporalCollection;
+  }
+
   //#endregion
 
   get profile() {
