@@ -10,8 +10,10 @@ const spotifyBaseURL = 'https://open.spotify.com';
 
 export const spotifyMetadataFields = ['track', 'artist', 'album'];
 
-export const spotifyURI = (text: string, type: string, id: string, tooltip?: string) => {
-  const url = `${spotifyBaseURL}/${type}/${id}`
+export const spotifyURI = (type: string, id: string) => `${spotifyBaseURL}/${type}/${id}`;
+
+export const spotifyLink = (text: string, type: string, id: string, tooltip?: string) => {
+  const url = spotifyURI(type, id);
   return tooltip ? hyperlink(text, url, tooltip) : hyperlink(text, url);
 }
 
@@ -31,7 +33,7 @@ export const formatSpotifyField = (field: MetadataFields, text: string, id: stri
   }
 
   if (id) {
-    return spotifyURI(text, spotifyField, id, `More about this ${spotifyField} on Spotify`);
+    return spotifyLink(text, spotifyField, id, `More about this ${spotifyField} on Spotify`);
   }
 
   return spotifySearchLink(text, `${spotifyField}s`);

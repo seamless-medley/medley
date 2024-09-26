@@ -4,7 +4,7 @@ import { chunk, isEmpty, startCase, upperCase } from "lodash";
 import { formatDuration } from "../../format/format";
 import { CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 import { createCoverImageAttachment } from "../../helpers/message";
-import { extractSpotifyMetadata, formatSpotifyField, spotifySearchLink, spotifyURI } from "../../helpers/spotify";
+import { extractSpotifyMetadata, formatSpotifyField, spotifySearchLink, spotifyLink } from "../../helpers/spotify";
 
 const emptyField = { name: '\u200B', value: '\u200B', inline: true };
 const emptyRows = Array(3).fill(0).map<APIEmbedField>(_ => emptyField);
@@ -33,7 +33,7 @@ export class Normal extends TrackMessageCreator {
       })
       .setDescription(quote(
         spotifyMetadata.track
-          ? spotifyURI(data.description, 'track', spotifyMetadata.track, "More about this track on Spotify")
+          ? spotifyLink(data.description, 'track', spotifyMetadata.track, "More about this track on Spotify")
           : spotifySearchLink(data.description, 'tracks')
       ));
 

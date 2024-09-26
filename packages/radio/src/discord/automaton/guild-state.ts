@@ -1,10 +1,11 @@
-import { chain, clamp, noop, sortBy } from "lodash";
+import { clamp, noop, sortBy } from "lodash";
 
 import {
   AudienceGroupId,
   IReadonlyLibrary,
   KaraokeUpdateParams,
-  Station
+  Station,
+  compareTrackWithStation
 } from "@seamless-medley/core";
 
 import { retryable } from "@seamless-medley/utils";
@@ -621,7 +622,7 @@ export class GuildState {
 
           const dedicatedTracks = await station.findTracksByComment(searchKey, id);
 
-          const [track] = sortBy(dedicatedTracks, t => t.collection.options.auxiliary ? 1 : 0);
+          const [track] = sortBy(dedicatedTracks, t => compareTrackWithStation(station, t));
 
           if (track) {
             const { id: trackId, extra } = track;
@@ -682,7 +683,7 @@ export class GuildState {
                     new ButtonBuilder()
                       .setLabel('Search')
                       .setStyle(ButtonStyle.Primary)
-                      .setCustomId(`request:cross_search`)
+                      .setCustomId(`request:cross_search:${id}`)
                   )
               ]
             }
@@ -732,7 +733,7 @@ export class GuildState {
                     new ButtonBuilder()
                       .setLabel('Search')
                       .setStyle(ButtonStyle.Primary)
-                      .setCustomId(`request:artist_search`)
+                      .setCustomId(`request:artist_search:${id}`)
                   )
               ]
             }

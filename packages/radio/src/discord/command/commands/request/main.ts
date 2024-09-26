@@ -2,12 +2,12 @@ import {
   AudienceType,
   AudioProperties,
   BoomBoxTrack,
+  compareTrackWithStation,
   getTrackBanner,
   makeRequester,
   MetadataHelper,
   Station,
-  StationTrack,
-  TrackKind
+  StationTrack
 } from "@seamless-medley/core";
 
 import {
@@ -28,7 +28,7 @@ import {
   quote
 } from "discord.js";
 
-import { chain, chunk, clamp, Dictionary, flatten, fromPairs, groupBy, identity, isUndefined, sample, sortBy, truncate, zip } from "lodash";
+import { chain, chunk, clamp, Dictionary, flatten, fromPairs, groupBy, identity, isUndefined, sample, sortBy, truncate, uniqBy, zip } from "lodash";
 import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../helpers/emojis";
@@ -39,7 +39,7 @@ import { getVoteMessage } from "../vote";
 import { interact } from "../../interactor";
 import { groupByAsync } from "@seamless-medley/utils";
 import { MedleyAutomaton } from "../../../automaton";
-import { extractSpotifyUrl, fetchSpotifyInfo } from "../../../helpers/spotify";
+import { fetchSpotifyInfo, spotifyURI } from "../../../helpers/spotify";
 import { GuildState } from "../../../automaton/guild-state";
 
 type Selection = {
@@ -222,9 +222,17 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
     }
   }
 
+  const selectionOrder = (selection: Selection) => compareTrackWithStation(station, selection.track);
+
+  const makeTrackSelections = async (choices: Selection[]): Promise<SelectMenuComponentOptionData[]> => {
+    const groups = Object.values(groupBy(choices, selectionOrder));
+    const clarifications = groups.map(g => clarifySelection(g, trackSelectionProcessors));
+    return flatten(await Promise.all(clarifications));
+  }
+
   await deferReply(interaction);
 
-  const results = await (() => {
+  const results = await (async () => {
     switch (options.type) {
       case 'query': {
         const { title, artist, query, exactMatch, noHistory } = options;
@@ -242,9 +250,23 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
         });
       }
 
-      case 'spotify:artist':
       case 'spotify:track':
         return station.findTracksByComment(options.type, options.id);
+
+      case 'spotify:artist': {
+        const exactMatches = await station.findTracksByComment(options.type, options.id);
+
+        const artist = exactMatches[0].extra?.tags?.artist;
+
+        const searchResult = artist
+          ? await station.search({
+            q: { artist },
+            exactMatch: true
+          })
+          : [];
+
+        return uniqBy([...exactMatches, ...searchResult], t => t.musicId ?? t.id);
+      }
     }
   })();
 
@@ -605,19 +627,6 @@ const trackSelectionProcessors: ClarificationProcessor[] = [
   }
 ];
 
-const makeTrackSelections = async (choices: Selection[]): Promise<SelectMenuComponentOptionData[]> => {
-  const groups = Object.values(groupBy(choices, selectionOrder));
-  const clarifications = groups.map(g => clarifySelection(g, trackSelectionProcessors));
-  return flatten(await Promise.all(clarifications));
-}
-
-function selectionOrder(selection: Selection): 0 | 1 | 2 {
-  const { options } = selection.track.collection;
-  if (options?.auxiliary) return 2;
-  if (options?.noFollowOnRequest) return 1;
-  return 0;
-}
-
 function selectionToComponentData(selection: Selection, [collection, ...clarified]: string[]): SelectMenuComponentOptionData {
   const { title, artist = 'Unknown Artist', track } = selection;
 
@@ -678,8 +687,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
       const [trackId] = args;
 
       if (!trackId) {
-        deny(interaction, 'Invalid track id');
-        return;
+        throw new RequestError(automaton, guildId, 'No track id');
       }
 
       return makeRequest({
@@ -707,49 +715,39 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
     }
 
     case 'artist_search': {
-      const originalMessage = await fetchOriginalMessage(interaction);
+      const [artistId] = args;
 
-      if (!originalMessage) {
-        return;
+      if (!artistId) {
+        throw new RequestError(automaton, guildId, 'No artist id');
       }
 
-      const [matched] = extractSpotifyUrl(originalMessage.content);
-      if (!matched?.url || matched?.paths?.[0] !== 'artist' && matched?.paths?.[1]) {
-        return
-      }
-
-      const info = await fetchSpotifyInfo(matched.url.href);
+      const info = await fetchSpotifyInfo(spotifyURI('artist', artistId), 'artist');
 
       if (!info || info.type !== 'artist' || !info.artist) {
-        return;
+        throw new RequestError(automaton, guildId, 'Could not fetch artist information');
       }
 
       return handleRequestCommand({
         automaton,
         interaction,
         type: 'spotify:artist',
-        id: matched.paths[1],
+        id: artistId,
         artist: info.artist
       })
-      .catch(e => new CrossSearchError(automaton, guildId, e.message));
+      .catch(e => new RequestError(automaton, guildId, e.message));
     }
 
     case 'cross_search': {
-      const originalMessage = await fetchOriginalMessage(interaction);
+      const [trackId] = args;
 
-      if (!originalMessage) {
-        return;
+      if (!trackId) {
+        throw new RequestError(automaton, guildId, 'No track id');
       }
 
-      const [matched] = extractSpotifyUrl(originalMessage.content);
-      if (!matched?.url || matched?.paths?.[0] !== 'track') {
-        return
-      }
-
-      const info = await fetchSpotifyInfo(matched.url.href);
+      const info = await fetchSpotifyInfo(spotifyURI('track', trackId), 'track');
 
       if (!info || info.type !== 'track' || !info.artist || !info.title) {
-        return;
+        throw new RequestError(automaton, guildId, 'Could not fetch track information');
       }
 
       return handleRequestCommand({
@@ -760,7 +758,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         title: info.title,
         noHistory: true
       })
-      .catch(e => new CrossSearchError(automaton, guildId, e.message));
+      .catch(e => new RequestError(automaton, guildId, e.message));
     }
   }
 }
@@ -775,7 +773,7 @@ async function fetchOriginalMessage(interaction: MessageComponentInteraction) {
     .catch(() => undefined);
 }
 
-class CrossSearchError extends AutomatonCommandError {
+class RequestError extends AutomatonCommandError {
   readonly state?: GuildState;
 
   constructor(automaton: MedleyAutomaton, guildId: string, message: string) {
