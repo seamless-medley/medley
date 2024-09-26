@@ -21,7 +21,7 @@ process.on('unhandledRejection', (e) => {
 async function main() {
   const program = new Command()
     .name('medley-discord')
-    .argument('<config-file>')
+    .argument('[config-file]')
     .parse(process.argv);
 
   const configFile = (program.args[0] || '').trim();
