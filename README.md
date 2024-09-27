@@ -1,14 +1,93 @@
 # Medley
 
-> [!WARNING]
-> This is a work in progress.
-> In the meantime while it is being developed, have a look at [node-medley](./packages/node-medley) native module which is the core engine powering the main project.
+> [!NOTE]
+> Medley is currently in active development. Some features, such as a Web UI for configuration, are not yet implemented.
+>
+> We appreciate your patience and welcome contributions!
+
+## Overview
+Medley is a project that aims to deliver a genuine radio station experience with automatic, seamless playback and mixing capabilities.
+
+Medley brings a radio-like approach to your personal music collection.
+
+It's more than just a playlist - it's a system that creates a continuous, curated listening stream based on your preferences and music moods, with the added bonus of Discord bot functionality for interactive control.
+
+We have a [Discord](https://discord.gg/vrzCvV2hjS) channel where anyone can join.
+
+So you can:
+
+- Interact with the Medley Discord bot
+- Listen to the audio stream provided by Medley
+- Connect with other Medley users and the development team
+
+## Project Motivation
+
+Medley was born out of a personal desire to enhance the music listening experience. My motivations stem from common frustrations and a love for diverse, engaging audio:
+
+- **Avoiding "Music Boredom"**: Playing random songs can lead to jarring mood shifts, while sticking to playlists becomes predictable over time. Medley aims to strike a balance, offering variety without sacrificing cohesion.
+
+- **Replicating Radio Magic**: The project draws inspiration from the curated experience of radio stations, where songs flow seamlessly from one to another, maintaining a consistent vibe.
+
+- **Unpredictability with Purpose**: Medley seeks to recreate the excitement of not knowing what song comes next, while ensuring that each transition makes sense musically and emotionally.
+
+- **Enhancing Interaction**: While traditional radio offers limited listener interaction, Medley incorporates features like Discord integration to allow users to engage with the audio stream, request songs, and customize their experience.
+
+## Key Features
+- 🔀 Automatic and seamless music playback
+  - With customizable mixing behavior through embedded metadata
+- 🎨 Artist rotation to ensure variety
+  - This prevents the repetition of songs from the same artist too frequently, much like a well-curated radio station.
+- 🔊 ReplayGain and DSP audio limiter for consistent sound quality
+- 🚀 Multi-platform audio streaming
+- 🤖 Interactive Discord bot with slash commands
+
+## Supported File Formats
+
+- MP3
+- FLAC
+- WAV
+- OGG
+
+## Powered by [node-medley](https://github.com/seamless-medley/medley/blob/main/packages/node-medley/README.md)
+Medley is powered by the `node-medley` project, which serves as the engine behind all of its audio capabilities.
+
+For detailed information about `node-medley`, please refer to its [README](https://github.com/seamless-medley/medley/blob/main/packages/node-medley/README.md)
+
+## ReplayGain and Audio Limiter
+Medley incorporates ReplayGain technology to ensure a consistent listening experience.
+
+ReplayGain analyzes the perceived loudness of audio files and adjusts the playback volume accordingly.
+
+This feature:
+- Prevents sudden volume changes between tracks
+- Maintains a comfortable listening level across different songs and albums
+- Enhances the overall user experience by eliminating the need for manual volume adjustments
+- Prevents audio clipping and distortion
+- Ensures a clean, professional sound even with varying input levels
+
+These combined features result in a polished, radio-quality audio experience with consistent volume and superior sound quality.
+
+## Customizable Seamless Mixing
+Medley offers a feature that allows customization of the automatic mixing behavior for each track. This is achieved through embedded metadata in the media files:
+
+This feature provides granular control over how the tracks blend together.
+
+## Audio Output Targets
+Medley can send its audio output to the following targets:
+- Discord
+- Icecast
+- ... and more to come
+
+## Running your own station
+We welcome beta testers to try out the current version and provide valuable feedback.
+
+For instructions on how to set up and test Medley, please refer to our [Beta Testing Guide](wiki/Beta-Testing).
+
+## Contributors
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
-
-## Contributors
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
