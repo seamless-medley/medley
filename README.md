@@ -81,7 +81,7 @@ Medley can send its audio output to the following targets:
 ## Running your own station
 We welcome beta testers to try out the current version and provide valuable feedback.
 
-For instructions on how to set up and test Medley, please refer to our [Beta Testing Guide](wiki/Beta-Testing).
+For instructions on how to set up and test Medley, please refer to our [Beta Testing Guide](https://github.com/seamless-medley/medley/wiki/Beta-Testing).
 
 ## Contributors
 
