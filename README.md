@@ -20,6 +20,17 @@ So you can:
 - Listen to the audio stream provided by Medley
 - Connect with other Medley users and the development team
 
+You can also run your own Medley instance, please see [Beta Testing Guide](https://github.com/seamless-medley/medley/wiki/Beta-Testing).
+
+## Key Features
+- 🔀 Automatic and seamless music playback
+  - With customizable mixing behavior through embedded metadata
+- 🎨 Artist rotation to ensure variety
+  - This prevents the repetition of songs from the same artist too frequently, much like a well-curated radio station.
+- 🔊 ReplayGain and DSP audio limiter for consistent sound quality
+- 🚀 Multi-platform audio streaming
+- 🤖 Interactive Discord bot with slash commands
+
 ## Project Motivation
 
 Medley was born out of a personal desire to enhance the music listening experience. My motivations stem from common frustrations and a love for diverse, engaging audio:
@@ -31,15 +42,6 @@ Medley was born out of a personal desire to enhance the music listening experien
 - **Unpredictability with Purpose**: Medley seeks to recreate the excitement of not knowing what song comes next, while ensuring that each transition makes sense musically and emotionally.
 
 - **Enhancing Interaction**: While traditional radio offers limited listener interaction, Medley incorporates features like Discord integration to allow users to engage with the audio stream, request songs, and customize their experience.
-
-## Key Features
-- 🔀 Automatic and seamless music playback
-  - With customizable mixing behavior through embedded metadata
-- 🎨 Artist rotation to ensure variety
-  - This prevents the repetition of songs from the same artist too frequently, much like a well-curated radio station.
-- 🔊 ReplayGain and DSP audio limiter for consistent sound quality
-- 🚀 Multi-platform audio streaming
-- 🤖 Interactive Discord bot with slash commands
 
 ## Supported File Formats
 
@@ -53,19 +55,12 @@ Medley is powered by the `node-medley` project, which serves as the engine behin
 
 For detailed information about `node-medley`, please refer to its [README](https://github.com/seamless-medley/medley/blob/main/packages/node-medley/README.md)
 
-## ReplayGain and Audio Limiter
-Medley incorporates ReplayGain technology to ensure a consistent listening experience.
+## [ReplayGain](https://en.wikipedia.org/wiki/ReplayGain) and Audio Limiter
+Medley supports ReplayGain to ensure a consistent listening experience.
 
-ReplayGain analyzes the perceived loudness of audio files and adjusts the playback volume accordingly.
-
-This feature:
-- Prevents sudden volume changes between tracks
-- Maintains a comfortable listening level across different songs and albums
-- Enhances the overall user experience by eliminating the need for manual volume adjustments
+- Prevents sudden volume changes between tracks, eliminating the need for manual volume adjustments
+- Maintains a comfortable listening level across different songs
 - Prevents audio clipping and distortion
-- Ensures a clean, professional sound even with varying input levels
-
-These combined features result in a polished, radio-quality audio experience with consistent volume and superior sound quality.
 
 ## Customizable Seamless Mixing
 Medley offers a feature that allows customization of the automatic mixing behavior for each track. This is achieved through embedded metadata in the media files:
@@ -82,6 +77,9 @@ Medley can send its audio output to the following targets:
 We welcome beta testers to try out the current version and provide valuable feedback.
 
 For instructions on how to set up and test Medley, please refer to our [Beta Testing Guide](https://github.com/seamless-medley/medley/wiki/Beta-Testing).
+
+## Spotify Integration
+See: [Beta Testing Guide](https://github.com/seamless-medley/medley/wiki/Beta-Testing#spotify-integration)
 
 ## Contributors
 
