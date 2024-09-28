@@ -30,6 +30,9 @@ You can also run your own Medley instance, please see [Beta Testing Guide](https
 - 🔊 ReplayGain and DSP audio limiter for consistent sound quality
 - 🚀 Multi-platform audio streaming
 - 🤖 Interactive Discord bot with slash commands
+- 🎵 Spotify Integration for easy track and artist requests
+- 🎤 Vocal Removal (Karaoke) for instant instrumental versions
+
 ## Medley Discord Bot Screenshots
 
 <img src="https://github.com/user-attachments/assets/ac173d6e-55c7-49d9-b2be-de15e544a2b5" width="300" alt="image" >
