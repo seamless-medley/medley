@@ -20,6 +20,20 @@ So you can:
 - Listen to the audio stream provided by Medley
 - Connect with other Medley users and the development team
 
+## Medley Discord Bot Screenshots
+
+<img src="https://github.com/user-attachments/assets/ac173d6e-55c7-49d9-b2be-de15e544a2b5" width="300" alt="image" >
+<br />
+<img src="https://github.com/user-attachments/assets/2554e527-9f45-458b-b31f-1602d67e5091" height="400" />
+<img src="https://github.com/user-attachments/assets/4996a4a9-fdb8-46cb-ac04-73a0161f2492" height="400" />
+<img src="https://github.com/user-attachments/assets/bf37290a-c1af-4f03-be14-c749f6d2eeed" height="400" />
+<img src="https://github.com/user-attachments/assets/9cc7e278-b200-48b8-bad8-6ec25c268fb9" height="400" />
+
+<br />
+<img src="https://github.com/user-attachments/assets/cffcba2a-47f3-4aee-9db0-0595b14ebb5f" width="300" />
+
+
+
 ## Project Motivation
 
 Medley was born out of a personal desire to enhance the music listening experience. My motivations stem from common frustrations and a love for diverse, engaging audio:
