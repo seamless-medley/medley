@@ -23,8 +23,10 @@ So you can:
 You can also run your own Medley instance, please see [Beta Testing Guide](https://github.com/seamless-medley/medley/wiki/Beta-Testing).
 
 ## Key Features
-- 🔀 Automatic and seamless music playback
+- 🔀 Seamless music playback with automatic smooth transitions and custom jingles
   - With customizable mixing behavior through embedded metadata
+  - Experience a polished, radio-style flow
+  - Hear it in action: Join our [Discord](https://discord.gg/vrzCvV2hjS) channel to listen live!
 - 🎨 Artist rotation to ensure variety
   - This prevents the repetition of songs from the same artist too frequently, much like a well-curated radio station.
 - 🔊 ReplayGain and DSP audio limiter for consistent sound quality
