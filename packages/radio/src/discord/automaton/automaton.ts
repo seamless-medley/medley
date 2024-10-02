@@ -213,8 +213,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.#stationEventHandlers.set(station, handlers);
     }
 
-    this.#logger.info('OAUthURL: %s', this.oAuth2Url.toString());
-
     this.#client.once('ready', async () => {
       this.#client.on('shardError', this.#handleShardError);
 
@@ -410,6 +408,9 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
       if (result !== undefined) {
         this.#logger.info('Login OK');
+
+        await this.registerCommandsIfNeccessary();
+        this.#logger.info('OAUthURL: %s', this.oAuth2Url.toString());
       }
     })
   }

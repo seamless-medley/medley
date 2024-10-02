@@ -114,12 +114,6 @@ async function main() {
     }))
   );
 
-  (async () => {
-    for (const automaton of automatons) {
-      await automaton.registerCommandsIfNeccessary();
-    }
-  })();
-
   logger.info('Started');
 
   process.on('SIGINT', () => {

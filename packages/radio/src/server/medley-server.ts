@@ -140,12 +140,6 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
         .map(args => this.createAutomaton(...args)
     ));
 
-    (async () => {
-      for (const automaton of automatons) {
-        await automaton.registerCommandsIfNeccessary();
-      }
-    })();
-
     logger.info('Started');
 
     return new Map<string, MedleyAutomaton>(automatons.map(s => [s.id, s]));
