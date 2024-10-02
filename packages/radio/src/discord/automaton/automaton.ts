@@ -169,7 +169,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.MessageContent
+        // This intent is not required, but must be enabled for the Spotify URL detection to work
+        // GatewayIntentBits.MessageContent
       ]
     });
 
