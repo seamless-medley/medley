@@ -215,6 +215,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
 
     this.#client.once('ready', async () => {
+      this.#shardReady = true;
+
       this.#client.on('shardError', this.#handleShardError);
 
       this.#client.on('shardReconnecting', (shardId) => {
