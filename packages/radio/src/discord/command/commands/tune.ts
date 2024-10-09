@@ -1,9 +1,7 @@
 import {
-  CommandInteraction,
   ActionRowBuilder,
   ButtonBuilder,
   EmbedBuilder,
-  PermissionsBitField,
   ButtonStyle,
   MessageActionRowComponentBuilder,
   StringSelectMenuBuilder,
@@ -14,9 +12,9 @@ import {
 } from "discord.js";
 import { stubTrue } from "lodash";
 
-import { MedleyAutomaton } from "../../automaton";
-import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { reply, deny, guildIdGuard, permissionGuard, makeColoredMessage } from "../utils";
+import { AutomatonAccess, MedleyAutomaton } from "../../automaton";
+import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { reply, deny, guildIdGuard, makeColoredMessage } from "../utils";
 import { interact } from "../interactor";
 
 const declaration: SubCommandLikeOption = {
@@ -26,18 +24,13 @@ const declaration: SubCommandLikeOption = {
 }
 
 const handleStationSelection = async (automaton: MedleyAutomaton, interaction: StringSelectMenuInteraction) => {
-  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
-
-  if (!isOwnerOverride) {
-    permissionGuard(interaction.memberPermissions, [
-      PermissionsBitField.Flags.ManageChannels,
-      PermissionsBitField.Flags.ManageGuild,
-      PermissionsBitField.Flags.MuteMembers,
-      PermissionsBitField.Flags.MoveMembers
-    ]);
-  }
-
   const guildId = guildIdGuard(interaction);
+
+  const access = await automaton.getAccessFor(interaction);
+
+  if (access < AutomatonAccess.Moderator) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+  }
 
   const { values: [stationId] } = interaction;
 
@@ -150,16 +143,11 @@ export async function createStationSelector(automaton: MedleyAutomaton, interact
   });
 }
 
-const createCommandHandler: InteractionHandlerFactory<RepliableInteraction> = (automaton) => (interaction) => {
-  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+const createCommandHandler: InteractionHandlerFactory<RepliableInteraction> = (automaton) => async (interaction) => {
+  const access = await automaton.getAccessFor(interaction);
 
-  if (!isOwnerOverride) {
-    permissionGuard(interaction.memberPermissions, [
-      PermissionsBitField.Flags.ManageChannels,
-      PermissionsBitField.Flags.ManageGuild,
-      PermissionsBitField.Flags.MuteMembers,
-      PermissionsBitField.Flags.MoveMembers
-    ]);
+  if (access <= AutomatonAccess.None) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
   }
 
   return createStationSelector(automaton, interaction);

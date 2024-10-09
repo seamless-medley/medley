@@ -647,6 +647,15 @@
           "minimum": 0,
           "maximum": 1,
           "default": 1.0
+        },
+        "djRoles": {
+          "title": "DJ Roles",
+          "description": "List of role IDs for DJ",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       },
       "additionalProperties": false

@@ -1,11 +1,12 @@
-import { ButtonInteraction, ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
-import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../../type";
+import { ButtonInteraction, ChatInputCommandInteraction } from "discord.js";
+import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../../type";
 import { list } from './list';
 import { set } from './set';
 import { remove } from './remove';
-import { declare, deny, guildStationGuard, makeAnsiCodeBlock, permissionGuard } from "../../utils";
+import { declare, deny, guildStationGuard, makeAnsiCodeBlock } from "../../utils";
 import { ansi } from "../../../format/ansi";
 import { SubCommandHandlerOptions } from "./type";
+import { AutomatonAccess } from "../../../automaton";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommandGroup,
@@ -50,15 +51,10 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, collectionId: string) => {
   const { station } = guildStationGuard(automaton, interaction);
 
-  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+  const access = await automaton.getAccessFor(interaction);
 
-  if (!isOwnerOverride) {
-    permissionGuard(interaction.memberPermissions, [
-      PermissionsBitField.Flags.ManageChannels,
-      PermissionsBitField.Flags.ManageGuild,
-      PermissionsBitField.Flags.MuteMembers,
-      PermissionsBitField.Flags.MoveMembers
-    ]);
+  if (access <= AutomatonAccess.None) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
   }
 
   const collection = station.trackPlay?.track?.collection;

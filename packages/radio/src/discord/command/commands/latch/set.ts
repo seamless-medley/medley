@@ -3,33 +3,29 @@ import {
   ButtonBuilder,
   ButtonStyle,
   MessageActionRowComponentBuilder,
-  PermissionsBitField,
   SelectMenuComponentOptionData,
   StringSelectMenuBuilder,
 } from "discord.js";
 
-import { deferReply, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply, warn } from "../../utils";
+import { deferReply, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, warn } from "../../utils";
 import { isString, range, startCase } from "lodash";
 import { ansi } from "../../../format/ansi";
 import { onGoing } from "./on-going";
 import { interact } from "../../interactor";
 import { SubCommandHandlerOptions } from "./type";
+import { AutomatonCommandError } from "../../type";
+import { AutomatonAccess } from "../../../automaton";
 
 export async function set(options: SubCommandHandlerOptions) {
   const { automaton, interaction } = options;
 
-  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
-
-  if (!isOwnerOverride) {
-    permissionGuard(interaction.memberPermissions, [
-      PermissionsBitField.Flags.ManageChannels,
-      PermissionsBitField.Flags.ManageGuild,
-      PermissionsBitField.Flags.MuteMembers,
-      PermissionsBitField.Flags.MoveMembers
-    ]);
-  }
-
   const { station } = guildStationGuard(automaton, interaction);
+
+  const access = await automaton.getAccessFor(interaction);
+
+  if (access <= AutomatonAccess.None) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+  }
 
   // All collections from station's library
   const collections = station.collections.filter(c => c.length > 0 && !c.latchDisabled);

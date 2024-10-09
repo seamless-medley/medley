@@ -1,7 +1,8 @@
-import { ChatInputCommandInteraction, ChannelType as DJSChannelType } from "discord.js";
-import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { ChatInputCommandInteraction } from "discord.js";
+import { AutomatonCommandError, ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { canSendMessageTo, guildIdGuard, reply } from "../utils";
 import { isChannelSuitableForTrackMessage } from "../../trackmessage";
+import { AutomatonAccess } from "../../automaton";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -18,10 +19,16 @@ const declaration: SubCommandLikeOption = {
   ]
 }
 
-const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automation) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const guildId = guildIdGuard(interaction);
 
-  const state = automation.getGuildState(guildId);
+  const state = automaton.getGuildState(guildId);
+
+  const access = await automaton.getAccessFor(interaction);
+
+  if (access < AutomatonAccess.Administrator) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+  }
 
   if (state) {
     const channel = interaction.options.getChannel('channel');

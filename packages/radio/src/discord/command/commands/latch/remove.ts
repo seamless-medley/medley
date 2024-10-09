@@ -3,32 +3,27 @@ import {
   ButtonBuilder,
   ButtonStyle,
   MessageActionRowComponentBuilder,
-  PermissionsBitField,
   StringSelectMenuBuilder,
 } from "discord.js";
 
-import { deferReply, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, permissionGuard, reply } from "../../utils";
+import { deferReply, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, reply } from "../../utils";
 import { onGoing } from "./on-going";
 import { getLatchSessionsListing } from "./list";
 import { interact } from "../../interactor";
 import { SubCommandHandlerOptions } from "./type";
+import { AutomatonCommandError } from "../../type";
+import { AutomatonAccess } from "../../../automaton";
 
 export async function remove(options: SubCommandHandlerOptions) {
   const { automaton, interaction } = options;
 
-  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
-
-  if (!isOwnerOverride) {
-    permissionGuard(interaction.memberPermissions, [
-      PermissionsBitField.Flags.ManageChannels,
-      PermissionsBitField.Flags.ManageGuild,
-      PermissionsBitField.Flags.MuteMembers,
-      PermissionsBitField.Flags.MoveMembers
-    ]);
-  }
-
-
   const { station } = guildStationGuard(automaton, interaction);
+
+  const access = await automaton.getAccessFor(interaction);
+
+  if (access <= AutomatonAccess.None) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+  }
 
   const sessions = station.allLatches;
 

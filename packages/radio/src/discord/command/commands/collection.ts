@@ -1,10 +1,11 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageActionRowComponentBuilder, PermissionsBitField, SelectMenuComponentOptionData, StringSelectMenuBuilder } from "discord.js";
-import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, permissionGuard, warn } from "../utils";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageActionRowComponentBuilder, SelectMenuComponentOptionData, StringSelectMenuBuilder } from "discord.js";
+import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, warn } from "../utils";
 import { chain, startCase } from "lodash";
 import { interact } from "../interactor";
 import { ansi } from "../../format/ansi";
 import { StationEvents, TrackCollection, isRequestTrack } from "@seamless-medley/core";
+import { AutomatonAccess } from "../../automaton";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -15,18 +16,13 @@ const declaration: SubCommandLikeOption = {
 const onGoing = new Set<string>();
 
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
-  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
-
-  if (!isOwnerOverride) {
-    permissionGuard(interaction.memberPermissions, [
-      PermissionsBitField.Flags.ManageChannels,
-      PermissionsBitField.Flags.ManageGuild,
-      PermissionsBitField.Flags.MuteMembers,
-      PermissionsBitField.Flags.MoveMembers
-    ]);
-  }
-
   const { station } = guildStationGuard(automaton, interaction);
+
+  const access = await automaton.getAccessFor(interaction);
+
+  if (access <= AutomatonAccess.None) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+  }
 
   if (station.isLatchActive) {
     deny(interaction, `Could not select collection while a latch session is active`);

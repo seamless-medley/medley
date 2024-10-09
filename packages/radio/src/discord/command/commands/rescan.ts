@@ -1,8 +1,9 @@
 import { CommandInteraction, blockQuote, inlineCode, unorderedList } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deferReply, deny, guildStationGuard, joinStrings, reply } from "../utils";
-import { LibraryRescanStats, MusicTrackCollection, Station } from "@seamless-medley/core";
+import { LibraryRescanStats, Station } from "@seamless-medley/core";
 import { once } from "lodash";
+import { AutomatonAccess } from "../../automaton";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -11,10 +12,10 @@ const declaration: SubCommandLikeOption = {
 }
 
 const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
-  const isOwner = automaton.owners.includes(interaction.user.id);
+  const access = await automaton.getAccessFor(interaction);
 
-  if (!isOwner) {
-    deny(interaction, 'This command is for the owner only');
+  if (access !== AutomatonAccess.Owner) {
+    deny(interaction, 'This command is for the owners only');
     return;
   }
 

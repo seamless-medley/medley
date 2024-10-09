@@ -1,10 +1,11 @@
 import { isRequestTrack, Requester, StationTrack } from "@seamless-medley/core";
-import { ButtonInteraction, CommandInteraction, PermissionsBitField, userMention } from "discord.js";
-import { MedleyAutomaton } from "../../automaton";
+import { ButtonInteraction, CommandInteraction, userMention } from "discord.js";
+import { AutomatonAccess, MedleyAutomaton } from "../../automaton";
 import { extractRequestersForGuild } from "../../trackmessage/creator/base";
 import { ansi } from "../../format/ansi";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { declare, deny, guildStationGuard, makeAnsiCodeBlock, reply, warn } from "../utils";
+import { reject } from "lodash";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -12,14 +13,12 @@ const declaration: SubCommandLikeOption = {
   description: 'Skip to the next track'
 }
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> =
-  (automaton) => (interaction) => handleSkip(automaton, interaction);
-
+const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => (interaction) => handleSkip(automaton, interaction);
 
 async function handleSkip(automaton: MedleyAutomaton, interaction: CommandInteraction | ButtonInteraction) {
-  const { guildId, station } = guildStationGuard(automaton, interaction);
+  const { guild, station } = guildStationGuard(automaton, interaction);
 
-  const state = automaton.getGuildState(guildId);
+  const state = automaton.getGuildState(guild.id);
 
   if (!state) {
     deny(interaction, 'No station linked');
@@ -28,57 +27,68 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
 
   const { trackPlay } = station;
 
-  if (trackPlay && isRequestTrack<StationTrack, Requester>(trackPlay.track)) {
-    const canSkip = automaton.owners.includes(interaction.user.id);
+  if (!trackPlay) {
+    deny(interaction, 'Not currently playing');
+    return;
+  }
 
-    if (!canSkip) {
-      const { requestedBy } = trackPlay.track;
+  async function doSkip() {
+    const result = automaton.skipCurrentSong(interaction.guildId!);
 
-      const isRequester = requestedBy.some(r => r.requesterId === interaction.user.id);
-
-      if (!isRequester) {
-        const requesters = extractRequestersForGuild(guildId, requestedBy);
-        const mentions = requesters.length > 0 ? requesters.map(id => userMention(id)).join(' ') : '`Someone else`';
-        await reply(interaction, `${userMention(interaction.user.id)} Could not skip this track, it was requested by ${mentions}`);
-        return;
-      }
+    if (result === true) {
+      await declare(interaction,
+        makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, {{blue}}Skipping to the next track`),
+        { mention: { type: 'user', subject: interaction.user.id }}
+      );
+      return;
     }
+
+    await warn(interaction, 'Track skipping has been denied');
   }
 
-  const noPermissions = !interaction.memberPermissions?.any([
-    PermissionsBitField.Flags.ManageChannels,
-    PermissionsBitField.Flags.ManageGuild,
-    PermissionsBitField.Flags.MuteMembers,
-    PermissionsBitField.Flags.MoveMembers
-  ]);
+  const access = await automaton.getAccessFor(interaction);
 
-  if (noPermissions) {
-    await deny(interaction,
-      'You are not allowed to do that',
-      { mention: { type: 'user', subject: interaction.user.id }}
-    );
+  if (access === AutomatonAccess.Owner) {
+    // Always allow owners
+    doSkip();
     return;
   }
 
-  if (station.paused || !station.playing) {
-    await deny(interaction,
-      'Not currently playing',
-      { mention: { type: 'user', subject: interaction.user.id }}
-    );
+  const { track } = trackPlay;
+
+  if (!isRequestTrack<StationTrack, Requester>(track)) {
+    // Normal user cannot skip normal track
+    if (access < AutomatonAccess.DJ) {
+      await deny(interaction,
+        'You are not allowed to do that',
+        { mention: { type: 'user', subject: interaction.user.id }}
+      );
+
+      return;
+    }
+
+    // Allow
+    doSkip();
     return;
   }
 
-  const result = automaton.skipCurrentSong(guildId);
+  // Reaching here means, not an owner and the track is a request track
 
-  if (result === true) {
-    await declare(interaction,
-      makeAnsiCodeBlock(ansi`{{green|b}}OK{{reset}}, {{blue}}Skipping to the next track`),
-      { mention: { type: 'user', subject: interaction.user.id }}
-    );
+  const { requestedBy } = track;
+
+  const isRequester = requestedBy.some(r => r.requesterId === interaction.user.id);
+  const otherRequesters = reject(requestedBy, r => r.requesterId === interaction.user.id);
+
+  if (isRequester && otherRequesters.length === 0) {
+    // This is the solo requester, allow
+    doSkip();
     return;
   }
 
-  await warn(interaction, 'Track skipping has been denied');
+  // Someone else has (also) requested for this track
+  const discordRequesters = extractRequestersForGuild(guild.id, otherRequesters);
+  const mentions = discordRequesters.length > 0 ? discordRequesters.map(id => userMention(id)).join(' ') : '`Someone else`';
+  await reply(interaction, `${userMention(interaction.user.id)} Could not skip this track, it was requested by ${mentions}`);
 }
 
 const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, playUuid: string) => {

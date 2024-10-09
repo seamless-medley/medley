@@ -1,9 +1,10 @@
-import { ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
-import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { ChatInputCommandInteraction } from "discord.js";
+import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { SubCommandHandlerOptions } from "./latch/type";
-import { deny, guildIdGuard, joinStrings, makeAnsiCodeBlock, permissionGuard, reply } from "../utils";
+import { deny, guildIdGuard, joinStrings, makeAnsiCodeBlock, reply } from "../utils";
 import { GuildState } from "../../automaton/guild-state";
 import { ansi } from "../../format/ansi";
+import { AutomatonAccess } from "../../automaton";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommandGroup,
@@ -72,15 +73,10 @@ const subCommandHandlers: Partial<Record<string, (options: SubCommandHandlerOpti
 }
 
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
-  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+  const access = await automaton.getAccessFor(interaction);
 
-  if (!isOwnerOverride) {
-    permissionGuard(interaction.memberPermissions, [
-      PermissionsBitField.Flags.ManageChannels,
-      PermissionsBitField.Flags.ManageGuild,
-      PermissionsBitField.Flags.MuteMembers,
-      PermissionsBitField.Flags.MoveMembers
-    ]);
+  if (access <= AutomatonAccess.None) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
   }
 
   const subCommandName = interaction.options?.getSubcommand(true);

@@ -1,8 +1,9 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageActionRowComponentBuilder, PermissionsBitField, SelectMenuComponentOptionData, StringSelectMenuBuilder } from "discord.js";
-import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, joinStrings, makeAnsiCodeBlock, permissionGuard, warn } from "../utils";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageActionRowComponentBuilder, SelectMenuComponentOptionData, StringSelectMenuBuilder } from "discord.js";
+import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { guildStationGuard, joinStrings, makeAnsiCodeBlock, warn } from "../utils";
 import { interact } from "../interactor";
 import { ansi } from "../../format/ansi";
+import { AutomatonAccess } from "../../automaton";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -13,15 +14,10 @@ const declaration: SubCommandLikeOption = {
 const onGoing = new Set<string>();
 
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
-  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+  const access = await automaton.getAccessFor(interaction);
 
-  if (!isOwnerOverride) {
-    permissionGuard(interaction.memberPermissions, [
-      PermissionsBitField.Flags.ManageChannels,
-      PermissionsBitField.Flags.ManageGuild,
-      PermissionsBitField.Flags.MuteMembers,
-      PermissionsBitField.Flags.MoveMembers
-    ]);
+  if (access <= AutomatonAccess.None) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
   }
 
   const { station } = guildStationGuard(automaton, interaction);

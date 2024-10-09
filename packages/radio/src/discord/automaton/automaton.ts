@@ -16,7 +16,8 @@ import {
   PartialMessageReaction,
   Emoji,
   MessageType,
-  ActivityType
+  ActivityType,
+  BaseInteraction
 } from "discord.js";
 
 import {
@@ -43,9 +44,17 @@ import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
 import { AudioDispatcher } from "../../audio/exciter";
 import { CreatorNames } from "../trackmessage/creator";
 import { Logger, createLogger } from "@seamless-medley/logging";
-import { noop, sumBy, throttle } from "lodash";
+import { intersection, isEqual, noop, sumBy, throttle } from "lodash";
 import { Command, CommandOption, OptionType, SubCommandLikeOption } from "../command/type";
 import { canSendMessageTo } from "../command/utils";
+
+export enum AutomatonAccess {
+  None = 0,
+  DJ = 1,
+  Moderator = 2,
+  Administrator = 3,
+  Owner = 0xFF
+}
 
 export type GuildSpecificConfig = {
   autotune?: string;
@@ -75,9 +84,11 @@ export type GuildSpecificConfig = {
   /**
    * Opus bitrate, in kbps
    */
-  bitrate: number;
+  bitrate?: number;
 
-  gain: number;
+  gain?: number;
+
+  djRoles?: Snowflake[];
 }
 
 export type MedleyAutomatonOptions = {
@@ -444,6 +455,11 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   getGuildState(id: Guild['id']): GuildState | undefined {
     return this.#guildStates.get(id);
+  }
+
+  getGuildConfig(id: Guild['id']): GuildSpecificConfig | undefined {
+    this.#guildConfigs[id] ??= {};
+    return this.#guildConfigs[id];
   }
 
   #handleClientReady = async (client: Client) => {
@@ -895,24 +911,24 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     if (!station) {
       this.#logger.warn({ guildId }, 'Deny skipping: no station');
-      return false;
+      return 'no_station';
     }
 
     if (station.paused || !station.playing) {
       this.#logger.warn({ guildId }, 'Deny skipping: not playing');
-      return false;
+      return 'not_playing';
     }
 
     const { trackPlay } = station;
 
     if (!trackPlay) {
       this.#logger.warn({ guildId }, 'Deny skipping: no track play');
-      return false;
+      return 'no_trackplay';
     }
 
     if (!station.skip()) {
       this.#logger.warn({ guildId }, 'Deny skipping: denied by engine');
-      return false;
+      return 'denied';
     }
 
     return true;
@@ -1236,5 +1252,77 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       type: ActivityType.Custom
     });
   }, 5000);
+
+  getAccessForPermissions(permissions: PermissionsBitField) {
+    if (permissions.has(PermissionFlagsBits.Administrator)) {
+      return AutomatonAccess.Administrator;
+    }
+
+    const hasPriviledge = permissions.any([
+      PermissionFlagsBits.ManageChannels,
+      PermissionFlagsBits.ManageGuild,
+      PermissionFlagsBits.ManageRoles,
+      PermissionFlagsBits.KickMembers,
+      PermissionFlagsBits.BanMembers,
+      PermissionFlagsBits.ModerateMembers
+    ]);
+
+    if (hasPriviledge) {
+      return AutomatonAccess.Moderator;
+    }
+  }
+
+  async getAccessFor(interaction: BaseInteraction): Promise<AutomatonAccess> {
+    const userId = interaction.user.id;
+
+    if (this.owners.includes(userId)) {
+      return AutomatonAccess.Owner;
+    }
+
+    if (interaction.guild) {
+      if (interaction.memberPermissions) {
+        const memberAccess = this.getAccessForPermissions(interaction.memberPermissions);
+        if (memberAccess !== undefined) {
+          return memberAccess;
+        }
+      }
+
+      const state = this.getGuildState(interaction.guild.id);
+
+      if (state?.voiceChannelId) {
+        const channel = await interaction.guild.channels?.fetch(state.voiceChannelId);
+
+        if (channel?.isVoiceBased()) {
+          const isModerator = channel.permissionsFor(userId)?.any(
+            [PermissionFlagsBits.MuteMembers, PermissionFlagsBits.MoveMembers],
+            true
+          );
+
+          if (isModerator) {
+            return AutomatonAccess.Moderator;
+          }
+        }
+      }
+
+      if (await this.isGuildDJ(interaction.guild, userId)) {
+        return AutomatonAccess.DJ;
+      }
+    }
+
+    return AutomatonAccess.None;
+  }
+
+  async isGuildDJ(guild: Guild, userId: string) {
+    const config = this.#guildConfigs[guild.id];
+
+    if (config?.djRoles) {
+      const member = await guild.members.fetch(userId);
+      const memberRoleIds = member.roles.cache.map(role => role.id);
+
+      if (intersection(memberRoleIds, config.djRoles).length) {
+        return AutomatonAccess.DJ;
+      }
+    }
+  }
 }
 

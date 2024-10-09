@@ -1,9 +1,10 @@
 import { decibelsToGain, gainToDecibels, interpolate } from "@seamless-medley/utils";
-import { ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
+import { ChatInputCommandInteraction } from "discord.js";
 import { range, round } from "lodash";
 import { ansi } from "../../format/ansi";
-import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { declare, deny, guildIdGuard, makeAnsiCodeBlock, permissionGuard, warn } from "../utils";
+import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { declare, deny, guildIdGuard, makeAnsiCodeBlock, warn } from "../utils";
+import { AutomatonAccess } from "../../automaton";
 
 const dbToEmoji = (db: number) => {
   if (db > 3) return '🔊💥';
@@ -49,17 +50,6 @@ const declaration: SubCommandLikeOption = ((list) => ({
 }))(makeVolumeScale(0, 100, 5).reverse())
 
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
-  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
-
-  if (!isOwnerOverride) {
-    permissionGuard(interaction.memberPermissions, [
-      PermissionsBitField.Flags.ManageChannels,
-      PermissionsBitField.Flags.ManageGuild,
-      PermissionsBitField.Flags.MuteMembers,
-      PermissionsBitField.Flags.MoveMembers
-    ]);
-  }
-
   const guildId = guildIdGuard(interaction);
 
   const state = automaton.getGuildState(guildId);
@@ -72,6 +62,12 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   if (!state.hasVoiceChannel()) {
     deny(interaction, 'Not in a voice channel');
     return;
+  }
+
+  const access = await automaton.getAccessFor(interaction);
+
+  if (access <= AutomatonAccess.None) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
   }
 
   const oldGain = state.gain;

@@ -1,7 +1,8 @@
-import { ChatInputCommandInteraction, EmbedBuilder, hyperlink, PermissionsBitField, ChannelType as DJSChannelType } from "discord.js";
-import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { deny, guildIdGuard, permissionGuard, reply } from "../utils";
+import { ChatInputCommandInteraction, EmbedBuilder, hyperlink } from "discord.js";
+import { AutomatonCommandError, ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { deny, guildIdGuard, reply } from "../utils";
 import { createStationSelector } from "./tune";
+import { AutomatonAccess } from "../../automaton";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -19,15 +20,10 @@ const declaration: SubCommandLikeOption = {
 }
 
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
-  const isOwnerOverride = automaton.owners.includes(interaction.user.id);
+  const access = await automaton.getAccessFor(interaction);
 
-  if (!isOwnerOverride) {
-    permissionGuard(interaction.memberPermissions, [
-      PermissionsBitField.Flags.ManageChannels,
-      PermissionsBitField.Flags.ManageGuild,
-      PermissionsBitField.Flags.MuteMembers,
-      PermissionsBitField.Flags.MoveMembers
-    ]);
+  if (access <= AutomatonAccess.None) {
+    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
   }
 
   const channel = interaction.options.getChannel('channel');
