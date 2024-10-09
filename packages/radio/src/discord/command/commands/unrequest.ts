@@ -1,9 +1,9 @@
 import { parse as parsePath } from 'node:path';
 import { ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageActionRowComponentBuilder, StringSelectMenuBuilder } from "discord.js";
-import { chain, truncate } from "lodash";
+import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, reply, makeAnsiCodeBlock, joinStrings, deferReply } from "../utils";
-import { AudienceType, BoomBoxTrack, TrackWithRequester, getTrackBanner, isRequestTrack, makeRequester } from '@seamless-medley/core';
+import { AudienceType, getTrackBanner, makeRequester } from '@seamless-medley/core';
 import { ansi } from '../../format/ansi';
 import { interact } from '../interactor';
 

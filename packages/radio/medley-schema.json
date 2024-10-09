@@ -244,6 +244,7 @@
         },
         "owners": {
           "type": "array",
+          "title": "Owners",
           "description": "List of bot owner ID",
           "items": {
             "type": "string",

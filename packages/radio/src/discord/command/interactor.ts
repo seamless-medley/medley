@@ -1,4 +1,16 @@
-import { ActionRowBuilder, BaseInteraction, CollectedMessageInteraction, InteractionCollector, InteractionReplyOptions, MappedInteractionTypes, Message, MessageActionRowComponentBuilder, MessageComponentInteraction, RepliableInteraction, time as formatTime, userMention } from "discord.js";
+import {
+  ActionRowBuilder,
+  CollectedMessageInteraction,
+  InteractionCollector,
+  InteractionReplyOptions,
+  Message,
+  MessageActionRowComponentBuilder,
+  MessageComponentInteraction,
+  RepliableInteraction,
+  time as formatTime,
+  userMention
+} from "discord.js";
+
 import { MedleyAutomaton } from "../automaton";
 import { guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
 import { noop } from "lodash";

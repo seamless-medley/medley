@@ -33,7 +33,7 @@ import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../helpers/emojis";
 import { AutomatonCommandError, InteractionHandlerFactory } from "../../type";
-import { declare, deferReply, deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
+import { declare, deferReply, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
 import { ansi } from "../../../format/ansi";
 import { getVoteMessage } from "../vote";
 import { interact } from "../../interactor";
@@ -105,7 +105,7 @@ const makeRequest = async ({ station, automaton, trackId, guildId, noSweep, inte
   });
 
   // When this is the only request track in the list and there are some tracks that are being cued/loaded before it.
-  // The requester must be informed that the track he/she has just requested will not be played right after the currenly playing track
+  // The requester must be informed that the track he/she has just requested will not be played right after the currently playing track
   let notice: string | undefined;
   const requests = station.allRequests.all();
 
@@ -475,7 +475,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
       return rows;
     },
 
-    async onCollect({ runningKey, collected, buildMessage, resetTimer, done }) {
+    async onCollect({ collected, buildMessage, resetTimer, done }) {
       const { customId } = collected;
 
       // Cancel button
