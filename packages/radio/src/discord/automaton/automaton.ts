@@ -1028,7 +1028,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         }
       });
 
-      const d = textChannel?.send(options).catch(e => void this.#logger.error(e));
+      const d = textChannel?.send(options).catch(e => {
+        this.#logger.error(`Could not send track message to ${textChannel?.name} on ${guild.name}: ${e.message}`);
+        return undefined;
+      });
 
       results.push([guildId, trackMsg, d]);
     }
