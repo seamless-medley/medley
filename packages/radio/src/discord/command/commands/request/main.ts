@@ -225,8 +225,9 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
   const selectionOrder = (selection: Selection) => compareTrackWithStation(station, selection.track);
 
   const makeTrackSelections = async (choices: Selection[]): Promise<SelectMenuComponentOptionData[]> => {
-    const groups = Object.values(groupBy(choices, selectionOrder));
-    const clarifications = groups.map(g => clarifySelection(g, trackSelectionProcessors));
+    const groups = groupBy(choices, selectionOrder);
+    const sortedKeys = sortBy(Object.keys(groups), Number);
+    const clarifications = sortedKeys.map(sortOrder => clarifySelection(groups[sortOrder], trackSelectionProcessors));
     return flatten(await Promise.all(clarifications));
   }
 
