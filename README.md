@@ -20,6 +20,9 @@ So you can:
 - Listen to the audio stream provided by Medley
 - Connect with other Medley users and the development team
 
+> [!TIP]
+> The demonstration music rotation features mostly Thai/T-pop music, with some tracks in English, Korean/K-pop, and Japanese/J-pop
+
 You can also run your own Medley instance, please see [Beta Testing Guide](https://github.com/seamless-medley/medley/wiki/Beta-Testing).
 
 ## Key Features
@@ -35,6 +38,14 @@ You can also run your own Medley instance, please see [Beta Testing Guide](https
 - 🎵 Spotify Integration for easy track and artist requests
 - 🎤 Vocal Removal (Karaoke) for instant instrumental versions
 
+## Installation
+
+Before setting up your own instance of Medley, we recommend trying out our [Discord](https://discord.gg/vrzCvV2hjS) channel first to experience Medley in action and see if it meets your needs.
+
+If you decide to self-host Medley, please refer to our [Beta Testing Guide](https://github.com/seamless-medley/medley/wiki/Beta-Testing) for detailed setup instructions. This guide is intended for users who want to run their own instance of Medley.
+
+Please note that self-hosting Medley requires some technical knowledge and system resources.
+
 ## Medley Discord Bot Screenshots
 
 <img src="https://github.com/user-attachments/assets/ac173d6e-55c7-49d9-b2be-de15e544a2b5" width="300" alt="image" >
@@ -47,7 +58,7 @@ You can also run your own Medley instance, please see [Beta Testing Guide](https
 <br />
 <img src="https://github.com/user-attachments/assets/cffcba2a-47f3-4aee-9db0-0595b14ebb5f" width="300" />
 
-
+### Try it in our [Discord](https://discord.gg/vrzCvV2hjS) channel.
 
 ## Project Motivation
 
