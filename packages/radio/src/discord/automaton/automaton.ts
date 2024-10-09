@@ -203,7 +203,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         trackFinished: this.#handleTrackFinished(station),
         trackSkipped: this.#handleTrackSkipped(station),
         collectionChange: this.#handleCollectionChange(station),
-        libraryStats: this.#updateStats
+        libraryStats: this.#updateLibraryStats
       }
 
       for (const [name, handler] of Object.entries(handlers)) {
@@ -229,7 +229,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
           this.#rejoinVoiceChannels(30);
         }
 
-        this.#updateStats();
+        this.#updateLibraryStats();
 
         this.#shardReady = true;
       });
@@ -240,7 +240,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         this.#rejoinVoiceChannels(30);
       });
 
-      this.#updateStats();
+      this.#updateLibraryStats();
 
       Object.keys(this.#guildConfigs).map(async (guildId) => {
         await this.#autoTuneStation(guildId);
@@ -1219,7 +1219,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     return url;
   }
 
-  #updateStats =  throttle(() => {
+  #updateLibraryStats =  throttle(() => {
     if (!this.#client.user) {
       return;
     }
