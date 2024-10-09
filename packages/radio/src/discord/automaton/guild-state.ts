@@ -378,7 +378,7 @@ export class GuildState {
 
     const channel = this.adapter.getChannel(this.voiceChannelId);
 
-    if (channel?.type === ChannelType.GuildVoice) {
+    if ((channel?.type === ChannelType.GuildVoice) || (channel?.type === ChannelType.GuildStageVoice)) {
       this.preferredStation.updateAudiences(
         this.adapter.makeAudienceGroup(this.guildId),
         channel.members
@@ -416,7 +416,7 @@ export class GuildState {
     if (!this.#voiceChannelId) {
       if (newState.channelId) {
         // Just joined
-        this.#joinedVoiceChannel(newState.channel, newState.serverMute === true);
+        this.#joinedVoiceChannel(newState.channel, isVoiceStateMuted(newState));
       }
 
       return;
@@ -430,13 +430,13 @@ export class GuildState {
 
     if (newState.channelId !== oldState.channelId) {
       // Moved by some entity
-      this.#joinedVoiceChannel(newState.channel, newState.serverMute === true);
+      this.#joinedVoiceChannel(newState.channel, isVoiceStateMuted(newState));
       return;
     }
 
     // Stationary
-    if (oldState.serverMute !== newState.serverMute) {
-      this.#serverMuted = newState.serverMute === true;
+    if (isVoiceStateMuted(oldState) !== isVoiceStateMuted(newState)) {
+      this.#serverMuted = isVoiceStateMuted(newState);
       this.#serverMuteStateChanged(newState.channel);
     }
   }
@@ -779,4 +779,8 @@ interface VoiceStateWithMember extends VoiceState {
 
 function isVoiceStateWithMember(s: VoiceState): s is VoiceStateWithMember {
   return s.member !== null;
+}
+
+function isVoiceStateMuted(s: VoiceState) {
+  return (s.suppress || s.serverMute) === true;
 }

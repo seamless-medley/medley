@@ -1,6 +1,7 @@
 import { ChatInputCommandInteraction, ChannelType as DJSChannelType } from "discord.js";
 import { ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildIdGuard, reply } from "../utils";
+import { canSendMessageTo, guildIdGuard, reply } from "../utils";
+import { isChannelSuitableForTrackMessage } from "../../trackmessage";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -9,7 +10,7 @@ const declaration: SubCommandLikeOption = {
   options: [
     {
       type: OptionType.Channel,
-      channel_types: [ChannelType.GuildText],
+      channel_types: [ChannelType.GuildText, ChannelType.GuildVoice, ChannelType.GuildStageVoice],
       name: 'channel',
       description: 'Channel to send message to',
       required: true
@@ -31,7 +32,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 
     const guildChannel = interaction.guild?.channels?.cache?.get(channel.id);
 
-    if (guildChannel?.type !== DJSChannelType.GuildText || !automation.canSendMessageTo(guildChannel)) {
+    if (!guildChannel || !isChannelSuitableForTrackMessage(guildChannel) || !canSendMessageTo(guildChannel)) {
       reply(interaction, {
         content: `Message could not be sent to channel ${channel.toString()}`,
         ephemeral: true

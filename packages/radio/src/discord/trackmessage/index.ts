@@ -1,4 +1,4 @@
-import { ActionRowBuilder, MessageActionRowComponentBuilder, MessageEditOptions } from 'discord.js';
+import { ActionRowBuilder, BaseChannel, ChannelType, MessageActionRowComponentBuilder, MessageEditOptions, StageChannel, TextChannel, VoiceChannel } from 'discord.js';
 import { TrackMessage } from './types';
 
 export type TrackMessageOptions = Pick<MessageEditOptions, 'embeds' | 'files' | 'components'> ;
@@ -31,5 +31,13 @@ export function trackMessageToMessageOptions<T>(msg: TrackMessage): TrackMessage
     files: coverImage ? [coverImage] : undefined,
     components: actionRow ? [actionRow] : []
   }
+}
+
+export function isChannelSuitableForTrackMessage(c: BaseChannel): c is TextChannel | VoiceChannel | StageChannel {
+  return (c?.type !== undefined) && ([
+    ChannelType.GuildText,
+    ChannelType.GuildVoice,
+    ChannelType.GuildStageVoice
+  ]).includes(c.type);
 }
 

@@ -12,7 +12,7 @@ const declaration: SubCommandLikeOption = {
       type: OptionType.Channel,
       name: 'channel',
       description: 'Channel name to join',
-      channel_types: [ChannelType.GuildVoice],
+      channel_types: [ChannelType.GuildVoice, ChannelType.GuildStageVoice],
       required: true
     }
   ]
@@ -48,7 +48,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 
   await reply(interaction, `Joining ${channelToJoin}`);
 
-  if (!state.textChannelId && interaction.channel?.type === DJSChannelType.GuildText && automaton.canSendMessageTo(interaction.channel)) {
+  if (!state.textChannelId && interaction.channel?.type === ChannelType.GuildText) {
     state.textChannelId = interaction.channelId;
   }
 

@@ -11,9 +11,7 @@ import {
   Snowflake,
   PermissionsBitField,
   PermissionFlagsBits,
-  ChannelType,
   PartialMessage,
-  TextChannel,
   MessageReaction,
   PartialMessageReaction,
   Emoji,
@@ -40,13 +38,14 @@ import { createCommandDeclarations, createInteractionHandler } from "../command"
 
 import { retryable, waitFor } from "@seamless-medley/utils";
 import { TrackMessage, TrackMessageStatus } from "../trackmessage/types";
-import { trackMessageToMessageOptions } from "../trackmessage";
+import { isChannelSuitableForTrackMessage, trackMessageToMessageOptions } from "../trackmessage";
 import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
 import { AudioDispatcher } from "../../audio/exciter";
 import { CreatorNames } from "../trackmessage/creator";
 import { Logger, createLogger } from "@seamless-medley/logging";
 import { noop, sumBy, throttle } from "lodash";
-import { Command, CommandOption, SubCommandLikeOption } from "../command/type";
+import { Command, CommandOption, OptionType, SubCommandLikeOption } from "../command/type";
+import { canSendMessageTo } from "../command/utils";
 
 export type GuildSpecificConfig = {
   autotune?: string;
@@ -673,7 +672,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       return;
     }
 
-    if (!message.inGuild() || message.channel.type !== ChannelType.GuildText) {
+    if (!message.inGuild() || !isChannelSuitableForTrackMessage(message.channel)) {
       return;
     }
 
@@ -949,17 +948,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       .filter((guildId): guildId is string => !!guildId);
   }
 
-  canSendMessageTo(channel: TextChannel): boolean {
-    const guild = channel.guild;
-    const me = guild.members.me;
-
-    if (!me) {
-      return false;
-    }
-
-    return channel.members.has(me.id) && channel.permissionsFor(me).has(PermissionsBitField.Flags.SendMessages);
-  }
-
   #getTextChannel(guildId: string) {
     const state = this.#guildStates.get(guildId);
 
@@ -973,16 +961,18 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       return;
     }
 
-    const textChannel = state.textChannelId ? guild.channels.cache.get(state.textChannelId) : undefined;
+    const channelId = state.textChannelId || state.voiceChannelId;
 
-    if (textChannel?.type === ChannelType.GuildText) {
-      if (this.canSendMessageTo(textChannel)) {
-        return textChannel;
-      }
+    const textChannel = channelId
+      ? guild.channels.cache.get(channelId)
+      : undefined;
+
+    if (textChannel && isChannelSuitableForTrackMessage(textChannel) && canSendMessageTo(textChannel)) {
+      return textChannel;
     }
 
     // fallback
-    if (guild.systemChannel && this.canSendMessageTo(guild.systemChannel)) {
+    if (guild.systemChannel && canSendMessageTo(guild.systemChannel)) {
       return guild.systemChannel;
     }
   }
@@ -1094,6 +1084,12 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
         if ((a.options[i].required ?? false) !== (b.options[i].required ?? false)) {
           return 'Option required flag mismatch';
+        }
+
+        if (b.options[i].type === OptionType.Channel) {
+          if (!isEqual((a.options[i] as any).channel_types, (b.options[i] as any).channel_types)) {
+            return 'Channel types mismatch'
+          }
         }
       }
 

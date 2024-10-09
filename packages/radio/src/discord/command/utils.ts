@@ -11,6 +11,7 @@ import {
 
 import {
   BaseInteraction,
+  GuildChannel,
   InteractionDeferReplyOptions,
   InteractionEditReplyOptions,
   InteractionReplyOptions,
@@ -119,7 +120,7 @@ export function guildIdGuard(interaction: BaseInteraction): string {
   return guildId;
 }
 
-export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseInteraction, errorMessage?: string): { guildId: string, station: Station } {
+export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseInteraction, errorMessage?: string) {
   const guildId = guildIdGuard(interaction);
 
   const state = automaton.getGuildState(guildId);
@@ -136,6 +137,7 @@ export function guildStationGuard(automaton: MedleyAutomaton, interaction: BaseI
 
   return {
     guildId,
+    guild: interaction.guild!,
     station
   }
 }
@@ -230,4 +232,15 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
   }
 
   return lines.length ? makeAnsiCodeBlock(lines) : undefined;
+}
+
+export function canSendMessageTo(channel: GuildChannel): boolean {
+  const guild = channel.guild;
+  const me = guild.members.me;
+
+  if (!me) {
+    return false;
+  }
+
+  return channel.members.has(me.id) && channel.permissionsFor(me).has(PermissionsBitField.Flags.SendMessages);
 }
