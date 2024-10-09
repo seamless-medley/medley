@@ -8,7 +8,7 @@
     "build": "tsc && tsx scripts/package.ts"
   },
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0",
   "dependencies": {
     "@parcel/watcher": "^2.3.0",
     "@seamless-medley/logging": "../logging",

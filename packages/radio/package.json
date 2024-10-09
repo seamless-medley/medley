@@ -12,7 +12,7 @@
     "medley",
     "automation"
   ],
-  "license": "AGPL-3.0",
+  "license": "GPL-3.0",
   "main": "src/server/main.ts",
   "scripts": {
     "clean": "rimraf .turbo dist combine",
