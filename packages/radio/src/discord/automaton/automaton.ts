@@ -1238,17 +1238,23 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     return url;
   }
 
+  get totalListeners() {
+    return sumBy(this.stations.all(), s => s.audienceCount);
+  }
+
+  get totalTracks() {
+    return sumBy(this.stations.all(), station => station.libraryStats.indexed ?? 0);
+  }
+
   #updateLibraryStats =  throttle(() => {
     if (!this.#client.user) {
       return;
     }
 
-    const totalTracks = sumBy(this.stations.all(), station => station.libraryStats.indexed ?? 0);
-
     const formatter = new Intl.NumberFormat();
 
     this.#client.user.setActivity({
-      name: `Serving ${formatter.format(totalTracks)} tracks from ${formatter.format(this.stations.size)} stations`,
+      name: `Serving ${formatter.format(this.totalTracks)} tracks from ${formatter.format(this.stations.size)} stations`,
       type: ActivityType.Custom
     });
   }, 5000);

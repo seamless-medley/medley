@@ -14,6 +14,7 @@ import karaoke from './karaoke';
 import rescan from './rescan';
 import volume from './volume';
 import dj from './dj';
+import stats from './stats';
 
 export const all = {
   join,
@@ -31,5 +32,6 @@ export const all = {
   karaoke,
   rescan,
   volume,
-  dj
+  dj,
+  stats
 }
