@@ -1,7 +1,7 @@
 import { parse as parsePath } from 'node:path';
 import { castArray, chain, flatten, isEqual, mapValues, matches, some, toLower, trim, uniq, without } from "lodash";
 import { isString } from 'lodash/fp';
-import { compareTwoStrings } from "string-similarity";
+import { distance } from 'fastest-levenshtein';
 import { TypedEmitter } from "tiny-typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions, AudioProperties } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
@@ -135,7 +135,7 @@ type BoomBoxOptions<T extends BoomBoxTrack, R extends BaseRequester> = {
   /**
    * Similarity threshold for the artist to be considered as duplicated
    *
-   * @default 0.8
+   * @default 0.48
    */
   duplicationSimilarity?: number;
 
@@ -188,7 +188,7 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
 
     this.options = {
       artistBacklog: options.artistBacklog || 50,
-      duplicationSimilarity: options.duplicationSimilarity || 0.8
+      duplicationSimilarity: options.duplicationSimilarity || 0.48
     };
     //
     this.medley = options.medley;
@@ -304,7 +304,7 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
 
       const playedArtists = flatten(this.artistHistory).map(toLower);
       const currentArtists = getArtistStrings(boomboxExtra).map(toLower);
-      const dup = some(playedArtists, a => some(currentArtists, b => compareTwoStrings(a, b) >= this.options.duplicationSimilarity));
+      const dup = some(playedArtists, a => some(currentArtists, b => stringSimilarity(a, b) >= this.options.duplicationSimilarity));
 
       if (dup) {
         this.#logger.info('Duplicated artist, deny playing track %s', track.path);
@@ -783,6 +783,21 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
   get allLatches(): ReadonlyArray<LatchSession<BoomBoxTrack, any>> {
     return this.#sequencer.allLatches;
   }
+}
+
+function stringSimilarity(a: string, b: string): number {
+  if (!a || !b) {
+    return 0;
+  }
+
+  if (a === b) {
+    return 1;
+  }
+
+  const editDistance = distance(a, b);
+  const longestLength = Math.max(a.length, b.length);
+
+  return (longestLength - editDistance) / longestLength
 }
 
 export const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).map(trim);
