@@ -45,7 +45,6 @@
       }
     },
     "allowedDeprecatedVersions": {
-      "string-similarity": "*",
       "babel-merge": "*",
       "are-we-there-yet": "*",
       "npmlog": "*",
