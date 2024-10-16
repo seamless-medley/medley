@@ -706,10 +706,14 @@ export class GuildState {
           }
 
           const exactMatches = await station.findTracksByComment(searchKey, id);
-          const searchResult = await station.search({
-            q: { artist: info.artist },
-            exactMatch: true
-          });
+          const exactIds = new Set(exactMatches.map(t => t.id));
+
+          const searchResult = await station
+            .search({
+              q: { artist: info.artist },
+              exactMatch: true
+            })
+            .then(s => s.filter(t => !exactIds.has(t.id)));
 
           if (exactMatches.length + searchResult.length) {
             const counter = [
