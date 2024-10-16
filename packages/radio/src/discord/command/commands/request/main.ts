@@ -266,7 +266,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
           })
           : [];
 
-        return uniqBy([...exactMatches, ...searchResult], t => t.musicId ?? t.id);
+        return uniqBy([...exactMatches, ...searchResult], t => t.id);
       }
     }
   })();
