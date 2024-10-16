@@ -1,6 +1,6 @@
-FROM node:18.16.0 as builder
+FROM node:18.20.4 as builder
 
-RUN corepack enable && corepack prepare pnpm@9.6.0
+RUN corepack enable && corepack prepare pnpm@9.12.1
 
 # install build dependencies
 RUN apt update \
@@ -26,7 +26,7 @@ WORKDIR /app
 RUN pnpm install
 
 # ----------------------------------------------------------------------------------------------------
-FROM node:18.16.0-slim as application
+FROM node:18.20.4-slim as application
 
 ARG ARCH=amd64
 

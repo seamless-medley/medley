@@ -33,7 +33,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "packageManager": "pnpm@9.6.0",
+  "packageManager": "pnpm@9.12.1",
   "pnpm": {
     "peerDependencyRules": {
       "ignoreMissing": [

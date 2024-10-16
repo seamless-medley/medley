@@ -1,9 +1,9 @@
 # This is for building linux native module using docker
 # Usage: pnpm prebuild:linux[-arm64]
 
-FROM node:18.16.0
+FROM node:18.20.4
 
-RUN corepack enable && corepack prepare pnpm@9.6.0
+RUN corepack enable && corepack prepare pnpm@9.12.1
 
 RUN apt -y update \
     && apt -y install \
