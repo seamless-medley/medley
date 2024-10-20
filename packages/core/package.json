@@ -22,7 +22,6 @@
     "minisearch": "^6.3.0",
     "normalize-path": "^3.0.0",
     "tiny-typed-emitter": "^2.1.0",
-    "which": "^4.0.0",
     "workerpool": "^8.0.0"
   },
   "devDependencies": {
