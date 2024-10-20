@@ -3,7 +3,7 @@
 
 FROM node:18.20.4
 
-RUN corepack enable && corepack prepare pnpm@9.12.1
+RUN corepack enable && corepack prepare pnpm@9.12.2
 
 RUN apt -y update \
     && apt -y install \
