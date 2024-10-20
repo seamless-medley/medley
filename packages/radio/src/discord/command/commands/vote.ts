@@ -1,7 +1,7 @@
 import { createLogger } from "@seamless-medley/logging";
 import { Requester, AudienceType, getTrackBanner, makeRequester, RequestTrackLockPredicate, StationRequestedTrack, TrackIndex } from "@seamless-medley/core";
 import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, PermissionsBitField, userMention, time as formatTime, quote, } from "discord.js";
-import { chain, isEqual, keyBy, noop, sampleSize, take, without } from "lodash";
+import { chain, isEqual, keyBy, noop, sample, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
 import * as emojis from "../../helpers/emojis";
 import { CommandDescriptor, GuildHandlerFactory, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
@@ -24,6 +24,12 @@ const logger = createLogger({ name: 'command', id: 'vote' });
 const guildVoteMessage = new Map<string, Message>();
 
 export const getVoteMessage = (guildId: string) => guildVoteMessage.get(guildId);
+
+export const createVoteButton = () => new ButtonBuilder()
+  .setLabel('Vote')
+  .setEmoji(sample(['✋🏼', '🤚🏼', '🖐🏼', '🙋🏼‍♀️', '🙋🏼‍♂️'])!)
+  .setStyle(ButtonStyle.Secondary)
+  .setCustomId(`vote:-`)
 
 const distinguishableEmojis = without(emojis.distinguishable, '🏁');
 

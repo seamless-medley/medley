@@ -35,7 +35,7 @@ import { toEmoji } from "../../../helpers/emojis";
 import { AutomatonCommandError, InteractionHandlerFactory } from "../../type";
 import { declare, deferReply, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
 import { ansi } from "../../../format/ansi";
-import { getVoteMessage } from "../vote";
+import { createVoteButton, getVoteMessage } from "../vote";
 import { interact } from "../../interactor";
 import { groupByAsync } from "@seamless-medley/utils";
 import { MedleyAutomaton } from "../../../automaton";
@@ -135,13 +135,7 @@ const makeRequest = async ({ station, automaton, trackId, guildId, noSweep, inte
       components: canVote && (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
         ? [
           new ActionRowBuilder<MessageActionRowComponentBuilder>()
-            .addComponents(
-              new ButtonBuilder()
-                .setLabel('Vote')
-                .setEmoji(sample(['✋🏼', '🤚🏼', '🖐🏼', '🙋🏼‍♀️', '🙋🏼‍♂️'])!)
-                .setStyle(ButtonStyle.Secondary)
-                .setCustomId(`vote:-`)
-            )
+            .addComponents(createVoteButton())
         ]
         : undefined
     })
@@ -212,11 +206,23 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
     if ([artist, title, query].every(isUndefined)) {
       const preview = await makeRequestPreview(station, { guildId, count: 20 });
 
-      if (preview) {
-        reply(interaction, joinStrings([`# Request list`, ...preview]));
-      } else {
+      if (!preview) {
         reply(interaction, station.requestsCount && interaction.guild?.name ? `Request list for ${interaction.guild.name} is empty` : 'Request list is empty');
+        return;
       }
+
+      const peekings = peekRequestsForGuild(station, 0, 20, guildId);
+      const canVote = interaction.appPermissions?.any([PermissionsBitField.Flags.AddReactions]);
+
+      reply(interaction, {
+        content: joinStrings([`# Request list`, ...preview]),
+        components: canVote && (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
+          ? [
+            new ActionRowBuilder<MessageActionRowComponentBuilder>()
+              .addComponents(createVoteButton())
+          ]
+          : undefined
+      });
 
       return;
     }
