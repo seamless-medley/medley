@@ -18,8 +18,8 @@
     "fast-glob": "^3.3.1",
     "fastest-levenshtein": "^1.0.16",
     "lodash": "^4.17.21",
-    "minisearch": "^6.3.0",
     "minimatch": "10.0.1",
+    "minisearch": "^7.1.0",
     "normalize-path": "^3.0.0",
     "tiny-typed-emitter": "^2.1.0",
     "workerpool": "^8.0.0"
