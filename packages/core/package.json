@@ -22,7 +22,7 @@
     "minisearch": "^7.1.0",
     "normalize-path": "^3.0.0",
     "tiny-typed-emitter": "^2.1.0",
-    "workerpool": "^8.0.0"
+    "workerpool": "^9.0.3"
   },
   "devDependencies": {
     "@types/normalize-path": "^3.0.1",
