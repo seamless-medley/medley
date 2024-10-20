@@ -51,11 +51,12 @@
     "@tanstack/react-router": "^1.57.15",
     "@wyw-in-js/babel-preset": "^0.5.0",
     "axios": ">=1.7.4",
+    "bufferutil": "^4.0.8",
     "cfonts": "^3.2.0",
     "classnames": "^2.3.2",
     "color.js": "^1.2.0",
     "commander": "^12.0.0",
-    "discord-api-types": "0.37.90",
+    "discord-api-types": "0.37.102",
     "discord.js": "^14.15.3",
     "eventemitter3": "^5.0.1",
     "express": "4.20.0",
@@ -88,7 +89,7 @@
     "sodium-native": "^4.1.1",
     "tiny-typed-emitter": "^2.1.0",
     "typed-emitter": "2.1.0",
-    "workerpool": "^8.0.0",
+    "workerpool": "^9.0.3",
     "ws": "^8.17.1",
     "yaml": "^2.3.3",
     "zod": "^3.22.4"
@@ -123,9 +124,5 @@
     "typescript": "5.4.5",
     "vite": "5.3.1",
     "vite-plugin-mkcert": "^1.17.1"
-  },
-  "optionalDependencies": {
-    "bufferutil": "^4.0.7",
-    "utf-8-validate": "^5.0.2"
   }
 }
