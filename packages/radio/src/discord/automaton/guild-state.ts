@@ -5,7 +5,7 @@ import {
   IReadonlyLibrary,
   KaraokeUpdateParams,
   Station,
-  compareTrackWithStation
+  getStationTrackSorters,
 } from "@seamless-medley/core";
 
 import { retryable } from "@seamless-medley/utils";
@@ -622,7 +622,7 @@ export class GuildState {
 
           const dedicatedTracks = await station.findTracksByComment(searchKey, id);
 
-          const [track] = sortBy(dedicatedTracks, t => compareTrackWithStation(station, t));
+          const [track] = sortBy(dedicatedTracks, ...getStationTrackSorters(station));
 
           if (track) {
             const { id: trackId, extra } = track;
