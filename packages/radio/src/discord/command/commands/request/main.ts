@@ -261,7 +261,13 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
         return station.findTracksByComment(options.type, options.id);
 
       case 'spotify:artist': {
-        const exactMatches = await station.findTracksByComment(options.type, options.id);
+        const exactMatches = await station.findTracksByComment(
+          options.type,
+          options.id,
+          {
+            sort: { title: 1 }
+          }
+        );
 
         const artist = exactMatches[0].extra?.tags?.artist;
 
