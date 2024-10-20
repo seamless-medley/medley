@@ -2,7 +2,7 @@ import {
   AudienceType,
   AudioProperties,
   BoomBoxTrack,
-  compareTrackWithStation,
+  getStationTrackSorters,
   getTrackBanner,
   makeRequester,
   MetadataHelper,
@@ -125,11 +125,10 @@ const makeRequest = async ({ station, automaton, trackId, guildId, noSweep, inte
     components: []
   });
 
-  const peekings = peekRequestsForGuild(station, 0, 20, guildId);
-
-  const canVote = interaction.appPermissions?.any([PermissionsBitField.Flags.AddReactions]);
-
   if (preview) {
+    const peekings = peekRequestsForGuild(station, 0, 20, guildId);
+    const canVote = interaction.appPermissions?.any([PermissionsBitField.Flags.AddReactions]);
+
     interaction.followUp({
       content: joinStrings(preview),
       components: canVote && (peekings.length > 1) && (getVoteMessage(guildId) === undefined)
@@ -228,18 +227,13 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
     }
   }
 
-  const selectionOrder = (selection: Selection) => compareTrackWithStation(station, selection.track);
-
-  const makeTrackSelections = async (choices: Selection[]): Promise<SelectMenuComponentOptionData[]> => {
-    const groups = groupBy(choices, selectionOrder);
-    const sortedKeys = sortBy(Object.keys(groups), Number);
-    const clarifications = sortedKeys.map(sortOrder => clarifySelection(groups[sortOrder], trackSelectionProcessors));
-    return flatten(await Promise.all(clarifications));
-  }
-
   await deferReply(interaction);
 
-  const results = await (async () => {
+  type StationTrackWithPriority = StationTrack & {
+    priority?: number;
+  }
+
+  const results: StationTrackWithPriority[] = await (async () => {
     switch (options.type) {
       case 'query': {
         const { title, artist, query, exactMatch, noHistory } = options;
@@ -278,7 +272,17 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
           })
           : [];
 
-        return uniqBy([...exactMatches, ...searchResult], t => t.id);
+        return uniqBy(
+          [
+            ...exactMatches,
+            ...searchResult.map(t => ({
+              // Less priority
+              priority: -1,
+              ...t
+            }))
+          ],
+          t => t.id
+        );
       }
     }
   })();
@@ -324,6 +328,11 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
   }
 
   const groupedSelections = chain(results)
+    .sortBy([
+      // Highest priority comes first
+      track => -(track.priority ?? 0),
+      ...getStationTrackSorters(station)
+    ])
     .map<Selection>((track) => {
       const title = track.extra?.tags?.title || parsePath(track.path).name;
       const artist = track.extra?.tags?.artist ? track.extra.tags.artist : undefined;
@@ -336,8 +345,6 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
     })
     .groupBy(({ title, artist = '' }) => createHash('sha256').update(`${title}:${artist}`.toLowerCase()).digest('base64'))
     .transform((groups, selection, groupKey) => {
-      selection = sortBy(selection, selectionOrder);
-
       if (selection.length <= maxSelectMenuOptions) {
         groups[groupKey] = selection;
         return;
@@ -361,7 +368,6 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
     }
 
     return [true, chain(entries)
-      .sortBy(([, grouped]) => -grouped.length)
       .map(([key, grouped]) => {
         const sel = grouped[0];
 
