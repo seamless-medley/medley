@@ -15,6 +15,7 @@ const { createLogger } = require('@seamless-medley/logging');
 /** @typedef {import('@seamless-medley/core').RecentSearchRecord} RecentSearchRecord */
 /** @typedef {import('@seamless-medley/core').SearchRecord} SearchRecord */
 /** @typedef {import('@seamless-medley/core').TimestampedTrackRecord} TimestampedTrackRecord */
+/** @typedef {import('@seamless-medley/core').FindByCommentOptions} FindByCommentOptions */
 /** @typedef {import('./mongo').Options} Options */
 
 /** @type {MongoClient} */
@@ -187,10 +188,10 @@ async function find(value, by) {
  *
  * @param {string} field
  * @param {string} value
- * @param {number} limit
+ * @param {FindByCommentOptions | undefined} options
  * @return {Promise<MusicDbTrack[]>}
  */
-async function findByComment(field, value, limit = 1) {
+async function findByComment(field, value, options) {
   if (!musics) {
     throw new Error('Not initialized');
   }
@@ -214,8 +215,12 @@ async function findByComment(field, value, limit = 1) {
     }
   ];
 
-  if (limit) {
-    pipelines.push({ $limit: limit });
+  if (options?.sort) {
+    pipelines.push({ $sort: options?.sort });
+  }
+
+  if (options?.limit) {
+    pipelines.push({ $limit: options?.limit });
   }
 
   pipelines.push({ $project: { _id: 0 }});
