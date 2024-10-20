@@ -1,4 +1,4 @@
-import { clamp, random, sample, subtract, sum, uniq } from "lodash";
+import { clamp, random, sample, sortBy, subtract, sum, uniq } from "lodash";
 import { inRange } from 'lodash/fp';
 
 export const decibelsToGain = (decibels: number): number => decibels > -100 ? Math.pow(10, decibels * 0.05) : 0;
@@ -65,7 +65,7 @@ export function moveArrayIndexes<T>(list: Array<T>, newPosition: number, ...inde
   newPosition = clamp(newPosition, 0, list.length - indexes.length);
 
   const values = indexes.map(i => list[i]);
-  for (const index of indexes) {
+  for (const index of sortBy(indexes, i => -i)) {
     list.splice(index, 1);
   }
 
