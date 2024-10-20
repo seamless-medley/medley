@@ -998,4 +998,42 @@ export function compareTrackWithStation(station: Station, track: StationTrack): 
   }
 
   return 0;
+type TrackSortFn = (track: StationTrack) => number;
+
+export type StationTrackSorters = [
+  nonAuxiliary: TrackSortFn,
+  followable: TrackSortFn,
+  withCurrentCollection: TrackSortFn,
+  withCurrentCrate: TrackSortFn
+];
+
+export function getStationTrackSorters(station: Station): StationTrackSorters {
+  const withCurrentCollection = (track: StationTrack) => (
+    station.currentSequenceCollection?.id && track.collection.id === station.currentSequenceCollection?.id
+      ? 0
+      : 1
+  );
+
+  const withCurrentCrate = (track: StationTrack) => (
+    (station.currentSequenceCrate?.sources ?? []).find(c => c.id === track.collection.id)
+      ? 0
+      : 1
+  );
+
+  const followable = (track: StationTrack) => (!track.collection.options?.noFollowOnRequest
+    ? 0
+    : 1
+  );
+
+  const nonAuxiliary = (track: StationTrack) => (!track.collection.options?.auxiliary
+    ? 0
+    : 1
+  );
+
+  return [
+    nonAuxiliary,
+    followable,
+    withCurrentCollection,
+    withCurrentCrate,
+  ];
 }
