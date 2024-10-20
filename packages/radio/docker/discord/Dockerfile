@@ -1,4 +1,4 @@
-FROM node:18.20.4 as builder
+FROM node:20.18.0 as builder
 
 RUN corepack enable && corepack prepare pnpm@9.12.2
 
@@ -26,7 +26,7 @@ WORKDIR /app
 RUN pnpm install
 
 # ----------------------------------------------------------------------------------------------------
-FROM node:18.20.4-slim as application
+FROM node:20.18.0-slim as application
 
 ARG ARCH=amd64
 
