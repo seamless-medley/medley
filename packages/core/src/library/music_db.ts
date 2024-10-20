@@ -35,6 +35,11 @@ export type UpdateInfo = {
   modified: number;
 }
 
+export type FindByCommentOptions = {
+  limit?: number;
+  sort?: Partial<Record<keyof MusicDbTrack, 1 | -1>>;
+}
+
 export interface MusicDb {
   dispose(): void;
 
@@ -44,7 +49,7 @@ export interface MusicDb {
 
   findByISRC(musicId: string): Promise<MusicDbTrack | undefined>;
 
-  findByComment(field: string, value: string, limit: number): Promise<MusicDbTrack[]>;
+  findByComment(field: string, value: string, options?: FindByCommentOptions): Promise<MusicDbTrack[]>;
 
   update(trackId: string, update: Omit<MusicDbTrack, 'trackId'>): Promise<MusicDbTrack>;
 
@@ -79,7 +84,7 @@ export class InMemoryMusicDb implements MusicDb {
     return undefined;
   }
 
-  async findByComment(field: string, value: string, limit: number): Promise<MusicDbTrack[]> {
+  async findByComment(field: string, value: string, options?: FindByCommentOptions): Promise<MusicDbTrack[]> {
     return [];
   }
 

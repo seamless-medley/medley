@@ -17,7 +17,7 @@ import { createLogger, Logger } from "@seamless-medley/logging";
 
 import { TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
 import { Crate, LatchOptions, LatchSession } from "../crate";
-import { Library, LibrarySearchParams, LibraryStats, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicLibraryEvents, MusicTrack, MusicTrackCollection } from "../library";
+import { FindByCommentOptions, Library, LibrarySearchParams, LibraryStats, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicLibraryEvents, MusicTrack, MusicTrackCollection } from "../library";
 import {
   BoomBox,
   BoomBoxEvents,
@@ -684,8 +684,8 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.findTrackById(id);
   }
 
-  async findTracksByComment(key: string, value: string, limit: number = 0) {
-    return this.#library.findTracksByComment(key, value, limit);
+  async findTracksByComment(key: string, value: string, options?: FindByCommentOptions) {
+    return this.#library.findTracksByComment(key, value, options);
   }
 
   async search(searchOptions: StationSearchOptions) {

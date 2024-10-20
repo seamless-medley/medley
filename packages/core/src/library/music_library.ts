@@ -5,7 +5,7 @@ import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
 import { SearchEngine, Query, TrackDocumentFields, SearchQuery } from './search';
 import { MetadataHelper } from '../metadata';
-import { MusicDb } from './music_db';
+import { FindByCommentOptions, MusicDb } from './music_db';
 import { TrackExtraOf, TrackWithCollectionExtra } from '../track';
 import { fileExists, scanDir } from './scanner';
 
@@ -333,8 +333,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     }
   }
 
-  async findTracksByComment(key: string, value: string, limit: number = 0) {
-    const found = await this.musicDb.findByComment(key, value, limit);
+  async findTracksByComment(key: string, value: string, options?: FindByCommentOptions) {
+    const found = await this.musicDb.findByComment(key, value, options);
     return found
       .map(({ trackId }) => this.findTrackById(trackId))
       .filter((t): t is MusicTrack<O> => t !== undefined)
