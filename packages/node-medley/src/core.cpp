@@ -867,7 +867,6 @@ Napi::Value Medley::reqAudioGetlatency(const CallbackInfo& info) {
 
     auto sampleRate = engine->getOutputSampleRate();
     auto outputLatency = (double)engine->getOutputLatency();
-    auto bufferedSize = (double)request->buffer.getNumReady();
 
     auto latencyMs = outputLatency / sampleRate * 1000;
 
