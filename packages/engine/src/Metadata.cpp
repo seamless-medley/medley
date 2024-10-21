@@ -528,39 +528,11 @@ void medley::Metadata::AudioProperties::readMpegInfo(const File& f)
     if (file.isSupported(&stream)) {
         auto props = file.audioProperties();
 
+        channels = props->channels();
         bitrate = props->bitrate();
         sampleRate = props->sampleRate();
         duration = props->lengthInSeconds();
-
-        //if ((bitrate != 0) && (sampleRate != 0) && (duration != 0)) {
-        //    return;
-        //}
     }
-
-    /*{
-        FileInputStream stream(f);
-
-        mp3dec_io_t io{};
-        mp3dec_ex_t dec{};
-
-        io.read = &minimp3_read_cb;
-        io.seek = &minimp3_seek_cb;
-        io.read_data = io.seek_data = &stream;
-
-        if (mp3dec_ex_open_cb(&dec, &io, MP3D_SEEK_TO_SAMPLE) != 0) {
-            return;
-        }
-
-        auto lengthInSamples = dec.detected_samples / dec.info.channels;
-
-        if (lengthInSamples <= 0) {
-            lengthInSamples = dec.samples / dec.info.channels;
-        }
-
-        bitrate = dec.info.bitrate_kbps;
-        sampleRate = dec.info.hz;
-        duration = lengthInSamples / (float)sampleRate;
-    }*/
 }
 
 void medley::Metadata::AudioProperties::readXiph(const File& f)
@@ -582,11 +554,13 @@ void medley::Metadata::AudioProperties::readXiph(const File& f)
         try {
             auto const props = file.audioProperties();
 
+            channels = props->channels();
             bitrate = props->bitrate();
             sampleRate = props->sampleRate();
             duration = props->lengthInMilliseconds() / 1000.0;
         }
         catch (...) {
+            channels = 0;
             bitrate = 0;
             sampleRate = 0;
             duration = 0;

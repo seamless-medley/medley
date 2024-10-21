@@ -388,6 +388,7 @@ export type Metadata = {
 }
 
 export type AudioProperties = {
+  channels?: number;
   bitrate?: number;
   sampleRate?: number;
   duration?: number;

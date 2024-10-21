@@ -69,6 +69,7 @@ public:
     public:
         AudioProperties(const File& file);
 
+        int getChannels() const { return channels; }
         int getBitrate() const { return bitrate; }
         int getSampleRate() const { return sampleRate; }
         double getDuration() const { return duration; }
@@ -78,6 +79,7 @@ public:
         void readMpegInfo(const File& f);
         void readXiph(const File& f);
 
+        int channels = 0;
         int bitrate = 0;
         int sampleRate = 0;
         double duration = 0;
@@ -104,7 +106,7 @@ public:
 
     std::vector<std::pair<juce::String, juce::String>>&  getComments() { return comments; }
 
-private:    
+private:
     bool readID3V2(const File& f);
     bool readFLAC(const File& f);
     void readTag(const TagLib::Tag& tag);

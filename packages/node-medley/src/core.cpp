@@ -45,14 +45,16 @@ namespace {
     void readAudioProperties(juce::String trackFile, Object& result) {
         medley::Metadata::AudioProperties audProps(trackFile);
 
+        auto channels = audProps.getChannels();
         auto bitrate = audProps.getBitrate();
         auto sampleRate = audProps.getSampleRate();
         auto duration = audProps.getDuration();
 
         auto env = result.Env();
 
-        result.Set("bitrate", bitrate != 0.0f ? Napi::Number::New(env, bitrate) : env.Undefined());
-        result.Set("sampleRate", sampleRate != 0.0f ? Napi::Number::New(env, sampleRate) : env.Undefined());
+        result.Set("channels", channels != 0 ? Napi::Number::New(env, channels) : env.Undefined());
+        result.Set("bitrate", bitrate != 0 ? Napi::Number::New(env, bitrate) : env.Undefined());
+        result.Set("sampleRate", sampleRate != 0 ? Napi::Number::New(env, sampleRate) : env.Undefined());
         result.Set("duration", duration != 0.0f ? Napi::Number::New(env, duration) : env.Undefined());
     }
 
