@@ -1,4 +1,4 @@
-import { CommandInteraction, Guild } from "discord.js";
+import { ChatInputCommandInteraction, Guild } from "discord.js";
 import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { AutomatonAccess, MedleyAutomaton } from "../../automaton";
 import { Station } from "@seamless-medley/core";
@@ -7,7 +7,15 @@ import { deny, joinStrings, reply } from "../utils";
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
   name: 'stats',
-  description: 'Show statistics'
+  description: 'Show statistics',
+  options: [
+    {
+      type: OptionType.Boolean,
+      name: 'private',
+      description: 'Only you can see the stats',
+      required: false
+    }
+  ]
 }
 
 async function guildStats(automaton: MedleyAutomaton, guild: Guild) {
@@ -30,8 +38,10 @@ function stationStats(station: Station) {
 
 const makeTitle = (...args: any[]) => args.filter(Boolean).join(' - ');
 
-async function showFullStats(interaction: CommandInteraction, automaton: MedleyAutomaton) {
+async function showFullStats(interaction: ChatInputCommandInteraction, automaton: MedleyAutomaton) {
   const guildIds = await automaton.client.guilds.fetch().then(guilds => guilds.map(g => g.id));
+
+  const ephemeral = interaction.options.getBoolean('private') ?? true;
 
   const lines: string[] = [];
 
@@ -79,10 +89,13 @@ async function showFullStats(interaction: CommandInteraction, automaton: MedleyA
     }
   }
 
-  reply(interaction, joinStrings(lines));
+  reply(interaction, {
+    content: joinStrings(lines),
+    ephemeral
+  });
 }
 
-async function showGuildStats(interaction: CommandInteraction, automaton: MedleyAutomaton) {
+async function showGuildStats(interaction: ChatInputCommandInteraction, automaton: MedleyAutomaton) {
   if (!interaction.guildId) {
     throw new Error('Not in a guild');
   }
@@ -95,19 +108,24 @@ async function showGuildStats(interaction: CommandInteraction, automaton: Medley
     return;
   }
 
+  const ephemeral = interaction.options.getBoolean('private') ?? false;
+
   const intl = new Intl.NumberFormat();
 
   const { station, listeners } = s;
 
-  reply(interaction, joinStrings([
-    '# Stats:',
-    `- Station: ${makeTitle(station.name, station.description)}`,
-    `- ${intl.format(station.libraryStats.indexed ?? 0)} Tracks`,
-    `- ${intl.format(listeners)} Listeners`
-  ]));
+  reply(interaction, {
+    content: joinStrings([
+      '# Stats:',
+      `- Station: ${makeTitle(station.name, station.description)}`,
+      `- ${intl.format(station.libraryStats.indexed ?? 0)} Tracks`,
+      `- ${intl.format(listeners)} Listeners`
+    ]),
+    ephemeral
+  });
 }
 
-const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (automaton) => async (interaction) => {
+const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const access = await automaton.getAccessFor(interaction);
 
   if (access === AutomatonAccess.Owner) {
