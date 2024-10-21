@@ -18,13 +18,13 @@ const onGoing = new Set<string>();
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
-  const requests = station.getRequestsOf(
-    makeRequester(
-      AudienceType.Discord,
-      { automatonId: automaton.id, guildId },
-      interaction.user.id
-    )
+  const requester = makeRequester(
+    AudienceType.Discord,
+    { automatonId: automaton.id, guildId },
+    interaction.user.id
   );
+
+  const requests = station.getRequestsOf(requester);
 
   if (requests.length < 1) {
     reply(interaction, {
@@ -41,6 +41,8 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     description: request.extra?.tags?.title ? truncate(request.extra?.tags?.artist || 'Unknown Artist', { length: 100 }) : undefined,
     value: request.rid.toString(36),
   }));
+
+  let requestIds: number[] = [];
 
   await interact({
     commandName: declaration.name,
@@ -60,11 +62,16 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
             .setMaxValues(selections.length)
             .addOptions(selections)
         ),
-
       new ActionRowBuilder<MessageActionRowComponentBuilder>()
         .addComponents(
           new ButtonBuilder()
-            .setCustomId('cancel_unrequest')
+            .setCustomId('unrequest_confirm')
+            .setLabel('Confirm')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('✅'),
+
+          new ButtonBuilder()
+            .setCustomId('unrequest_cancel')
             .setLabel('Cancel')
             .setStyle(ButtonStyle.Secondary)
             .setEmoji('❌')
@@ -72,35 +79,48 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     ],
 
     async onCollect({ collected, done }) {
-      if (!collected.isStringSelectMenu()) {
+      const { customId } = collected;
+
+      if (customId === 'unrequest_cancel') {
+        await done();
         return;
       }
 
-      await done(false);
+      if (customId === 'unrequest' && collected.isStringSelectMenu()) {
+        requestIds = collected.values.map(v => parseInt(v, 36));
+        collected.deferUpdate();
+        return;
+      }
 
-      const requestIds = collected.values.map(v => parseInt(v, 36));
-      const unrequested = station.unrequest(requestIds);
+      if (customId === 'unrequest_confirm') {
+        await done(false);
 
-      const banners = unrequested.removed.map(getTrackBanner);
-      const loadedRequests = station.getFetchedRequests()
-        .filter(({ rid }) => requestIds.includes(rid));
+        const unrequested = station.unrequest(requestIds, requester);
 
-      collected.update({
-        components: [],
-        content: joinStrings([
-          ...makeAnsiCodeBlock([
-            ansi`{{green}}OK{{reset}}, {{pink}}${banners.length}{{reset}} track(s) canceled`,
-            ...banners
-          ]),
-          ...(loadedRequests.length
-            ? makeAnsiCodeBlock([
-              'The following track(s) are already loaded and cannot be cancelled',
-              ...loadedRequests.map(getTrackBanner)
-            ])
-            : []
-          )
-        ])
-      });
+        const banners = unrequested.removed.map(getTrackBanner);
+        const loadedRequests = station.getFetchedRequests()
+          .filter(({ rid }) => requestIds.includes(rid));
+
+        station.sortRequests(true);
+
+        collected.update({
+          components: [],
+          content: joinStrings([
+            ...makeAnsiCodeBlock([
+              ansi`{{green}}OK{{reset}}, {{pink}}${banners.length}{{reset}} track(s) canceled`,
+              '',
+              ...banners
+            ]),
+            ...(loadedRequests.length
+              ? makeAnsiCodeBlock([
+                'The following track(s) are already loaded and cannot be cancelled',
+                ...loadedRequests.map(getTrackBanner)
+              ])
+              : []
+            )
+          ])
+        });
+      }
     }
   });
 }
