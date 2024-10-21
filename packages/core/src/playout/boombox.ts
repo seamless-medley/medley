@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'node:path';
-import { castArray, chain, flatten, isEqual, mapValues, matches, some, toLower, trim, uniq, without } from "lodash";
+import { castArray, chain, flatten, isEqual, mapValues, matches, reject, some, toLower, trim, uniq, without } from "lodash";
 import { isString } from 'lodash/fp';
 import { distance } from 'fastest-levenshtein';
 import { TypedEmitter } from "tiny-typed-emitter";
@@ -452,9 +452,32 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
     return this.#requests.filter(r => r.requestedBy.some(matchRequester));
   }
 
-  unrequest(requestIds: number[]) {
-    const all = new Set(requestIds);
-    const removed = this.#requests.removeBy(r => all.has(r.rid));
+  unrequest(requestIds: number[], requester?: R) {
+    const removed = (() => {
+      if (requester) {
+        const matchRequester = matches(requester);
+
+        const requests = this.#requests.filter(r => r.requestedBy.some(matchRequester));
+
+        for (const r of requests) {
+          const counter = r.requestedBy.length;
+          r.requestedBy = reject(r.requestedBy, matchRequester);
+
+          if (r.priority !== undefined) {
+            const reduction = counter - r.requestedBy.length;
+            r.priority -= reduction;
+          }
+        }
+
+        this.#requests.removeBy(r => r.requestedBy.length === 0);
+
+        return requests;
+      }
+
+      const all = new Set(requestIds);
+      return this.#requests.removeBy(r => all.has(r.rid));
+    })();
+
     return {
       removed,
       invalid: without(requestIds, ...removed.map(r => r.rid))
