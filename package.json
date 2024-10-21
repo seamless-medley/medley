@@ -50,7 +50,8 @@
       "rimraf": "*"
     },
     "overrides": {
-      "typescript": "5.4.5"
+      "typescript": "5.4.5",
+      "micromatch": ">=4.0.8"
     }
   },
   "commitlint": {
