@@ -55,10 +55,9 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
     return;
   }
 
-  const requests = take(
-    station.allRequests.filter(track => isTrackRequestedFromGuild(track, guildId)),
-    20
-  );
+  const maxNominatees = 20;
+  const guildRequests = station.allRequests.filter(track => isTrackRequestedFromGuild(track, guildId));
+  const requests = take(guildRequests, maxNominatees);
 
   if (requests.length <= 1) {
     warn(interaction, 'Nothing to vote')
@@ -102,21 +101,24 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
     const message = await reply(interaction, {
       content: joinStrings([
         getTimeout(),
-        createMessageContent(),
+        createMessageContent()
       ]),
       components: [
         new ActionRowBuilder<MessageActionRowComponentBuilder>()
-        .addComponents(new ButtonBuilder()
-        .setCustomId('vote_end')
-        .setLabel('End')
-        .setStyle(ButtonStyle.Danger)
-        .setEmoji('🏁')),
+          .addComponents(new ButtonBuilder()
+          .setCustomId('vote_end')
+          .setLabel('End')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🏁')),
       ],
       embeds: [
         new EmbedBuilder()
           .setTitle('Vote')
           .setColor('Random')
-          .setDescription('Click on a reaction emoji to vote for that track')
+          .setDescription(joinStrings([
+            'Click on a reaction emoji to vote for that track',
+            guildRequests.length > maxNominatees ? `> Only the first ${maxNominatees} requests can be voted` : undefined
+          ]))
           .setFooter({
             text: 'These tracks will not be played during this vote session'
           })
@@ -139,6 +141,9 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
             getTimeout(),
             createMessageContent(),
           ])
+        })
+        .catch(e => {
+          logger.error(`Could not edit vote message: ${e.message}`);
         })
       }
 
