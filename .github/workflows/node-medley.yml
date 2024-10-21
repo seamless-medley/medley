@@ -1,16 +1,9 @@
 name: node-medley native module
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/node-medley.yml
-      - packages/engine/src/**
-      - packages/node-medley/src/**
-      - packages/node-medley/scripts/**
-      - packages/node-medley/binding.gyp
-      - packages/node-medley/package.json
   workflow_dispatch:
+  push:
+    tags:
+      - node-medley@*.*
 jobs:
   # This job builds on each platform directly
   build:
