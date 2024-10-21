@@ -3,8 +3,6 @@ on:
   workflow_run:
     workflows:
       - node-medley native module
-    branches:
-      - main
     types:
       - completed
 env:
