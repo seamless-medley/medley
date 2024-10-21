@@ -40,8 +40,9 @@ async function main() {
     done(true);
   });
 
-  medley.on('loaded', (deck) => {
+  medley.on('loaded', (deck, trackPlay) => {
     nodeLog('Loaded', deck, medley.getDeckMetadata(deck));
+    nodeLog('Audio Properties', Medley.getAudioProperties(trackPlay.track.path));
   });
 
   medley.on('unloaded', (deck) => {
