@@ -28,7 +28,7 @@ import {
   quote
 } from "discord.js";
 
-import { chain, chunk, clamp, Dictionary, flatten, fromPairs, groupBy, identity, isUndefined, sample, sortBy, truncate, uniqBy, zip } from "lodash";
+import { chain, chunk, clamp, Dictionary, fromPairs, identity, isUndefined, truncate, uniqBy, zip } from "lodash";
 import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../helpers/emojis";
@@ -360,6 +360,30 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
     }, {} as Dictionary<SelectionsWithChunk>)
     .value();
 
+  const audioPropsPromises = new Map<StationTrack, Promise<AudioProperties | undefined>>();
+
+  const fetchTrackAudioProps = (track: StationTrack) => {
+    if (audioPropsPromises.has(track)) {
+      return audioPropsPromises.get(track)!;
+    }
+
+    const promise = fetchAudioProps(track) ?? Promise.resolve(undefined);
+    audioPropsPromises.set(track, promise);
+
+    return promise;
+  }
+
+  const clarificationCtx: TrackClarificationContext = {
+    getSamplerate: track => fetchTrackAudioProps(track).then(p => p?.sampleRate ?? 0),
+    getBitrate: track => fetchTrackAudioProps(track).then(p => p?.bitrate ?? 0)
+  }
+
+  const makeTrackSelections = (choices: Selection[]) =>  clarifySelection({
+    selections: choices,
+    processors: trackClarificationProcessors,
+    context: clarificationCtx
+  });
+
   const [isGrouped, resultSelectionChunks] = await (async (): Promise<[grouped: boolean, data: SelectMenuComponentOptionData[][]]> => {
     const entries = Object.entries(groupedSelections);
 
@@ -613,7 +637,12 @@ function fetchAudioProps(track: BoomBoxTrack): Promise<AudioProperties> | undefi
   return extra.maybeAudioProperties;
 }
 
-const trackSelectionProcessors: ClarificationProcessor[] = [
+type TrackClarificationContext = {
+  getSamplerate: (track: StationTrack) => Promise<number>;
+  getBitrate: (track: StationTrack) => Promise<number>;
+}
+
+const trackClarificationProcessors: ClarificationProcessor<TrackClarificationContext>[] = [
   // By collection
   {
     getKey: (async s => s.track.collection.id),
@@ -628,15 +657,15 @@ const trackSelectionProcessors: ClarificationProcessor[] = [
   },
   // Still not clear?, may be audio sample rate
   {
-    getKey: async ({ track }) => (((await fetchAudioProps(track))?.sampleRate ?? 0) / 1000).toFixed(1),
+    getKey: async ({ track }, ctx) => ctx?.getSamplerate(track).then(v => (v/1000).toFixed(1)) ?? '',
     prioritize: k => -k,
-    clarify: async (key, s) => (await fetchAudioProps(s.track))?.sampleRate ? `${key}KHz` : ''
+    clarify: async (key, s, ctx) => key ? `${key}KHz` : ''
   },
   // Bitrate
   {
-    getKey: async ({ track }) => ((await fetchAudioProps(track))?.bitrate ?? 0).toString(),
+    getKey: async ({ track }, ctx) => ctx?.getBitrate(track).then(v => v.toString()) ?? '',
     prioritize: k => -k,
-    clarify: async key => `${key}Kbps`
+    clarify: async key => key ? `${key}Kbps` : ''
   },
   // Album
   {
@@ -658,13 +687,22 @@ function selectionToComponentData(selection: Selection, [collection, ...clarifie
   };
 }
 
-type ClarificationProcessor = {
-  getKey: (s: Selection) => Promise<string>;
-  prioritize: (key: string) => number;
-  clarify?: (key: string, sample: Selection) => Promise<string>;
+type ClarificationProcessor<C> = {
+  getKey: (s: Selection, context: C | undefined) => Promise<string>;
+  prioritize: (key: string, context: C | undefined) => number;
+  clarify?: (key: string, sample: Selection, context: C | undefined) => Promise<string>;
 }
 
-async function clarifySelection(selections: Selection[], processors: ClarificationProcessor[], clarified: string[] = []) {
+type ClarificationOptions<C> = {
+  selections: Selection[];
+  processors: ClarificationProcessor<C>[];
+  clarified?: string[];
+  context?: C;
+}
+
+async function clarifySelection<C>(options: ClarificationOptions<C>) {
+  const { selections, processors, clarified = [], context } = options;
+
   if (processors.length < 1) {
     return selections.map(sel => selectionToComponentData(sel, clarified));
   }
@@ -673,8 +711,8 @@ async function clarifySelection(selections: Selection[], processors: Clarificati
 
   const result: SelectMenuComponentOptionData[] = [];
 
-  const groups = await groupByAsync(selections, s => processor.getKey(s));
-  const keys = Object.keys(groups).sort(processor.prioritize);
+  const groups = await groupByAsync(selections, s => processor.getKey(s, context));
+  const keys = Object.keys(groups).sort(k => processor.prioritize(k, context));
 
   for (const key of keys) {
     const group = groups[key];
@@ -683,10 +721,16 @@ async function clarifySelection(selections: Selection[], processors: Clarificati
       continue;
     }
 
-    const nextClarifications = [...clarified, await processor.clarify?.(key, group[0]) ?? ''];
+    const nextClarifications = [...clarified, await processor.clarify?.(key, group[0], context) ?? ''];
 
     if (group.length > 1) {
-      result.push(...await clarifySelection(group, nextProcessors, nextClarifications));
+      result.push(...await clarifySelection({
+        selections: group,
+        processors: nextProcessors,
+        clarified: nextClarifications,
+        context
+      }));
+
       continue;
     }
 
