@@ -1,13 +1,14 @@
 import { Medley, Queue } from '..';
 import test from 'ava';
 
-test('Native module loading', t => {
+test.serial('Native module loading', t => {
   const info = Medley.getInfo();
   t.truthy(info);
   t.is(info.versionString, require('../package.json').version);
 });
 
 const track = __dirname + '/bensound-dance.mp3';
+const middlec = __dirname + '/middlec.mp3';
 
 test.serial('MP3 Track loading', t => {
   t.true(Medley.isTrackLoadable(track));
@@ -28,6 +29,25 @@ test.serial('Exotic MP3 tracks loading', async t => {
   }
 });
 
+test.serial('Audio Properties: middlec.mp3', t => {
+  const props = Medley.getAudioProperties(middlec);
+
+  t.assert(typeof props === 'object', 'Medley.getAudioProperties must return an object');
+  t.is(props.channels, 2);
+  t.is(props.sampleRate, 44100);
+  t.assert(typeof props.bitrate === 'number' || typeof props.bitrate === 'undefined', 'bitrate must be a number or undefined');
+  t.is(props.duration, 5);
+});
+
+test.serial('Reading Cover and Lyrics: middlec.mp3', t => {
+  const result = Medley.getCoverAndLyrics(middlec);
+
+  t.assert(typeof result === 'object', 'Medley.getCoverAndLyrics must return an object');
+  t.is(result.coverMimeType, 'image/jpeg');
+  t.true(Buffer.isBuffer(result.cover));
+  t.is(result.cover.byteLength, 4856);
+  t.is(result.lyrics, 'middle c');
+});
 
 test('Null Audio Device playback', t => {
   const queue = new Queue();
