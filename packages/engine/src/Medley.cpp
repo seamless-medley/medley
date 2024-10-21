@@ -543,9 +543,9 @@ void Medley::deckPosition(Deck& sender, double position) {
                             _pNextTransition->fader.start(_position, tep, 0.0f, 1.0f, fadingFactor * 0.5f);
                         }
                         else {
-                            auto leadIn = !cd->disableNextTrackLeadIn ? nd->getLeadingDuration() : 0.0;
-                            auto fadeInStart = jmax(0.0, tsp - leadIn);
-                            _pNextTransition->fader.start(fadeInStart, fadeInStart + leadIn, 0.25f, 1.0f, fadingFactor);
+                            auto leadInDuration = !cd->disableNextTrackLeadIn ? nd->getLeadingDuration() : 0.0;
+                            auto fadeInStart = jmax(0.0, tsp - leadInDuration, _position);
+                            _pNextTransition->fader.start(fadeInStart, tsp, 0.25f, 1.0f, fadingFactor);
                         }
                     }
                     else {
@@ -611,8 +611,8 @@ void Medley::doTransition(Deck* deck, double position) {
                         decksTransition[nextDeck->index].fader.start(position, transitionEndPos, 0.25f, 1.0f, fadingFactor);
                     }
                     else if (hasLongLeadIn) {
-                        auto fadeInStart = jmax(0.0, transitionStartPos - leadingDuration);
-                        decksTransition[nextDeck->index].fader.start(fadeInStart, fadeInStart + leadingDuration, 0.25f, 1.0f, fadingFactor);
+                        auto fadeInStart = jmax(0.0, transitionStartPos - leadingDuration, position);
+                        decksTransition[nextDeck->index].fader.start(fadeInStart, transitionStartPos, 0.25f, 1.0f, fadingFactor);
                     }
                 }
 
@@ -625,6 +625,7 @@ void Medley::doTransition(Deck* deck, double position) {
             auto newVolume = 1.0f;
 
             if (hasLongLeadIn) {
+                // Keep in mind that fading during a transition is always based on main deck timing
                 if (position >= decksTransition[nextDeck->index].fader.getTimeStart()) {
                     newVolume = decksTransition[nextDeck->index].fader.update(position);
                 }

@@ -485,7 +485,7 @@ void Deck::calculateTransition()
 
         if (trailingDuration >= maximumFadeOutDuration) {
             transitionStartPosition = trailingSamplePosition / sourceSampleRate;
-            transitionEndPosition = transitionStartPosition + maximumFadeOutDuration;
+            transitionEndPosition = jmin(transitionStartPosition + maximumFadeOutDuration, (double)lastAudibleSamplePosition);
             trailingDuration = maximumFadeOutDuration;
         }
         else {
