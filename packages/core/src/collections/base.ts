@@ -2,7 +2,7 @@ import os from 'node:os';
 import { access, stat } from 'node:fs/promises';
 import { createHash } from 'crypto';
 import { TypedEmitter } from "tiny-typed-emitter";
-import { castArray, chain, chunk, clamp, findLastIndex, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
+import { castArray, chain, chunk, clamp, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
 import normalizePath from 'normalize-path';
 import { Logger, createLogger } from '@seamless-medley/logging';
 import { moveArrayElements, moveArrayIndexes, waitFor } from '@seamless-medley/utils';
@@ -548,23 +548,31 @@ export class TrackCollection<
     return sample(this.tracks);
   }
 
-  peek(bottomIndex: number = 0, n: number, filterFn: (track: T) => boolean): TrackPeek<T>[] {
-    const items = this.tracks.map((track, index) => ({ index, track }));
+  peek(centerIndex: number, count: number, filterFn: (track: T) => boolean): TrackPeek<T>[] {
+    const items = this.tracks.map((track, index) => ({ track, index }));
 
-    const filtered = items.filter(({ track }) => filterFn(track));
-
-    const itemIndex = findLastIndex(filtered, ({ index }) => index >= bottomIndex);
-    if (itemIndex < 0) {
-      return [];
+    if (centerIndex <= 0) {
+      // From the top
+      return items.filter(({ track }) => filterFn(track))
+        .slice(0, count)
+        .map((item, localIndex) => ({
+          ...item,
+          localIndex
+        }));
     }
 
-    const top = clamp(itemIndex - n + 1, 0, filtered.length - 1);
-    const view = filtered.slice(top, top + n);
+    const view = items
+      .filter(({ track }) => filterFn(track))
+      .map((item, localIndex) => ({
+        ...item,
+        localIndex
+      }));
 
-    return view.map((item, index) => ({
-      ...item,
-      localIndex: top + index
-    }));
+    const centerItemIndex = view.findIndex(item => item.index >= centerIndex);
+    const sideWidth = Math.floor(count / 2);
+    const [leftItemIndex, rightItemIndex] = [-1, 1].map(d => clamp(centerItemIndex + sideWidth * d, 0, view.length - 1));
+
+    return view.slice(leftItemIndex, rightItemIndex + 1);
   }
 
   [Symbol.iterator](): Iterator<T, any, undefined> {
