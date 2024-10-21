@@ -979,25 +979,6 @@ export function makeRequester(type: AudienceType, group: any, requesterId: strin
   }
 }
 
-/**
- * Compare the track against a station and return the sorting order for the track
- */
-export function compareTrackWithStation(station: Station, track: StationTrack): number {
-  const { options } = track.collection;
-  if (options?.auxiliary) return 2;
-  if (options?.noFollowOnRequest) return 1;
-
-  const currentCollectionId = station.currentSequenceCollection?.id;
-  if (currentCollectionId && track.collection.id === currentCollectionId) {
-    return -2;
-  }
-
-  const currentCollections = station.currentSequenceCrate?.sources ?? [];
-  if (currentCollections.find(c => c.id === track.collection.id)) {
-    return -1;
-  }
-
-  return 0;
 type TrackSortFn = (track: StationTrack) => number;
 
 export type StationTrackSorters = [
