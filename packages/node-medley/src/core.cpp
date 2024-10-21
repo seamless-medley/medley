@@ -987,15 +987,18 @@ Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
         return env.Undefined();
     }
 
-    juce::String trackFile = info[0].ToString().Utf8Value();
-    medley::Metadata metadata;
     bool ok = false;
+    medley::Metadata metadata;
 
     try {
+        juce::String trackFile = info[0].ToString().Utf8Value();
         ok = metadata.readFromFile(trackFile);
     }
     catch (std::exception const& e) {
         throw Napi::Error::New(info.Env(), e.what());
+    }
+    catch (...) {
+        throw Napi::Error::New(info.Env(), "Error reading file");
     }
 
     if (!ok) {
@@ -1013,10 +1016,15 @@ Napi::Value Medley::static_getAudioProperties(const Napi::CallbackInfo& info) {
         return env.Undefined();
     }
 
-    juce::String trackFile = info[0].ToString().Utf8Value();
     auto result = Object::New(env);
 
-    readAudioProperties(trackFile, result);
+    try {
+        juce::String trackFile = info[0].ToString().Utf8Value();
+        readAudioProperties(trackFile, result);
+    }
+    catch (...) {
+
+    }
 
     return result;
 }
@@ -1029,17 +1037,23 @@ Napi::Value Medley::static_getCoverAndLyrics(const Napi::CallbackInfo& info) {
         return env.Undefined();
     }
 
-    juce::String trackFile = info[0].ToString().Utf8Value();
-
-    medley::Metadata::CoverAndLyrics cal(trackFile, true, true);
-    auto cover = cal.getCover();
-    auto coverData = cover.getData();
-
     auto result = Object::New(env);
 
-    result.Set("cover", Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)coverData.data(), coverData.size()));
-    result.Set("coverMimeType", Napi::String::New(env, cover.getMimeType().toStdString()));
-    result.Set("lyrics", Napi::String::New(env, cal.getLyrics().toStdString()));
+    try {
+
+        juce::String trackFile = info[0].ToString().Utf8Value();
+
+        medley::Metadata::CoverAndLyrics cal(trackFile, true, true);
+        auto cover = cal.getCover();
+        auto coverData = cover.getData();
+
+        result.Set("cover", Napi::Buffer<uint8_t>::Copy(env, (uint8_t*)coverData.data(), coverData.size()));
+        result.Set("coverMimeType", Napi::String::New(env, cover.getMimeType().toStdString()));
+        result.Set("lyrics", Napi::String::New(env, cal.getLyrics().toStdString()));
+    }
+    catch (...) {
+
+    }
 
     return result;
 }
@@ -1052,8 +1066,13 @@ Napi::Value Medley::static_isTrackLoadable(const CallbackInfo& info) {
         return Boolean::New(env, false);
     }
 
-    auto trackPtr = Track::fromJS(info[0]);
-    return Boolean::New(env, medley::utils::isTrackLoadable(supportedFormats, trackPtr));
+    try {
+        auto trackPtr = Track::fromJS(info[0]);
+        return Boolean::New(env, medley::utils::isTrackLoadable(supportedFormats, trackPtr));
+    }
+    catch (...) {
+        return Boolean::New(env, false);
+    }
 }
 
 Napi::Value Medley::static_getInfo(const Napi::CallbackInfo& info) {
