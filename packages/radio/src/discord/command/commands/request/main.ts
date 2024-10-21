@@ -99,7 +99,7 @@ const makeRequest = async ({ station, automaton, trackId, guildId, noSweep, inte
   }
 
   const preview = await makeRequestPreview(station, {
-    bottomIndex: result.index,
+    centerIndex: result.index,
     focusIndex: result.index,
     guildId
   });
@@ -137,7 +137,7 @@ const makeRequest = async ({ station, automaton, trackId, guildId, noSweep, inte
             .addComponents(createVoteButton())
         ]
         : undefined
-    })
+    });
   }
 
   await done();
