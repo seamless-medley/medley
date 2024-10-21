@@ -772,8 +772,8 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#boombox.getRequestsOf(requester);
   }
 
-  unrequest(requestIds: number[]) {
-    const result = this.#boombox.unrequest(requestIds);
+  unrequest(requestIds: number[], requester?: Requester) {
+    const result = this.#boombox.unrequest(requestIds, requester);
 
     if (result.removed.length > 0) {
       this.emit('requestTracksRemoved', result.removed);
