@@ -1,7 +1,6 @@
 import { CommandInteraction, Guild } from "discord.js";
 import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { AutomatonAccess, MedleyAutomaton } from "../../automaton";
-import { sumBy } from "lodash";
 import { Station } from "@seamless-medley/core";
 import { deny, joinStrings, reply } from "../utils";
 

@@ -111,7 +111,6 @@
     "@types/react-dom": "18.2.14",
     "@types/readable-stream": "^4.0.4",
     "@types/sodium-native": "^2.3.8",
-    "@types/workerpool": "^6.4.5",
     "@types/ws": "^8.5.8",
     "@vitejs/plugin-react": "4.2.1",
     "@wyw-in-js/vite": "^0.5.0",
