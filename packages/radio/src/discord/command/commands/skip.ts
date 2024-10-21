@@ -27,7 +27,7 @@ async function handleSkip(automaton: MedleyAutomaton, interaction: CommandIntera
 
   const { trackPlay } = station;
 
-  if (!trackPlay) {
+  if (!trackPlay || !station.playing || station.paused) {
     deny(interaction, 'Not currently playing');
     return;
   }
