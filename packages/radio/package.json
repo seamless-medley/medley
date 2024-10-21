@@ -121,7 +121,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.6.2",
     "typescript": "5.4.5",
-    "vite": "5.3.1",
+    "vite": "5.4.9",
     "vite-plugin-mkcert": "^1.17.1"
   }
 }
