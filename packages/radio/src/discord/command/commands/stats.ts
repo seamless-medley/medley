@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, Guild } from "discord.js";
-import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { AutomatonAccess, MedleyAutomaton } from "../../automaton";
 import { Station } from "@seamless-medley/core";
 import { deny, joinStrings, reply } from "../utils";
@@ -9,6 +9,16 @@ const declaration: SubCommandLikeOption = {
   name: 'stats',
   description: 'Show statistics',
   options: [
+    {
+      type: OptionType.String,
+      name: 'type',
+      description: 'Stats type',
+      choices: [
+        { name: 'Guild', value: 'guild' },
+        { name: 'Full', value: 'full' }
+      ],
+      required: false
+    },
     {
       type: OptionType.Boolean,
       name: 'private',
@@ -128,19 +138,44 @@ async function showGuildStats(interaction: ChatInputCommandInteraction, automato
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const access = await automaton.getAccessFor(interaction);
 
-  if (access === AutomatonAccess.Owner) {
+  const type = (() => {
+    const type_opt = interaction.options.getString('type');
+
+    let s = '';
+
+    if (access === AutomatonAccess.Owner) {
+      s = type_opt || 'full';
+    }
+    else if (access >= AutomatonAccess.DJ) {
+      s = type_opt || 'guild';
+
+      if (s !== 'guild') {
+        return undefined;
+      }
+    }
+
+    const valid_types = ['guild', 'full'] as const;
+
+    if (valid_types.includes(s as any)) {
+      return s as (typeof valid_types[number]);
+    }
+
+    return undefined;
+  })();
+
+  if (type === 'full') {
     showFullStats(interaction, automaton);
     return;
   }
 
-  if (access >= AutomatonAccess.DJ) {
+  if (type === 'guild') {
     if (interaction.inGuild()) {
       showGuildStats(interaction, automaton);
     }
     return;
   }
 
-  throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+  throw new AutomatonPermissionError(automaton, interaction);
 }
 
 const descriptor: CommandDescriptor = {
