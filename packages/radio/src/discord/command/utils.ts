@@ -170,7 +170,7 @@ export function peekRequestsForGuild(station: Station, centerIndex: number, coun
   );
 }
 
-export type MakePeekPreviewOptions = {
+type MakePeekPreviewOptions = {
   centerIndex?: number;
 
   focusIndex?: number;
@@ -179,6 +179,11 @@ export type MakePeekPreviewOptions = {
    * @default 5
    */
   count?: number;
+
+  /**
+   * @default 3
+   */
+  edgeCount?: number;
 }
 
 export type MakeRequestPreviewOptions = MakePeekPreviewOptions & {
@@ -186,7 +191,7 @@ export type MakeRequestPreviewOptions = MakePeekPreviewOptions & {
 }
 
 export async function makeRequestPreview(station: Station, options: MakeRequestPreviewOptions): Promise<Strings | undefined> {
-  const { centerIndex = -1, focusIndex, count = 5, guildId } = options;
+  const { centerIndex = -1, focusIndex, count = 5, edgeCount = 3, guildId } = options;
   const peekings = peekRequestsForGuild(station, centerIndex, count, guildId);
 
   const cuedRequests = station.getFetchedRequests()
@@ -211,19 +216,22 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
 
   configs.push(...cuedRequests.map((track, cuedIndex) => ({
     track,
-    localIndex: cuedIndex - cuedRequests.length,
+    localIndex: -1,
+    requestIndex: cuedIndex - cuedRequests.length
   })));
 
-  const headAndTail = [
-    ...guildRequests.slice(0, 3),
-    ...guildRequests.slice(-3)
-  ];
+  if (edgeCount > 0) {
+    const headAndTail = [
+      ...guildRequests.slice(0, edgeCount),
+      ...guildRequests.slice(-edgeCount)
+    ]
 
-  configs.push(...headAndTail.map(({ track, localIndex, requestIndex }) => ({
-    track,
-    requestIndex,
-    localIndex
-  })));
+    configs.push(...headAndTail.map(({ track, localIndex, requestIndex }) => ({
+      track,
+      requestIndex,
+      localIndex
+    })));
+  }
 
   configs.push(...peekings.map(({ track, localIndex, index: requestIndex }) => ({
     track,
@@ -235,6 +243,7 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
     .uniqBy(cfg => cfg.requestIndex)
     .sortBy(cfg => cfg.requestIndex)
     .thru((o) => {
+      // fill the gap
       const list: Array<PreviewConfig | undefined> = [];
       for (let i = 0; i < o.length; i++) {
         list.push(o[i]);
@@ -256,12 +265,28 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
     return;
   }
 
-  if (guildRequests.at(0)?.localIndex! > 0) {
-    fullConfigs.unshift(undefined);
-  }
+  {
+    // Find the first visible request, skipping cued tracks
+    const firstVisibleReqIndex = fullConfigs.findIndex(c => c && c.localIndex !== -1);
 
-  if (guildRequests.at(-1)?.localIndex! > fullConfigs.at(-1)?.localIndex!) {
-    fullConfigs.push(undefined);
+    if (firstVisibleReqIndex > -1) {
+      const firstVisibleReq = fullConfigs[firstVisibleReqIndex]!;
+
+      const isFirstReq = firstVisibleReq.localIndex === 0;
+
+      if (!isFirstReq) {
+        const isVisibleAtTheTop = firstVisibleReqIndex === 0;
+
+        // Add a gap if ihe item is visible at the top or there's some text above it
+        if (isVisibleAtTheTop || fullConfigs[firstVisibleReqIndex - 1] !== undefined) {
+          fullConfigs.splice(firstVisibleReqIndex, 0, undefined);
+        }
+      }
+    }
+
+    if (guildRequests.at(-1)?.localIndex! > fullConfigs.at(-1)?.localIndex!) {
+      fullConfigs.push(undefined);
+    }
   }
 
   const cuedLabel = 'CUED';
