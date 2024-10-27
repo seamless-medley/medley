@@ -1,5 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageActionRowComponentBuilder, SelectMenuComponentOptionData, StringSelectMenuBuilder } from "discord.js";
-import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, joinStrings, makeAnsiCodeBlock, warn } from "../utils";
 import { interact } from "../interactor";
 import { ansi } from "../../format/ansi";
@@ -17,7 +17,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   const access = await automaton.getAccessFor(interaction);
 
   if (access <= AutomatonAccess.None) {
-    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+    throw new AutomatonPermissionError(automaton, interaction);
   }
 
   const { station } = guildStationGuard(automaton, interaction);

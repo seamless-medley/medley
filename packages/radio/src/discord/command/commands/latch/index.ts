@@ -1,5 +1,5 @@
 import { ButtonInteraction, ChatInputCommandInteraction } from "discord.js";
-import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../../type";
+import { AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../../type";
 import { list } from './list';
 import { set } from './set';
 import { remove } from './remove';
@@ -54,7 +54,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   const access = await automaton.getAccessFor(interaction);
 
   if (access <= AutomatonAccess.None) {
-    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+    throw new AutomatonPermissionError(automaton, interaction);
   }
 
   const collection = station.trackPlay?.track?.collection;

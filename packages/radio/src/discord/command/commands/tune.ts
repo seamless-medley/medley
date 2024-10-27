@@ -13,7 +13,7 @@ import {
 import { stubTrue } from "lodash";
 
 import { AutomatonAccess, MedleyAutomaton } from "../../automaton";
-import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { reply, deny, guildIdGuard, makeColoredMessage } from "../utils";
 import { interact } from "../interactor";
 
@@ -29,7 +29,7 @@ const handleStationSelection = async (automaton: MedleyAutomaton, interaction: S
   const access = await automaton.getAccessFor(interaction);
 
   if (access < AutomatonAccess.Moderator) {
-    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+    throw new AutomatonPermissionError(automaton, interaction);
   }
 
   const { values: [stationId] } = interaction;
@@ -147,7 +147,7 @@ const createCommandHandler: InteractionHandlerFactory<RepliableInteraction> = (a
   const access = await automaton.getAccessFor(interaction);
 
   if (access <= AutomatonAccess.None) {
-    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+    throw new AutomatonPermissionError(automaton, interaction);
   }
 
   return createStationSelector(automaton, interaction);

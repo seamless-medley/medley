@@ -2,7 +2,7 @@ import { decibelsToGain, gainToDecibels, interpolate } from "@seamless-medley/ut
 import { ChatInputCommandInteraction } from "discord.js";
 import { range, round } from "lodash";
 import { ansi } from "../../format/ansi";
-import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { AutomatonCommandError, AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { declare, deny, guildIdGuard, makeAnsiCodeBlock, warn } from "../utils";
 import { AutomatonAccess } from "../../automaton";
 
@@ -67,7 +67,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   const access = await automaton.getAccessFor(interaction);
 
   if (access <= AutomatonAccess.None) {
-    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+    throw new AutomatonPermissionError(automaton, interaction);
   }
 
   const oldGain = state.gain;

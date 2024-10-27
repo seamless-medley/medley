@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, EmbedBuilder, hyperlink } from "discord.js";
-import { AutomatonCommandError, ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { AutomatonPermissionError, ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deny, guildIdGuard, reply } from "../utils";
 import { createStationSelector } from "./tune";
 import { AutomatonAccess } from "../../automaton";
@@ -23,7 +23,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   const access = await automaton.getAccessFor(interaction);
 
   if (access <= AutomatonAccess.None) {
-    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+    throw new AutomatonPermissionError(automaton, interaction);
   }
 
   const channel = interaction.options.getChannel('channel');

@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction } from "discord.js";
-import { AutomatonCommandError, ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { AutomatonPermissionError, ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { canSendMessageTo, guildIdGuard, reply } from "../utils";
 import { isChannelSuitableForTrackMessage } from "../../trackmessage";
 import { AutomatonAccess } from "../../automaton";
@@ -27,7 +27,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   const access = await automaton.getAccessFor(interaction);
 
   if (access < AutomatonAccess.Administrator) {
-    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+    throw new AutomatonPermissionError(automaton, interaction);
   }
 
   if (state) {

@@ -1,5 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageActionRowComponentBuilder, roleMention, RoleSelectMenuBuilder } from "discord.js";
-import { AutomatonCommandError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { AutomatonAccess } from "../../automaton";
 import { interact } from "../interactor";
 import { makeColoredMessage, reply } from "../utils";
@@ -16,7 +16,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   const access = await automaton.getAccessFor(interaction);
 
   if (access < AutomatonAccess.Moderator) {
-    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+    throw new AutomatonPermissionError(automaton, interaction);
   }
 
   if (!interaction.guildId) {

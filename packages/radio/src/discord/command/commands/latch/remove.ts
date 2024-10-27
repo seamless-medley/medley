@@ -11,7 +11,7 @@ import { onGoing } from "./on-going";
 import { getLatchSessionsListing } from "./list";
 import { interact } from "../../interactor";
 import { SubCommandHandlerOptions } from "./type";
-import { AutomatonCommandError } from "../../type";
+import { AutomatonPermissionError } from "../../type";
 import { AutomatonAccess } from "../../../automaton";
 
 export async function remove(options: SubCommandHandlerOptions) {
@@ -22,7 +22,7 @@ export async function remove(options: SubCommandHandlerOptions) {
   const access = await automaton.getAccessFor(interaction);
 
   if (access <= AutomatonAccess.None) {
-    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+    throw new AutomatonPermissionError(automaton, interaction);
   }
 
   const sessions = station.allLatches;

@@ -3,7 +3,7 @@ import { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction
 import { createLogger } from "@seamless-medley/logging";
 
 import { all as descriptors  } from './commands';
-import { Command, CommandError, CommandType, GuardError, GuildHandler, InteractionHandler, SubCommandLikeOption } from "./type";
+import { AutomatonPermissionError, Command, CommandError, CommandType, GuardError, GuildHandler, InteractionHandler, SubCommandLikeOption } from "./type";
 import { deny, makeColoredMessage } from "./utils";
 import { MedleyAutomaton } from "../automaton";
 
@@ -118,7 +118,21 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
     }
     catch (e) {
       if (!(e instanceof GuardError)) {
-        logger.error(e,
+        const error = e instanceof AutomatonPermissionError
+          ? ({
+            message: e.message,
+            user: e.interaction.user,
+            guild: e.interaction.guild
+              ? {
+                id: e.interaction.guild.id,
+                name: e.interaction.guild.name
+              }
+              : undefined,
+            automaton: e.automaton.id
+          })
+          : e;
+
+        logger.error(error,
           interaction.isChatInputCommand()
             ? `Error in ${interaction.options.getSubcommand()} command`
             : 'Error in interaction'

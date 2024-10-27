@@ -120,6 +120,12 @@ export class AutomatonCommandError extends CommandError {
   }
 };
 
+export class AutomatonPermissionError extends AutomatonCommandError {
+  constructor(automaton: MedleyAutomaton, readonly interaction: BaseInteraction, options?: ErrorOptions) {
+    super(automaton, 'Insufficient permissions', options);
+  }
+}
+
 export class GuardError extends AutomatonCommandError { }
 
 export type Strings = (string | undefined)[];

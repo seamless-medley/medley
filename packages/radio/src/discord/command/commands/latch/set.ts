@@ -13,7 +13,7 @@ import { ansi } from "../../../format/ansi";
 import { onGoing } from "./on-going";
 import { interact } from "../../interactor";
 import { SubCommandHandlerOptions } from "./type";
-import { AutomatonCommandError } from "../../type";
+import { AutomatonPermissionError } from "../../type";
 import { AutomatonAccess } from "../../../automaton";
 
 export async function set(options: SubCommandHandlerOptions) {
@@ -24,7 +24,7 @@ export async function set(options: SubCommandHandlerOptions) {
   const access = await automaton.getAccessFor(interaction);
 
   if (access <= AutomatonAccess.None) {
-    throw new AutomatonCommandError(automaton, 'Insufficient permissions');
+    throw new AutomatonPermissionError(automaton, interaction);
   }
 
   // All collections from station's library

@@ -1178,7 +1178,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
           {
             body: [declaredCommand]
           }
-        );
+        )
+        .catch((e) => {
+          this.#logger.error({ message: e.message }, 'Error registerting global command');
+        })
       }
 
       for (const guild of guilds) {
@@ -1209,7 +1212,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
             {
               body: [declaredCommand]
             }
-          ).catch(noop)
+          )
+          .catch((e) => {
+            this.#logger.error({ message: e.message, guild: { name: guild.name, id: guild.id} }, 'Error registerting guild command');
+          })
 
           await waitFor(2000);
         }
