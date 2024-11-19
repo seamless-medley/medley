@@ -290,16 +290,16 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
   if (results.length < 1) {
     const highlight = (n: string, v: string)  => ansi`({{yellow}}${n} {{cyan}}~ {{pink}}{{bgDarkBlue|b}}${v}{{reset}})`
 
-    const terms = (() => {
+    const terms: (string | undefined)[][] = (() => {
       switch (options.type) {
         case 'query':
           return zip(['artist', 'title'], [options.artist, options.title]);
 
         case 'spotify:artist':
-          return ['artist', options.artist];
+          return [['artist', options.artist]];
 
         case 'spotify:track':
-          return ['title', options.title];
+          return [['title', options.title]];
       }
     })();
 
