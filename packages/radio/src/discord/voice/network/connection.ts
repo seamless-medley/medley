@@ -267,7 +267,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 					sequence: randomNBit(16),
 					timestamp: randomNBit(32),
 					nonce: 0,
-					nonceBuffer: Buffer.alloc(24),
+					nonceBuffer: Buffer.alloc(encryptionMode === 'aead_aes256_gcm_rtpsize' ? 12 : 24),
 					speaking: false,
 					packetsPlayed: 0,
 				},
@@ -445,54 +445,34 @@ function chooseEncryptionMode(serverModes: EncryptionMode[]) {
 function packVoiceData(opusPacket: Buffer, header: Buffer, connectionData: ConnectionData, nonce: Buffer) {
   const { secretKey, encryptionMode } = connectionData;
 
+  connectionData.nonce++;
+
+  if (connectionData.nonce > 2 ** 32 - 1) {
+    connectionData.nonce = 0;
+  }
+
+  connectionData.nonceBuffer.writeUInt32BE(connectionData.nonce, 0);
+
+  const noncePadding = connectionData.nonceBuffer.subarray(0, 4);
+
   const secretKeyBuffer = Buffer.from(secretKey);
 
-  if (encryptionMode === 'aead_xchacha20_poly1305_rtpsize') {
-    connectionData.nonce++;
-
-    if (connectionData.nonce > 2 ** 32 - 1) {
-      connectionData.nonce = 0;
+  switch (encryptionMode) {
+    case 'aead_xchacha20_poly1305_rtpsize': {
+      return [
+        header,
+        secretbox.aeadClose(opusPacket, header, connectionData.nonceBuffer, secretKeyBuffer),
+        noncePadding
+      ];
     }
 
-    connectionData.nonceBuffer.writeUInt32BE(connectionData.nonce, 0);
-
-    return [
-      header,
-      secretbox.aeadClose(opusPacket, header, connectionData.nonceBuffer, secretKeyBuffer),
-      connectionData.nonceBuffer.subarray(0, 4),
-    ];
-  }
-
-  if (encryptionMode === 'xsalsa20_poly1305_lite') {
-    connectionData.nonce++;
-
-    if (connectionData.nonce > 2 ** 32 - 1) {
-      connectionData.nonce = 0;
+    case 'aead_aes256_gcm_rtpsize': {
+      return [
+        header,
+        secretbox.gcmClose(opusPacket, header, connectionData.nonceBuffer, secretKeyBuffer),
+        noncePadding
+      ]
     }
-
-    connectionData.nonceBuffer.writeUInt32BE(connectionData.nonce, 0);
-
-    return [
-      header,
-      secretbox.close(opusPacket, connectionData.nonceBuffer, secretKeyBuffer),
-      connectionData.nonceBuffer.subarray(0, 4),
-    ];
-  }
-
-  if (encryptionMode === 'xsalsa20_poly1305_suffix') {
-    const random = secretbox.random(24, connectionData.nonceBuffer);
-    return [
-      header,
-      secretbox.close(opusPacket, random, secretKeyBuffer),
-      random
-    ];
-  }
-
-  if (encryptionMode === 'xsalsa20_poly1305') {
-    return [
-      header,
-      secretbox.close(opusPacket, nonce, secretKeyBuffer)
-    ];
   }
 
   return [];

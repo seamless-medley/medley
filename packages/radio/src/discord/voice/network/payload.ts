@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { GatewayOpcodes, GatewayVoiceStateUpdateData } from "discord-api-types/v10";
 import { VoiceOpcodes } from "discord-api-types/voice/v4";
 
@@ -16,18 +17,17 @@ export interface GatewayVoiceStateUpdatePayload extends GatewayVoicePayload<Gate
 
 }
 
+export type EncryptionMode = 'aead_aes256_gcm_rtpsize' | 'aead_xchacha20_poly1305_rtpsize';
+
 export const ENCRYPTION_MODES = [
   // Required by voice v8
-  'aead_xchacha20_poly1305_rtpsize',
+  'aead_xchacha20_poly1305_rtpsize'
+] as EncryptionMode[];
 
-  // Deprecated
-  // TODO: Remove this before Nov 18th 2024
-  'xsalsa20_poly1305_lite',
-  'xsalsa20_poly1305_suffix',
-  'xsalsa20_poly1305'
-] as const;
-
-export type EncryptionMode = typeof ENCRYPTION_MODES[number];
+// optional, if supported by the system
+if (crypto.getCiphers().includes('aes-256-gcm')) {
+  ENCRYPTION_MODES.push('aead_aes256_gcm_rtpsize');
+}
 
 export interface VoicePayload<D = unknown> extends Payload<VoiceOpcodes, D> {
   seq?: number;

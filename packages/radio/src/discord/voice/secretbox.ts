@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import {
   crypto_aead_xchacha20poly1305_ietf_encrypt,
   crypto_aead_xchacha20poly1305_ietf_ABYTES,
@@ -23,6 +25,12 @@ export function aeadClose(opusPacket: Buffer, header: Buffer, nonce: Buffer, sec
   const output = Buffer.allocUnsafe(opusPacket.length + crypto_aead_xchacha20poly1305_ietf_ABYTES);
   crypto_aead_xchacha20poly1305_ietf_encrypt(output, opusPacket, header, null, nonce, secretKey);
   return output;
+}
+
+export function gcmClose(opusPacket: Buffer, header: Buffer, nonce: Buffer, secretKey: Buffer) {
+  const cipher = crypto.createCipheriv('aes-256-gcm', secretKey, nonce);
+  cipher.setAAD(header);
+  return Buffer.concat([cipher.update(opusPacket), cipher.final(), cipher.getAuthTag()]);
 }
 
 export function close(opusPacket: Buffer, nonce: Buffer, secretKey: Buffer) {
