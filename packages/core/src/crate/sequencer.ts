@@ -99,6 +99,13 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
 
     this.#profile = newProfile;
 
+    // Unset the #temporalCollection, if the collection was not known to the newProfile
+    if (this.#temporalCollection !== undefined) {
+      if (this.#findCrateIndexContainingCollection(this.#temporalCollection.id) === -1) {
+        this.#temporalCollection = undefined;
+      }
+    }
+
     // Find the crate index in the new profile that is having the same collection id
     let crateIndex = currentCollectionId
       ? this.#findCrateIndexContainingCollection(currentCollectionId)

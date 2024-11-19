@@ -218,6 +218,11 @@ export class Crate<T extends Track<any>> {
     return true;
   }
 
+  /**
+   * Select a new track from the crate
+   *
+   * The `intendedCollection` is not necessary to belong to the crate.
+   */
   async next(validator?: (path: string) => Promise<boolean>, intendedCollection?: T['collection']): Promise<T | undefined> {
     const source = intendedCollection ?? weightedSample(this.#sources, this.#sourceWeights);
 
