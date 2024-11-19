@@ -334,8 +334,8 @@ export class Station extends TypedEmitter<StationEvents> {
     this.emit('trackFinished', deck, trackPlay);
   }
 
-  #handleCollectionChange: BoomBoxEventsForStation['collectionChange'] = (oldCollection, newCollection, transitingFromRequestTrack) => {
-    this.emit('collectionChange', oldCollection as StationTrackCollection | undefined, newCollection as StationTrackCollection, transitingFromRequestTrack);
+  #handleCollectionChange: BoomBoxEventsForStation['collectionChange'] = (e) => {
+    this.emit('collectionChange', e.oldCollection as StationTrackCollection | undefined, e.newCollection as StationTrackCollection, e.fromReqeustTrack && !e.toReqeustTrack);
   }
 
   #handleCrateChange: BoomBoxEventsForStation['crateChange'] = (oldCrate, newCrate) => {
@@ -385,6 +385,8 @@ export class Station extends TypedEmitter<StationEvents> {
     const currentTrack =  this.#boombox.trackPlay?.track;
     const isSameCollection = currentTrack?.collection.id === track.collection.id;
 
+    let inserted = 0;
+
     if (requestSweepers && !track.disallowSweepers) {
       const shouldSweep = noRequestSweeperOnIdenticalCollection
         ? !isSameCollection
@@ -396,7 +398,7 @@ export class Station extends TypedEmitter<StationEvents> {
         for (let i = 0; i < count; i++) {
           const sweeper = requestSweepers.shift();
 
-          if (sweeper && await MetadataHelper.isTrackLoadable(sweeper.path)) {
+          if (sweeper) {
             if (sweeper.extra?.kind === undefined) {
               sweeper.extra = {
                 ...sweeper.extra,
@@ -408,6 +410,8 @@ export class Station extends TypedEmitter<StationEvents> {
               ...sweeper,
               disableNextLeadIn: true
             });
+
+            inserted++;
 
             requestSweepers.push(sweeper);
 
@@ -435,6 +439,8 @@ export class Station extends TypedEmitter<StationEvents> {
     if (isSameCollection && this.#boombox.isKnownCollection(track.collection)) {
       this.#boombox.increasePlayCount();
     }
+
+    return inserted;
   }
 
   get playing() {

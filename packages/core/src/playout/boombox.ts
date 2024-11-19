@@ -60,13 +60,21 @@ export type TrackWithRequester<T extends BoomBoxTrack, R extends BaseRequester> 
   original: T; // Store the original track as a RequestTrack is likely to be a clone
 }
 
-export type OnInsertRequestTrack<T extends BoomBoxTrack, R extends BaseRequester> = (track: TrackWithRequester<T, R>) => Promise<void>;
+export type OnInsertRequestTrack<T extends BoomBoxTrack, R extends BaseRequester> = (track: TrackWithRequester<T, R>) => Promise<number>;
 
 export function isRequestTrack<T extends BoomBoxTrack, R extends BaseRequester>(o: any): o is TrackWithRequester<T, R> {
   return !!o && !!o.requestedBy;
 }
 
 export type BoomBoxProfile = CrateProfile<BoomBoxTrack>;
+
+export type BoomBoxCollectionChangeEvent = {
+  oldCollection?: BoomBoxTrackCollection;
+  newCollection: BoomBoxTrackCollection;
+  fromReqeustTrack: boolean;
+  toReqeustTrack: boolean;
+  preventSweepers: boolean;
+}
 
 export type BoomBoxEvents<P extends BoomBoxProfile = BoomBoxProfile> = {
   /**
@@ -83,7 +91,7 @@ export type BoomBoxEvents<P extends BoomBoxProfile = BoomBoxProfile> = {
    *
    * To detect change during the actual playback, listen to `trackStarted` event and check the collection from trackPlay instead
    */
-  collectionChange: (oldCollection: BoomBoxTrackCollection | undefined, newCollection: BoomBoxTrackCollection, transitingFromRequestTrack: boolean) => void;
+  collectionChange: (event: BoomBoxCollectionChangeEvent) => void;
 
   /**
    * Emit when the active profile was changed during track queuing phase
@@ -519,51 +527,63 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
       }
 
       const requestedTrack = await this.#fetchRequestTrack();
-      if (requestedTrack) {
-        const loadable = await this.#isTrackLoadable(requestedTrack.path);
 
-        if (!loadable) {
-          this.#logger.warn({ path: requestedTrack.path }, 'The request is invalid');
-          return;
-        }
+      /**
+       * The number of track being inserted during the request processing
+       */
+      const numRequestTrackInserted = (requestedTrack
+        ? await this.#onInsertRequestTrack?.(requestedTrack)
+        : undefined
+      ) ?? 0;
 
-        await this.#onInsertRequestTrack?.(requestedTrack);
-        addToQueue(requestedTrack);
-
-        return;
-      }
-
-      const nextTrack = await this.#sequencer.nextTrack();
+      const nextTrack = requestedTrack ?? await this.#sequencer.nextTrack();
 
       if (!nextTrack) {
         done(false);
         return;
       }
 
-      if (nextTrack.sequencing.latch === undefined) {
-        const currentTrack = this.#currentTrackPlay?.track;
-        const currentTrackCollection = currentTrack?.collection;
+      const currentTrack = this.#currentTrackPlay?.track;
+      const currentCollection = currentTrack?.collection;
+      const currentProfile = this.#currentCrate?.profile as (P | undefined);
 
-        const nextCollection = nextTrack.collection;
-        const collectionChange = currentTrackCollection?.id !== nextCollection.id;
+      const nextIsLatch = nextTrack.sequencing?.latch !== undefined;
+      const nextCollection = nextTrack.collection;
+      const nextCrate = nextTrack.sequencing?.crate;
+      const nextProfile = nextCrate?.profile;
 
-        if (this.#currentCrate?.profile !== nextTrack.sequencing.crate.profile) {
-          this.emit('profileChange', this.#currentCrate?.profile as (P | undefined), nextTrack.sequencing.crate.profile as P)
-          this.#logger.debug('Play profile changed to: %s', nextTrack.sequencing.crate.profile?.id);
+      const collectionChange = currentCollection?.id !== nextCollection.id;
+
+      if (nextProfile && nextProfile !== currentProfile) {
+        this.emit('profileChange', currentProfile, nextProfile as P)
+        this.#logger.debug('Play profile changed to: %s', nextProfile.id);
+      }
+
+      // Always trigger collection change event
+      if (collectionChange && nextCollection) {
+        const fromReqeustTrack = isRequestTrack(currentTrack);
+        const toReqeustTrack = isRequestTrack(nextTrack);
+
+        // Prevent any sweepers if the queue was manipulated by the request processing
+        // Also should prevent sweepers when playing consecutive request tracks
+        const preventSweepers = (numRequestTrackInserted >= 1) || (fromReqeustTrack && toReqeustTrack);
+
+        this.emit('collectionChange', {
+          oldCollection: currentCollection,
+          newCollection: nextCollection,
+          fromReqeustTrack,
+          toReqeustTrack,
+          preventSweepers
+        });
+      }
+
+      // Latching shouldn't cause crate change, to preserve sequencing order
+      if (!nextIsLatch && this.#currentCrate !== nextCrate) {
+        if (nextCrate) {
+          this.emit('crateChange', this.#currentCrate, nextCrate);
         }
 
-        if (collectionChange && nextCollection) {
-          const transitingFromRequestTrack = isRequestTrack(currentTrack) && !isRequestTrack(nextTrack);
-          this.emit('collectionChange', currentTrackCollection, nextCollection, transitingFromRequestTrack);
-        }
-
-        if (this.#currentCrate !== nextTrack.sequencing.crate) {
-          if (nextTrack.sequencing.crate) {
-            this.emit('crateChange', this.#currentCrate, nextTrack.sequencing.crate);
-          }
-
-          this.#currentCrate = nextTrack.sequencing.crate;
-        }
+        this.#currentCrate = nextCrate;
       }
 
       addToQueue(nextTrack);

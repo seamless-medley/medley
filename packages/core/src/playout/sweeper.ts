@@ -104,11 +104,12 @@ export class SweeperInserter {
     return collection.sample();
   }
 
-  #handler: BoomBoxEvents['collectionChange'] = (oldCollection, newCollection, ignoreFrom) => {
-    if (!oldCollection) {
+  #handler: BoomBoxEvents['collectionChange'] = ({ oldCollection, newCollection, fromReqeustTrack, toReqeustTrack, preventSweepers }) => {
+    if (preventSweepers || !oldCollection) {
       return;
     }
 
+    const ignoreFrom = fromReqeustTrack && !toReqeustTrack;
     const matched = findRule(oldCollection.id, newCollection.id, this.rules, ignoreFrom);
 
     if (!matched) {
