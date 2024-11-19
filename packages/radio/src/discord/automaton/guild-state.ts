@@ -708,10 +708,10 @@ export class GuildState {
           const exactMatches = await station.findTracksByComment(searchKey, id);
           const exactIds = new Set(exactMatches.map(t => t.id));
 
-          const searchResult = await station
-            .search({
+          const searchResult = await station.search({
               q: { artist: info.artist },
-              exactMatch: true
+              exactMatch: true,
+              noHistory: true
             })
             .then(s => s.filter(t => !exactIds.has(t.id)));
 
