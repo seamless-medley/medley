@@ -790,14 +790,20 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         throw new RequestError(automaton, guildId, 'Could not fetch artist information');
       }
 
-      return handleRequestCommand({
+      const result = await handleRequestCommand({
         automaton,
         interaction,
         type: 'spotify:artist',
         id: artistId,
         artist: info.artist
       })
-      .catch(e => new RequestError(automaton, guildId, e.message));
+      .catch(e => new RequestError(automaton, guildId, 'Could not perform artist search with button'));
+
+      if (result instanceof Error) {
+        throw result;
+      }
+
+      return result;
     }
 
     case 'cross_search': {
@@ -813,7 +819,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         throw new RequestError(automaton, guildId, 'Could not fetch track information');
       }
 
-      return handleRequestCommand({
+      const result = await handleRequestCommand({
         automaton,
         interaction,
         type: 'query',
@@ -821,7 +827,13 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         title: info.title,
         noHistory: true
       })
-      .catch(e => new RequestError(automaton, guildId, e.message));
+      .catch(e => new RequestError(automaton, guildId, 'Could not perform track search with button'));
+
+      if (result instanceof Error) {
+        throw result;
+      }
+
+      return result;
     }
   }
 }
