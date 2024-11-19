@@ -69,9 +69,11 @@ type MakeRequestOptions = {
   done: () => Promise<void>
 }
 
-const makeRequest = async ({ station, automaton, trackId, guildId, noSweep, interaction, done }: MakeRequestOptions) => {
+const makeRequest = async (options: MakeRequestOptions) => {
+  const { station, automaton, guildId, noSweep, interaction, done } = options;
+
   const result = await station.request(
-    trackId,
+    options.trackId,
     makeRequester(
       AudienceType.Discord,
       { automatonId: automaton.id, guildId },
@@ -263,14 +265,10 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
           }
         );
 
-        const artist = exactMatches[0].extra?.tags?.artist;
-
-        const searchResult = artist
-          ? await station.search({
-            q: { artist },
-            exactMatch: true
-          })
-          : [];
+        const searchResult =  await station.search({
+          q: { artist: options.artist },
+          exactMatch: true
+        });
 
         return uniqBy(
           [
