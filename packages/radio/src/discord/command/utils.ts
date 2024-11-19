@@ -145,16 +145,16 @@ type PreviewTrackOptions = {
   track: BoomBoxTrack;
   label: string;
   priority?: number;
-  focused: boolean;
+  highlighted: boolean;
   padding: number
 }
 
 function previewTrack(options: PreviewTrackOptions) {
-  const { track, label, priority, padding, focused } = options;
+  const { track, label, priority, padding, highlighted } = options;
   const labelText = padStart(`${label}`, padding);
   const priorityText = priority ? ` {{red|b}}[${priority}]` : '';
 
-  return ansi`${focused ? '{{bgDarkBlue|b}}' : ''}{{pink}}${labelText}{{${focused ? 'blue' : 'white'}}}: ${getTrackBanner(track)}${priorityText}`;
+  return ansi`${highlighted ? '{{bgDarkBlue|b}}' : ''}{{pink}}${labelText}{{${highlighted ? 'blue' : 'white'}}}: ${getTrackBanner(track)}${priorityText}`;
 }
 
 export function isTrackRequestedFromGuild(track: TrackWithRequester<BoomBoxTrack, Requester>, guildId: string) {
@@ -173,7 +173,7 @@ export function peekRequestsForGuild(station: Station, centerIndex: number, coun
 type MakePeekPreviewOptions = {
   centerIndex?: number;
 
-  focusIndex?: number;
+  focusIndexes?: number[];
 
   /**
    * @default 5
@@ -191,7 +191,9 @@ export type MakeRequestPreviewOptions = MakePeekPreviewOptions & {
 }
 
 export async function makeRequestPreview(station: Station, options: MakeRequestPreviewOptions): Promise<Strings | undefined> {
-  const { centerIndex = -1, focusIndex, count = 5, edgeCount = 3, guildId } = options;
+  const { centerIndex = -1, count = 5, edgeCount = 3, guildId } = options;
+  const focusIndexes = new Set(options.focusIndexes);
+
   const peekings = peekRequestsForGuild(station, centerIndex, count, guildId);
 
   const cuedRequests = station.getFetchedRequests()
@@ -238,6 +240,9 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
     requestIndex,
     localIndex
   })));
+
+  // make sure the focused items are includeed
+  configs.push(...guildRequests.filter(({ requestIndex }) => requestIndex && focusIndexes.has(requestIndex)));
 
   const fullConfigs = chain(configs)
     .uniqBy(cfg => cfg.requestIndex)
@@ -301,7 +306,7 @@ export async function makeRequestPreview(station: Station, options: MakeRequestP
         label: cfg.localIndex < 0 ? cuedLabel : `${cfg.localIndex + 1}`,
         track: cfg.track,
         priority: cfg.track.priority,
-        focused: focusIndex !== undefined && focusIndex === cfg.requestIndex,
+        highlighted: cfg.requestIndex !== undefined && focusIndexes.has(cfg.requestIndex)
       })
     : '...'
   ));

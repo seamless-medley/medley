@@ -100,7 +100,7 @@ const makeRequest = async ({ station, automaton, trackId, guildId, noSweep, inte
 
   const preview = await makeRequestPreview(station, {
     centerIndex: result.index,
-    focusIndex: result.index,
+    focusIndexes: [result.index],
     guildId
   });
 
