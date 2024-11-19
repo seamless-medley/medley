@@ -98,7 +98,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
         )
     ],
     files: [
-      new AttachmentBuilder(Buffer.from(lyricsText), { name: 'lyrics.txt' })
+      new AttachmentBuilder(Buffer.from(lyricsText), { name: `${banner} lyrics.txt` })
     ],
     fetchReply: true
   });
