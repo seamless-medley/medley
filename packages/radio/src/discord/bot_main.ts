@@ -65,9 +65,9 @@ async function main() {
 
   const musicDb = new MongoMusicDb();
 
-  await retryable(async ({ attempts }) => {
+  await retryable(async ({ attempts, previousError }) => {
     if (attempts) {
-      logger.info('Attempting to re-initialize database connections (%d)', attempts);
+      logger.info('Attempting to re-initialize database connections (%d), previous error was: %s', attempts, (previousError as any).stack);
     }
 
     return musicDb.init({
