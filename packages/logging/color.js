@@ -1,11 +1,31 @@
 const tty = require('node:tty');
 
-const { env = {} } = typeof process === "undefined" ? {} : process;
+const isColorSupported = (() => {
+  const isTTY = tty?.isatty(1);
 
-const isCompatibleTerminal = tty && tty.isatty && tty.isatty(1) && !!env.TERM;
-const isCI = "CI" in env && ("GITHUB_ACTIONS" in env || "GITLAB_CI" in env || "CIRCLECI" in env);
+  if (!isTTY) {
+    return;
+  }
 
-const isColorSupported = isCompatibleTerminal || isCI;
+  const { env = {} } = typeof process === "undefined" ? {} : process;
+
+  if (env.TERM) {
+    return true;
+  }
+
+  if (process.platform === 'win32') {
+    return true;
+  }
+
+  const isCI = "CI" in env && ("GITHUB_ACTIONS" in env || "GITLAB_CI" in env || "CIRCLECI" in env);
+  if (isCI) {
+    return true;
+  }
+
+  if ('COLORTERM' in env) {
+    return true;
+  }
+})() ?? false;
 
 /**
  *
