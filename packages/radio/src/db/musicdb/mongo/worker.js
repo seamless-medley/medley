@@ -273,15 +273,18 @@ async function findByComment(field, value, options) {
 const update = async (trackId, fields) => {
   const track = {
     ...fields,
-    timestamp: fields.timestamp ?? Date.now(),
+    timestamp: fields.timestamp ?? Date.now()
   }
 
-  await musics.updateOne({ trackId }, {
-    $set: {
-      ...track,
-      expires: Date.now() + random(...ttls) * 1000
-    }
-  }, { upsert: true })
+  await musics.updateOne({ trackId },
+    {
+      $set: {
+        ...track,
+        expires: Date.now() + random(...ttls) * 1000
+      }
+    },
+    { upsert: true }
+  )
   .catch((e) => {
     logError(e, 'Error in update');
   });
@@ -297,9 +300,9 @@ const update = async (trackId, fields) => {
  */
 const _delete = async (trackId) => {
   await musics.deleteOne({ trackId })
-  .catch((e) => {
-    logError(e, 'Error in delete');
-  });
+    .catch((e) => {
+      logError(e, 'Error in delete');
+    });
 }
 
 /**
