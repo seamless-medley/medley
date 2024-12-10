@@ -265,6 +265,10 @@ export class Station extends TypedEmitter<StationEvents> {
     this.#boombox = boombox;
   }
 
+  get logger() {
+    return this.#logger;
+  }
+
   get availableAudioDevices() {
     return this.medley.getAvailableDevices();
   }
