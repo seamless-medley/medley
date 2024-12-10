@@ -1,5 +1,5 @@
 import os from 'node:os';
-import { access, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import { createHash } from 'crypto';
 import { TypedEmitter } from "tiny-typed-emitter";
 import { castArray, chain, chunk, clamp, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
@@ -273,7 +273,14 @@ export class TrackCollection<
     mode?: TrackAddingMode;
     updateExisting?: boolean;
   }) {
-    const { tracks, chunkIndex, totalChunks, mode, updateExisting } = options;
+    const {
+      tracks,
+      chunkIndex,
+      totalChunks,
+      mode = this.options.newTracksAddingMode ?? 'spread',
+      updateExisting
+    } = options;
+
     const { tracksMapper } = this.options;
 
     const newTracks = tracks.filter(it => !this.trackIdMap.has(it.id));
@@ -302,7 +309,7 @@ export class TrackCollection<
     const mapped = await tracksMapper?.(newTracks) ?? newTracks;
 
     if (mapped.length) {
-      switch (mode ?? this.options.newTracksAddingMode ?? 'spread') {
+      switch (mode) {
         case 'append':
           this.tracks.push(...mapped);
           break;
@@ -379,6 +386,8 @@ export class TrackCollection<
       this.logger.info('%d track(s) deleted', this.tracks.length);
     }
 
+    this.emit('refresh');
+
     this.tracks = [];
     this.trackIdMap.clear();
   }
@@ -432,17 +441,36 @@ export class TrackCollection<
     return removedTracks;
   }
 
+  delete(index: number): boolean {
+    const deleted = this.tracks.splice(index, 1);
+
+    for (const t of deleted) {
+      this.trackIdMap.delete(t.id);
+    }
+
+    if (deleted.length === 0) {
+      return false;
+    }
+
+    this.emit('tracksRemove', deleted);
+
+    return true;
+  }
+
   move(newPosition: number, indexes: number[]) {
     moveArrayIndexes(this.tracks, newPosition, ...indexes);
+    this.emit('refresh');
   }
 
   moveTrack(newPosition: number, tracks: T | T[]) {
     moveArrayElements(this.tracks, newPosition, ...castArray(tracks));
+    this.emit('refresh');
   }
 
   moveByPath(newPosition: number, paths: string | string[]) {
     const toMove = castArray(paths).map(path => this.fromPath(path));
     moveArrayElements(this.tracks, newPosition, ...toMove);
+    this.emit('refresh');
   }
 
   async shuffle() {
@@ -497,16 +525,6 @@ export class TrackCollection<
 
   at(index: number): T | undefined {
     return this.tracks[index];
-  }
-
-  delete(index: number): boolean {
-    const deleted = this.tracks.splice(index, 1);
-
-    for (const t of deleted) {
-      this.trackIdMap.delete(t.id);
-    }
-
-    return deleted.length > 0;
   }
 
   fromPath(path: string) {
