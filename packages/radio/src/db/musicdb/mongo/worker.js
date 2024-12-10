@@ -200,12 +200,32 @@ async function findByComment(field, value, options) {
   const pipelines = [
     {
       $addFields: {
-        comments: { $arrayToObject: "$comments" }
+        comments: {
+          $arrayToObject: !options?.valueDelimiter
+            ? "$comments"
+            : {
+              $map: {
+                input: "$comments",
+                as: "value",
+                in: [
+                  { $arrayElemAt: ["$$value", 0] },
+                  {
+                    $split: [
+                      { $arrayElemAt: ["$$value", 1] },
+                      options.valueDelimiter,
+                    ]
+                  }
+                ]
+              }
+            }
+        }
       }
     },
     {
       $match: {
-        [`comments.${field}`]: value
+        [`comments.${field}`]: {
+          $in: [value]
+        }
       }
     },
     {
