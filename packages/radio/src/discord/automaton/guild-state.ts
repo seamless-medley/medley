@@ -705,7 +705,7 @@ export class GuildState {
             embed.setThumbnail(info.image);
           }
 
-          const exactMatches = await station.findTracksByComment(searchKey, id);
+          const exactMatches = await station.findTracksByComment(searchKey, id, { valueDelimiter: ',' });
           const exactIds = new Set(exactMatches.map(t => t.id));
 
           const searchResult = await station.search({

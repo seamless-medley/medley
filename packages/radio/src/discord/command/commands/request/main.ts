@@ -261,7 +261,8 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
           options.type,
           options.id,
           {
-            sort: { title: 1 }
+            sort: { title: 1 },
+            valueDelimiter: ','
           }
         );
 
