@@ -17,7 +17,7 @@ import { createLogger, Logger } from "@seamless-medley/logging";
 
 import { TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
 import { Crate, LatchOptions, LatchSession } from "../crate";
-import { FindByCommentOptions, Library, LibrarySearchParams, LibraryStats, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicLibraryEvents, MusicTrack, MusicTrackCollection } from "../library";
+import { FindByCommentOptions, Library, LibrarySearchParams, LibraryOverallStats, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicLibraryEvents, MusicTrack, MusicTrackCollection } from "../library";
 import {
   BoomBox,
   BoomBoxEvents,
@@ -135,7 +135,7 @@ export type StationEvents = {
   collectionRemoved: (collection: StationTrackCollection) => void;
   collectionUpdated: (collection: StationTrackCollection) => void;
   //
-  libraryStats: (stats: LibraryStats) => void;
+  libraryStats: (stats: LibraryOverallStats) => void;
   //
   audienceChanged: () => void;
 }
@@ -939,7 +939,7 @@ export class Station extends TypedEmitter<StationEvents> {
   }
 
   get libraryStats() {
-    return this.#library.stats;
+    return this.#library.overallStats;
   }
 }
 

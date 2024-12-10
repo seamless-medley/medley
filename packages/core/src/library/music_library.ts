@@ -34,7 +34,7 @@ type IndexInfo<O> = {
   succeeded?: boolean;
 }
 
-export type LibraryStats = Record<'discovered' | 'indexing' | 'indexed', number>;
+export type LibraryOverallStats = Record<'discovered' | 'indexing' | 'indexed', number>;
 
 export type LibraryRescanStats<O> = RescanStats & {
   elapsedTime: number;
@@ -48,7 +48,7 @@ export type LibrarySearchParams = {
 }
 
 export interface MusicLibraryEvents {
-  stats(stats: LibraryStats): void;
+  stats(stats: LibraryOverallStats): void;
 }
 
 export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicLibraryEvents> {
@@ -66,23 +66,23 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     this.#logger = createLogger({ name: 'library', id: this.id });
   }
 
-  #stats: LibraryStats = {
+  #overallStats: LibraryOverallStats = {
     discovered: 0,
     indexing: 0,
     indexed: 0
   }
 
-  private set stats(newStats: Partial<LibraryStats>) {
-    this.#stats = {
-      ...this.#stats,
+  private set overallStats(newStats: Partial<LibraryOverallStats>) {
+    this.#overallStats = {
+      ...this.#overallStats,
       ...newStats
     }
 
-    this.emit('stats', this.#stats);
+    this.emit('stats', this.#overallStats);
   }
 
-  get stats() {
-    return this.#stats;
+  get overallStats() {
+    return this.#overallStats;
   }
 
   #trackCreator: TrackCreator<MusicTrack<O>> = async (path) => {
@@ -109,8 +109,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
   #collectionEventHandlers = new WeakMap<WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>, Record<any, Function>>();
 
   #handleTrackAddition = (collection: WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>) => (tracks: Array<MusicTrack<O>>, chunkIndex: number, totalChunks: number) => {
-    this.stats = {
-      discovered: this.#stats.discovered + tracks.length
+    this.overallStats = {
+      discovered: this.#overallStats.discovered + tracks.length
     }
 
     const infos = tracks.map<IndexInfo<O>>(track => ({ track, succeeded: false }));
@@ -131,8 +131,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
   }
 
   #tryIndexTracks = async (infos: Array<IndexInfo<O>>, done: () => void) => {
-    this.stats = {
-      indexing: this.#stats.indexing + infos.length
+    this.overallStats = {
+      indexing: this.#overallStats.indexing + infos.length
     }
 
     this.#indexTracks(infos, async (retries) => {
@@ -152,9 +152,9 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
     this.#searchEngine.removeAll(tracks);
 
-    this.stats = {
-      discovered: this.#stats.discovered - tracks.length,
-      indexed: this.#stats.indexed - tracks.length
+    this.overallStats = {
+      discovered: this.#overallStats.discovered - tracks.length,
+      indexed: this.#overallStats.indexed - tracks.length
     }
   }
 
@@ -210,17 +210,17 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       .then(() => {
         info.succeeded = true;
 
-        this.stats = {
-          indexing: this.#stats.indexing - 1,
-          indexed: this.#stats.indexed + 1
+        this.overallStats = {
+          indexing: this.#overallStats.indexing - 1,
+          indexed: this.#overallStats.indexed + 1
         }
       })
       .catch(() => {
         info.retried ??= 0;
         info.retried++;
 
-        this.stats = {
-          indexing: this.#stats.indexing - 1
+        this.overallStats = {
+          indexing: this.#overallStats.indexing - 1
         }
 
         if (info.retried <= 3) {
