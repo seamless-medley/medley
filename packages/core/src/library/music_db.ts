@@ -36,6 +36,7 @@ export type UpdateInfo = {
 }
 
 export type FindByCommentOptions = {
+  valueDelimiter?: string;
   limit?: number;
   sort?: Partial<Record<keyof MusicDbTrack, 1 | -1>>;
 }
