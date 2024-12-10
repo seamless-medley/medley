@@ -1,5 +1,23 @@
-import { BoomBoxTrack, Crate, MusicCollectionWatch, MusicDb, Station, StationProfile, StationRegistry, StationTrack, WatchPathWithOption, WatchTrackCollection, crateLimitFromSequenceLimit, createChanceable, scanDir } from "@seamless-medley/core";
 import { readFile } from 'node:fs/promises';
+import { join } from "node:path";
+
+import { isString, partition } from "lodash";
+
+import {
+  BoomBoxTrack,
+  Crate,
+  MusicCollectionWatch,
+  MusicDb,
+  MusicTrackCollection,
+  Station,
+  StationProfile,
+  StationRegistry,
+  StationTrack,
+  WatchTrackCollection,
+  crateLimitFromSequenceLimit,
+  createChanceable,
+  scanDir
+} from "@seamless-medley/core";
 
 import {
   type StationConfig,
@@ -8,8 +26,6 @@ import {
 } from './config/station';
 import { AutomatonConfig } from "./config/automaton";
 import { MedleyAutomaton } from "./discord/automaton";
-import { join } from "path";
-import { isString } from "lodash";
 
 function createCrateFromSequence(id: string, station: Station, sequence: SequenceConfig) {
   const validCollections = sequence.collections.filter(({ id: collectionId }) => station.hasCollection(collectionId));
@@ -90,24 +106,58 @@ export function createStationProfile(station: Station, config: StationProfileCon
   return profile;
 }
 
-export async function createStation(stationConfig: StationConfig & { id: string; musicDb: MusicDb }): Promise<Station> {
+export type StationCreationConfig = StationConfig & {
+  id: string;
+  musicDb: MusicDb;
+  onCollectionsScanned?: () => any;
+};
+
+export async function createStation(creationConfig: StationCreationConfig): Promise<Station> {
   return new Promise<Station>(async (resolve) => {
-    const { id, musicDb, musicCollections, profiles, ...config } = stationConfig;
+    const {
+      id: stationId,
+      onCollectionsScanned,
+      musicDb,
+      musicCollections,
+      profiles,
+      ...config
+    } = creationConfig;
 
     const station = new Station({
       ...config,
-      id,
+      id: stationId,
       musicDb
     });
 
-    for (const [id, desc] of Object.entries(musicCollections)) {
-      if (!desc.auxiliary) {
-        await station.addCollection({
-          id,
-          ...desc,
-          logPrefix: station.id
-        });
+    const [
+      auxiliaryCollectionEntries,
+      mandatoryCollectionEntries
+    ] = partition(Object.entries(musicCollections), ([id, desc]) => desc.auxiliary);
+
+    const pendingCollectionIds = new Set(Object.keys(musicCollections));
+
+    const handleScanDoneEvent = (collection?: MusicTrackCollection<Station>) => {
+      if (!onCollectionsScanned || !collection) {
+        return;
       }
+
+      collection.once('scan-done' as any, () => {
+        pendingCollectionIds.delete(collection.id);
+
+        if (pendingCollectionIds.size == 0) {
+          onCollectionsScanned?.();
+        }
+      });
+    }
+
+    for (const [id, desc] of mandatoryCollectionEntries) {
+      const collection = await station.addCollection({
+        id,
+        ...desc,
+        logPrefix: station.id
+      });
+
+      handleScanDoneEvent(collection);
     }
 
     for (const [id, config] of Object.entries(profiles)) {
@@ -121,16 +171,15 @@ export async function createStation(stationConfig: StationConfig & { id: string;
 
     resolve(station);
 
-    for (const [id, desc] of Object.entries(musicCollections)) {
-      if (desc.auxiliary) {
-        station.addCollection({
-          id,
-          disableLatch: true,
-          noFollowOnRequest: true,
-          ...desc,
-          logPrefix: station.id
-        });
-      }
+    for (const [id, desc] of auxiliaryCollectionEntries) {
+      station.addCollection({
+        id,
+        disableLatch: true,
+        noFollowOnRequest: true,
+        ...desc,
+        logPrefix: station.id
+      })
+      .then(handleScanDoneEvent);
     }
   })
 }

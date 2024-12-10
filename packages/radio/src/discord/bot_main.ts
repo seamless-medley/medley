@@ -90,6 +90,8 @@ async function main() {
     }
   });
 
+  const pendingStationIds = new Set(Object.keys(configs.stations));
+
   const stations = await Promise.all(
     Object.entries(configs.stations).map(async ([stationId, stationConfig]) => {
       logger.info(`Constructing station: ${stationId}`);
@@ -97,7 +99,16 @@ async function main() {
       const station = await createStation({
         ...stationConfig,
         id: stationId,
-        musicDb
+        musicDb,
+        onCollectionsScanned() {
+          station.logger.info('All collections scanned');
+
+          pendingStationIds.delete(stationId);
+
+          if (pendingStationIds.size === 0) {
+            logger.info('All stations scanned');
+          }
+        },
       });
 
       return station;
