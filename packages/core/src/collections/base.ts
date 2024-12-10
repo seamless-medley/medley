@@ -217,7 +217,7 @@ export class TrackCollection<
         created[i] = await this.createTrack(p, trackId);
       }
 
-      const added = await onChunkCreated(created, index, buckets.length);
+      const added = await onChunkCreated(created, index, buckets.length).catch(() => []);
       await waitFor(10);
       immediateTracks.push(...created);
       newTracks.push(...added);
@@ -283,8 +283,8 @@ export class TrackCollection<
       const tracksToUpdate = (await Promise.all(tracks
         .filter(it => this.trackIdMap.has(it.id))
         .map(async (track) => {
-          const s = await stat(track.path);
-          return (s.mtimeMs > (track.extra?.timestamp ?? 0))
+          const s = await stat(track.path).catch(() => undefined);
+          return (s !== undefined && s.mtimeMs > (track.extra?.timestamp ?? 0))
             ? track
             : undefined
         })
