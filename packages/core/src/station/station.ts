@@ -269,6 +269,10 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#logger;
   }
 
+  get musicDb() {
+    return this.#musicDb;
+  }
+
   get availableAudioDevices() {
     return this.medley.getAvailableDevices();
   }
