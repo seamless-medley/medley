@@ -24,6 +24,11 @@ export type CreateTrackMessageOptions = {
   trackPlay: StationTrackPlay;
   positions: DeckPositions;
   guildId: string;
+
+  /**
+   * A callback function to translate metadata `value` based on `kind` and return a new value
+   */
+  metadataLookup?: (kind: string, value: string) => Promise<string | undefined>;
 }
 
 export type CreateTrackMessageOptionsEx = CreateTrackMessageOptions & {
@@ -45,7 +50,7 @@ export abstract class TrackMessageCreator {
   protected abstract doCreate(options: CreateTrackMessageOptionsEx): Promise<CreatedTrackMessage>;
 
   async create(options: CreateTrackMessageOptions): Promise<TrackMessage> {
-    const { guildId, station, trackPlay, positions } = options;
+    const { guildId, station, trackPlay, positions, metadataLookup } = options;
 
     const requested = isRequestTrack<StationTrack, Requester>(trackPlay.track) ? trackPlay.track : undefined;
     const requestedBy = requested?.requestedBy;
@@ -70,7 +75,8 @@ export abstract class TrackMessageCreator {
       requested,
       requestedBy,
       track,
-      playDuration
+      playDuration,
+      metadataLookup
     });
 
     const lyricButton = new ButtonBuilder()

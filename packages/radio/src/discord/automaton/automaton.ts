@@ -1032,7 +1032,13 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         guildId,
         station,
         trackPlay,
-        positions
+        positions,
+        async metadataLookup(kind, val) {
+          if (kind === 'spotify:artist') {
+            const tracksFromSoloArtist = await station.musicDb.findByComment(kind, val);
+            return tracksFromSoloArtist.find(t => !!t.artist)?.artist;
+          }
+        }
       });
 
       const options = trackMessageToMessageOptions({

@@ -1,6 +1,6 @@
 import { MetadataFields } from "@seamless-medley/core";
 import { APIEmbedField, bold, hyperlink, inlineCode, quote, userMention } from "discord.js";
-import { chunk, isEmpty, startCase, upperCase } from "lodash";
+import { chunk, isEmpty, startCase, upperCase, zip } from "lodash";
 import { formatDuration } from "../../format/format";
 import { CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 import { createCoverImageAttachment } from "../../helpers/message";
@@ -22,7 +22,7 @@ export class Normal extends TrackMessageCreator {
     const { station, embed, guildId, track, playDuration, requestedBy } = options;
 
     const data = getEmbedDataForTrack(track, metadataFields);
-    const spotifyMetadata = extractSpotifyMetadata(track);
+    const spotifyIds = extractSpotifyMetadata(track);
     const cover = await createCoverImageAttachment(track);
 
     (embed)
@@ -32,29 +32,97 @@ export class Normal extends TrackMessageCreator {
         iconURL: station.iconURL
       })
       .setDescription(quote(
-        spotifyMetadata.track
-          ? spotifyLink(data.description, 'track', spotifyMetadata.track, "More about this track on Spotify")
+        spotifyIds.track
+          ? spotifyLink(data.description, 'track', spotifyIds.track, "More about this track on Spotify")
           : spotifySearchLink(data.description, 'tracks')
       ));
 
     for (const group of chunk(metadataFields, 2)) {
-      const fields = group.map<APIEmbedField | undefined>(field => {
+      const fieldsForEmbed = await Promise.all(group.map(async (field): Promise<APIEmbedField | undefined> => {
           const val = data.fields[field];
 
-          return val && !isEmpty(val)
-            ? ({
-              name: (fieldCaptionFuncs[field] ?? startCase)(field),
-              value: quote(formatSpotifyField(field, val, spotifyMetadata[field])),
-              inline: true
-            })
-            : undefined
-        })
-        .filter((f): f is APIEmbedField => f !== undefined)
+          if (!val || isEmpty(val)) {
+            return
+          }
 
-      if (fields.length > 0) {
-        embed.addFields(fields.length < 3
-          ? fields.concat(emptyRows).slice(0, emptyRows.length)
-          : fields);
+          const fieldTitle = (fieldCaptionFuncs[field] ?? startCase)(field);
+          const spotifyId = spotifyIds[field];
+
+          if (/artist/i.test(field) && spotifyId) {
+            const artistIds = spotifyId.split(',');
+
+            // Found artist field with multiple spotify id
+            if (artistIds.length > 1) {
+              let artistNames = val.split(/[/,]/);
+
+              let aligned = (artistNames.length > 0) && (artistNames.length % artistIds.length) === 0;
+
+              if (!aligned) {
+                // Try to align it by using metadataLookup
+                const { metadataLookup } = options;
+
+                if (metadataLookup) {
+                  aligned = true;
+
+                  const newNames: string[] = [];
+
+                  for (const artistId of artistIds) {
+                    const name = await metadataLookup('spotify:artist', artistId);
+
+                    if (!name) {
+                      // could not lookup, this is likely to be un-aligned, stop lookup now
+                      aligned = false;
+                      break;
+                    }
+
+                    newNames.push(name);
+                  }
+
+                  if (aligned) {
+                    artistNames = newNames;
+                  }
+                }
+              }
+
+              // names and ids are aligned
+              if (aligned) {
+                const alignment = artistNames.length / artistIds.length;
+                const artistGroups = chunk(artistNames, alignment).map(g => g.join('/'));
+
+                const artistText = zip(artistGroups, artistIds)
+                  .map(([group, id]) => formatSpotifyField(field, group!, id))
+                  .join(', ');
+
+                return {
+                  name: fieldTitle,
+                  value: quote(artistText),
+                  inline: true
+                }
+              }
+
+              // Un-aligned, use the first id instead
+              return {
+                name: fieldTitle,
+                value: quote(formatSpotifyField(field, val, artistIds[0])),
+                inline: true
+              }
+            }
+          }
+
+          return {
+            name: fieldTitle,
+            value: quote(formatSpotifyField(field, val, spotifyId)),
+            inline: true
+          }
+        })
+      );
+
+      const embedFields = fieldsForEmbed.filter((f): f is APIEmbedField => f !== undefined);
+
+      if (embedFields.length > 0) {
+        embed.addFields(embedFields.length < 3
+          ? embedFields.concat(emptyRows).slice(0, emptyRows.length)
+          : embedFields);
       }
     }
 
