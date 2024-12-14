@@ -24,7 +24,10 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   const history = [...trackHistory].reverse();
 
   for (const { playedTime, ...record } of history) {
-    const banner = formatSongBanner(record.artists, record.title);
+    const banner = formatSongBanner({
+      artists: record.artists,
+      title: record.title
+    });
 
     const line = quote(`${bold('[')}${formatTime(playedTime, 'T')}${bold(']')}: ${banner}`);
 
