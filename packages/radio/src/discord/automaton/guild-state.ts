@@ -607,15 +607,17 @@ export class GuildState {
       }
     }
 
-    const matches = extractSpotifyUrl(message.content);
-
     const createReply = async (url: URL, [type, id]: [string, string]): Promise<MessageReplyOptions | undefined> => {
       const searchKey = `spotify:${type}`;
 
+      if (!['track', 'artist'].includes(type)) {
+        return;
+      }
+
+      const info = await retryable(async () => fetchSpotifyInfo(url.href), { retries: 2, wait: 1 })
+
       switch (type) {
         case 'track': {
-          const info = await fetchSpotifyInfo(url.href);
-
           if (info?.type !== 'track' || !info.title) {
             return;
           }
@@ -693,8 +695,6 @@ export class GuildState {
         }
 
         case 'artist': {
-          const info = await fetchSpotifyInfo(url.href);
-
           if (info?.type !== 'artist' || !info.artist) {
             return;
           }
@@ -750,6 +750,8 @@ export class GuildState {
           return;
       }
     }
+
+    const matches = extractSpotifyUrl(message.content);
 
     for (const match of matches.slice(0, 3)) {
       const reply = await createReply(match.url, match.paths);
