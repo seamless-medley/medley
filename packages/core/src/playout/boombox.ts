@@ -887,24 +887,40 @@ export function getArtistStrings(extra: BoomBoxTrackExtra, options?: GetArtistsO
     .value()
 }
 
-export function getTrackBanner(track: BoomBoxTrack) {
-  const tags = track.extra?.tags;
-  const info = formatSongBanner(tags?.artist ? extractArtists(tags.artist) : undefined, tags?.title);
-  return info ? info : parsePath(track.path).name;
+export type TrackBannerOptions = {
+  separators?: Partial<Record<'title' | 'artist', string>>;
 }
 
-export function formatSongBanner(artists: string[] | string | undefined, title: string | undefined): string | undefined {
+export function getTrackBanner(track: BoomBoxTrack) {
+  const tags = track.extra?.tags;
+
+  return formatSongBanner({
+    title: tags?.title,
+    artists: tags?.artist ? extractArtists(tags.artist) : undefined,
+    separators: {
+      artist: '/'
+    }
+  }) ?? parsePath(track.path).name;
+}
+
+export type SongBannerFormatOptions = {
+  title?: string;
+  artists?: string[] | string;
+} & TrackBannerOptions;
+
+export function formatSongBanner(options: SongBannerFormatOptions): string | undefined {
+  const { title, artists, separators } = options;
   const info: string[] = [];
 
   if (artists) {
-    info.push(castArray(artists).join(','));
+    info.push(castArray(artists).join(separators?.artist ?? ','));
   }
 
   if (title) {
     info.push(title);
   }
 
-  return info.length ? info.join(' - ') : undefined;
+  return info.length ? info.join(separators?.title ?? ' - ') : undefined;
 }
 
 export function trackRecordOf(track: BoomBoxTrack): TrackRecord {
