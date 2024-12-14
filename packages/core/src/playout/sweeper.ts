@@ -1,5 +1,5 @@
+import { basename } from "node:path";
 import { curry, sample, sortBy } from "lodash";
-import { basename } from "path";
 import { createLogger, Logger } from "@seamless-medley/logging";
 import { BoomBox, BoomBoxEvents, BoomBoxTrackCollection, TrackKind } from "./boombox";
 
