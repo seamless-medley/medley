@@ -1,5 +1,6 @@
 #include "Medley.h"
 #include "MiniMP3AudioFormat.h"
+#include "OpusAudioFormat.h"
 #include "NullAudioDevice.h"
 #include "utils.h"
 
@@ -97,6 +98,7 @@ Medley::SupportedFormats::SupportedFormats()
     registerFormat(new AiffAudioFormat(), false);
     registerFormat(new FlacAudioFormat(), false);
     registerFormat(new OggVorbisAudioFormat(), false);
+    registerFormat(new OpusAudioFormat(), false);
 
 #if JUCE_MAC || JUCE_IOS
     registerFormat(new CoreAudioFormat(), false);
