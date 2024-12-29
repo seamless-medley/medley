@@ -51,6 +51,10 @@ FileType getFileTypeFromFileName(juce::File file) {
         return FileType::OGG;
     }
 
+    if (ext.equalsIgnoreCase(".opus")) {
+        return FileType::OPUS;
+    }
+
     if (ext.equalsIgnoreCase(".wav")) {
         return FileType::WAV;
     }

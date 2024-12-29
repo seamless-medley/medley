@@ -13,7 +13,8 @@ enum class FileType {
     FLAC,
     OGG,
     WAV,
-    AIFF
+    AIFF,
+    OPUS
 };
 
 AudioFormatReader* createAudioReaderFor(juce::AudioFormatManager& formatMgr, const ITrack::Ptr track);
