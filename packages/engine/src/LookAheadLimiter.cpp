@@ -60,7 +60,7 @@ void LookAheadLimiter::process(const ProcessContextReplacing<float>& context)
     }
 
     /** STEP 2: calculate gain reduction, which one depends on lookAhead */
-    gainReductionCalculator.calculateDecibels(sideChainBuffer.getReadPointer(0), sideChainBuffer.getWritePointer(1), numSamples);
+    gainReductionCalculator.calculateDecibels(sideChainBuffer.getReadPointer(0), sideChainBuffer.getWritePointer(1), (int)numSamples);
 
     /** STEP 3: fade-in gain reduction if look-ahead is enabled */
 
@@ -70,9 +70,9 @@ void LookAheadLimiter::process(const ProcessContextReplacing<float>& context)
     delay.process(context);
 
     // fade in gain reduction
-    lookAheadFadeIn.pushSamples(sideChainBuffer.getReadPointer(1), numSamples);
+    lookAheadFadeIn.pushSamples(sideChainBuffer.getReadPointer(1), (int)numSamples);
     lookAheadFadeIn.process();
-    lookAheadFadeIn.readSamples(sideChainBuffer.getWritePointer(1), numSamples);
+    lookAheadFadeIn.readSamples(sideChainBuffer.getWritePointer(1), (int)numSamples);
 
     // add make-up and convert to linear gain
     const float makeUpGainInDecibels = gainReductionCalculator.getMakeUpGain();
