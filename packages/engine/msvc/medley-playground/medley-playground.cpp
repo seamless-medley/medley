@@ -578,15 +578,21 @@ private:
         }
 
         int useTimeSlice() {
-            if (auto track = deck.getTrack()) {
-                auto trackFile = track->getFile();
+            try {
+                if (auto track = deck.getTrack()) {
+                    auto trackFile = track->getFile();
 
-                Metadata::CoverAndLyrics cal(trackFile, true, false);
-                auto cover = cal.getCover().getData();
+                    Metadata::CoverAndLyrics cal(trackFile, true, true);
 
-                if (!cover.isEmpty()) {
-                    setCover(cover);
+                    auto cover = cal.getCover().getData();
+
+                    if (!cover.isEmpty()) {
+                        setCover(cover);
+                    }
                 }
+            }
+            catch (...) {
+
             }
 
             return -1;
