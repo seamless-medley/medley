@@ -11,7 +11,11 @@ RUN apt -y update \
         make \
         cmake \
         pkg-config \
-        libasound2-dev
+        libasound2-dev \
+        libfreetype-dev \
+        libutfcpp-dev \
+        libopus-dev \
+        libopusfile-dev
 
 ENV PKG_JUCE=packages/juce
 ENV PKG_MINIMP3=packages/minimp3

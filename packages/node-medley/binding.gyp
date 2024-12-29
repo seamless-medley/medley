@@ -23,6 +23,8 @@
                 "../engine/src/utils.cpp",
                 "../engine/src/MiniMP3AudioFormat.cpp",
                 "../engine/src/MiniMP3AudioFormatReader.cpp",
+                "../engine/src/OpusAudioFormat.cpp",
+                "../engine/src/OpusAudioFormatReader.cpp",
                 "../engine/src/LevelSmoother.cpp",
                 "../engine/src/LevelTracker.cpp",
                 "../engine/src/ReductionCalculator.cpp",
@@ -127,7 +129,7 @@
                                         'OptimizeReferences': 2,
                                         'EnableCOMDATFolding': 2,
                                         'AdditionalLibraryDirectories': ['$(VcpkgRoot)\\installed\\x64-windows-static\\lib'],
-                                        'AdditionalDependencies': ['tag.lib', 'samplerate.lib']
+                                        'AdditionalDependencies': ['tag.lib', 'samplerate.lib', 'opus.lib', 'opusfile.lib']
                                     }
                                 }
                             }
@@ -139,11 +141,14 @@
                     {
                         'include_dirs': [
                             "<!@(pkg-config taglib --cflags-only-I | sed s/-I//g)",
-                            "<!@(pkg-config samplerate --cflags-only-I | sed s/-I//g)"
+                            "<!@(pkg-config samplerate --cflags-only-I | sed s/-I//g)",
+                            "<!@(pkg-config opus --cflags-only-I | sed s/-I//g)"
                         ],
                         'libraries': [
                             "<!@(pkg-config taglib --libs)",
                             "<!@(pkg-config samplerate --libs)",
+                            "<!@(pkg-config opus --libs)",
+                            "<!@(pkg-config opusfile --libs)",
                         ],
                         'sources': [
                             "../engine/juce/include_juce_audio_basics_mac.mm",
@@ -199,16 +204,20 @@
                     {
                         'include_dirs': [
                             "<!@(pkg-config taglib --cflags-only-I | sed s/-I//g)",
-                            "<!@(pkg-config freetype2 --cflags-only-I | sed s/-I//g)"
+                            "<!@(pkg-config samplerate --cflags-only-I | sed s/-I//g)"
                         ],
                         'libraries': [
                             "<!@(pkg-config taglib --libs)",
                             "<!@(pkg-config samplerate --libs)",
+                            "<!@(pkg-config opus --libs)",
+                            "<!@(pkg-config opusfile --libs)",
                             "<!@(pkg-config freetype2 --libs)",
                             "-lasound"
                         ],
                         "cflags_cc": [
-                            "-std=c++17"
+                            "-std=c++17",
+                            "<!@(pkg-config opus --cflags)",
+                            "<!@(pkg-config freetype2 --cflags)",
                         ],
                         'sources': [
                             "../engine/juce/include_juce_audio_basics.cpp",

@@ -1,6 +1,6 @@
 #!/usr/bin/sh
 
-TAGLIB_VERSION=1.13.1
+TAGLIB_VERSION=2.0.2
 LIBSAMPLERATE_VERSION=0.2.2
 
 SUDO=sudo
@@ -17,6 +17,7 @@ cd taglib \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_TESTING=0
         . \
     && make -j 2 \
     && ${SUDO} make install
@@ -27,7 +28,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-wget https://github.com/libsndfile/libsamplerate/releases/download/0.2.2/libsamplerate-${LIBSAMPLERATE_VERSION}.tar.xz \
+wget https://github.com/libsndfile/libsamplerate/releases/download/${LIBSAMPLERATE_VERSION}/libsamplerate-${LIBSAMPLERATE_VERSION}.tar.xz \
     -O libsamplerate.tar.gz
 tar xvf libsamplerate.tar.gz
 mv libsamplerate-* libsamplerate
