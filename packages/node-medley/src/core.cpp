@@ -863,8 +863,6 @@ Napi::Value Medley::reqAudioGetlatency(const CallbackInfo& info) {
         return env.Undefined();
     }
 
-    auto& request = it->second;
-
     auto sampleRate = engine->getOutputSampleRate();
     auto outputLatency = (double)engine->getOutputLatency();
 
