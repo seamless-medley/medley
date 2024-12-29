@@ -12,6 +12,8 @@ class MiniMP3AudioFormatReader : public AudioFormatReader
 public:
     MiniMP3AudioFormatReader(InputStream* const in);
 
+    virtual ~MiniMP3AudioFormatReader() override;
+
     bool readSamples(int** destSamples, int numDestChannels, int startOffsetInDestBuffer, int64 startSampleInFile, int numSamples) override;
 
 private:

@@ -16,6 +16,9 @@ MiniMP3AudioFormatReader::MiniMP3AudioFormatReader(InputStream* const in)
     io.seek = &ioSeek;
     io.seek_data = this;
 
+    currentPosition = 0;
+    lengthInSamples = 0;
+
     auto ret = mp3dec_ex_open_cb(&dec, &io, MP3D_SEEK_TO_SAMPLE);
 
     if (ret != 0) {
@@ -30,7 +33,6 @@ MiniMP3AudioFormatReader::MiniMP3AudioFormatReader(InputStream* const in)
     usesFloatingPointData = true;
     sampleRate = dec.info.hz;
     numChannels = dec.info.channels;
-    currentPosition = 0;
     lengthInSamples = dec.detected_samples / numChannels;
 
     if (lengthInSamples <= 0) {
@@ -40,6 +42,12 @@ MiniMP3AudioFormatReader::MiniMP3AudioFormatReader(InputStream* const in)
     opened = true;
 
     reallocBuffer();
+}
+
+MiniMP3AudioFormatReader::~MiniMP3AudioFormatReader()
+{
+    mp3dec_ex_close(&dec);
+    buffer.free();
 }
 
 bool MiniMP3AudioFormatReader::readSamples(int** destSamples, int numDestChannels, int startOffsetInDestBuffer, int64 startFrameInFile, int numFrames)
@@ -53,14 +61,13 @@ bool MiniMP3AudioFormatReader::readSamples(int** destSamples, int numDestChannel
         reallocBuffer();
     }
 
-
     if (currentPosition != startFrameInFile) {
         if (mp3dec_ex_seek(&dec, startFrameInFile * numChannels) == 0) {
             currentPosition = dec.cur_sample / numChannels;
         }
     }
 
-    auto framesRead = mp3dec_ex_read(&dec, buffer, numFrames * numChannels) / numChannels;
+    auto framesRead = mp3dec_ex_read(&dec, buffer, numFrames * (int)numChannels) / numChannels;
 
     auto dst = (float**)destSamples;
 
@@ -70,7 +77,7 @@ bool MiniMP3AudioFormatReader::readSamples(int** destSamples, int numDestChannel
         AudioData::deinterleaveSamples(
             AudioData::InterleavedSource<Format> { buffer.getData(), (int) numChannels },
             AudioData::NonInterleavedDest<Format> { dst, (int)numChannels },
-            framesRead
+            (int)framesRead
         );
     }
 
