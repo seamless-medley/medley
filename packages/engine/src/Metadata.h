@@ -57,8 +57,16 @@ public:
         const juce::String& getLyrics() const { return lyrics; }
     private:
         void read(const File& file, bool readCover, bool readLyrics);
-        void readID3V2(const File& f, bool readCover, bool readLyrics);
-        void readXiph(const File& f, bool readCover, bool readLyrics);
+        void readMpeg(const File& f, bool readCover, bool readLyrics);
+        void readFLAC(const File& f, bool readCover, bool readLyrics);
+        void readOPUS(const File& f, bool readCover, bool readLyrics);
+        void readOggVorbis(const File& f, bool readCover, bool readLyrics);
+        void readWAV(const File& f, bool readCover, bool readLyrics);
+        void readAIFF(const File& f, bool readCover, bool readLyrics);
+        //
+        void readID3Tag(const TagLib::ID3v2::Tag& tag, bool readCover, bool readLyrics);
+        void readPictures(const TagLib::List<TagLib::FLAC::Picture*> pictures);
+        void readXiphLyrics(const TagLib::Ogg::XiphComment& tag);
 
         Cover cover;
         juce::String lyrics;
@@ -76,8 +84,14 @@ public:
 
     private:
         void read(const File& file);
-        void readMpegInfo(const File& f);
-        void readXiph(const File& f);
+        void readMpeg(const File& f);
+        void readFLAC(const File& f);
+        void readOPUS(const File& f);
+        void readOggVorbis(const File& f);
+        void readWAV(const File& f);
+        void readAIFF(const File& f);
+        //
+        void readAudioProperties(const TagLib::AudioProperties* props);
 
         int channels = 0;
         int bitrate = 0;
@@ -107,9 +121,16 @@ public:
     std::vector<std::pair<juce::String, juce::String>>&  getComments() { return comments; }
 
 private:
-    bool readID3V2(const File& f);
+    bool readMpeg(const File& f);
     bool readFLAC(const File& f);
-    void readTag(const TagLib::Tag& tag);
+    bool readOPUS(const File& f);
+    bool readOggVorbis(const File& f);
+    bool readWAV(const File& f);
+    bool readAIFF(const File& f);
+    //
+    void readBasicTag(const TagLib::Tag& tag);
+    void readID3Tag(const TagLib::ID3v2::Tag& tag);
+    void readXiphTag(const TagLib::Ogg::XiphComment& tag, bool readReplayGain = true);
 
     FileType type = FileType::Unknown;
     juce::String title;
@@ -126,5 +147,6 @@ private:
 
     std::vector<std::pair<juce::String, juce::String>> comments;
 };
+
 
 }

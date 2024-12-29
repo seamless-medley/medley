@@ -3,8 +3,9 @@
 #include <taglib/textidentificationframe.h>
 #include <taglib/xiphcomment.h>
 #include <taglib/attachedpictureframe.h>
-
-#include "MiniMP3AudioFormatReader.h"
+#include <taglib/oggpageheader.h>
+#include <taglib/opusfile.h>
+#include <taglib/vorbisfile.h>
 
 namespace {
 
@@ -81,36 +82,6 @@ bool readXiphCommentField(const TagLib::Ogg::XiphComment& comment, juce::String 
     return true;
 }
 
-TagLib::ByteVector readHeader(TagLib::IOStream *stream, unsigned int length, bool skipID3v2)
-{
-    if (!stream || !stream->isOpen()) {
-        return TagLib::ByteVector();
-    }
-
-    const long originalPosition = stream->tell();
-    long bufferOffset = 0;
-
-    if (skipID3v2) {
-        stream->seek(0);
-        const TagLib::ByteVector data = stream->readBlock(TagLib::ID3v2::Header::size());
-        if (data.startsWith(TagLib::ID3v2::Header::fileIdentifier())) {
-            bufferOffset = TagLib::ID3v2::Header(data).completeTagSize();
-        }
-    }
-
-    stream->seek(bufferOffset);
-    const TagLib::ByteVector header = stream->readBlock(length);
-    stream->seek(originalPosition);
-
-    return header;
-}
-
-bool isFLACSupported(TagLib::IOStream *stream)
-{
-    const auto buffer = readHeader(stream, 1024, true);
-    return (buffer.find("fLaC") >= 0);
-}
-
 }
 
 
@@ -143,19 +114,33 @@ bool medley::Metadata::readFromFile(const File& file)
 
         switch (filetype) {
         case utils::FileType::MP3: {
-            return readID3V2(file);
+            return readMpeg(file);
         }
 
         case utils::FileType::FLAC: {
             return readFLAC(file);
         }
 
-        // TODO: Other file types
-
+        case utils::FileType::OPUS: {
+            return readOPUS(file);
         }
 
-        title = file.getFileNameWithoutExtension();
-        return true;
+        case utils::FileType::OGG: {
+            return readOggVorbis(file);
+        }
+
+        case utils::FileType::WAV: {
+            return readWAV(file);
+        }
+
+        case utils::FileType::AIFF: {
+            return readAIFF(file);
+        }
+
+        default:
+            title = file.getFileNameWithoutExtension();
+            return true;
+        }
     }
     catch (std::exception& e) {
         throw std::runtime_error(("Could not read metadata from file " + file.getFullPathName() + " Error was: " + e.what()).toStdString());
@@ -167,224 +152,344 @@ bool medley::Metadata::readFromFile(const File& file)
     return false;
 }
 
-namespace {
-    static size_t minimp3_read_cb(void* buf, size_t size, void* user_data)
-    {
-        auto input = (FileInputStream*)user_data;
-
-        if (!input) {
-            return -1;
-        }
-
-        return input->read(buf, (int)size);
-    }
-
-    static int minimp3_seek_cb(uint64_t position, void* user_data)
-    {
-        auto input = (FileInputStream*)user_data;
-
-        if (!input) {
-            return -1;
-        }
-
-        return input->setPosition(position) ? 0 : -1;
-    }
-}
-
-bool medley::Metadata::readID3V2(const juce::File& f)
+bool medley::Metadata::readMpeg(const juce::File& f)
 {
-    #ifdef _WIN32
+#ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
-    #else
+#else
     TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
-    #endif
+#endif
 
-    TagLib::MPEG::File file(fileName, TagLib::ID3v2::FrameFactory::instance());
+    TagLib::FileStream stream(fileName);
 
-    if (!file.isValid()) {
-        throw std::runtime_error("Could not open MPEG file for reading");
+    if (!TagLib::MPEG::File::isSupported(&stream)) {
+        throw std::runtime_error("Not a MPEG file");
     }
 
     try {
+        TagLib::MPEG::File file(&stream, false);
+
         if (!file.hasID3v2Tag()) {
             return false;
         }
 
         auto& tag = *file.ID3v2Tag();
-        readTag(tag);
-
-        const auto& tpe2Frames = tag.frameListMap()["TPE2"];
-        if (!tpe2Frames.isEmpty()) {
-            for (const auto pFrame : tpe2Frames) {
-                if (pFrame) {
-                    albumArtist = pFrame->toString().toCWString();
-                    break;
-                }
-            }
-        }
-
-        const auto& topeFrames = tag.frameListMap()["TOPE"];
-        if (!topeFrames.isEmpty()) {
-            for (const auto pFrame : topeFrames) {
-                if (pFrame) {
-                    originalArtist = pFrame->toString().toCWString();
-                    break;
-                }
-            }
-        }
-
-        const auto& tsrcFrames = tag.frameListMap()["TSRC"];
-        if (!tsrcFrames.isEmpty()) {
-            for (const auto pFrame : tsrcFrames) {
-                if (pFrame) {
-                    isrc = pFrame->toString().toCWString();
-                    break;
-                }
-            }
-        }
-
-        const auto& tbpmFrames = tag.frameListMap()["TBPM"];
-        if (!tbpmFrames.isEmpty()) {
-            for (const auto pFrame : tbpmFrames) {
-                if (pFrame) {
-                    juce::String bpm = pFrame->toString().toCWString();
-                    this->bpm = bpm.getFloatValue();
-
-                    if (this->bpm < 0.0f) {
-                        this->bpm = 0.0f;
-
-                    }
-                    break;
-                }
-            }
-        }
-
-        this->comments.clear();
-
-        if (tag.header()->majorVersion() >= 3) {
-            auto trackGain = readFirstUserTextIdentificationFrame(tag, L"REPLAYGAIN_TRACK_GAIN");
-            this->trackGain = (float)parseReplayGainGain(trackGain);
-
-            auto cueIn = readFirstUserTextIdentificationFrame(tag, L"CUE-IN");
-            if (cueIn.isEmpty()) {
-                cueIn = readFirstUserTextIdentificationFrame(tag, L"CUE_IN");
-            }
-
-            this->cueIn = cueIn.isNotEmpty() ? cueIn.getDoubleValue() : -1.0;
-
-            auto cueOut = readFirstUserTextIdentificationFrame(tag, L"CUE-OUT");
-            if (cueOut.isEmpty()) {
-                cueOut = readFirstUserTextIdentificationFrame(tag, L"CUE_OUT");
-            }
-
-            this->cueOut = cueOut.isNotEmpty() ? cueOut.getDoubleValue() : -1.0;
-
-            auto lastAudible = readFirstUserTextIdentificationFrame(tag, L"LAST_AUDIBLE");
-
-            this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
-
-            const auto& textFrames = tag.frameListMap()["TXXX"];
-            for (auto& frame : textFrames) {
-                if (auto pFrame = dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(frame)) {
-                    auto fields = pFrame->fieldList();
-
-                    if (fields.size() >= 2) {
-                        this->comments.push_back(std::make_pair(fields[0].toCWString(), fields[1].toCWString()));
-                    }
-                }
-            }
-        }
+        readBasicTag(tag);
+        readID3Tag(tag);
 
         return true;
     }
     catch (...) {
         throw std::runtime_error("reading ID3V2");
     }
+
+    return false;
 }
 
 bool medley::Metadata::readFLAC(const File& f)
 {
-    #ifdef _WIN32
+#ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
-    #else
+#else
     TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
-    #endif
+#endif
 
     TagLib::FileStream stream(fileName);
-    TagLib::FLAC::File file(&stream, TagLib::ID3v2::FrameFactory::instance(), true, TagLib::AudioProperties::Fast);
 
-    if (!file.isValid()) {
-        throw std::runtime_error("Could not open FLAC file for reading");
+    if (!TagLib::FLAC::File::isSupported(&stream)) {
+        throw std::runtime_error("Not a FLAC file");
     }
 
     try {
+        TagLib::FLAC::File file(&stream, false);
 
         if (!file.hasXiphComment()) {
             return false;
         }
 
         auto& tag = *file.xiphComment();
-        readTag(tag);
-
-        juce::String isrc;
-        readXiphCommentField(tag, "ISRC", &isrc);
-        this->isrc = isrc;
-
-        juce::String albumArtist;
-        readXiphCommentField(tag, "ALBUMARTIST", &albumArtist);
-        this->albumArtist = albumArtist;
-
-        juce::String originalArtist;
-        readXiphCommentField(tag, "ORIGARTIST", &isrc);
-        this->originalArtist = originalArtist;
-
-
-        juce::String trackGain;
-        readXiphCommentField(tag, "REPLAYGAIN_TRACK_GAIN", &trackGain);
-        this->trackGain = (float)parseReplayGainGain(trackGain);
-
-        juce::String cueIn;
-        readXiphCommentField(tag, L"CUE-IN", &cueIn);
-        if (cueIn.isEmpty()) {
-            readXiphCommentField(tag, L"CUE_IN", &cueIn);
-        }
-
-        this->cueIn = cueIn.isNotEmpty() ? cueIn.getDoubleValue() : -1.0;
-
-        juce::String cueOut;
-        readXiphCommentField(tag, L"CUE-OUT", &cueOut);
-        if (cueOut.isEmpty()) {
-            readXiphCommentField(tag, L"CUE_OUT", &cueOut);
-        }
-
-        this->cueOut = cueOut.isNotEmpty() ? cueOut.getDoubleValue() : -1.0;
-
-        juce::String lastAudible;
-        readXiphCommentField(tag, L"LAST_AUDIBLE", &lastAudible);
-
-        this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
-
-        this->comments.clear();
-
-        for (auto const& field : tag.fieldListMap()) {
-            this->comments.push_back(std::make_pair(
-                field.first.toCWString(),
-                firstNonEmptyStringListItem(field.second).toCWString()
-            ));
-        }
+        readBasicTag(tag);
+        readXiphTag(tag);
 
         return true;
     }
     catch (...) {
         throw std::runtime_error("reading FLAC");
     }
+
+    return false;
 }
 
-void medley::Metadata::readTag(const TagLib::Tag& tag)
+bool medley::Metadata::readOPUS(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (!TagLib::Ogg::Opus::File::isSupported(&stream)) {
+        throw std::runtime_error("Not an OPUS file");
+    }
+
+    try {
+        TagLib::Ogg::Opus::File file(&stream, false);
+
+        auto& tag = *file.tag();
+        readBasicTag(tag);
+        readXiphTag(tag, false); // Do not read replaygain
+
+        // Assume OPUS Output gain was revert during the decoding phase.
+        auto headerGain = file.packet(0).toShort(16, false);
+        if (headerGain != 0) {
+            // The output gain is encoded as decibels in Q7.8 notation, hence divide by 256 here
+            auto outputGain = headerGain / 256.0f;
+            // Since the gain is applied with -23dBFS reference point for opus but we use ReplayGain which has -18dbFS as the reference point
+            // So it's 5dB apart
+            constexpr float gainCompensation = 5.0f;
+            this->trackGain = Decibels::decibelsToGain(outputGain + gainCompensation);
+        }
+
+        return true;
+    }
+    catch (...) {
+        throw std::runtime_error("reading OPUS");
+    }
+
+    return false;
+}
+
+bool medley::Metadata::readOggVorbis(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (!TagLib::Ogg::Vorbis::File::isSupported(&stream)) {
+        throw std::runtime_error("Not an Ogg Vorbis file");
+    }
+
+    try {
+        TagLib::Ogg::Vorbis::File file(&stream, false);
+
+        auto& tag = *file.tag();
+        readBasicTag(tag);
+        readXiphTag(tag);
+
+        return true;
+    }
+    catch (...) {
+        throw std::runtime_error("reading Ogg");
+    }
+
+    return false;
+}
+
+bool medley::Metadata::readWAV(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (!TagLib::RIFF::WAV::File::isSupported(&stream)) {
+        throw std::runtime_error("Not a WAV file");
+    }
+
+    try {
+        TagLib::RIFF::WAV::File file(&stream, false);
+
+        auto& tag = *file.tag();
+        readBasicTag(tag);
+
+        if (file.hasID3v2Tag()) {
+            readID3Tag(*file.ID3v2Tag());
+        }
+
+        return true;
+    }
+    catch (...) {
+        throw std::runtime_error("reading Wav");
+    }
+
+    return false;
+}
+
+bool medley::Metadata::readAIFF(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (!TagLib::RIFF::AIFF::File::isSupported(&stream)) {
+        throw std::runtime_error("Not an AIFF file");
+    }
+
+    try {
+        TagLib::RIFF::AIFF::File file(&stream, false);
+
+        auto& tag = *file.tag();
+        readBasicTag(tag);
+
+        if (file.hasID3v2Tag()) {
+            readID3Tag(tag);
+        }
+
+        return true;
+    }
+    catch (...) {
+        throw std::runtime_error("reading Aiff");
+    }
+
+    return false;
+}
+
+void medley::Metadata::readBasicTag(const TagLib::Tag& tag)
 {
     title = tag.title().toCWString();
     artist = tag.artist().toCWString();
     album = tag.album().toCWString();
+}
+
+void medley::Metadata::readID3Tag(const TagLib::ID3v2::Tag& tag)
+{
+    const auto& tpe2Frames = tag.frameListMap()["TPE2"];
+    if (!tpe2Frames.isEmpty()) {
+        for (const auto pFrame : tpe2Frames) {
+            if (pFrame) {
+                albumArtist = pFrame->toString().toCWString();
+                break;
+            }
+        }
+    }
+
+    const auto& topeFrames = tag.frameListMap()["TOPE"];
+    if (!topeFrames.isEmpty()) {
+        for (const auto pFrame : topeFrames) {
+            if (pFrame) {
+                originalArtist = pFrame->toString().toCWString();
+                break;
+            }
+        }
+    }
+
+    const auto& tsrcFrames = tag.frameListMap()["TSRC"];
+    if (!tsrcFrames.isEmpty()) {
+        for (const auto pFrame : tsrcFrames) {
+            if (pFrame) {
+                isrc = pFrame->toString().toCWString();
+                break;
+            }
+        }
+    }
+
+    const auto& tbpmFrames = tag.frameListMap()["TBPM"];
+    if (!tbpmFrames.isEmpty()) {
+        for (const auto pFrame : tbpmFrames) {
+            if (pFrame) {
+                juce::String bpm = pFrame->toString().toCWString();
+                this->bpm = bpm.getFloatValue();
+
+                if (this->bpm < 0.0f) {
+                    this->bpm = 0.0f;
+
+                }
+                break;
+            }
+        }
+    }
+
+    this->comments.clear();
+
+    if (tag.header()->majorVersion() >= 3) {
+        auto trackGain = readFirstUserTextIdentificationFrame(tag, L"REPLAYGAIN_TRACK_GAIN");
+        this->trackGain = (float)parseReplayGainGain(trackGain);
+
+        auto cueIn = readFirstUserTextIdentificationFrame(tag, L"CUE-IN");
+        if (cueIn.isEmpty()) {
+            cueIn = readFirstUserTextIdentificationFrame(tag, L"CUE_IN");
+        }
+
+        this->cueIn = cueIn.isNotEmpty() ? cueIn.getDoubleValue() : -1.0;
+
+        auto cueOut = readFirstUserTextIdentificationFrame(tag, L"CUE-OUT");
+        if (cueOut.isEmpty()) {
+            cueOut = readFirstUserTextIdentificationFrame(tag, L"CUE_OUT");
+        }
+
+        this->cueOut = cueOut.isNotEmpty() ? cueOut.getDoubleValue() : -1.0;
+
+        auto lastAudible = readFirstUserTextIdentificationFrame(tag, L"LAST_AUDIBLE");
+
+        this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
+
+        const auto& textFrames = tag.frameListMap()["TXXX"];
+        for (auto& frame : textFrames) {
+            if (auto pFrame = dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(frame)) {
+                auto fields = pFrame->fieldList();
+
+                if (fields.size() >= 2) {
+                    this->comments.push_back(std::make_pair(fields[0].toCWString(), fields[1].toCWString()));
+                }
+            }
+        }
+    }
+}
+
+void medley::Metadata::readXiphTag(const TagLib::Ogg::XiphComment& tag, bool readReplayGain)
+{
+    readXiphCommentField(tag, "ISRC", &isrc);
+    readXiphCommentField(tag, "ALBUMARTIST", &albumArtist);
+    readXiphCommentField(tag, "ORIGARTIST", &originalArtist);
+
+    if (readReplayGain) {
+        juce::String trackGain;
+        readXiphCommentField(tag, "REPLAYGAIN_TRACK_GAIN", &trackGain);
+        this->trackGain = (float)parseReplayGainGain(trackGain);
+    }
+
+    juce::String cueIn;
+    readXiphCommentField(tag, L"CUE-IN", &cueIn);
+    if (cueIn.isEmpty()) {
+        readXiphCommentField(tag, L"CUE_IN", &cueIn);
+    }
+
+    this->cueIn = cueIn.isNotEmpty() ? cueIn.getDoubleValue() : -1.0;
+
+    juce::String cueOut;
+    readXiphCommentField(tag, L"CUE-OUT", &cueOut);
+    if (cueOut.isEmpty()) {
+        readXiphCommentField(tag, L"CUE_OUT", &cueOut);
+    }
+
+    this->cueOut = cueOut.isNotEmpty() ? cueOut.getDoubleValue() : -1.0;
+
+    juce::String lastAudible;
+    readXiphCommentField(tag, L"LAST_AUDIBLE", &lastAudible);
+
+    this->lastAudible = lastAudible.isNotEmpty() ? lastAudible.getDoubleValue() : -1.0;
+
+    this->comments.clear();
+
+    for (auto const& field : tag.fieldListMap()) {
+        this->comments.push_back(std::make_pair(
+            field.first.toCWString(),
+            firstNonEmptyStringListItem(field.second).toCWString()
+        ));
+    }
 }
 
 medley::Metadata::CoverAndLyrics::CoverAndLyrics(const File& file, bool readCover, bool readLyrics)
@@ -392,65 +497,43 @@ medley::Metadata::CoverAndLyrics::CoverAndLyrics(const File& file, bool readCove
     read(file, readCover, readLyrics);
 }
 
-void medley::Metadata::CoverAndLyrics::readID3V2(const File& f, bool readCover, bool readLyrics)
+void medley::Metadata::CoverAndLyrics::readMpeg(const File& f, bool readCover, bool readLyrics)
 {
 #ifdef _WIN32
-    TagLib::MPEG::File file((const wchar_t*)f.getFullPathName().toWideCharPointer());
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
 #else
-    TagLib::MPEG::File file(f.getFullPathName().toRawUTF8());
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
 #endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (!TagLib::MPEG::File::isSupported(&stream)) {
+        throw std::runtime_error("Not a MPEG file");
+    }
+
+    TagLib::MPEG::File file(&stream, false);
 
     if (file.hasID3v2Tag()) {
         auto& tag = *file.ID3v2Tag();
-
-        if (readCover) {
-            auto frameMap = tag.frameListMap();
-            const auto it = frameMap.find("APIC");
-
-            if ((it != frameMap.end()) && !it->second.isEmpty()) {
-                const auto frames = it->second;
-
-                for (const auto frame : frames) {
-                    const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
-                    if (apic && apic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
-                        cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
-                        break;
-                    }
-                }
-
-                if (cover.getData().isEmpty() && frames.size()) {
-                    if (const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frames[0])) {
-                        cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
-                    }
-                }
-            }
-        }
-
-        if (readLyrics) {
-            lyrics = readFirstUserTextIdentificationFrame(tag, L"LYRICS");
-
-            if (lyrics.isEmpty()) {
-                const auto& usltFrames = tag.frameListMap()["USLT"];
-                if (!usltFrames.isEmpty()) {
-                    for (const auto pFrame : usltFrames) {
-                        if (pFrame) {
-                            lyrics = pFrame->toString().toCWString();
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+        readID3Tag(tag, readCover, readLyrics);
     }
 }
 
-void medley::Metadata::CoverAndLyrics::readXiph(const File& f, bool readCover, bool readLyrics)
+void medley::Metadata::CoverAndLyrics::readFLAC(const File& f, bool readCover, bool readLyrics)
 {
 #ifdef _WIN32
-    TagLib::FLAC::File file((const wchar_t*)f.getFullPathName().toWideCharPointer());
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
 #else
-    TagLib::FLAC::File file(f.getFullPathName().toRawUTF8());
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
 #endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (!TagLib::FLAC::File::isSupported(&stream)) {
+        throw std::runtime_error("Not a FLAC file");
+    }
+
+    TagLib::FLAC::File file(&stream, false);
 
     if (readCover) {
         auto pictures = file.pictureList();
@@ -459,20 +542,168 @@ void medley::Metadata::CoverAndLyrics::readXiph(const File& f, bool readCover, b
             pictures = file.xiphComment()->pictureList();
         }
 
-        if (!pictures.isEmpty()) {
-            for (const auto picture : pictures) {
-                if (picture->type() == TagLib::FLAC::Picture::FrontCover) {
-                    cover = medley::Metadata::Cover(picture->data(), picture->mimeType());
+        readPictures(pictures);
+    }
+
+    if (readLyrics) {
+        readXiphLyrics(*file.xiphComment());
+    }
+}
+
+void medley::Metadata::CoverAndLyrics::readOPUS(const File& f, bool readCover, bool readLyrics)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (!TagLib::Ogg::Opus::File::isSupported(&stream)) {
+        throw std::runtime_error("Not an OPUS file");
+    }
+
+    TagLib::Ogg::Opus::File file(&stream, false);
+
+    auto tag = file.tag();
+
+    if (readCover) {
+        readPictures(tag->pictureList());
+    }
+
+    if (readLyrics) {
+        readXiphLyrics(*tag);
+    }
+}
+
+void medley::Metadata::CoverAndLyrics::readOggVorbis(const File& f, bool readCover, bool readLyrics)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (!TagLib::Ogg::Vorbis::File::isSupported(&stream)) {
+        throw std::runtime_error("Not an Ogg Vorbis file");
+    }
+
+    TagLib::Ogg::Vorbis::File file(&stream, false);
+
+    auto tag = file.tag();
+
+    if (readCover) {
+        readPictures(tag->pictureList());
+    }
+
+    if (readLyrics) {
+        readXiphLyrics(*tag);
+    }
+}
+
+void medley::Metadata::CoverAndLyrics::readWAV(const File& f, bool readCover, bool readLyrics)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (!TagLib::RIFF::WAV::File::isSupported(&stream)) {
+        throw std::runtime_error("Not a WAV file");
+    }
+
+    TagLib::RIFF::WAV::File file(&stream, false);
+
+    if (file.hasID3v2Tag()) {
+        auto& tag = *file.ID3v2Tag();
+        readID3Tag(tag, readCover, readLyrics);
+    }
+}
+
+void medley::Metadata::CoverAndLyrics::readAIFF(const File& f, bool readCover, bool readLyrics)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (!TagLib::RIFF::AIFF::File::isSupported(&stream)) {
+        throw std::runtime_error("Not an AIFF file");
+    }
+
+    TagLib::RIFF::AIFF::File file(&stream, false);
+
+    if (file.hasID3v2Tag()) {
+        readID3Tag(*file.tag(), readCover, readLyrics);
+    }
+}
+
+void medley::Metadata::CoverAndLyrics::readID3Tag(const TagLib::ID3v2::Tag& tag, bool readCover, bool readLyrics)
+{
+    if (readCover) {
+        auto frameMap = tag.frameListMap();
+        const auto it = frameMap.find("APIC");
+
+        if ((it != frameMap.end()) && !it->second.isEmpty()) {
+            const auto frames = it->second;
+
+            for (const auto frame : frames) {
+                const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
+                if (apic && apic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
+                    cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
                     break;
+                }
+            }
+
+            if (cover.getData().isEmpty() && frames.size()) {
+                if (const auto apic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frames[0])) {
+                    cover = medley::Metadata::Cover(apic->picture(), apic->mimeType());
                 }
             }
         }
     }
 
     if (readLyrics) {
-        auto tag = file.xiphComment();
-        readXiphCommentField(*tag, "LYRICS", &lyrics);
+        lyrics = readFirstUserTextIdentificationFrame(tag, L"LYRICS");
+
+        if (lyrics.isEmpty()) {
+            const auto& usltFrames = tag.frameListMap()["USLT"];
+            if (!usltFrames.isEmpty()) {
+                for (const auto pFrame : usltFrames) {
+                    if (pFrame) {
+                        lyrics = pFrame->toString().toCWString();
+                        break;
+                    }
+                }
+            }
+        }
     }
+}
+
+void medley::Metadata::CoverAndLyrics::readPictures(const TagLib::List<TagLib::FLAC::Picture*> pictures)
+{
+    if (!pictures.isEmpty()) {
+        for (const auto picture : pictures) {
+            if (picture->type() == TagLib::FLAC::Picture::FrontCover) {
+                cover = medley::Metadata::Cover(picture->data(), picture->mimeType());
+                break;
+            }
+        }
+    }
+}
+
+void medley::Metadata::CoverAndLyrics::readXiphLyrics(const TagLib::Ogg::XiphComment& tag)
+{
+    readXiphCommentField(tag, "LYRICS", &lyrics);
 }
 
 void medley::Metadata::CoverAndLyrics::read(const File& file, bool readCover, bool readLyrics)
@@ -481,14 +712,42 @@ void medley::Metadata::CoverAndLyrics::read(const File& file, bool readCover, bo
 
     switch (filetype) {
     case utils::FileType::MP3: {
-        readID3V2(file, readCover, readLyrics);
+        readMpeg(file, readCover, readLyrics);
         return;
     }
 
     case utils::FileType::FLAC: {
-        readXiph(file, readCover, readLyrics);
+        readFLAC(file, readCover, readLyrics);
         return;
     }
+
+    case utils::FileType::OPUS: {
+        readOPUS(file, readCover, readLyrics);
+        return;
+    }
+
+    case utils::FileType::OGG: {
+        readOggVorbis(file, readCover, readLyrics);
+        return;
+    }
+
+    case utils::FileType::WAV: {
+        readWAV(file, readCover, readLyrics);
+        return;
+    }
+
+    case utils::FileType::AIFF: {
+        readAIFF(file, readCover, readLyrics);
+        return;
+    }
+
+    case utils::FileType::MP4: {
+        // TODO: Implement this
+        return;
+    }
+
+    default:
+        return;
     }
 }
 
@@ -499,22 +758,56 @@ medley::Metadata::AudioProperties::AudioProperties(const File& file)
 
 void medley::Metadata::AudioProperties::read(const File& file)
 {
+    channels = 0;
+    bitrate = 0;
+    sampleRate = 0;
+    duration = 0;
+
     auto filetype = utils::getFileTypeFromFileName(file);
 
     switch (filetype) {
     case utils::FileType::MP3: {
-        readMpegInfo(file);
+        readMpeg(file);
         return;
     }
 
     case utils::FileType::FLAC: {
-        readXiph(file);
+        readFLAC(file);
         return;
+    }
+
+    case utils::FileType::OPUS: {
+        readOPUS(file);
+        return;
+    }
+
+    case utils::FileType::OGG: {
+        readOggVorbis(file);
+        return;
+    }
+
+    case utils::FileType::WAV: {
+        readWAV(file);
+        return;
+    }
+
+    case utils::FileType::AIFF: {
+        readAIFF(file);
+        return;
+    }
+
+    case utils::FileType::MP4: {
+        // TODO: Implement this
+        return;
+    }
+
+    default: {
+
     }
     }
 }
 
-void medley::Metadata::AudioProperties::readMpegInfo(const File& f)
+void medley::Metadata::AudioProperties::readMpeg(const File& f)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -523,47 +816,135 @@ void medley::Metadata::AudioProperties::readMpegInfo(const File& f)
 #endif
 
     TagLib::FileStream stream(fileName);
-    TagLib::MPEG::File file(&stream, TagLib::ID3v2::FrameFactory::instance(), true, TagLib::AudioProperties::Average);
 
-    if (file.isSupported(&stream)) {
-        auto props = file.audioProperties();
+    if (TagLib::MPEG::File::isSupported(&stream)) {
+        try {
+            TagLib::MPEG::File file(&stream, true, TagLib::AudioProperties::Fast);
+            readAudioProperties(file.audioProperties());
+        }
+        catch (...) {
 
+        }
+    }
+}
+
+void medley::Metadata::AudioProperties::readFLAC(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (TagLib::FLAC::File::isSupported(&stream)) {
+        try {
+            TagLib::FLAC::File file(&stream, true, TagLib::AudioProperties::Fast);
+            readAudioProperties(file.audioProperties());
+        }
+        catch (...) {
+
+        }
+    }
+}
+
+void medley::Metadata::AudioProperties::readOPUS(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (TagLib::Ogg::Opus::File::isSupported(&stream)) {
+        try {
+            TagLib::Ogg::Opus::File file(&stream, true, TagLib::AudioProperties::Fast);
+            readAudioProperties(file.audioProperties());
+        }
+        catch (...) {
+
+        }
+    }
+}
+
+void medley::Metadata::AudioProperties::readOggVorbis(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (TagLib::Ogg::Vorbis::File::isSupported(&stream)) {
+        try {
+            TagLib::Ogg::Vorbis::File file(&stream, true, TagLib::AudioProperties::Fast);
+            readAudioProperties(file.audioProperties());
+        }
+        catch (...) {
+
+        }
+    }
+}
+
+void medley::Metadata::AudioProperties::readWAV(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (TagLib::RIFF::WAV::File::isSupported(&stream)) {
+        try {
+            TagLib::RIFF::WAV::File file(&stream, true, TagLib::AudioProperties::Fast);
+            readAudioProperties(file.audioProperties());
+        }
+        catch (...) {
+
+        }
+    }
+}
+
+void medley::Metadata::AudioProperties::readAIFF(const File& f)
+{
+#ifdef _WIN32
+    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
+#else
+    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
+#endif
+
+    TagLib::FileStream stream(fileName);
+
+    if (TagLib::RIFF::AIFF::File::isSupported(&stream)) {
+        try {
+            TagLib::RIFF::AIFF::File file(&stream, true, TagLib::AudioProperties::Fast);
+            readAudioProperties(file.audioProperties());
+        }
+        catch (...) {
+
+        }
+    }
+}
+
+void medley::Metadata::AudioProperties::readAudioProperties(const TagLib::AudioProperties* props)
+{
+    try {
         channels = props->channels();
         bitrate = props->bitrate();
         sampleRate = props->sampleRate();
         duration = props->lengthInSeconds();
     }
-}
-
-void medley::Metadata::AudioProperties::readXiph(const File& f)
-{
-#ifdef _WIN32
-    TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
-#else
-    TagLib::FileName fileName(f.getFullPathName().toRawUTF8());
-#endif
-
-    TagLib::FileStream stream(fileName);
-    TagLib::FLAC::File file(&stream, TagLib::ID3v2::FrameFactory::instance(), true, TagLib::AudioProperties::Fast);
-
-    if (!file.isValid()) {
-        throw std::runtime_error("Invalid FLAC file");
-    }
-
-    if (isFLACSupported(&stream)) {
-        try {
-            auto const props = file.audioProperties();
-
-            channels = props->channels();
-            bitrate = props->bitrate();
-            sampleRate = props->sampleRate();
-            duration = props->lengthInMilliseconds() / 1000.0;
-        }
-        catch (...) {
-            channels = 0;
-            bitrate = 0;
-            sampleRate = 0;
-            duration = 0;
-        }
+    catch (...) {
+        channels = 0;
+        bitrate = 0;
+        sampleRate = 0;
+        duration = 0;
     }
 }
