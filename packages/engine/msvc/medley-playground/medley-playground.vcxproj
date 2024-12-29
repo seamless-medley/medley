@@ -205,6 +205,8 @@
     <ClCompile Include="..\..\src\MiniMP3AudioFormat.cpp" />
     <ClCompile Include="..\..\src\MiniMP3AudioFormatReader.cpp" />
     <ClCompile Include="..\..\src\NullAudioDevice.cpp" />
+    <ClCompile Include="..\..\src\OpusAudioFormat.cpp" />
+    <ClCompile Include="..\..\src\OpusAudioFormatReader.cpp" />
     <ClCompile Include="..\..\src\PostProcessor.cpp" />
     <ClCompile Include="..\..\src\ReductionCalculator.cpp" />
     <ClCompile Include="..\..\src\utils.cpp" />
@@ -227,6 +229,8 @@
     <ClInclude Include="..\..\src\MiniMP3AudioFormat.h" />
     <ClInclude Include="..\..\src\MiniMP3AudioFormatReader.h" />
     <ClInclude Include="..\..\src\NullAudioDevice.h" />
+    <ClInclude Include="..\..\src\OpusAudioFormat.h" />
+    <ClInclude Include="..\..\src\OpusAudioFormatReader.h" />
     <ClInclude Include="..\..\src\PostProcessor.h" />
     <ClInclude Include="..\..\src\ReductionCalculator.h" />
     <ClInclude Include="..\..\src\RingBuffer.h" />

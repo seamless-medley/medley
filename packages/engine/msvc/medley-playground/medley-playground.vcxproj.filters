@@ -111,6 +111,12 @@
     <ClCompile Include="..\..\src\DeFXKaraoke.cpp">
       <Filter>Engine Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\OpusAudioFormat.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\OpusAudioFormatReader.cpp">
+      <Filter>Engine Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\juce\JuceHeader.h">
@@ -171,6 +177,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\DeFXKaraoke.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\OpusAudioFormat.h">
+      <Filter>Engine Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\OpusAudioFormatReader.h">
       <Filter>Engine Source</Filter>
     </ClInclude>
   </ItemGroup>
