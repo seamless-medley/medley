@@ -29,7 +29,7 @@
     "type-fest": "^4.8.3",
     "typescript": "5.4.5"
   },
-  "packageManager": "pnpm@9.12.2",
+  "packageManager": "pnpm@9.15.2",
   "pnpm": {
     "peerDependencyRules": {
       "ignoreMissing": [
