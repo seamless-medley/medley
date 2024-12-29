@@ -52,7 +52,7 @@ FileType getFileTypeFromFileName(juce::File file) {
     }
 
     if (ext.equalsIgnoreCase(".wav")) {
-        return FileType::OGG;
+        return FileType::WAV;
     }
 
     if (ext.equalsIgnoreCase(".aif") || ext.equalsIgnoreCase(".aiff")) {
