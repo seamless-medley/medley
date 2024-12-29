@@ -253,6 +253,14 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
     if (queue.count() <= 0) {
         ScopedLock sl(callbackLock);
         listeners.call([&](Callback& listener) {
+            enqueueLock.enter();
+
+            // In case a race condition has occured, return from this function and try it later
+            if (queue.count() > 0) {
+                enqueueLock.exit();
+                return;
+            }
+
             listener.enqueueNext([&, _pQueue = &queue, p = play, _onLoadingDone = onLoadingDone](bool enqueueResult) {
                 if (enqueueResult && _pQueue->count() > 0) {
                     // enqueue succeeded, try to load again using available deck
@@ -261,6 +269,8 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
                 else {
                     _onLoadingDone(false);
                 }
+
+                enqueueLock.exit();
             });
         });
 
@@ -506,6 +516,14 @@ void Medley::deckPosition(Deck& sender, double position) {
 
                     auto pSender = &sender;
                     listeners.call([=, _sender = pSender](Callback& cb) {
+                        enqueueLock.enter();
+
+                        // In case a race condition has occured, return from this function and try it later
+                        if (queue.count() > 0) {
+                            enqueueLock.exit();
+                            return;
+                        }
+
                         cb.enqueueNext([=](bool done) {
                             if (done) {
                                 pTransition->state = DeckTransitionState::CueNext;
@@ -522,6 +540,8 @@ void Medley::deckPosition(Deck& sender, double position) {
                             else {
                                 pTransition->state = DeckTransitionState::Idle; // Move back to the previous state, this will cause a retry
                             }
+
+                            enqueueLock.exit();
                         });
                     });
                 }

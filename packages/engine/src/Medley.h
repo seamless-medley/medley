@@ -347,6 +347,8 @@ private:
     CriticalSection callbackLock;
     ListenerList<Callback> listeners;
 
+    CriticalSection enqueueLock;
+
     CriticalSection audioCallbackLock;
     AudioCallback* audioCallback = nullptr;
 
