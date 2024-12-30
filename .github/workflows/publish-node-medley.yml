@@ -5,7 +5,6 @@ on:
       - node-medley native module
     types:
       - completed
-  workflow_dispatch:
 env:
   NODE_MEDLEY_DIR: ./packages/node-medley
   PREBUILDS_DIR: ./packages/node-medley/prebuilds
