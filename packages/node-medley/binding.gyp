@@ -142,6 +142,8 @@
                         'include_dirs': [
                             "<!@(pkg-config taglib --cflags-only-I | sed s/-I//g)",
                             "<!@(pkg-config samplerate --cflags-only-I | sed s/-I//g)",
+                            "<!@(pkg-config opusfile --cflags-only-I  | awk '{print $1}' | sed s/include\\\\/opus/include/g | sed s/-I//g)",
+                            "<!@(pkg-config ogg --cflags-only-I | sed s/-I//g)",
                             "<!@(pkg-config opus --cflags-only-I | sed s/-I//g)"
                         ],
                         'libraries': [
