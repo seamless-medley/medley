@@ -75,7 +75,12 @@ jobs:
       - name: Dependencies (Linux)
         if: contains(matrix.build-arch, 'linux')
         run: |
-          sudo apt -y update && sudo apt -y install g++ make cmake pkg-config libasound2-dev
+          sudo apt -y update && sudo apt -y install g++ make cmake pkg-config libasound2-dev libfreetype-dev libutfcpp-dev libopus-dev libopusfile-dev
+
+      - name: Dependencies (Linux)
+        if: contains(matrix.build-arch, 'darwin')
+        run: |
+          brew install utf8cpp opus opusfile
 
       - name: Dependencies
         if: contains(matrix.build-arch, 'darwin') || contains(matrix.build-arch, 'linux')
@@ -98,7 +103,7 @@ jobs:
         if: contains(matrix.build-arch, 'win32')
         run: |
           vcpkg integrate install
-          vcpkg install libsamplerate:x64-windows-static taglib:x64-windows-static zlib:x64-windows-static
+          vcpkg install libsamplerate:x64-windows-static taglib:x64-windows-static zlib:x64-windows-static opus:x64-windows-static opusfile:x64-windows-static
 
       - name: Prepare
         working-directory: ./packages/node-medley
