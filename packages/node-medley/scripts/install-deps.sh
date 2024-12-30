@@ -17,7 +17,7 @@ cd taglib \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_TESTING=0
+        -DBUILD_TESTING=0 \
         . \
     && make -j 2 \
     && ${SUDO} make install
