@@ -1,4 +1,4 @@
-import { clamp, noop, sortBy } from "lodash";
+import { clamp, noop, sortBy, take, uniq } from "lodash";
 
 import {
   AudienceGroupId,
@@ -705,7 +705,15 @@ export class GuildState {
             embed.setThumbnail(info.image);
           }
 
-          const exactMatches = await station.findTracksByComment(searchKey, id, { valueDelimiter: ',' });
+          const exactMatches = await station.findTracksByComment(
+            searchKey,
+            id,
+            {
+              sort: { title: 1 },
+              valueDelimiter: ','
+            }
+          );
+
           const exactIds = new Set(exactMatches.map(t => t.id));
 
           const searchResult = await station.search({
@@ -716,12 +724,15 @@ export class GuildState {
             .then(s => s.filter(t => !exactIds.has(t.id)));
 
           if (exactMatches.length + searchResult.length) {
+            const exactMatchBanners = uniq(exactMatches.map(getTrackBanner));
+            const searchResultBanners = uniq(searchResult.map(getTrackBanner));
+
             const counter = [
-              exactMatches.length ? `${exactMatches.length} track(s)` : undefined,
-              searchResult.length ? `${searchResult.length} potential track(s)` : undefined
-            ]
-            .filter((s): s is string => s !== undefined)
-            .join(' and ');
+                exactMatchBanners.length ? `${exactMatchBanners.length} track(s)` : undefined,
+                searchResultBanners.length ? `${searchResultBanners.length} potential track(s)` : undefined
+              ]
+              .filter((s): s is string => s !== undefined)
+              .join(' and ');
 
             embed
               .setTitle(`Found ${counter} for this artist`)
