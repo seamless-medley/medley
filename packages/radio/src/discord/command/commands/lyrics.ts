@@ -61,7 +61,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
 
     const parsed = parseLyrics(lyrics);
 
-    const parsedCoverAndLyrics: BoomBoxCoverAnyLyrics = {
+    const coverAndLyrics: BoomBoxCoverAnyLyrics = {
       cover,
       coverMimeType,
       lyricsSource,
@@ -71,10 +71,10 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
     }
 
     if (trackExtra) {
-      trackExtra.maybeCoverAndLyrics = Promise.resolve(parsedCoverAndLyrics);
+      trackExtra.maybeCoverAndLyrics = Promise.resolve(coverAndLyrics);
     }
 
-    resolve(parsedCoverAndLyrics);
+    resolve(coverAndLyrics);
   })
 
   if (!lyricsText) {
