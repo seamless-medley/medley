@@ -31,7 +31,7 @@ import {
   trackRecordOf,
   TrackWithRequester
 } from "../playout";
-import { MetadataHelper } from "../metadata";
+
 import { SearchQueryField } from "../library/search";
 import { CrateProfile } from "../crate/profile";
 
