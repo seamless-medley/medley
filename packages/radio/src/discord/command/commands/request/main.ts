@@ -248,7 +248,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
           },
           // 10 pages
           limit: maxSelectMenuOptions * 10,
-          exactMatch,
+          fuzzy: exactMatch ? 'exact' : undefined,
           noHistory
         });
       }
@@ -268,7 +268,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
 
         const searchResult =  await station.search({
           q: { artist: options.artist },
-          exactMatch: true
+          fuzzy: 'exact'
         });
 
         return uniqBy(

@@ -710,7 +710,7 @@ export class GuildState {
 
           const searchResult = await station.search({
               q: { artist: info.artist },
-              exactMatch: true,
+              fuzzy: 'exact',
               noHistory: true
             })
             .then(s => s.filter(t => !exactIds.has(t.id)));
