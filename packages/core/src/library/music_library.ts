@@ -1,4 +1,4 @@
-import { castArray, chain, isString, partition, stubFalse } from 'lodash';
+import { castArray, chain, isString, partition, stubFalse, uniq } from 'lodash';
 import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents, WatchPathWithOption, RescanStats, TracksUpdateEvent } from '../collections';
 import { Logger, createLogger } from '@seamless-medley/logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
@@ -30,7 +30,7 @@ export type MusicTrackCollectionEvents<O> = TrackCollectionEvents<MusicTrack<O>>
 
 type IndexInfo<O> = {
   track: MusicTrack<O>;
-  retried?: number;
+  errors?: Error[];
   succeeded?: boolean;
 }
 
@@ -121,7 +121,13 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       this.#logger.info('%d tracks(s) from collection \'%s\' have been indexed', succeeded.length, collection.extra.description);
 
       if (failures.length) {
-        this.#logger.warn(failures.map(f => f.track.path), 'Could not index');
+        this.#logger.warn(
+          failures.map(f => ({
+            path: f.track.path,
+            errors: uniq(f.errors?.map(e => e.message))
+          })),
+          'Could not index'
+        );
       }
 
       if (chunkIndex +1 === totalChunks) {
@@ -215,15 +221,15 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
           indexed: this.#overallStats.indexed + 1
         }
       })
-      .catch(() => {
-        info.retried ??= 0;
-        info.retried++;
+      .catch((e) => {
+        info.errors ??= [];
+        info.errors.push(e);
 
         this.overallStats = {
           indexing: this.#overallStats.indexing - 1
         }
 
-        if (info.retried <= 3) {
+        if (info.errors.length <= 3) {
           failures.push(info);
         }
       })
