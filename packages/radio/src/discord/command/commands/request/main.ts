@@ -276,8 +276,8 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
             ...exactMatches,
             ...searchResult.map(t => ({
               // Less priority
+              ...t,
               priority: -1,
-              ...t
             }))
           ],
           t => t.id
