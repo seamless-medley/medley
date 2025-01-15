@@ -109,12 +109,12 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
             ...makeAnsiCodeBlock([
               ansi`{{green}}OK{{reset}}, {{pink}}${banners.length}{{reset}} track(s) canceled`,
               '',
-              ...banners
+              ...banners.map(s => `- ${s}`)
             ]),
             ...(loadedRequests.length
               ? makeAnsiCodeBlock([
                 'The following track(s) are already loaded and cannot be cancelled',
-                ...loadedRequests.map(getTrackBanner)
+                ...loadedRequests.map(t => `- ${getTrackBanner(t)}`)
               ])
               : []
             )
