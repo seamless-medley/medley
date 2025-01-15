@@ -387,7 +387,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
     const result = await this.#searchEngine.search(
       { queries: mainQueries, combineWith: 'OR' },
-      fuzzy !== 'exact' ? { prefix: true, fuzzy: fuzzy ?? 0.2 } : { prefix: false, fuzzy: false }
+      fuzzy !== 'exact' ? { prefix: true, fuzzy: fuzzy ?? 0.5 } : { prefix: false, fuzzy: false }
     );
 
     const chained = chain(result)
@@ -444,7 +444,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       {
         fields: field ? castArray(field) : undefined,
         prefix: true,
-        fuzzy: 0.3,
+        fuzzy: 0.6,
         narrow,
       }
     );
