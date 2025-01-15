@@ -90,12 +90,12 @@ medley::Metadata::Metadata()
 
 }
 
-bool medley::Metadata::readFromTrack(const ITrack::Ptr track)
+void medley::Metadata::readFromTrack(const ITrack::Ptr track)
 {
-    return readFromFile(track->getFile());
+    readFromFile(track->getFile());
 }
 
-bool medley::Metadata::readFromFile(const File& file)
+void medley::Metadata::readFromFile(const File& file)
 {
     bpm = 0.0f;
     trackGain = 0.0f;
@@ -114,32 +114,38 @@ bool medley::Metadata::readFromFile(const File& file)
 
         switch (filetype) {
         case utils::FileType::MP3: {
-            return readMpeg(file);
+            readMpeg(file);
+            return;
         }
 
         case utils::FileType::FLAC: {
-            return readFLAC(file);
+            readFLAC(file);
+            return;
         }
 
         case utils::FileType::OPUS: {
-            return readOPUS(file);
+            readOPUS(file);
+            return;
         }
 
         case utils::FileType::OGG: {
-            return readOggVorbis(file);
+            readOggVorbis(file);
+            return;
         }
 
         case utils::FileType::WAV: {
-            return readWAV(file);
+            readWAV(file);
+            return;
         }
 
         case utils::FileType::AIFF: {
-            return readAIFF(file);
+            readAIFF(file);
+            return;
         }
 
         default:
             title = file.getFileNameWithoutExtension();
-            return true;
+            return;
         }
     }
     catch (std::exception& e) {
@@ -148,11 +154,9 @@ bool medley::Metadata::readFromFile(const File& file)
     catch (...) {
         throw std::runtime_error(("Could not read metadata from file " + file.getFullPathName()).toStdString());
     }
-
-    return false;
 }
 
-bool medley::Metadata::readMpeg(const juce::File& f)
+void medley::Metadata::readMpeg(const juce::File& f)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -162,31 +166,27 @@ bool medley::Metadata::readMpeg(const juce::File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::MPEG::File::isSupported(&stream)) {
-        throw std::runtime_error("Not a MPEG file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open MPEG file");
     }
 
     try {
         TagLib::MPEG::File file(&stream, false);
 
         if (!file.hasID3v2Tag()) {
-            return false;
+            return;
         }
 
         auto& tag = *file.ID3v2Tag();
         readBasicTag(tag);
         readID3Tag(tag);
-
-        return true;
     }
     catch (...) {
-        throw std::runtime_error("reading ID3V2");
+        throw std::runtime_error("reading MPEG");
     }
-
-    return false;
 }
 
-bool medley::Metadata::readFLAC(const File& f)
+void medley::Metadata::readFLAC(const File& f)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -196,31 +196,27 @@ bool medley::Metadata::readFLAC(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::FLAC::File::isSupported(&stream)) {
-        throw std::runtime_error("Not a FLAC file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open FLAC file");
     }
 
     try {
         TagLib::FLAC::File file(&stream, false);
 
         if (!file.hasXiphComment()) {
-            return false;
+            return;
         }
 
         auto& tag = *file.xiphComment();
         readBasicTag(tag);
         readXiphTag(tag);
-
-        return true;
     }
     catch (...) {
         throw std::runtime_error("reading FLAC");
     }
-
-    return false;
 }
 
-bool medley::Metadata::readOPUS(const File& f)
+void medley::Metadata::readOPUS(const File& f)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -230,8 +226,8 @@ bool medley::Metadata::readOPUS(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::Ogg::Opus::File::isSupported(&stream)) {
-        throw std::runtime_error("Not an OPUS file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open OPUS file");
     }
 
     try {
@@ -251,17 +247,13 @@ bool medley::Metadata::readOPUS(const File& f)
             constexpr float gainCompensation = 5.0f;
             this->trackGain = Decibels::decibelsToGain(outputGain + gainCompensation);
         }
-
-        return true;
     }
     catch (...) {
         throw std::runtime_error("reading OPUS");
     }
-
-    return false;
 }
 
-bool medley::Metadata::readOggVorbis(const File& f)
+void medley::Metadata::readOggVorbis(const File& f)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -271,8 +263,8 @@ bool medley::Metadata::readOggVorbis(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::Ogg::Vorbis::File::isSupported(&stream)) {
-        throw std::runtime_error("Not an Ogg Vorbis file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open Ogg Vorbis file");
     }
 
     try {
@@ -281,17 +273,13 @@ bool medley::Metadata::readOggVorbis(const File& f)
         auto& tag = *file.tag();
         readBasicTag(tag);
         readXiphTag(tag);
-
-        return true;
     }
     catch (...) {
-        throw std::runtime_error("reading Ogg");
+        throw std::runtime_error("reading Ogg Vorbis");
     }
-
-    return false;
 }
 
-bool medley::Metadata::readWAV(const File& f)
+void medley::Metadata::readWAV(const File& f)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -301,8 +289,8 @@ bool medley::Metadata::readWAV(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::RIFF::WAV::File::isSupported(&stream)) {
-        throw std::runtime_error("Not a WAV file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open WAV file");
     }
 
     try {
@@ -314,17 +302,13 @@ bool medley::Metadata::readWAV(const File& f)
         if (file.hasID3v2Tag()) {
             readID3Tag(*file.ID3v2Tag());
         }
-
-        return true;
     }
     catch (...) {
         throw std::runtime_error("reading Wav");
     }
-
-    return false;
 }
 
-bool medley::Metadata::readAIFF(const File& f)
+void medley::Metadata::readAIFF(const File& f)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -334,8 +318,8 @@ bool medley::Metadata::readAIFF(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::RIFF::AIFF::File::isSupported(&stream)) {
-        throw std::runtime_error("Not an AIFF file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open AIFF file");
     }
 
     try {
@@ -347,14 +331,10 @@ bool medley::Metadata::readAIFF(const File& f)
         if (file.hasID3v2Tag()) {
             readID3Tag(tag);
         }
-
-        return true;
     }
     catch (...) {
         throw std::runtime_error("reading Aiff");
     }
-
-    return false;
 }
 
 void medley::Metadata::readBasicTag(const TagLib::Tag& tag)
@@ -507,15 +487,21 @@ void medley::Metadata::CoverAndLyrics::readMpeg(const File& f, bool readCover, b
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::MPEG::File::isSupported(&stream)) {
-        throw std::runtime_error("Not a MPEG file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open MPEG file");
     }
 
-    TagLib::MPEG::File file(&stream, false);
+    try {
+        TagLib::MPEG::File file(&stream, false);
 
-    if (file.hasID3v2Tag()) {
-        auto& tag = *file.ID3v2Tag();
-        readID3Tag(tag, readCover, readLyrics);
+        if (file.hasID3v2Tag()) {
+            auto& tag = *file.ID3v2Tag();
+            readID3Tag(tag, readCover, readLyrics);
+        }
+
+    }
+    catch (...) {
+        throw std::runtime_error("reading MPEG");
     }
 }
 
@@ -529,24 +515,29 @@ void medley::Metadata::CoverAndLyrics::readFLAC(const File& f, bool readCover, b
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::FLAC::File::isSupported(&stream)) {
-        throw std::runtime_error("Not a FLAC file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open FLAC file");
     }
 
-    TagLib::FLAC::File file(&stream, false);
+    try {
+        TagLib::FLAC::File file(&stream, false);
 
-    if (readCover) {
-        auto pictures = file.pictureList();
+        if (readCover) {
+            auto pictures = file.pictureList();
 
-        if (pictures.isEmpty() && file.hasXiphComment()) {
-            pictures = file.xiphComment()->pictureList();
+            if (pictures.isEmpty() && file.hasXiphComment()) {
+                pictures = file.xiphComment()->pictureList();
+            }
+
+            readPictures(pictures);
         }
 
-        readPictures(pictures);
+        if (readLyrics) {
+            readXiphLyrics(*file.xiphComment());
+        }
     }
-
-    if (readLyrics) {
-        readXiphLyrics(*file.xiphComment());
+    catch (...) {
+        throw std::runtime_error("reading FLAC");
     }
 }
 
@@ -560,20 +551,26 @@ void medley::Metadata::CoverAndLyrics::readOPUS(const File& f, bool readCover, b
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::Ogg::Opus::File::isSupported(&stream)) {
-        throw std::runtime_error("Not an OPUS file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open OPUS file");
     }
 
-    TagLib::Ogg::Opus::File file(&stream, false);
+    try {
 
-    auto tag = file.tag();
+        TagLib::Ogg::Opus::File file(&stream, false);
 
-    if (readCover) {
-        readPictures(tag->pictureList());
+        auto tag = file.tag();
+
+        if (readCover) {
+            readPictures(tag->pictureList());
+        }
+
+        if (readLyrics) {
+            readXiphLyrics(*tag);
+        }
     }
-
-    if (readLyrics) {
-        readXiphLyrics(*tag);
+    catch (...) {
+        throw std::runtime_error("reading OPUS");
     }
 }
 
@@ -587,20 +584,25 @@ void medley::Metadata::CoverAndLyrics::readOggVorbis(const File& f, bool readCov
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::Ogg::Vorbis::File::isSupported(&stream)) {
-        throw std::runtime_error("Not an Ogg Vorbis file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open Ogg Vorbis file");
     }
 
-    TagLib::Ogg::Vorbis::File file(&stream, false);
+    try {
+        TagLib::Ogg::Vorbis::File file(&stream, false);
 
-    auto tag = file.tag();
+        auto tag = file.tag();
 
-    if (readCover) {
-        readPictures(tag->pictureList());
+        if (readCover) {
+            readPictures(tag->pictureList());
+        }
+
+        if (readLyrics) {
+            readXiphLyrics(*tag);
+        }
     }
-
-    if (readLyrics) {
-        readXiphLyrics(*tag);
+    catch (...) {
+        throw std::runtime_error("reading Ogg Vorbis");
     }
 }
 
@@ -614,15 +616,20 @@ void medley::Metadata::CoverAndLyrics::readWAV(const File& f, bool readCover, bo
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::RIFF::WAV::File::isSupported(&stream)) {
-        throw std::runtime_error("Not a WAV file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open WAV file");
     }
 
-    TagLib::RIFF::WAV::File file(&stream, false);
+    try {
+        TagLib::RIFF::WAV::File file(&stream, false);
 
-    if (file.hasID3v2Tag()) {
-        auto& tag = *file.ID3v2Tag();
-        readID3Tag(tag, readCover, readLyrics);
+        if (file.hasID3v2Tag()) {
+            auto& tag = *file.ID3v2Tag();
+            readID3Tag(tag, readCover, readLyrics);
+        }
+    }
+    catch (...) {
+        throw std::runtime_error("reading WAV");
     }
 }
 
@@ -636,14 +643,19 @@ void medley::Metadata::CoverAndLyrics::readAIFF(const File& f, bool readCover, b
 
     TagLib::FileStream stream(fileName);
 
-    if (!TagLib::RIFF::AIFF::File::isSupported(&stream)) {
-        throw std::runtime_error("Not an AIFF file");
+    if (!stream.isOpen()) {
+        throw std::runtime_error("Could not open AIFF file");
     }
 
-    TagLib::RIFF::AIFF::File file(&stream, false);
+    try {
+        TagLib::RIFF::AIFF::File file(&stream, false);
 
-    if (file.hasID3v2Tag()) {
-        readID3Tag(*file.tag(), readCover, readLyrics);
+        if (file.hasID3v2Tag()) {
+            readID3Tag(*file.tag(), readCover, readLyrics);
+        }
+    }
+    catch (...) {
+        throw std::runtime_error("reading AIFF");
     }
 }
 
@@ -817,7 +829,7 @@ void medley::Metadata::AudioProperties::readMpeg(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (TagLib::MPEG::File::isSupported(&stream)) {
+    if (stream.isOpen()) {
         try {
             TagLib::MPEG::File file(&stream, true, TagLib::AudioProperties::Fast);
             readAudioProperties(file.audioProperties());
@@ -838,7 +850,7 @@ void medley::Metadata::AudioProperties::readFLAC(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (TagLib::FLAC::File::isSupported(&stream)) {
+    if (stream.isOpen()) {
         try {
             TagLib::FLAC::File file(&stream, true, TagLib::AudioProperties::Fast);
             readAudioProperties(file.audioProperties());
@@ -859,7 +871,7 @@ void medley::Metadata::AudioProperties::readOPUS(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (TagLib::Ogg::Opus::File::isSupported(&stream)) {
+    if (stream.isOpen()) {
         try {
             TagLib::Ogg::Opus::File file(&stream, true, TagLib::AudioProperties::Fast);
             readAudioProperties(file.audioProperties());
@@ -880,7 +892,7 @@ void medley::Metadata::AudioProperties::readOggVorbis(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (TagLib::Ogg::Vorbis::File::isSupported(&stream)) {
+    if (stream.isOpen()) {
         try {
             TagLib::Ogg::Vorbis::File file(&stream, true, TagLib::AudioProperties::Fast);
             readAudioProperties(file.audioProperties());
@@ -901,7 +913,7 @@ void medley::Metadata::AudioProperties::readWAV(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (TagLib::RIFF::WAV::File::isSupported(&stream)) {
+    if (stream.isOpen()) {
         try {
             TagLib::RIFF::WAV::File file(&stream, true, TagLib::AudioProperties::Fast);
             readAudioProperties(file.audioProperties());
@@ -922,7 +934,7 @@ void medley::Metadata::AudioProperties::readAIFF(const File& f)
 
     TagLib::FileStream stream(fileName);
 
-    if (TagLib::RIFF::AIFF::File::isSupported(&stream)) {
+    if (stream.isOpen()) {
         try {
             TagLib::RIFF::AIFF::File file(&stream, true, TagLib::AudioProperties::Fast);
             readAudioProperties(file.audioProperties());

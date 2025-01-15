@@ -101,8 +101,8 @@ public:
 
     Metadata();
 
-    bool readFromTrack(const ITrack::Ptr track);
-    bool readFromFile(const File& file);
+    void readFromTrack(const ITrack::Ptr track);
+    void readFromFile(const File& file);
 
     FileType getFileType() const { return type; }
     const juce::String& getTitle() const { return title; }
@@ -121,12 +121,12 @@ public:
     std::vector<std::pair<juce::String, juce::String>>&  getComments() { return comments; }
 
 private:
-    bool readMpeg(const File& f);
-    bool readFLAC(const File& f);
-    bool readOPUS(const File& f);
-    bool readOggVorbis(const File& f);
-    bool readWAV(const File& f);
-    bool readAIFF(const File& f);
+    void readMpeg(const File& f);
+    void readFLAC(const File& f);
+    void readOPUS(const File& f);
+    void readOggVorbis(const File& f);
+    void readWAV(const File& f);
+    void readAIFF(const File& f);
     //
     void readBasicTag(const TagLib::Tag& tag);
     void readID3Tag(const TagLib::ID3v2::Tag& tag);

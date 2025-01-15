@@ -984,22 +984,17 @@ Napi::Value Medley::static_getMetadata(const CallbackInfo& info) {
         return env.Undefined();
     }
 
-    bool ok = false;
     medley::Metadata metadata;
 
     try {
         juce::String trackFile = info[0].ToString().Utf8Value();
-        ok = metadata.readFromFile(trackFile);
+        metadata.readFromFile(trackFile);
     }
     catch (std::exception const& e) {
         throw Napi::Error::New(info.Env(), e.what());
     }
     catch (...) {
         throw Napi::Error::New(info.Env(), "Error reading file");
-    }
-
-    if (!ok) {
-        return env.Undefined();
     }
 
     return createJSMetadata(env, metadata);
