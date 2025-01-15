@@ -6,6 +6,7 @@ import {
   KaraokeUpdateParams,
   Station,
   getStationTrackSorters,
+  getTrackBanner,
 } from "@seamless-medley/core";
 
 import { retryable } from "@seamless-medley/utils";
@@ -675,9 +676,17 @@ export class GuildState {
           });
 
           if (searchResult.length) {
+            const banners = uniq(searchResult.map(getTrackBanner));
+            const sampleBanners = take(banners, 3).map(s => `- ${s}`);
+
+            if (sampleBanners.length < banners.length) {
+              sampleBanners.push('...');
+            }
+
             return {
               embeds: [new EmbedBuilder()
-                .setTitle(`Found ${searchResult.length} potential track(s) for this title`)
+                .setTitle(`Found ${banners.length} potential track(s) for this title`)
+                .setDescription(sampleBanners.join('\n'))
               ],
               components: [
                 new ActionRowBuilder<MessageActionRowComponentBuilder>()
@@ -734,8 +743,19 @@ export class GuildState {
               .filter((s): s is string => s !== undefined)
               .join(' and ');
 
+            const sampleBanners = take(exactMatchBanners, 3).map(s => `- ${s}`);
+
+            if (sampleBanners.length < 3 && searchResultBanners.length) {
+              sampleBanners.push(...take(searchResultBanners, 3 - sampleBanners.length).map(s => `- ${s}`));
+            }
+
+            if (sampleBanners.length < (exactMatches.length + searchResultBanners.length)) {
+              sampleBanners.push('...');
+            }
+
             embed
               .setTitle(`Found ${counter} for this artist`)
+              .setDescription(sampleBanners.join('\n'))
               .addFields(
                 { name: 'Artist', value: quote(hyperlink(info.artist, url.href)) },
               )
