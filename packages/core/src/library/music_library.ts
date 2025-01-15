@@ -44,7 +44,7 @@ export type LibraryRescanStats<O> = RescanStats & {
 export type LibrarySearchParams = {
   q: SearchQuery;
   limit?: number;
-  exactMatch?: boolean;
+  fuzzy?: 'exact' | number;
 }
 
 export interface MusicLibraryEvents {
@@ -346,7 +346,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       .filter((t): t is MusicTrack<O> => t !== undefined)
   }
 
-  async search({ q, limit, exactMatch }: LibrarySearchParams): Promise<Array<MusicTrack<O>>> {
+  async search({ q, limit, fuzzy }: LibrarySearchParams): Promise<Array<MusicTrack<O>>> {
     const { artist, title, query } = q;
 
     const mainQueries: Array<Query> = [];
@@ -357,14 +357,15 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
       if (artist) {
         titleAndArtistValues.push({
-          queries: (exactMatch ? ['artist'] : ['artist', 'originalArtist', 'albumArtist']).map(artistField => ({
+          queries: (fuzzy === 'exact' ? ['artist'] : ['artist', 'originalArtist', 'albumArtist']).map(artistField => ({
             fields: [artistField], queries: [artist]
           })),
           combineWith: 'OR',
           boost: {
             originalArtist: 0.85,
             albumArtist: 0.8
-          }
+          },
+          fuzzy: fuzzy !== 'exact' ? fuzzy : undefined
         });
       }
 
@@ -386,7 +387,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
     const result = await this.#searchEngine.search(
       { queries: mainQueries, combineWith: 'OR' },
-      !exactMatch ? { prefix: true, fuzzy: 0.2 } : { prefix: false, fuzzy: false }
+      fuzzy !== 'exact' ? { prefix: true, fuzzy: fuzzy ?? 0.2 } : { prefix: false, fuzzy: false }
     );
 
     const chained = chain(result)
@@ -408,7 +409,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
           q: {
             artist: narrowTerm
           },
-          exactMatch: true
+          fuzzy: 'exact'
         });
       }
 
