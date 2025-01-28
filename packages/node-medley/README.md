@@ -63,7 +63,7 @@ medley.play();
 > This will start playback on the default audio device.
 
 # Supported File Formats
-Currently, the supported file formats include: `wav`, `aiff`, `mp3`, `ogg` and `flac`. More formats may be added in the future.
+Currently, the supported file formats include: `wav`, `aiff`, `mp3`, `ogg`, `flac` and `opus`. More formats may be added in the future.
 
 # Guide
 
