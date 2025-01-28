@@ -15,6 +15,7 @@ import rescan from './rescan';
 import volume from './volume';
 import dj from './dj';
 import stats from './stats';
+import invite from './invite';
 
 export const all = {
   join,
@@ -33,5 +34,6 @@ export const all = {
   rescan,
   volume,
   dj,
-  stats
+  stats,
+  invite
 }
