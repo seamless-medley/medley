@@ -78,6 +78,8 @@ Medley was born out of a personal desire to enhance the music listening experien
 - FLAC
 - WAV
 - OGG
+- OPUS
+- AIFF
 
 ## Powered by [node-medley](https://github.com/seamless-medley/medley/blob/main/packages/node-medley/README.md)
 Medley is powered by the `node-medley` project, which serves as the engine behind all of its audio capabilities.
