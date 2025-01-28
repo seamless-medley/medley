@@ -118,7 +118,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     this.#tryIndexTracks(infos, () => {
       const [succeeded, failures] = partition(infos, info => info.succeeded);
 
-      this.#logger.info('%d tracks(s) from collection \'%s\' have been indexed', succeeded.length, collection.extra.description);
+      this.#logger.info(`${totalChunks > 1 ? `[${chunkIndex + 1}/${totalChunks}] ` : ''}${succeeded.length} tracks(s) from collection '${collection.extra.description}' have been indexed`);
 
       if (failures.length) {
         this.#logger.warn(
