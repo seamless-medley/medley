@@ -12,7 +12,7 @@
   "dependencies": {
     "@parcel/watcher": "^2.3.0",
     "@seamless-medley/logging": "../logging",
-    "@seamless-medley/medley": "0.4.6",
+    "@seamless-medley/medley": "0.5.0",
     "@seamless-medley/utils": "../utils",
     "axios": ">=1.7.4",
     "fast-glob": "^3.3.1",
