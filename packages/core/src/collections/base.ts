@@ -335,7 +335,7 @@ export class TrackCollection<
         this.trackIdMap.set(track.id, track);
       }
 
-      this.logger.info(`${mapped.length} track(s) added`);
+      this.logger.info(`${totalChunks > 1 ? `[${chunkIndex+1}/${totalChunks}] ` : ''}${mapped.length} track(s) added`);
       this.emit('tracksAdd', mapped, chunkIndex, totalChunks);
     }
 
