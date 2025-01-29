@@ -212,8 +212,9 @@
                         'libraries': [
                             "<!@(pkg-config taglib --libs)",
                             "<!@(pkg-config samplerate --libs)",
-                            "<!@(pkg-config opus --libs)",
-                            "<!@(pkg-config opusfile --libs)",
+                            "-l:libogg.a",
+                            "-l:libopus.a",
+                            "-l:libopusfile.a",
                             "<!@(pkg-config freetype2 --libs)",
                             "-lasound"
                         ],
