@@ -148,9 +148,10 @@
                         ],
                         'libraries': [
                             "<!@(pkg-config taglib --libs)",
-                            "<!@(pkg-config samplerate --libs)",
-                            "<!@(pkg-config opus --libs)",
-                            "<!@(pkg-config opusfile --libs)",
+                            "<!@(pkg-config samplerate --libs-only-L)/libsamplerate.a",
+                            "<!@(pkg-config ogg --libs-only-L)/libogg.a",
+                            "<!@(pkg-config opus --libs-only-L)/libopus.a",
+                            "<!@(pkg-config opusfile --libs-only-L)/libopusfile.a"
                         ],
                         'sources': [
                             "../engine/juce/include_juce_audio_basics_mac.mm",
