@@ -715,7 +715,9 @@ void medley::Metadata::CoverAndLyrics::readPictures(const TagLib::List<TagLib::F
 
 void medley::Metadata::CoverAndLyrics::readXiphLyrics(const TagLib::Ogg::XiphComment& tag)
 {
-    readXiphCommentField(tag, "LYRICS", &lyrics);
+    if (!readXiphCommentField(tag, "LYRICS", &lyrics)) {
+        readXiphCommentField(tag, "UNSYNCED LYRICS", &lyrics);
+    }
 }
 
 void medley::Metadata::CoverAndLyrics::read(const File& file, bool readCover, bool readLyrics)
