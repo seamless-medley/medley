@@ -1,5 +1,6 @@
 import { Medley, Queue } from '..';
-import test from 'ava';
+import { extname } from 'node:path';
+import test, { ExecutionContext } from 'ava';
 
 test.serial('Native module loading', t => {
   const info = Medley.getInfo();
@@ -7,12 +8,22 @@ test.serial('Native module loading', t => {
   t.is(info.versionString, require('../package.json').version);
 });
 
-const track = __dirname + '/bensound-dance.mp3';
-const middlec = __dirname + '/middlec.mp3';
+const tracks = ['mp3', 'opus', 'flac', 'ogg', 'wav', 'aiff'].map(ext => `${__dirname}/bensound-dance.${ext}`);
 
-test.serial('MP3 Track loading', t => {
-  t.true(Medley.isTrackLoadable(track));
-});
+const middlec = [
+  { ext: 'mp3', sampleRate: 44100 },
+  { ext: 'opus', sampleRate: 48000 },
+  { ext: 'flac', sampleRate: 44100 },
+  { ext: 'ogg', sampleRate: 44100 },
+  { ext: 'wav', sampleRate: 44100 },
+  { ext: 'aiff', sampleRate: 44100 }
+]
+
+for (const track of tracks) {
+  test.serial(`${extname(track).toUpperCase().substring(1)} Track loading`, t => {
+    t.true(Medley.isTrackLoadable(track));
+  });
+}
 
 test.serial('Exotic MP3 tracks loading', async t => {
   const testTracks: [string, boolean][] = [
@@ -29,25 +40,34 @@ test.serial('Exotic MP3 tracks loading', async t => {
   }
 });
 
-test.serial('Audio Properties: middlec.mp3', t => {
-  const props = Medley.getAudioProperties(middlec);
+
+const testAudioProperties = (ext: string, sampleRate: number) => (t: ExecutionContext) => {
+  const props = Medley.getAudioProperties(`${__dirname}/middlec.${ext}`);
 
   t.assert(typeof props === 'object', 'Medley.getAudioProperties must return an object');
   t.is(props.channels, 2);
-  t.is(props.sampleRate, 44100);
+  t.is(props.sampleRate, sampleRate);
   t.assert(typeof props.bitrate === 'number' || typeof props.bitrate === 'undefined', 'bitrate must be a number or undefined');
   t.is(props.duration, 5);
-});
+}
 
-test.serial('Reading Cover and Lyrics: middlec.mp3', t => {
-  const result = Medley.getCoverAndLyrics(middlec);
+const testCoverAndLyrics = (ext: string) => (t: ExecutionContext) => {
+  const result = Medley.getCoverAndLyrics(`${__dirname}/middlec.${ext}`);
 
   t.assert(typeof result === 'object', 'Medley.getCoverAndLyrics must return an object');
   t.is(result.coverMimeType, 'image/jpeg');
   t.true(Buffer.isBuffer(result.cover));
   t.is(result.cover.byteLength, 4856);
   t.is(result.lyrics, 'middle c');
-});
+}
+
+for (const { ext, sampleRate } of middlec) {
+  test.serial(`Audio Properties: middlec.${ext}`, testAudioProperties(ext, sampleRate));
+}
+
+for (const { ext } of middlec) {
+  test.serial(`Reading Cover and Lyrics: middlec.${ext}`, testCoverAndLyrics(ext));
+}
 
 test('Null Audio Device playback', t => {
   const queue = new Queue();
@@ -60,8 +80,7 @@ test('Null Audio Device playback', t => {
     'Null audio device'
   );
 
-  queue.add(track);
-
+  queue.add(tracks[0]);
   t.true(medley.play());
 
   const sampleRate = 48_000;
