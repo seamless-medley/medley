@@ -81,7 +81,7 @@ Medley was born out of a personal desire to enhance the music listening experien
 - OPUS
 - AIFF
 
-## Powered by [node-medley](https://github.com/seamless-medley/medley/blob/main/packages/node-medley/README.md)
+## Powered by [node-medley](https://github.com/seamless-medley/medley/blob/main/packages/node-medley)
 Medley is powered by the `node-medley` project, which serves as the engine behind all of its audio capabilities.
 
 For detailed information about `node-medley`, please refer to its [README](https://github.com/seamless-medley/medley/blob/main/packages/node-medley/README.md)
