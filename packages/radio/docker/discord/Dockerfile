@@ -35,6 +35,8 @@ RUN apt update \
         tzdata \
         libasound2 \
         libfreetype6 \
+        libopus0 \
+        libopusfile0 \
         -y \
     && rm -rf /var/lib/apt/lists/*
 
