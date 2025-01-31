@@ -64,8 +64,8 @@ importers:
         specifier: ../logging
         version: link:../logging
       '@seamless-medley/medley':
-        specifier: 0.5.0
-        version: 0.5.0
+        specifier: 0.5.1
+        version: 0.5.1
       '@seamless-medley/utils':
         specifier: ../utils
         version: link:../utils
@@ -1555,8 +1555,8 @@ packages:
     resolution: {integrity: sha512-jjmJywLAFoWeBi1W7994zZyiNWPIiqRRNAmSERxyg93xRGzNYvGjlZ0gR6x0F4gPRi2+0O6S71kOZYyr3cxaIQ==}
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
 
-  '@seamless-medley/medley@0.5.0':
-    resolution: {integrity: sha512-vRS1uZWIt/eQqm0hdcHWQ+s41zNP3AmQetDm/gh2Ka8n/sqEzJquFn71yHHfkBdRYgCKcbseD9c3JONx0t/HRQ==}
+  '@seamless-medley/medley@0.5.1':
+    resolution: {integrity: sha512-kkCPLewYEU5u+OHBtLkHfYLMemH2ok26qgu7Latdt/gjsAtN3+60s8jRCok9QVMWSJ8lmu7FLJ1mnBOXB87Fng==}
 
   '@sindresorhus/merge-streams@2.3.0':
     resolution: {integrity: sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg==}
@@ -5675,7 +5675,7 @@ snapshots:
 
   '@sapphire/snowflake@3.5.3': {}
 
-  '@seamless-medley/medley@0.5.0':
+  '@seamless-medley/medley@0.5.1':
     dependencies:
       node-gyp-build: 4.8.2
 
