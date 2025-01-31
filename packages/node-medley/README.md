@@ -35,6 +35,29 @@
 
 # Installation
 
+### Linux Requirements
+
+To install on Linux system, you'll need to install the following dependencies:
+
+- `asound`
+    - Required for audio output on Linux systems
+- `freetype`
+    - Required by JUCE framework (but not actively used)
+- `opus` and `opusfile`
+    - For decoding .opus audio files
+
+### Debian/Ubuntu
+```sh
+sudo apt-get install libasound2 libfreetype6 libopus0 libopusfile0
+```
+
+### RHEL/Fedora/Rocky Linux
+```sh
+sudo dnf install alsa-lib freetype opus opusfile
+```
+
+### Install the npm package
+
 ### With `npm`:
 ```sh
 npm i @seamless-medley/medley
