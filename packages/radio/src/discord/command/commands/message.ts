@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction } from "discord.js";
+import { ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import { AutomatonPermissionError, ChannelType, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { canSendMessageTo, guildIdGuard, reply } from "../utils";
 import { isChannelSuitableForTrackMessage } from "../../trackmessage";
@@ -42,7 +42,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     if (!guildChannel || !isChannelSuitableForTrackMessage(guildChannel) || !canSendMessageTo(guildChannel)) {
       reply(interaction, {
         content: `Message could not be sent to channel ${channel.toString()}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
@@ -51,7 +51,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 
     reply(interaction, {
       content: `OK, Messages will be posted in ${channel.toString()}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 }

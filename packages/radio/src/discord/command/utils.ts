@@ -16,6 +16,7 @@ import {
   InteractionReplyOptions,
   InteractionResponse,
   Message,
+  MessageFlags,
   MessagePayload,
   PermissionResolvable,
   PermissionsBitField
@@ -70,7 +71,7 @@ export const reply = async (interaction: BaseInteraction, options: string | Mess
 
   return !interaction.replied && !interaction.deferred
     ? interaction.reply(options as string | MessagePayload | InteractionReplyOptions)
-    : interaction.editReply(options);
+    : interaction.editReply(options as InteractionEditReplyOptions);
 }
 
 type DeclareOptions = {
@@ -90,7 +91,7 @@ export const declare: SimpleDeclareFn = (interaction, s, options) => reply(inter
     options?.mention ? formatMention(options.mention.type, options.mention.subject) : undefined,
     ...castArray(s)
   ]),
-  ephemeral: options?.ephemeral
+  flags: options?.ephemeral ? MessageFlags.Ephemeral : undefined
 });
 
 export const accept: SimpleDeclareFn = (interaction, s, options?) =>

@@ -100,7 +100,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
     files: [
       new AttachmentBuilder(Buffer.from(lyricsText), { name: `${banner} lyrics.txt` })
     ],
-    fetchReply: true
+    withResponse: true
   });
 
   if (trackMsg && lyricMessage instanceof Message) {

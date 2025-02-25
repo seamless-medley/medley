@@ -3,6 +3,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   MessageActionRowComponentBuilder,
+  MessageFlags,
   SelectMenuComponentOptionData,
   StringSelectMenuBuilder,
 } from "discord.js";
@@ -158,7 +159,7 @@ export async function set(options: SubCommandHandlerOptions) {
         } else {
           collected.reply({
             content: makeColoredMessage('red|b', latching),
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
         }
 

@@ -123,7 +123,7 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
             text: 'These tracks will not be played during this vote session'
           })
       ],
-      fetchReply: true
+      withResponse: true
     });
 
     // Add reactions

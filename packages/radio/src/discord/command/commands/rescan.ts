@@ -1,4 +1,4 @@
-import { CommandInteraction, blockQuote, inlineCode, unorderedList } from "discord.js";
+import { CommandInteraction, MessageFlags, blockQuote, inlineCode, unorderedList } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deferReply, deny, guildStationGuard, joinStrings, reply } from "../utils";
 import { LibraryRescanStats, Station } from "@seamless-medley/core";
@@ -19,13 +19,13 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     return;
   }
 
-  await deferReply(interaction, { ephemeral: true });
+  await deferReply(interaction, { flags: MessageFlags.Ephemeral });
 
   const { station } = guildStationGuard(automaton, interaction);
 
   const stats = await station.rescan(true, once(() => {
      reply(interaction, {
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
       content: `Re-scanning...`
     });
   }));
@@ -50,7 +50,7 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   }, { scanned: 0, added: 0, removed: 0, updated: 0, elapsedTime: 0 } as Stat)
 
   await reply(interaction, {
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
     content: blockQuote(joinStrings([
       unorderedList(lines),
       '',

@@ -12,7 +12,7 @@ import {
 } from "discord.js";
 
 import { MedleyAutomaton } from "../automaton";
-import { guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
+import { deferReply, guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
 import { noop } from "lodash";
 import { Strings } from "./type";
 
@@ -64,6 +64,9 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
     makeComponents
   } = options;
 
+  // This ensures that we always get the message object when reply
+  await deferReply(interaction);
+
   const guildId = guildIdGuard(interaction);
   const issuer = interaction.user.id;
   const runningKey = `${guildId}:${issuer}`;
@@ -76,7 +79,7 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
   const makeTimeout = () => ttl ? (formatTimeout ?? defaultFunctions.formatTimeout)(formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')) : undefined;
 
   const buildMessage: InteractorMessageBuilder = async () => ({
-    fetchReply: true,
+    withResponse: true,
     content: joinStrings([
       !interaction.isChatInputCommand() ? `${userMention(issuer)} ` : undefined,
       makeTimeout(),
@@ -87,9 +90,9 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
 
   const replyMessage = async () => reply(interaction, await buildMessage());
 
-  const selector = await replyMessage();
+  const selector = await replyMessage().then(m => m?.fetch?.());
 
-  if (!(selector instanceof Message)) {
+  if (!selector) {
     return;
   }
 
