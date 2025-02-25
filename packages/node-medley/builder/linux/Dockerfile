@@ -3,7 +3,7 @@
 
 FROM node:20.18.0
 
-RUN corepack enable && corepack prepare pnpm@9.15.4
+RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@9.15.4
 
 RUN apt -y update \
     && apt -y install \
