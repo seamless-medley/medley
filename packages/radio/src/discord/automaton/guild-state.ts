@@ -676,7 +676,7 @@ export class GuildState {
           });
 
           if (searchResult.length) {
-            const banners = uniq(searchResult.map(getTrackBanner));
+            const banners = uniq(searchResult.map(r => getTrackBanner(r.track)));
             const sampleBanners = take(banners, 3).map(s => `- ${s}`);
 
             if (sampleBanners.length < banners.length) {
@@ -730,11 +730,11 @@ export class GuildState {
               fuzzy: 'exact',
               noHistory: true
             })
-            .then(s => s.filter(t => !exactIds.has(t.id)));
+            .then(s => s.filter(r => !exactIds.has(r.track.id)))
 
           if (exactMatches.length + searchResult.length) {
             const exactMatchBanners = uniq(exactMatches.map(getTrackBanner));
-            const searchResultBanners = uniq(searchResult.map(getTrackBanner));
+            const searchResultBanners = uniq(searchResult.map(r => getTrackBanner(r.track)));
 
             const counter = [
                 exactMatchBanners.length ? `${exactMatchBanners.length} track(s)` : undefined,

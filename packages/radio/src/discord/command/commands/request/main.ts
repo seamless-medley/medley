@@ -250,7 +250,8 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
           limit: maxSelectMenuOptions * 10,
           fuzzy: exactMatch ? 'exact' : undefined,
           noHistory
-        });
+        })
+        .then(result => result.map(r => r.track));
       }
 
       case 'spotify:track':
@@ -276,7 +277,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
             ...exactMatches,
             ...searchResult.map(t => ({
               // Less priority
-              ...t,
+              ...t.track,
               priority: -1,
             }))
           ],
