@@ -14,19 +14,10 @@ export type SocketConfig = {
 	port: number;
 }
 
-type KeepAlive = {
-	timestamp: number;
-	value: number;
-}
-
-const LEETCAFE = 0x1337cafe;
-
 const MAX_COUNTER_VALUE = 2 ** 32 - 1;
 
 export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
   readonly #socket: Socket;
-
-  readonly #keepAlives: KeepAlive[] = [];
 
   #keepAliveCounter = 0;
 
@@ -44,7 +35,7 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
       .on('close', this.#onClose)
       .on('error', this.#onError)
 
-    this.#keepAliveBuffer.writeUInt32BE(LEETCAFE, 0);
+    this.#keepAliveBuffer.writeUInt32BE(this.#keepAliveCounter, 0);
     this.#keepAliveTimer = setInterval(() => this.#keepAlive(), 5e3);
     setImmediate(() => this.#keepAlive());
   }
@@ -65,19 +56,6 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
   }
 
   #onMessage = (buffer: Buffer) => {
-    if (buffer.length === 8 && buffer.readUInt32BE(0) === LEETCAFE) {
-      const counter = buffer.readUInt32LE(4);
-      const index = this.#keepAlives.findIndex(({ value }) => value === counter);
-
-      if (index === -1)
-        return;
-
-      this.#ping = Date.now() - this.#keepAlives[index].timestamp;
-      this.#keepAlives.splice(0, index);
-
-      this.emit('ping', this.#ping);
-    }
-
     this.emit('message', buffer);
   }
 
@@ -90,18 +68,8 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
   }
 
   #keepAlive() {
-		if (this.#keepAlives.length >= 12) {
-			this.destroy();
-			return;
-		}
-
 		this.#keepAliveBuffer.writeUInt32LE(this.#keepAliveCounter, 4);
 		this.send(this.#keepAliveBuffer);
-
-		this.#keepAlives.push({
-			value: this.#keepAliveCounter,
-			timestamp: Date.now(),
-		});
 
 		this.#keepAliveCounter++;
 
