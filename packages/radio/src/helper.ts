@@ -267,4 +267,4 @@ export async function showVersionBanner(file: string) {
     hr
   ].forEach(l => console.log(l));
 }
-}
+
