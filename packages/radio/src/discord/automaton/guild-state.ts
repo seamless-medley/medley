@@ -615,7 +615,9 @@ export class GuildState {
         return;
       }
 
-      const info = await retryable(async () => fetchSpotifyInfo(url.href), { retries: 2, wait: 1 })
+      const fetchInfo = (url: string) => retryable(async () => fetchSpotifyInfo(url), { retries: 2, wait: 1 });
+
+      const info = await fetchInfo(url.href);
 
       switch (type) {
         case 'track': {
