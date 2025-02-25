@@ -1,10 +1,11 @@
 import { MetadataFields } from "@seamless-medley/core";
-import { APIEmbedField, bold, hyperlink, inlineCode, quote, userMention } from "discord.js";
+import { APIEmbedField, blockQuote, bold, hyperlink, inlineCode, quote, userMention } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase, zip } from "lodash";
 import { formatDuration } from "../../format/format";
 import { CreateTrackMessageOptionsEx, extractRequestersForGuild, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 import { createCoverImageAttachment } from "../../helpers/message";
 import { extractSpotifyMetadata, formatSpotifyField, spotifySearchLink, spotifyLink } from "../../helpers/spotify";
+import { joinStrings } from "../../command/utils";
 
 const emptyField = { name: '\u200B', value: '\u200B', inline: true };
 const emptyRows = Array(3).fill(0).map<APIEmbedField>(_ => emptyField);
@@ -167,7 +168,10 @@ export class Normal extends TrackMessageCreator {
 
     embed.addFields({
       name: 'Powered by',
-      value: quote(`${hyperlink(bold('Medley'), 'https://github.com/seamless-medley/medley', "GitHub project")}`)
+      value: blockQuote(joinStrings([
+        hyperlink(bold('Medley'), 'https://github.com/seamless-medley/medley', "GitHub project"),
+        hyperlink('Discord Server', 'https://discord.gg/vrzCvV2hjS', "Discord Server")
+      ]))
     });
 
     const durationText = formatDuration(playDuration);
