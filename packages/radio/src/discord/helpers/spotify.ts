@@ -53,7 +53,11 @@ export const extractSpotifyUrl = (s: string, limit?: number) => {
   return ((limit ?? 0) > 0 ? c.take(limit) : c).value();
 }
 
-type SpotifyTrackInfo = {
+export type SpotifyBaseInfo = {
+  lang?: string;
+}
+
+export type SpotifyTrackInfo = SpotifyBaseInfo & {
   type: 'track';
   title?: string;
   artist?: string;
@@ -61,33 +65,33 @@ type SpotifyTrackInfo = {
   image?: string;
 }
 
-type SpotifyArtistInfo = {
+export type SpotifyArtistInfo = SpotifyBaseInfo & {
   type: 'artist';
   artist?: string;
   image?: string;
 }
 
-type SpotifyUserInfo = {
+export type SpotifyUserInfo = SpotifyBaseInfo & {
   type: 'user';
   name?: string;
   image?: string;
 }
 
-type SpotifyAlbumInfo = {
+export type SpotifyAlbumInfo = SpotifyBaseInfo & {
   type: 'album';
   album?: string;
   image?: string;
   tracks: string[];
 }
 
-type SpotifyPlaylistInfo = {
+export type SpotifyPlaylistInfo = SpotifyBaseInfo & {
   type: 'playlist';
   name?: string;
   image?: string;
   tracks: string[];
 }
 
-type SpotifyInfo = SpotifyTrackInfo | SpotifyArtistInfo | SpotifyUserInfo | SpotifyAlbumInfo | SpotifyPlaylistInfo;
+export type SpotifyInfo = SpotifyTrackInfo | SpotifyArtistInfo | SpotifyUserInfo | SpotifyAlbumInfo | SpotifyPlaylistInfo;
 
 const cache = new Map<string, Promise<SpotifyInfo | undefined>>;
 
@@ -141,13 +145,18 @@ async function internal_fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo
     return;
   }
 
+  const baseInfo: SpotifyBaseInfo = {
+    lang: parsed.querySelector('html')?.attributes?.lang
+  }
+
   const getSongList = () => parsed.querySelectorAll(`head meta[name='music:song']`)
     .map(el => el.attributes.content)
-    .filter((s): s is string => typeof s === 'string' && s.length > 0)
+    .filter((s): s is string => typeof s === 'string' && s.length > 0);
 
   switch (type) {
     case 'artist':
       return {
+          ...baseInfo,
           type,
           artist: get('og:title'),
           image: get('og:image')
@@ -155,6 +164,7 @@ async function internal_fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo
 
     case 'user':
       return {
+        ...baseInfo,
         type,
         name: get('og:title'),
         image: get('og:image')
@@ -162,6 +172,7 @@ async function internal_fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo
 
     case 'track':
       return {
+        ...baseInfo,
         type: 'track',
         title: get('og:title'),
         artist: get('music:musician_description'),
@@ -171,6 +182,7 @@ async function internal_fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo
 
     case 'album':
       return {
+        ...baseInfo,
         type,
         album: get('og:title'),
         image: get('og:image'),
@@ -179,6 +191,7 @@ async function internal_fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo
 
     case 'playlist':
       return {
+        ...baseInfo,
         type,
         name: get('og:title'),
         image: get('og:image'),
