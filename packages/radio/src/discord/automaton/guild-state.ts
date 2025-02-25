@@ -30,8 +30,11 @@ import {
   VoiceBasedChannel,
   VoiceState,
   hyperlink,
+  inlineCode,
   quote
 } from "discord.js";
+
+import { detectAll as detectLanguages } from 'tinyld';
 
 import { TrackMessage } from "../trackmessage/types";
 import { VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
@@ -689,6 +692,38 @@ export class GuildState {
             noHistory: true
           });
 
+          if (!searchResult?.length && trackInfo.lang) {
+            const lang = trackInfo.lang.toLowerCase();
+
+            const trackLang = [trackInfo.title, trackInfo.artist]
+              .map(s => detectLanguage(s)?.toLowerCase())
+              .find(s => lang && s !== lang);
+
+            if (trackLang) {
+              const localizedUrl = new URL(url);
+              localizedUrl.searchParams.set('locale', trackLang);
+
+              const localizedInfo = await fetchInfo(localizedUrl.href);
+
+              if (localizedInfo?.type === 'track') {
+                if (localizedInfo.title && localizedInfo.artist) {
+                  binding.title = localizedInfo.title;
+                  binding.artist = localizedInfo.artist;
+
+                  const localizedSearch = await station.search({
+                    q: {
+                      title: localizedInfo.title,
+                      artist: localizedInfo.artist
+                    },
+                    noHistory: true
+                  });
+
+                  searchResult.push(...localizedSearch);
+                }
+              }
+            }
+          }
+
           if (searchResult?.length) {
             const banners = uniq(searchResult.map(r => getTrackBanner(r.track)));
             const sampleBanners = take(banners, 3).map(s => `- ${s}`);
@@ -842,4 +877,8 @@ function isVoiceStateWithMember(s: VoiceState): s is VoiceStateWithMember {
 
 function isVoiceStateMuted(s: VoiceState) {
   return (s.suppress || s.serverMute) === true;
+}
+
+function detectLanguage(s: string) {
+  return sortBy(detectLanguages(s), d => -d.accuracy).find(d => d.accuracy >= 0.88)?.lang;
 }
