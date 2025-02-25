@@ -245,7 +245,11 @@ export async function showVersionBanner(file: string) {
 
   const info = await readFile(file)
     .then(s => s.toString().split(/\r?\n/).map(l => l.trim()).filter(l => l !== ''))
-    .catch(() => false as const);
+    .catch(() => [
+        'Medley (Discord)',
+        `Version: ${process.env.DEBUG ? 'Dev' : 'Unknown' }`
+      ]
+    );
 
   if (!info) {
     return;
@@ -256,11 +260,11 @@ export async function showVersionBanner(file: string) {
     return `${pad}${s}${pad}`;
   }
 
-  const gs = require('gradient-string')(gradient);
   const hr = '-'.repeat(96);
   [
     hr,
     ...info.map(centered),
     hr
-  ].forEach(l => console.log(gs(l)));
+  ].forEach(l => console.log(l));
+}
 }
