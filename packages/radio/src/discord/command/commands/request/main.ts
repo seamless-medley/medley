@@ -4,6 +4,7 @@ import {
   BoomBoxTrack,
   getStationTrackSorters,
   getTrackBanner,
+  LibrarySearchParams,
   makeRequester,
   MetadataHelper,
   Station,
@@ -171,7 +172,7 @@ export type RequestCommandQueryOptions = BaseRequestCommandOptions & {
   artist?: string;
   title?: string;
   query?: string;
-  exactMatch?: boolean;
+  fuzzy?: LibrarySearchParams['fuzzy'];
   noHistory?: boolean;
 }
 
@@ -237,7 +238,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
   const results: StationTrackWithPriority[] = await (async () => {
     switch (options.type) {
       case 'query': {
-        const { title, artist, query, exactMatch, noHistory } = options;
+        const { title, artist, query, fuzzy, noHistory } = options;
 
         return station.search({
           q: {
@@ -247,7 +248,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
           },
           // 10 pages
           limit: maxSelectMenuOptions * 10,
-          fuzzy: exactMatch ? 'exact' : undefined,
+          fuzzy,
           noHistory
         })
         .then(result => result.map(r => r.track));
