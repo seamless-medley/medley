@@ -711,7 +711,7 @@ export class Station extends TypedEmitter<StationEvents> {
       this.#musicDb.searchHistory.add(this.id, { ...q, resultCount: result.length });
     }
 
-    return result as MusicTrack<Station>[];
+    return result;
   }
 
   async autoSuggest(q: string, field?: SearchQueryField, narrowBy?: SearchQueryField, narrowTerm?: string) {

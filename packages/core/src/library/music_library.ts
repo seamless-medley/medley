@@ -3,7 +3,7 @@ import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackC
 import { Logger, createLogger } from '@seamless-medley/logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
-import { SearchEngine, Query, TrackDocumentFields, SearchQuery } from './search';
+import { SearchEngine, Query, TrackDocumentFields, SearchQuery, TrackDocumentResult } from './search';
 import { MetadataHelper } from '../metadata';
 import { FindByCommentOptions, MusicDb } from './music_db';
 import { TrackExtraOf, TrackWithCollectionExtra } from '../track';
@@ -27,6 +27,11 @@ export type MusicTrack<O> = TrackWithCollectionExtra<BoomBoxTrack, TrackExtraOf<
 export type MusicTrackCollection<O> = WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>;
 
 export type MusicTrackCollectionEvents<O> = TrackCollectionEvents<MusicTrack<O>>;
+
+export type SearchTrack<O> = {
+  search: TrackDocumentResult;
+  track: MusicTrack<O>;
+}
 
 type IndexInfo<O> = {
   track: MusicTrack<O>;
@@ -346,7 +351,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       .filter((t): t is MusicTrack<O> => t !== undefined)
   }
 
-  async search({ q, limit, fuzzy }: LibrarySearchParams): Promise<Array<MusicTrack<O>>> {
+  async search({ q, limit, fuzzy }: LibrarySearchParams): Promise<Array<SearchTrack<O>>> {
     const { artist, title, query } = q;
 
     const mainQueries: Array<Query> = [];
@@ -390,22 +395,27 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
       fuzzy !== 'exact' ? { prefix: true, fuzzy: fuzzy ?? 0.5 } : { prefix: false, fuzzy: false }
     );
 
+    type MaybeTrack = {
+      search: TrackDocumentResult;
+      track?: MusicTrack<O>;
+    }
+
     const chained = chain(result)
       .sortBy([s => -s.score, 'title'])
-      .map(s => this.findTrackById(s.trackId))
-      .filter((t): t is MusicTrack<O> => t !== undefined)
-      .uniqBy(t => t.path)
+      .map<MaybeTrack>(search => ({ search, track: this.findTrackById(search.trackId) }))
+      .filter((t): t is SearchTrack<O> => t !== undefined)
+      .uniqBy(t => t.track.path)
 
     return (limit ? chained.take(limit) : chained).value();
   }
 
   async autoSuggest(q: string, field?: string, narrowBy?: string, narrowTerm?: string): Promise<string[]> {
     if (!q && field && narrowTerm && narrowBy) {
-      let tracks: Array<MusicTrack<O>> | undefined;
+      let results: Array<SearchTrack<O>> | undefined;
 
       if (field === 'title' && narrowBy === 'artist') {
         // Start showing title suggestion for a known artist
-        tracks = await this.search({
+        results = await this.search({
           q: {
             artist: narrowTerm
           },
@@ -415,14 +425,15 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
       if (field === 'artist' && narrowBy === 'title') {
         // Start showing artist suggestion for a known title
-        tracks = await this.search({
+        results = await this.search({
           q: { title: narrowTerm }
         });
       }
 
-      if (tracks) {
-        return chain(tracks)
+      if (results) {
+        return chain(results)
           .shuffle()
+          .map(t => t.track)
           .sortBy(t => t.collection.options.auxiliary ? 1 : 0)
           .map(t => (t.extra?.tags as any)?.[field])
           .filter(isString)
