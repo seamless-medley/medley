@@ -28,7 +28,7 @@ import {
   quote
 } from "discord.js";
 
-import { chain, chunk, clamp, Dictionary, fromPairs, identity, isUndefined, truncate, uniqBy, zip } from "lodash";
+import { chain, chunk, clamp, Dictionary, identity, isUndefined, truncate, uniqBy, zip } from "lodash";
 import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
 import { toEmoji } from "../../../helpers/emojis";
@@ -39,7 +39,6 @@ import { createVoteButton, getVoteMessage } from "../vote";
 import { interact } from "../../interactor";
 import { groupByAsync } from "@seamless-medley/utils";
 import { MedleyAutomaton } from "../../../automaton";
-import { fetchSpotifyInfo, spotifyURI } from "../../../helpers/spotify";
 import { GuildState } from "../../../automaton/guild-state";
 
 type Selection = {
@@ -764,19 +763,6 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
       })
     }
 
-    case 'search': {
-      const params = fromPairs(args.map(a => a.split('$', 2)));
-
-      return handleRequestCommand({
-        automaton,
-        interaction,
-        type: 'query',
-        artist: params.artist,
-        title: params.title,
-        query: params.query
-      });
-    }
-
     case 'artist_search': {
       const [artistId] = args;
 
@@ -784,10 +770,10 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         throw new RequestError(automaton, guildId, 'No artist id');
       }
 
-      const info = await fetchSpotifyInfo(spotifyURI('artist', artistId), 'artist');
+      const artist = interaction.message.embeds.flatMap(e => e.fields).find(f => f.name === 'artist')?.value;
 
-      if (!info || info.type !== 'artist' || !info.artist) {
-        throw new RequestError(automaton, guildId, 'Could not fetch artist information');
+      if (!artist) {
+        throw new RequestError(automaton, guildId, 'Invalid binding values');
       }
 
       const result = await handleRequestCommand({
@@ -795,7 +781,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         interaction,
         type: 'spotify:artist',
         id: artistId,
-        artist: info.artist
+        artist
       })
       .catch(e => new RequestError(automaton, guildId, 'Could not perform artist search with button'));
 
@@ -813,21 +799,26 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         throw new RequestError(automaton, guildId, 'No track id');
       }
 
-      const info = await fetchSpotifyInfo(spotifyURI('track', trackId), 'track');
+      const fields = interaction.message.embeds.flatMap(e => e.fields);
 
-      if (!info || info.type !== 'track' || !info.artist || !info.title) {
-        throw new RequestError(automaton, guildId, 'Could not fetch track information');
+      const binding = {
+        artist: fields.find(f => f.name === 'artist')?.value,
+        title: fields.find(f => f.name === 'title')?.value
+      }
+
+      if (!binding.artist || !binding.title) {
+        throw new RequestError(automaton, guildId, 'Invalid binding values');
       }
 
       const result = await handleRequestCommand({
         automaton,
         interaction,
         type: 'query',
-        artist: info.artist,
-        title: info.title,
+        artist: binding.artist,
+        title: binding.title,
         noHistory: true
       })
-      .catch(e => new RequestError(automaton, guildId, 'Could not perform track search with button'));
+      .catch(e => new RequestError(automaton, guildId, 'Error while performing track search'));
 
       if (result instanceof Error) {
         throw result;

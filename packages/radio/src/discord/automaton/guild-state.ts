@@ -621,30 +621,29 @@ export class GuildState {
 
       switch (type) {
         case 'track': {
-          if (info?.type !== 'track' || !info.title) {
-            return;
-          }
+          const trackInfo = info?.type === 'track' ? info : undefined;
 
           const dedicatedTracks = await station.findTracksByComment(searchKey, id);
 
           const [track] = sortBy(dedicatedTracks, ...getStationTrackSorters(station));
 
           if (track) {
-            const { id: trackId, extra } = track;
-
-            const { title = info.title || 'Unknown', artist = info.artist || 'Unknown' } = extra?.tags ?? {};
+            const {
+              title = trackInfo?.title || 'Unknown',
+              artist = trackInfo?.artist || 'Unknown'
+            } = track?.extra?.tags ?? {};
 
             const embed = new EmbedBuilder();
 
-            if (info.image) {
-              embed.setThumbnail(info.image);
+            if (trackInfo?.image) {
+              embed.setThumbnail(trackInfo.image);
             }
 
             embed
               .setTitle('Found a dedicated track for this link')
               .addFields(
                 { name: 'Title', value: quote(formatSpotifyField('title', title, id)) },
-                { name: 'Artist', value: quote(info.artist_url ? hyperlink(artist, info.artist_url) : artist) },
+                { name: 'Artist', value: quote(trackInfo?.artist_url ? hyperlink(artist, trackInfo.artist_url) : artist) },
               )
 
             if (!embed.data.thumbnail) {
@@ -662,22 +661,35 @@ export class GuildState {
                     new ButtonBuilder()
                       .setLabel('Make a request')
                       .setStyle(ButtonStyle.Primary)
-                      .setCustomId(`request:track:${trackId}`)
+                      .setCustomId(`request:track:${track.id}`)
                   )
               ]
             }
           }
 
-          // Search and show the potentials
+          if (!trackInfo?.artist || !trackInfo?.title) {
+            const { baseCommand } = this.adapter.getAutomaton();
+
+            return {
+              content: `Could not retrieve track information, please try again later or try using command ${inlineCode(`/${baseCommand} request`)} instead`
+            }
+          }
+
+          const binding = {
+            artist: trackInfo.artist,
+            title: trackInfo.title
+          };
+
+          // Search by Spotify trackInfo and show the potentials
           const searchResult = await station.search({
             q: {
-              title: info.title,
-              artist: info.artist
+              title: trackInfo.title,
+              artist: trackInfo.artist
             },
             noHistory: true
           });
 
-          if (searchResult.length) {
+          if (searchResult?.length) {
             const banners = uniq(searchResult.map(r => getTrackBanner(r.track)));
             const sampleBanners = take(banners, 3).map(s => `- ${s}`);
 
@@ -685,11 +697,19 @@ export class GuildState {
               sampleBanners.push('...');
             }
 
+            const embed = new EmbedBuilder()
+              .setTitle(`Found ${banners.length} potential track(s) for this title`)
+              .setDescription(sampleBanners.join('\n'))
+
+            if (binding) {
+              embed.addFields(
+                { name: 'artist', value: binding.artist },
+                { name: 'title', value: binding.title }
+              );
+            }
+
             return {
-              embeds: [new EmbedBuilder()
-                .setTitle(`Found ${banners.length} potential track(s) for this title`)
-                .setDescription(sampleBanners.join('\n'))
-              ],
+              embeds: [embed],
               components: [
                 new ActionRowBuilder<MessageActionRowComponentBuilder>()
                   .addComponents(
@@ -759,8 +779,8 @@ export class GuildState {
               .setTitle(`Found ${counter} for this artist`)
               .setDescription(sampleBanners.join('\n'))
               .addFields(
-                { name: 'Artist', value: quote(hyperlink(info.artist, url.href)) },
-              )
+                { name: 'artist', value: info.artist }
+              );
 
             return {
               embeds: [embed],
