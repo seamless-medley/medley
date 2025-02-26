@@ -7,7 +7,6 @@ function createPrettyPrint() {
   return pino.transport({ target: './pp', options: { configs } });
 }
 
-
 function createStream(usePretty) {
   const streams = [
     !!(process.env.LOG_PRETTY || process.env.DEBUG)

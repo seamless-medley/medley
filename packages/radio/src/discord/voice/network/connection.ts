@@ -167,7 +167,6 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
   #onWsOpen: WebSocketConnectionEvents['open'] = () => {
     if (this.#state.code === ConnectionStateCode.Opening) {
-
       const { guildId: server_id, userId: user_id, sessionId: session_id, token } = this.#state.connectionOptions;
 
       this.#state.ws.sendPayload({
