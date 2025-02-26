@@ -41,6 +41,15 @@
         "infra",
         "platform"
       ]
+    },
+    {
+      "login": "Doldragon001",
+      "name": "Doldragon001",
+      "avatar_url": "https://avatars.githubusercontent.com/u/24905753?v=4",
+      "profile": "https://github.com/Doldragon001",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
