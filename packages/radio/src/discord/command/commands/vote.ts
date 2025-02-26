@@ -5,7 +5,7 @@ import { chain, isEqual, keyBy, noop, sample, sampleSize, take, without } from "
 import { MedleyAutomaton } from "../../automaton";
 import * as emojis from "../../helpers/emojis";
 import { CommandDescriptor, GuildHandlerFactory, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
-import { guildStationGuard, isTrackRequestedFromGuild, joinStrings, makeRequestPreview, reply, warn } from "../utils";
+import { deferReply, guildStationGuard, isTrackRequestedFromGuild, joinStrings, makeRequestPreview, reply, warn } from "../utils";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -64,6 +64,8 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
     return;
   }
 
+  await deferReply(interaction);
+
   const issuer = interaction.user.id;
 
   const collectibleEmojis = sampleSize(distinguishableEmojis, distinguishableEmojis.length);
@@ -84,7 +86,6 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
 
   station.lockRequests(requestLock);
   try {
-
     const ttl = 90_000;
 
     const getTimeout = () => `Vote Timeout: ${formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')}`;
@@ -99,35 +100,36 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
       .value();
 
     const message = await reply(interaction, {
-      content: joinStrings([
-        getTimeout(),
-        createMessageContent()
-      ]),
-      components: [
-        new ActionRowBuilder<MessageActionRowComponentBuilder>()
-          .addComponents(new ButtonBuilder()
-          .setCustomId('vote_end')
-          .setLabel('End')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('🏁')),
-      ],
-      embeds: [
-        new EmbedBuilder()
-          .setTitle('Vote')
-          .setColor('Random')
-          .setDescription(joinStrings([
-            'Click on a reaction emoji to vote for that track',
-            guildRequests.length > maxNominatees ? `> Only the first ${maxNominatees} requests can be voted` : undefined
-          ]))
-          .setFooter({
-            text: 'These tracks will not be played during this vote session'
-          })
-      ],
-      withResponse: true
-    });
+        content: joinStrings([
+          getTimeout(),
+          createMessageContent()
+        ]),
+        components: [
+          new ActionRowBuilder<MessageActionRowComponentBuilder>()
+            .addComponents(new ButtonBuilder()
+            .setCustomId('vote_end')
+            .setLabel('End')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🏁')),
+        ],
+        embeds: [
+          new EmbedBuilder()
+            .setTitle('Vote')
+            .setColor('Random')
+            .setDescription(joinStrings([
+              'Click on a reaction emoji to vote for that track',
+              guildRequests.length > maxNominatees ? `> Only the first ${maxNominatees} requests can be voted` : undefined
+            ]))
+            .setFooter({
+              text: 'These tracks will not be played during this vote session'
+            })
+        ],
+        withResponse: true
+      })
+      .then(m => m?.fetch?.())
 
     // Add reactions
-    if (message instanceof Message) {
+    if (message) {
       const msg = message;
 
       guildVoteMessage.set(guildId, msg);
