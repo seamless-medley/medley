@@ -62,7 +62,6 @@
     "express": "4.20.0",
     "ffmpeg-static": "5.2.0",
     "framer-motion": "12.4.7",
-    "gradient-string": "^3.0.0",
     "lodash": "^4.17.21",
     "mediasoup": "^3.13.10",
     "mediasoup-client": "^3.7.0",
