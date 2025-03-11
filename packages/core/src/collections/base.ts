@@ -7,6 +7,7 @@ import normalizePath from 'normalize-path';
 import { Logger, createLogger } from '@seamless-medley/logging';
 import { moveArrayElements, moveArrayIndexes, waitFor } from '@seamless-medley/utils';
 import { Track, TrackExtra, TrackExtraOf } from "../track";
+import { getThreadPoolSize } from '../utils';
 
 export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 
@@ -187,7 +188,8 @@ export class TrackCollection<
     chunkSize?: number;
     onChunkCreated: ChunkHandler<T>
   }) {
-    const { paths, onChunkCreated, chunkSize = 25 * os.cpus().length } = options;
+    const threadPoolSize =  getThreadPoolSize();
+    const { paths, onChunkCreated, chunkSize = 25 * threadPoolSize } = options;
     const validPaths = chain(paths)
       .castArray()
       .map(p => normalizePath(p))
@@ -206,7 +208,7 @@ export class TrackCollection<
     const immediateTracks: T[] = [];
     const newTracks: T[] = [];
 
-    const buckets = chunk(validPaths, Math.max(os.cpus().length, chunkSize));
+    const buckets = chunk(validPaths, Math.max(threadPoolSize, chunkSize));
 
     for (const [index, bucket] of buckets.entries()) {
       const created = new Array<T>(bucket.length);
@@ -236,7 +238,7 @@ export class TrackCollection<
     chunkSize?: number;
     onChunkAdded?: ChunkHandler<T>;
   }) {
-    const { paths, mode, updateExisting, chunkSize, onChunkAdded } = options;
+    const { paths, mode, updateExisting, chunkSize = 25 * getThreadPoolSize(), onChunkAdded } = options;
 
     let totalUpdatedCount = 0;
 

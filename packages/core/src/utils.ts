@@ -1,3 +1,4 @@
+import os from 'node:os';
 import { distance } from "fastest-levenshtein";
 import { castArray } from "lodash";
 import { AudioProperties } from "@seamless-medley/medley";
@@ -55,4 +56,9 @@ export function fetchAudioProps(track: BoomBoxTrack): Promise<AudioProperties> |
   }
 
   return extra.maybeAudioProperties;
+}
+
+export function getThreadPoolSize() {
+  const uv = +(process.env.UV_THREADPOOL_SIZE ?? 0);
+  return uv > 0 ? uv : os.cpus().length;
 }
