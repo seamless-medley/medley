@@ -1,14 +1,14 @@
 import {
   AudienceType,
   AudioProperties,
-  BoomBoxTrack,
+  fetchAudioProps,
   getStationTrackSorters,
   getTrackBanner,
   LibrarySearchParams,
   makeRequester,
-  MetadataHelper,
   Station,
-  StationTrack
+  StationTrack,
+  stringSimilarity
 } from "@seamless-medley/core";
 
 import {
@@ -622,20 +622,6 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
 }
 
 const isExtensionLossless = (ext: string) => /(flac|wav)/i.test(ext);
-
-function fetchAudioProps(track: BoomBoxTrack): Promise<AudioProperties> | undefined {
-  const { extra } = track;
-
-  if (!extra) {
-    return;
-  }
-
-  if (extra.maybeAudioProperties === undefined) {
-    extra.maybeAudioProperties = MetadataHelper.audioProperties(track.path);
-  }
-
-  return extra.maybeAudioProperties;
-}
 
 type TrackClarificationContext = {
   getSamplerate: (track: StationTrack) => Promise<number>;
