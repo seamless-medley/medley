@@ -60,8 +60,9 @@ async function main() {
   logger.info('node-medley runtime: %s', Object.entries(info.runtime).map(([p, v]) => `${p}=${v}`).join('; '));
   logger.info('node-medley version: %s', `${info.versionString}`);
   logger.info(`JUCE CPU: ${Object.keys(info.juce.cpu)}`);
-
+  logger.info(`UV_THREADPOOL_SIZE: ${process.env.UV_THREADPOOL_SIZE || 4}`);
   logger.info('Initializing');
+  logger.flush();
 
   const musicDb = new MongoMusicDb();
 
