@@ -2,6 +2,7 @@ import { FindByCommentOptions, MusicDb, MusicDbTrack, SearchHistory, TrackHistor
 import { MongoClientOptions } from "mongodb";
 import { SettingsDb } from "../../types";
 import { PlainUser, User } from "../../persistent/user";
+import { createLogger, Logger } from "@seamless-medley/logging";
 
 export type Options = {
   url: string;
@@ -29,9 +30,16 @@ type WorkerMethods = MusicDb &
   PrefixRemap<'settings_', SettingsDb>
 
 export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
+  #logger: Logger;
   constructor() {
     super(__dirname + '/worker.js', {});
 
+    this.#logger = createLogger({
+      name: 'musicdb:mongo',
+      id: `main`
+    });
+
+    this.#logger.debug('Pre-spawn');
     this.preSpawn();
   }
 
