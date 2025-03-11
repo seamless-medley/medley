@@ -1,7 +1,8 @@
 #include <Medley.h>
+#include <chrono>
 #include "processor.h"
 
-using namespace std::chrono_literals;
+using namespace std::literals::chrono_literals;
 
 namespace audio_req {
 

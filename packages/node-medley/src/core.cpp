@@ -1,6 +1,7 @@
+#include <chrono>
 #include "core.h"
 
-using namespace std::chrono_literals;
+using namespace std::literals::chrono_literals;
 
 namespace {
     Napi::Value safeString(Napi::Env env, juce::String s) {
