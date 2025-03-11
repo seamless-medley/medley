@@ -2,7 +2,7 @@
 
 const { dirname } = require('path');
 const workerpool = require('workerpool');
-const { Searcher: MMSearcher, sourceName: mmSourceName } = require('./lyrics/musixmatch')
+const { Searcher: MMSearcher, sourceName: mmSourceName } = require('./lyrics/musixmatch');
 
 /** @type {import('@seamless-medley/medley')} */
 const { Medley } = process.env.MEDLEY_DEV

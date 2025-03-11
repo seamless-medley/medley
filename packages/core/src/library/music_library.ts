@@ -135,7 +135,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
         );
       }
 
-      if (chunkIndex +1 === totalChunks) {
+      if (chunkIndex + 1 === totalChunks) {
         this.#logger.info('Done indexing: %s', collection.extra.description);
       }
     });
