@@ -56,6 +56,8 @@ export interface MusicDb {
 
   delete(trackId: string): Promise<void>;
 
+  validateTracks(predicate: (trackId: string) => Promise<boolean>): Promise<[valid: number, invalid: number]>;
+
   get searchHistory(): SearchHistory;
 
   get trackHistory(): TrackHistory;
@@ -105,6 +107,20 @@ export class InMemoryMusicDb implements MusicDb {
 
   async delete(trackId: string){
     this.#tracks.delete(trackId);
+  }
+
+  async validateTracks(predicate: (trackId: string) => Promise<boolean>): ReturnType<MusicDb['validateTracks']> {
+    let invalid = 0;
+    for (const track of this.#tracks.values()) {
+      const valid = await predicate(track.trackId);
+
+      if (!valid) {
+        await this.delete(track.trackId);
+        invalid++;
+      }
+    }
+
+    return [this.#tracks.size, invalid];
   }
 
   get searchHistory(): SearchHistory {
