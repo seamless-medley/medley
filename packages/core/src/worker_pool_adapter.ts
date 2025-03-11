@@ -70,11 +70,11 @@ export abstract class WorkerPoolAdapter<Methods extends { [name: string]: any }>
     return pool;
   }
 
-  protected preSpawn() {
+  protected preSpawn(n: number = workerpool.cpus) {
     const pool = (this.pool as any);
     const workers = pool.workers as any[];
 
-    for (let i = 0; i < workerpool.cpus; i++) {
+    for (let i = 0; i < n; i++) {
       const worker = pool._createWorkerHandler();
       workers.push(worker);
     }
