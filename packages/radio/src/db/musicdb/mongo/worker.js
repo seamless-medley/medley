@@ -35,8 +35,8 @@ let trackHistory;
 
 /** @type {[min: number, max: number]} */
 let ttls = [
-  60 * 60 * 24,
-  60 * 60 * 36
+  60 * 60 * 24 * 1,
+  60 * 60 * 24 * 1.5
 ];
 
 const logger = createLogger({
