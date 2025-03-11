@@ -851,10 +851,15 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.pauseIfNoAudiences('audiences group removed');
   }
 
-  updateAudiences(groupId: AudienceGroupId, audiences: string[]) {
+  updateAudiences(groupId: AudienceGroupId, audiences: string[], options?: { updatePlayback: boolean }) {
     this.#audiences.set(groupId, new Set(audiences));
     this.audienceCount = this.countAudiences();
-    this.updatePlayback();
+
+    const { updatePlayback = true } = options ?? {};
+
+    if (updatePlayback) {
+      this.updatePlayback();
+    }
   }
 
   updatePlayback() {
