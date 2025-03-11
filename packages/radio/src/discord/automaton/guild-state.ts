@@ -396,7 +396,9 @@ export class GuildState {
         this.adapter.makeAudienceGroup(this.guildId),
         channel.members
           .filter(member => !member.user.bot && !member.voice.deaf)
-          .map(member => member.id)
+          .map(member => member.id),
+        // Do not update playback
+        { updatePlayback: false }
       );
     }
   }
