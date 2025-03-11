@@ -180,7 +180,7 @@ export class IcyAdapter extends FFMpegAdapter {
     }
 
     const transformers: Transform[] = [];
-    const mux = new MetadataMux(needMetadata ? this.#options.metadataInterval : 0 ?? 0);
+    const mux = new MetadataMux(needMetadata ? this.#options.metadataInterval : 0);
     mux.metadata = this.#getIcyMetadata();
     this.#multiplexers.add(mux);
 
