@@ -19,8 +19,6 @@ export function useDeckCover(stationId: string | undefined, index: DeckIndex) {
   const { deck } = useDeck(stationId, index);
   const [cover, setCover] = useState<string | undefined>();
 
-  // console.log('useDeckCover', { stationId, index, cover });
-
   const updateCover = (newURL?: string) => setCover((oldCover) => {
     if (oldCover) {
       URL.revokeObjectURL(oldCover);
@@ -41,7 +39,6 @@ export function useDeckCover(stationId: string | undefined, index: DeckIndex) {
         : undefined
     );
   }
-
 
   useEffect(() => {
     if (!deck) {
