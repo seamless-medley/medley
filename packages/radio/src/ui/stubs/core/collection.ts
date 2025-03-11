@@ -2,7 +2,7 @@ import { noop } from "lodash";
 import { type Collection } from "../../../remotes/core/collection";
 import { StubOf } from "../../../socket";
 
-export const StubCollection = StubOf<Collection>(class StubbingCollecting {
+export const StubCollection = StubOf<Collection>(class StubbingCollection {
   id = undefined as any;
   description = undefined as any;
   options = undefined as any;
