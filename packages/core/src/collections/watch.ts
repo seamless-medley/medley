@@ -11,6 +11,7 @@ import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@par
 import { ChunkHandler, TrackCollection, TrackCollectionOptions } from "./base";
 import { Track, TrackExtra, TrackExtraOf } from "../track";
 import { breath } from '@seamless-medley/utils';
+import { getThreadPoolSize } from '../utils';
 
 export type WatchOptions = {
 
@@ -27,8 +28,19 @@ type WatchInfo = {
   handler: SubscribeCallback;
 }
 
+export type FileScanOptions = {
+  dir: string;
+  chunkSize: number;
+
+  onFiles: (files: string[]) => Promise<void>;
+  onDone: () => Promise<void>;
+}
+
+export type FileScanner = (info: FileScanOptions) => Promise<true | undefined>;
+
 export type WatchTrackCollectionOptions<T extends Track<any>> = TrackCollectionOptions<T> & {
-  scanner?: (dir: string) => Promise<false | string[]>;
+  // scanner?: (dir: string) => Promise<false | string[]>;
+  scanner?: FileScanner;
   fileExistentChecker?: (path: string) => Promise<boolean>;
 }
 
@@ -254,16 +266,24 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
     }
   }
 
-  async #extScanner(dir: string) {
+  #extScanner: FileScanner = async (info: FileScanOptions) => {
     if (!this.options.scanner) {
-      return false;
+      return;
     }
 
-    return this.options.scanner(dir).catch(stubFalse);
+    this.options.scanner(info);
+    return true;
   }
 
-  async #globScanner(dir: string) {
-    return glob(`${normalizePath(dir)}/**/*`).catch(stubFalse);
+  #globScanner: FileScanner = async (info: FileScanOptions) => {
+    const result = await glob(`${normalizePath(info.dir)}/**/*`).catch(stubFalse);
+    if (!result) {
+      return;
+    }
+
+    await info.onFiles(result);
+    info.onDone();
+    return true;
   }
 
   #scanning = 0;
@@ -277,41 +297,56 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
 
     const onChunkAdded = once(onFirstChunkAdded ?? noop) as ChunkHandler<T>;
 
-    const scanners = [this.#extScanner, this.#globScanner];
+    const scanners: Array<FileScanner> = [this.#extScanner, this.#globScanner];
     const counter: ScanStats = {
       scanned: 0,
       added: 0,
       updated: 0
     }
 
-    for (const scanner of scanners) {
-      const files = await scanner.call(this, dir);
+    chunkSize = chunkSize ?? 25 * getThreadPoolSize();
 
-      if (files !== false) {
-        const { scanned, added, updated } = await this.add({
-          paths: shuffle(files),
-          updateExisting,
+    const scannedFiles: string[] = [];
+
+    return new Promise<ScanStats>(async (resolve) => {
+      for (const scanner of scanners) {
+        const ok = await scanner.call(this, {
+          dir,
           chunkSize,
-          onChunkAdded
+
+          onFiles: async (files) => {
+            scannedFiles.push(...files);
+          },
+
+          onDone: async () => {
+            const { scanned, added, updated } = await this.add({
+              paths: shuffle(scannedFiles),
+              updateExisting,
+              chunkSize,
+              onChunkAdded
+            });
+
+            await breath();
+
+            counter.scanned += scanned.length;
+            counter.added += added.length;
+            counter.updated += updated;
+
+            this.#scanning--;
+
+            if (this.#scanning === 0) {
+              this.emit('scan-done' as any);
+            }
+
+            resolve(counter);
+          }
         });
 
-        await breath();
-
-        counter.scanned += scanned.length;
-        counter.added += added.length;
-        counter.updated += updated;
-
-        break;
+        if (ok) {
+          break;
+        }
       }
-    }
-
-    this.#scanning--;
-
-    if (this.#scanning === 0) {
-      this.emit('scan-done' as any);
-    }
-
-    return counter;
+    });
   }
 
   async #checkFileExistent(path: string) {
