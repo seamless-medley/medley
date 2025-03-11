@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'node:path';
-import { castArray, chain, flatten, isEqual, mapValues, matches, reject, some, toLower, trim, uniq, without } from "lodash";
+import { chain, flatten, isEqual, mapValues, matches, reject, some, toLower, trim, uniq, without } from "lodash";
 import { isString } from 'lodash/fp';
 import { TypedEmitter } from "tiny-typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions, AudioProperties } from "@seamless-medley/medley";
@@ -872,10 +872,6 @@ export function getArtistStrings(extra: BoomBoxTrackExtra, options?: GetArtistsO
     .value()
 }
 
-export type TrackBannerOptions = {
-  separators?: Partial<Record<'title' | 'artist', string>>;
-}
-
 export function getTrackBanner(track: BoomBoxTrack) {
   const tags = track.extra?.tags;
 
@@ -886,26 +882,6 @@ export function getTrackBanner(track: BoomBoxTrack) {
       artist: '/'
     }
   }) ?? parsePath(track.path).name;
-}
-
-export type SongBannerFormatOptions = {
-  title?: string;
-  artists?: string[] | string;
-} & TrackBannerOptions;
-
-export function formatSongBanner(options: SongBannerFormatOptions): string | undefined {
-  const { title, artists, separators } = options;
-  const info: string[] = [];
-
-  if (artists) {
-    info.push(castArray(artists).join(separators?.artist ?? ','));
-  }
-
-  if (title) {
-    info.push(title);
-  }
-
-  return info.length ? info.join(separators?.title ?? ' - ') : undefined;
 }
 
 export function trackRecordOf(track: BoomBoxTrack): TrackRecord {
