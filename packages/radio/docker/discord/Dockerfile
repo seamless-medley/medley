@@ -44,12 +44,18 @@ COPY --from=builder /app /app
 
 RUN mkdir -p /data/musics /data/drops
 
+ENV UV_THREADPOOL_SIZE=4
+
+COPY packages/radio/docker/discord/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+
 # Add Tini
 ENV TINI_VERSION=v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${ARCH} /tini
 RUN chmod +x /tini
-ENTRYPOINT ["/tini", "--"]
 
+ENTRYPOINT ["/entrypoint.sh"]
 WORKDIR /app
 
 # The config file is meant to be mounted as volume from docker-compose.yml
