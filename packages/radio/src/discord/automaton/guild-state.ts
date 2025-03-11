@@ -1,4 +1,4 @@
-import { clamp, noop, sortBy, take, uniq } from "lodash";
+import { clamp, first, noop, sortBy, take, uniq } from "lodash";
 
 import {
   AudienceGroupId,
@@ -9,7 +9,7 @@ import {
   getTrackBanner,
 } from "@seamless-medley/core";
 
-import { retryable } from "@seamless-medley/utils";
+import { formatDuration, retryable } from "@seamless-medley/utils";
 import { Logger } from "@seamless-medley/logging";
 
 import {
@@ -638,8 +638,9 @@ export class GuildState {
       switch (type) {
         case 'track': {
           const trackInfo = info?.type === 'track' ? info : undefined;
+          const artistUrl = first(trackInfo?.artist_urls);
 
-          const dedicatedTracks = await station.findTracksByComment(searchKey, id);
+          const dedicatedTracks = await station.findTracksByComment(searchKey, id, { valueDelimiter: ',' });
 
           const [track] = sortBy(dedicatedTracks, ...getStationTrackSorters(station));
 
@@ -659,7 +660,7 @@ export class GuildState {
               .setTitle('Found a dedicated track for this link')
               .addFields(
                 { name: 'Title', value: quote(formatSpotifyField('title', title, id)) },
-                { name: 'Artist', value: quote(trackInfo?.artist_url ? hyperlink(artist, trackInfo.artist_url) : artist) },
+                { name: 'Artist', value: quote(artistUrl ? hyperlink(artist, artistUrl) : artist) },
               )
 
             if (!embed.data.thumbnail) {
@@ -683,6 +684,9 @@ export class GuildState {
             }
           }
 
+          // Spotify track id did not match any tracks,
+          // so try using metadata we've got from given spotify url to search for tracks and let user pick one
+
           if (!trackInfo?.artist || !trackInfo?.title) {
             const { baseCommand } = this.adapter.getAutomaton();
 
@@ -691,9 +695,16 @@ export class GuildState {
             }
           }
 
+          const artistId = ((url) => {
+            const [type, id] = (url ? first(extractSpotifyUrl(url))?.paths : undefined) ?? [];
+            return type === 'artist' ? id : undefined;
+          })(artistUrl);
+
           const binding = {
             artist: trackInfo.artist,
-            title: trackInfo.title
+            title: trackInfo.title,
+            duration: trackInfo.duration,
+            artist_id: artistId
           };
 
           // Search by Spotify trackInfo and show the potentials
@@ -705,6 +716,7 @@ export class GuildState {
             noHistory: true
           });
 
+          // This is possibly due to the track locale does not match, try to guess the locale and search again
           if (!searchResult?.length && trackInfo.lang) {
             const lang = trackInfo.lang.toLowerCase();
 
@@ -737,37 +749,59 @@ export class GuildState {
             }
           }
 
-          if (searchResult?.length) {
-            const banners = uniq(searchResult.map(r => getTrackBanner(r.track)));
-            const sampleBanners = take(banners, 3).map(s => `- ${s}`);
+          const banners = uniq(searchResult.map(r => getTrackBanner(r.track)));
 
-            if (sampleBanners.length < banners.length) {
-              sampleBanners.push('...');
-            }
+          if (banners.length == 0 && trackInfo.artist && trackInfo.title) {
+            banners.push(`${trackInfo.artist} - ${trackInfo.title}`);
+          }
 
-            const embed = new EmbedBuilder()
-              .setTitle(`Found ${banners.length} potential track(s) for this title`)
-              .setDescription(sampleBanners.join('\n'))
+          const sampleBanners = take(banners, 3).map(s => `- ${s}`);
 
-            if (binding) {
-              embed.addFields(
-                { name: 'artist', value: binding.artist },
-                { name: 'title', value: binding.title }
-              );
-            }
+          if (sampleBanners.length < banners.length) {
+            sampleBanners.push('...');
+          }
 
-            return {
-              embeds: [embed],
-              components: [
-                new ActionRowBuilder<MessageActionRowComponentBuilder>()
-                  .addComponents(
-                    new ButtonBuilder()
-                      .setLabel('Search')
-                      .setStyle(ButtonStyle.Primary)
-                      .setCustomId(`request:cross_search:${id}`)
-                  )
-              ]
-            }
+          const embed = new EmbedBuilder();
+
+          embed.setTitle(
+            searchResult.length > 0
+              ? `Found ${searchResult.length} potential track(s) for this title`
+              : 'Search to see more results'
+          )
+
+          if (sampleBanners.length) {
+            embed.setDescription(sampleBanners.join('\n'))
+          }
+
+          // transfer binding value via embed fields
+          embed.addFields(
+            { name: 'artist', value: binding.artist, inline: true },
+            { name: 'title', value: binding.title, inline: true },
+          );
+
+          if (binding.duration && binding.duration > 0) {
+            embed.addFields(
+              { name: 'duration', value: `${formatDuration(binding.duration)}`, inline: true }
+            );
+          }
+
+          if (binding.artist_id) {
+            embed.addFields(
+              { name: 'artist_id', value: binding.artist_id }
+            );
+          }
+
+          return {
+            embeds: [embed],
+            components: [
+              new ActionRowBuilder<MessageActionRowComponentBuilder>()
+                .addComponents(
+                  new ButtonBuilder()
+                    .setLabel('Search')
+                    .setStyle(ButtonStyle.Primary)
+                    .setCustomId(`request:track_search:${id}`)
+                )
+            ]
           }
 
           break;

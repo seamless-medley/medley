@@ -32,6 +32,7 @@ import {
 import { chain, chunk, clamp, Dictionary, identity, isUndefined, truncate, uniqBy, zip } from "lodash";
 import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
+
 import { toEmoji } from "../../../helpers/emojis";
 import { AutomatonCommandError, InteractionHandlerFactory } from "../../type";
 import { declare, deferReply, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
@@ -46,6 +47,8 @@ type Selection = {
   title: string;
   artist?: string;
   track: StationTrack;
+  emoji?: string;
+  priority?: number;
 };
 
 type SelectionsWithChunk = Selection[] & { fromChunk?: boolean };
@@ -173,9 +176,16 @@ export type RequestCommandQueryOptions = BaseRequestCommandOptions & {
   title?: string;
   query?: string;
   fuzzy?: LibrarySearchParams['fuzzy'];
+
+  spotifyArtistId?: string;
+  duration?: number;
+
   noHistory?: boolean;
 }
 
+/**
+ * @deprecated
+ */
 export type RequestCommandSpotifyTrackOptions = BaseRequestCommandOptions & {
   type: 'spotify:track';
   id: string;
@@ -231,16 +241,32 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
 
   await deferReply(interaction);
 
-  type StationTrackWithPriority = StationTrack & {
-    priority?: number;
+  const audioPropsPromises = new Map<StationTrack['id'], Promise<AudioProperties | undefined>>();
+
+  const fetchTrackAudioProps = (track: StationTrack) => {
+    if (audioPropsPromises.has(track.id)) {
+      return audioPropsPromises.get(track.id)!;
+    }
+
+    const promise = fetchAudioProps(track) ?? Promise.resolve(undefined);
+    audioPropsPromises.set(track.id, promise);
+
+    return promise;
   }
 
-  const results: StationTrackWithPriority[] = await (async () => {
+  type Speciality = {
+    priority?: number;
+    emoji?: string;
+  }
+
+  type StationTrackForSelection = StationTrack & Speciality;
+
+  const results: StationTrackForSelection[] = await (async () => {
     switch (options.type) {
       case 'query': {
-        const { title, artist, query, fuzzy, noHistory } = options;
+        const { title, artist, query, spotifyArtistId, duration, fuzzy, noHistory } = options;
 
-        return station.search({
+        const searchResults: StationTrackForSelection[] = await station.search({
           q: {
             artist,
             title,
@@ -252,10 +278,105 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
           noHistory
         })
         .then(result => result.map(r => r.track));
+
+        if (spotifyArtistId) {
+          const artistTracks = await station.findTracksByComment('spotify:artist', spotifyArtistId, { valueDelimiter: ',' });
+
+          const scoredTracks: Array<{ track: StationTrack, score: number }> = [];
+
+          let onlyExactTitle = false;
+
+          for (const track of artistTracks) {
+            let score = 0;
+
+            const trackTitle = track.extra?.tags?.title;
+
+            if (trackTitle && title) {
+              if (trackTitle.toLowerCase() === title.toLowerCase()) {
+                scoredTracks.push({
+                  track,
+                  score: 1
+                });
+
+                onlyExactTitle = true;
+
+                continue;
+              }
+
+              if (!onlyExactTitle) {
+                score = stringSimilarity(trackTitle, title);
+              }
+            }
+
+            if (!onlyExactTitle && duration) {
+              const trackDuration = await fetchTrackAudioProps(track).then(p => p?.duration);
+
+              if (trackDuration) {
+                const diff = Math.abs(duration - trackDuration);
+                score = Math.max(score, (1 - (diff / trackDuration)));
+              }
+            }
+
+            scoredTracks.push({
+              track,
+              score
+            });
+          };
+
+          const mostLikelyTracks = chain(scoredTracks)
+            .sortBy([t => -t.score, t => t.track.extra?.tags?.title])
+            .map<StationTrackForSelection>(t => ({
+              ...t.track,
+              ...(t.score >= 0.995
+                ? {
+                  priority: 10 + t.score,
+                  emoji: '✨'
+                }
+                : {
+                  priority: 5,
+                  emoji: '💿'
+                }
+              )
+            }))
+            .value();
+
+          const specialities = chain(mostLikelyTracks)
+            .groupBy(t => t.id)
+            .reduce((o, tracks) => {
+              const likely = tracks.find(t => t.emoji !== undefined);
+              if (likely) {
+                o[likely.id] = {
+                  emoji: likely.emoji,
+                  priority: likely.priority,
+                  ...o[likely.id]
+                }
+              }
+
+              return o;
+            }, {} as Record<string, Speciality>)
+            .value()
+
+          // re-apply priority/emoji to all tracks by its id
+          for (const track of searchResults) {
+            const speciality = specialities[track.id];
+            if (speciality) {
+              track.emoji = speciality.emoji;
+              track.priority = speciality.priority;
+            }
+          }
+
+          searchResults.push(...mostLikelyTracks);
+        }
+
+        return uniqBy(searchResults, t => t.id);
       }
 
+      /**
+       * @deprecated This is not so useful since a spotify track can be resovled to a track id at the spotify url detection stage
+       * and should perform an advanced track search instead when a track could not be found
+       */
       case 'spotify:track':
-        return station.findTracksByComment(options.type, options.id);
+        return station.findTracksByComment(options.type, options.id, { valueDelimiter: ',' });
 
       case 'spotify:artist': {
         const exactMatches = await station.findTracksByComment(
@@ -274,8 +395,11 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
 
         return uniqBy(
           [
-            ...exactMatches,
-            ...searchResult.map(t => ({
+            ...exactMatches.map<StationTrackForSelection>(t => ({
+              ...t,
+              emoji: '📀'
+            })),
+            ...searchResult.map<StationTrackForSelection>(t => ({
               // Less priority
               ...t.track,
               priority: -1,
@@ -340,7 +464,9 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
       return {
         title,
         artist,
-        track
+        track,
+        emoji: track.emoji,
+        priority: track.priority
       }
     })
     .groupBy(({ title, artist = '' }) => createHash('sha256').update(`${title}:${artist}`.toLowerCase()).digest('base64'))
@@ -359,19 +485,6 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
       }
     }, {} as Dictionary<SelectionsWithChunk>)
     .value();
-
-  const audioPropsPromises = new Map<StationTrack, Promise<AudioProperties | undefined>>();
-
-  const fetchTrackAudioProps = (track: StationTrack) => {
-    if (audioPropsPromises.has(track)) {
-      return audioPropsPromises.get(track)!;
-    }
-
-    const promise = fetchAudioProps(track) ?? Promise.resolve(undefined);
-    audioPropsPromises.set(track, promise);
-
-    return promise;
-  }
 
   const clarificationCtx: TrackClarificationContext = {
     getSamplerate: track => fetchTrackAudioProps(track).then(p => p?.sampleRate ?? 0),
@@ -413,6 +526,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
         return {
           label,
           description,
+          emoji: grouped.find(({ emoji }) => emoji)?.emoji,
           value: key
         }
       })
@@ -662,13 +776,14 @@ const trackClarificationProcessors: ClarificationProcessor<TrackClarificationCon
 ];
 
 function selectionToComponentData(selection: Selection, [collection, ...clarified]: string[]): SelectMenuComponentOptionData {
-  const { title, artist = 'Unknown Artist', track } = selection;
+  const { title, artist = 'Unknown Artist', track, emoji } = selection;
 
   const description = [collection, clarified.filter(Boolean).join('; ')].filter(Boolean).join(' - ');
 
   return {
     label: truncate(`${title} - ${artist}`, { length: 100 }),
     description,
+    emoji,
     value: track.id
   };
 }
@@ -728,10 +843,13 @@ async function clarifySelection<C>(options: ClarificationOptions<C>) {
   return result;
 }
 
-export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, action, ...args: string[]) => {
+type RequestButtonActionType = 'track' | 'artist_search' | 'track_search';
+
+export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (automaton) => async (interaction, action: RequestButtonActionType, ...args: string[]) => {
   const { guildId, station } = guildStationGuard(automaton, interaction);
 
   switch (action) {
+    // request for a single track using track id
     case 'track': {
       const [trackId] = args;
 
@@ -750,6 +868,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
       })
     }
 
+    // search for tracks by using spotify artist id
     case 'artist_search': {
       const [artistId] = args;
 
@@ -779,7 +898,8 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
       return result;
     }
 
-    case 'cross_search': {
+    // search for tracks by using fields from embed
+    case 'track_search': {
       const [trackId] = args;
 
       if (!trackId) {
@@ -788,14 +908,22 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
 
       const fields = interaction.message.embeds.flatMap(e => e.fields);
 
-      const binding = {
-        artist: fields.find(f => f.name === 'artist')?.value,
-        title: fields.find(f => f.name === 'title')?.value
-      }
+      const binding = chain(['artist', 'title', 'duration', 'artist_id'])
+        .map(name => [name, fields.find(f => f.name === name)?.value])
+        .filter((row): row is [string, string] => !!row[1])
+        .fromPairs()
+        .value();
 
       if (!binding.artist || !binding.title) {
         throw new RequestError(automaton, guildId, 'Invalid binding values');
       }
+
+      const duration = (() => {
+        if (binding.duration) {
+          const [m, s] = binding.duration.split(':').map(Number);
+          return m * 60 + s;
+        }
+      })();
 
       const result = await handleRequestCommand({
         automaton,
@@ -803,6 +931,8 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         type: 'query',
         artist: binding.artist,
         title: binding.title,
+        spotifyArtistId: binding.artist_id,
+        duration,
         noHistory: true
       })
       .catch(e => new RequestError(automaton, guildId, 'Error while performing track search'));
