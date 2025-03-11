@@ -287,17 +287,13 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#removeAllAudiences();
   }
 
-  #removeAllAudiences(closeConnection?: boolean) {
+  #removeAllAudiences() {
     // Remove audiences from all stations
     for (const [guildId, state] of this.#guildStates) {
       const group = this.makeAudienceGroup(guildId);
 
       for (const station of this.stations) {
         station.removeAudiencesForGroup(group)
-      }
-
-      if (closeConnection) {
-        state.destroyVoiceConnector();
       }
     }
   }
