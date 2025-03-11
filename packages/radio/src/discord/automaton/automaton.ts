@@ -254,6 +254,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.#updateLibraryStats();
 
       Object.keys(this.#guildConfigs).map(async (guildId) => {
+        this.ensureGuildState(guildId);
+
         await this.#autoTuneStation(guildId);
         await this.#autoJoinVoiceChannel(guildId);
       });
