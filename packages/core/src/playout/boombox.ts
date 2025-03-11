@@ -1,7 +1,6 @@
 import { parse as parsePath } from 'node:path';
 import { castArray, chain, flatten, isEqual, mapValues, matches, reject, some, toLower, trim, uniq, without } from "lodash";
 import { isString } from 'lodash/fp';
-import { distance } from 'fastest-levenshtein';
 import { TypedEmitter } from "tiny-typed-emitter";
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions, AudioProperties } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
@@ -12,6 +11,7 @@ import { createLogger, Logger } from '@seamless-medley/logging';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from '../library/music_db';
 import { CrateProfile, CrateProfileBook } from '../crate/profile';
+import { formatSongBanner, stringSimilarity } from '../utils';
 
 export type TrackRecord = {
   trackId: string;
@@ -826,21 +826,6 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
   get allLatches(): ReadonlyArray<LatchSession<BoomBoxTrack, any>> {
     return this.#sequencer.allLatches;
   }
-}
-
-function stringSimilarity(a: string, b: string): number {
-  if (!a || !b) {
-    return 0;
-  }
-
-  if (a === b) {
-    return 1;
-  }
-
-  const editDistance = distance(a, b);
-  const longestLength = Math.max(a.length, b.length);
-
-  return (longestLength - editDistance) / longestLength
 }
 
 export const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).map(trim);
