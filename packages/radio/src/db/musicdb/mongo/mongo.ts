@@ -1,7 +1,8 @@
 import { FindByCommentOptions, MusicDb, MusicDbTrack, SearchHistory, TrackHistory, WorkerPoolAdapter } from "@seamless-medley/core";
-import { MongoClientOptions } from "mongodb";
+import { Db, MongoClient, type MongoClientOptions } from "mongodb";
 import { SettingsDb } from "../../types";
 import { PlainUser, User } from "../../persistent/user";
+import { noop } from "lodash";
 import { createLogger, Logger } from "@seamless-medley/logging";
 
 export type Options = {
@@ -31,6 +32,12 @@ type WorkerMethods = MusicDb &
 
 export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
   #logger: Logger;
+
+  #options: Options | undefined;
+
+  #localClient: MongoClient | undefined;
+  #localClientRefCount = 0;
+
   constructor() {
     super(__dirname + '/worker.js', {});
 
@@ -44,11 +51,20 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
   }
 
   async init(options: Options): Promise<this> {
-    const pool = (this.pool as any);
-    await Promise.all(
-      (pool.workers as any[])
-        .map((worker, index) => worker.exec('configure', [{ ...options, seed: index === 0 }]))
-    );
+
+    if (!this.#options) {
+      const pool = (this.pool as any);
+
+      this.#logger.debug('Configure workers');
+
+      await Promise.all(
+        (pool.workers as any[])
+          .map((worker, index) => worker.exec('configure', [{ ...options, seed: index === 0 }]))
+      );
+
+      this.#options = options;
+    }
+
     return this;
   }
 
@@ -74,6 +90,79 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
 
   async delete(trackId: string): Promise<void> {
     return this.exec('delete', trackId);
+  }
+
+  async #withLocalClient<T>(fn: (client: MongoClient, db: Db) => Promise<T>): Promise<T | undefined> {
+    if (!this.#options) {
+      return;
+    }
+
+    if (!this.#localClient) {
+      this.#localClient = new MongoClient(this.#options.url, {
+        serverSelectionTimeoutMS: 5000,
+        ...this.#options.connectionOptions
+      });
+    }
+
+    this.#localClientRefCount++;
+    const db = this.#localClient.db(this.#options.database);
+    await fn(this.#localClient, db).catch(noop);
+    this.#localClientRefCount--;
+
+    if (this.#localClientRefCount <= 0) {
+      this.#localClient = undefined;
+      this.#localClientRefCount = 0;
+    }
+  }
+
+  async validateTracks(predicate: (trackId: string) => Promise<boolean>): ReturnType<MusicDb['validateTracks']> {
+    // This could not be done using worker, simply connect to the mongodb instance directly
+
+    type ResultType = Awaited<ReturnType<MusicDb['validateTracks']>>;
+
+    if (!this.#options) {
+      return [0, 0] as ResultType;
+    }
+
+    const promise = this.#withLocalClient(async (client, db) => {
+      const musics = db.collection('musics');
+
+      const documentCountBeforeDeletion = await musics.countDocuments();
+
+      let totalDeleted = 0;
+      let marked: string[] = [];
+
+      const doBatchDelete = async (force?: boolean) => {
+        if (force || marked.length >= 1000) {
+          this.#logger.debug(`Compact: removing ${marked.length} records`);
+          const { deletedCount } = await musics.deleteMany({ trackId: { $in: marked } });
+          this.#logger.debug(`Compact: removed ${deletedCount} records`);
+          marked = [];
+          return deletedCount;
+        }
+
+        return 0;
+      }
+
+      const collect = async (trackId: string) => {
+        marked.push(trackId);
+        totalDeleted += await doBatchDelete();
+      }
+
+      const cursor = musics.find().project({ trackId: 1 });
+      for await (const { trackId } of cursor) {
+        const valid = await predicate(trackId);
+        if (!valid) {
+          await collect(trackId)
+        }
+      }
+
+      totalDeleted += await doBatchDelete(true);
+
+      return [documentCountBeforeDeletion - totalDeleted, totalDeleted] as ResultType;
+    });
+
+    return (await promise) ?? [0, 0] as ResultType;
   }
 
   readonly #searchHistory: SearchHistory = {
