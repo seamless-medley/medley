@@ -312,6 +312,7 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
       return;
     }
 
+    // Should not reconnect
     if (code === 4014) {
 			this.state = {
 				...this.state,
