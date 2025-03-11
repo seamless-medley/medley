@@ -57,6 +57,11 @@ export type GuildStateAdapter = {
   makeAudienceGroup(guildId: string): AudienceGroupId;
 }
 
+type ActiveVoiceChannel = {
+  channelId: string;
+  joinedTime: Date;
+}
+
 export class GuildState {
   constructor (readonly guildId: Guild['id'], readonly adapter: GuildStateAdapter) {
     adapter.getClient().on('voiceStateUpdate', this.#handleVoiceStateUpdate);
@@ -72,7 +77,7 @@ export class GuildState {
 
   preferredStation?: Station;
 
-  #voiceChannelId?: string;
+  #activeVoiceChannel?: ActiveVoiceChannel;
 
   textChannelId?: string;
 
@@ -110,7 +115,7 @@ export class GuildState {
   }
 
   get voiceChannelId() {
-    return this.#voiceChannelId;
+    return this.#activeVoiceChannel?.channelId;
   }
 
   get serverMuted() {
@@ -144,10 +149,10 @@ export class GuildState {
   }
 
   hasVoiceChannel() {
-    return this.#voiceChannelId !== undefined;
+    return this.#activeVoiceChannel?.channelId !== undefined;
   }
 
-  destroyVoiceConnector(): void {
+  #destroyVoiceConnector(): void {
     this.#voiceConnector?.destroy();
     this.#voiceConnector = undefined;
   }
@@ -156,7 +161,11 @@ export class GuildState {
    * Just joined a voice channel, audiences for this guild should be reset to this channel's members
    */
   #joinedVoiceChannel(channel: VoiceBasedChannel | null | undefined, muted: boolean) {
-    this.#voiceChannelId = channel?.id;
+    this.#activeVoiceChannel = channel?.id ? {
+      channelId: channel.id,
+      joinedTime: new Date()
+    } : undefined;
+
     this.#serverMuted = muted;
 
     const station = this.tunedStation;
@@ -186,8 +195,8 @@ export class GuildState {
 
     if (this.#voiceConnector !== undefined) {
       this.detune();
-      this.destroyVoiceConnector();
-      this.#voiceChannelId = undefined;
+      this.#destroyVoiceConnector();
+      this.#activeVoiceChannel = undefined;
     }
   }
 
@@ -314,7 +323,7 @@ export class GuildState {
     // Release the voiceConnection to make VoiceStateUpdate handler aware of the this join command
     this.#voiceConnector = undefined;
     // This is crucial for channel change detection to know about this new joining
-    this.#voiceChannelId = undefined;
+    this.#activeVoiceChannel = undefined;
 
     // This should be called after setting state.voiceConnection to `undefined`
     existingConnection?.destroy();
@@ -417,7 +426,7 @@ export class GuildState {
       return;
     }
 
-    if (!this.#voiceChannelId) {
+    if (!this.#activeVoiceChannel) {
       if (newState.channelId) {
         // Just joined
         this.#joinedVoiceChannel(newState.channel, isVoiceStateMuted(newState));
@@ -486,12 +495,14 @@ export class GuildState {
       return;
     }
 
-    if (!this.#voiceChannelId) {
+    if (!this.#activeVoiceChannel) {
       // Me not in a channel, ignoring...
       return;
     }
 
-    if ((this.#voiceChannelId !== oldState.channelId) && (this.#voiceChannelId !== newState.channelId)) {
+    const { channelId: activeVoiceChannelId } = this.#activeVoiceChannel;
+
+    if ((activeVoiceChannelId !== oldState.channelId) && (activeVoiceChannelId !== newState.channelId)) {
       // Event occur in another channels
       return;
     }
@@ -502,7 +513,7 @@ export class GuildState {
       return;
     }
 
-    const channel = this.adapter.getChannel(this.#voiceChannelId);
+    const channel = this.adapter.getChannel(activeVoiceChannelId);
     if (!channel?.isVoiceBased()) {
       return;
     }
@@ -511,13 +522,13 @@ export class GuildState {
 
     if (oldState.channelId !== newState.channelId) {
 
-      if (oldState.channelId === this.#voiceChannelId) {
+      if (oldState.channelId === activeVoiceChannelId) {
         // Move away or leave
         station.removeAudience(audienceGroup, newState.member.id);
         return;
       }
 
-      if (newState.channelId === this.#voiceChannelId) {
+      if (newState.channelId === activeVoiceChannelId) {
         // Joined
         if (!this.#serverMuted && !newState.deaf) {
           // Add this audience only if they're not deaf and me is not muted
