@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { propertyDescriptorOf } from "./utils";
 import { WithoutEvents } from "./types";
 
-type StubCtor<T> = abstract new () => WithoutEvents<T>;
+type StubCtor<T> = abstract new (...args: any) => WithoutEvents<T>;
 
 export type Stub<T> = {
   readonly StubbedFrom: StubCtor<T>;
@@ -24,16 +24,20 @@ export function StubOf<T>(wrapped: StubCtor<T>): Stub<T> {
 
   }
 
-  abstract class Stubbed extends AnyCtor {
-    static readonly StubbedFrom = wrapped;
+  const name = `StubOf${wrapped.name}`;
 
-    static get descriptors() {
-      return {
-        own: propertyDescriptorOf(new Inst),
-        proto: propertyDescriptorOf(wrapped.prototype)
+  const Stubbed = ({
+    [name]: class extends AnyCtor {
+      static readonly StubbedFrom = wrapped;
+
+      static get descriptors() {
+        return {
+          own: propertyDescriptorOf(new Inst),
+          proto: propertyDescriptorOf(wrapped.prototype)
+        }
       }
     }
-  };
+  })[name];
 
   return Stubbed;
 }
