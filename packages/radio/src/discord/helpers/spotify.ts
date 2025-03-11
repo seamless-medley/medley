@@ -61,8 +61,9 @@ export type SpotifyTrackInfo = SpotifyBaseInfo & {
   type: 'track';
   title?: string;
   artist?: string;
-  artist_url?: string;
+  artist_urls: string[];
   image?: string;
+  duration?: number;
 }
 
 export type SpotifyArtistInfo = SpotifyBaseInfo & {
@@ -123,9 +124,17 @@ async function internal_fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo
     return;
   }
 
+  const makeQuery = (name: string) => `head meta[property='${name}'], head meta[name='${name}']`;
+
   const get = (name: string) => {
-    const el = parsed.querySelector(`head meta[property='${name}'], head meta[name='${name}']`);
+    const el = parsed.querySelector(makeQuery(name));
     return el?.attributes.content;
+  }
+
+  const getAll = (name: string) => {
+    return parsed.querySelectorAll(makeQuery(name))
+      .map(el => el.attributes.content)
+      .filter((s): s is string => typeof s === 'string' && s.length > 0);
   }
 
   const type = ((t) => {
@@ -176,8 +185,9 @@ async function internal_fetchSpotifyInfo(url: string, expectedType?: SpotifyInfo
         type: 'track',
         title: get('og:title'),
         artist: get('music:musician_description'),
-        artist_url: get('music:musician'),
-        image: get('og:image')
+        artist_urls: getAll('music:musician'),
+        image: get('og:image'),
+        duration: (d => d ? +d : undefined)(get('music:duration'))
       }
 
     case 'album':
