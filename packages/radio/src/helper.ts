@@ -8,6 +8,7 @@ import {
   Crate,
   MusicCollectionWatch,
   MusicDb,
+  MusicLibrary,
   MusicTrackCollection,
   Station,
   StationProfile,
@@ -268,3 +269,9 @@ export async function showVersionBanner(file: string) {
   ].forEach(l => console.log(l));
 }
 
+export async function compactMusicDb(library: MusicLibrary<any>) {
+  const collections = library.all();
+  const trackIds = new Set(collections.flatMap(collection => collection.all().map(track => track.id)));
+
+  return await library.musicDb.validateTracks(async (trackId) => trackIds.has(trackId));
+}
