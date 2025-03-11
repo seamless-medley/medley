@@ -25,7 +25,6 @@ import { StreamingConfig } from "../config/streaming";
 import { StreamingAdapter } from "../streaming/types";
 import { ShoutAdapter } from "../streaming/shout/adapter";
 import { IcyAdapter } from "../streaming";
-import { User } from '../db/persistent/user';
 import { UserModel } from '../db/models/user';
 import { retryable } from "@seamless-medley/utils";
 

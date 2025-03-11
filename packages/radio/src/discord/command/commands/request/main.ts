@@ -946,6 +946,9 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
   }
 }
 
+/**
+ * @deprecated
+ */
 async function fetchOriginalMessage(interaction: MessageComponentInteraction) {
   if (!interaction.channel) {
     return;
