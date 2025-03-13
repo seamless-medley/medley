@@ -9,6 +9,7 @@ import { isEqual, omit, stubFalse } from 'lodash';
 import { LyricProviderName, LyricsSearchResult } from './lyrics/types';
 
 let instance: MetadataHelper;
+import { cachedWith } from '@seamless-medley/utils';
 
 const falsy = negate(Boolean);
 
@@ -191,8 +192,14 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     return this.getDefaultInstance().isTrackLoadable(path, timeout);
   }
 
+  static #cache = cachedWith(async () => new MetadataHelper());
+
   static searchLyrics(artist: string, title: string, provider: LyricProviderName) {
     return this.getDefaultInstance().searchLyrics(artist, title, provider);
+  }
+
+  static async for<R>(domain: string, fn: (helper: MetadataHelper) => R): Promise<Awaited<R>> {
+    return await this.#cache(domain).then(fn)
   }
 }
 
