@@ -287,7 +287,7 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
 
   #requests = new WatchTrackCollection<TrackWithRequester<BoomBoxTrack, R>>('$_requests', undefined);
 
-  #isTrackLoadable: TrackValidator = async (path) => trackHelper.isTrackLoadable(path, 1000);
+  #isTrackLoadable: TrackValidator = async (path) => MetadataHelper.for(`boombox-${this.id}`, helper => helper.isTrackLoadable(path, 1000));
 
   #verifyTrack: TrackVerifier<BoomBoxTrackExtra> = async (track): Promise<TrackVerifierResult<BoomBoxTrackExtra>> => {
     try {
@@ -298,7 +298,7 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
         timestamp = track.extra.timestamp;
         tags = track.extra?.tags;
       } else {
-        const fetched = await helper.fetchMetadata(track, this.musicDb, true);
+        const fetched = await MetadataHelper.for(`boombox-${this.id}`, helper => helper.fetchMetadata(track, this.musicDb, true));
         timestamp = fetched.timestamp;
         tags = fetched.metadata;
       }
@@ -612,7 +612,7 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
 
     if (extra && extra.kind !== TrackKind.Insertion) {
       if (!extra.maybeCoverAndLyrics) {
-        extra.maybeCoverAndLyrics = helper.coverAndLyrics(trackPlay.track.path);
+        extra.maybeCoverAndLyrics = MetadataHelper.for(`boombox-${this.id}`, helper => helper.coverAndLyrics(trackPlay.track.path));
       }
 
       if (isRequestTrack(track) && !track.original.extra?.maybeCoverAndLyrics) {
@@ -903,6 +903,3 @@ export const extractCommentMetadata = (track: BoomBoxTrack, prefix: string) => (
     return o;
   }, {})
   ?? {}) as Partial<Record<string, string>>;
-
-const trackHelper = new MetadataHelper();
-const helper = new MetadataHelper();
