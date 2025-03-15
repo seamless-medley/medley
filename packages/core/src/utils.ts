@@ -44,7 +44,7 @@ export function formatSongBanner(options: SongBannerFormatOptions): string | und
   return info.length ? info.join(separators?.title ?? ' - ') : undefined;
 }
 
-export function fetchAudioProps(track: BoomBoxTrack): Promise<AudioProperties> | undefined {
+export function fetchAudioProps(track: BoomBoxTrack, helperDomain: string = 'audio-props'): Promise<AudioProperties> | undefined {
   const { extra } = track;
 
   if (!extra) {
@@ -52,7 +52,7 @@ export function fetchAudioProps(track: BoomBoxTrack): Promise<AudioProperties> |
   }
 
   if (extra.maybeAudioProperties === undefined) {
-    extra.maybeAudioProperties = MetadataHelper.audioProperties(track.path);
+    extra.maybeAudioProperties = MetadataHelper.for(helperDomain, helper => helper.audioProperties(track.path));
   }
 
   return extra.maybeAudioProperties;
