@@ -247,7 +247,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     let modified = false;
 
     if (force || !track.extra?.tags) {
-      const { metadata, timestamp, modified: metadataUpdated } = await MetadataHelper.fetchMetadata(track, this.musicDb, force);
+      const { metadata, timestamp, modified: metadataUpdated } = await MetadataHelper.for(`library-${this.id}`, helper => helper.fetchMetadata(track, this.musicDb, force));
+
       track.musicId = metadata.isrc,
       track.extra = {
         ...track.extra,
