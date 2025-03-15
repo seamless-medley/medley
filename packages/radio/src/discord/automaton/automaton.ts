@@ -135,7 +135,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   #botToken: string;
   #clientId: string;
 
-  owners: Snowflake[] = [];
+  #owners: Snowflake[] = [];
 
   #globalMode: boolean = false;
 
@@ -153,11 +153,13 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #shardReady = false;
 
+  #stations: IReadonlyLibrary<Station>;
+
   #audioDispatcher: AudioDispatcher;
 
   #stationEventHandlers = new Map<Station, Partial<StationEvents>>;
 
-  constructor(readonly stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
+  constructor(stations: IReadonlyLibrary<Station>, options: MedleyAutomatonOptions) {
     super();
 
     this.#logger = createLogger({ name: 'automaton', id: options.id });
@@ -166,9 +168,12 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#globalMode = options.globalMode;
     this.#botToken = options.botToken;
     this.#clientId = options.clientId;
+    this.#owners = options.owners || [];
     this.#guildConfigs = options.guilds || {};
 
     this.#baseCommand = options.baseCommand || 'medley';
+
+    this.#stations = stations;
 
     this.#audioDispatcher = new AudioDispatcher();
 
@@ -278,6 +283,14 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   get baseCommand() {
     return this.#baseCommand || 'medley';
+  }
+
+  get owners() {
+    return this.#owners;
+  }
+
+  get stations() {
+    return this.#stations;
   }
 
   #handleShardError = (error: Error, shardId: number) => {
@@ -1290,7 +1303,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   async getAccessFor(interaction: BaseInteraction): Promise<AutomatonAccess> {
     const userId = interaction.user.id;
 
-    if (this.owners.includes(userId)) {
+    if (this.#owners.includes(userId)) {
       return AutomatonAccess.Owner;
     }
 
