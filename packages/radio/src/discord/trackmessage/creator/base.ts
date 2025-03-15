@@ -18,6 +18,7 @@ import { chain, get, isEmpty, sample } from "lodash";
 import { parse as parsePath } from 'node:path';
 import { TrackMessage, TrackMessageStatus } from "../types";
 import { CoverImageAttachment } from "../../helpers/message";
+import { MedleyAutomaton } from "../../automaton";
 
 export type CreateTrackMessageOptions = {
   station: Station;
@@ -46,6 +47,10 @@ export type CreatedTrackMessage = CreateTrackMessageOptionsEx & {
 
 export abstract class TrackMessageCreator {
   abstract readonly name: string;
+
+  constructor (readonly automaton: MedleyAutomaton) {
+
+  }
 
   protected abstract doCreate(options: CreateTrackMessageOptionsEx): Promise<CreatedTrackMessage>;
 

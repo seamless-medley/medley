@@ -124,7 +124,7 @@ export class GuildState {
     const type = this.adapter.getConfig(this.guildId)?.trackMessage?.type || 'extended';
 
     if (this.#trackMessageCreator?.name !== type) {
-      this.#trackMessageCreator = makeCreator(type);
+      this.#trackMessageCreator = makeCreator(type, this.#automaton);
     }
 
     return this.#trackMessageCreator;

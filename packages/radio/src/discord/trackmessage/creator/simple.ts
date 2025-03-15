@@ -17,7 +17,7 @@ export class Simple extends TrackMessageCreator {
 
     const data = getEmbedDataForTrack(track, ['artist']);
     const banner = getTrackBanner(track);
-    const cover = await createCoverImageAttachment(track);
+    const cover = await createCoverImageAttachment(track, `track-message-${this.automaton.id}`);
 
     const desc = [
       quote(banner),
