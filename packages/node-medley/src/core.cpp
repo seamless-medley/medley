@@ -43,8 +43,8 @@ namespace {
         return result;
     }
 
-    void readAudioProperties(juce::String trackFile, Object& result) {
-        medley::Metadata::AudioProperties audProps(trackFile);
+    void readAudioProperties(juce::String trackFile, TagLib::AudioProperties::ReadStyle readStyle, Object& result) {
+        medley::Metadata::AudioProperties audProps(trackFile, readStyle);
 
         auto channels = audProps.getChannels();
         auto bitrate = audProps.getBitrate();
@@ -1009,11 +1009,22 @@ Napi::Value Medley::static_getAudioProperties(const Napi::CallbackInfo& info) {
         return env.Undefined();
     }
 
+    TagLib::AudioProperties::ReadStyle readStyle = TagLib::AudioProperties::Fast;
+
+    auto readStyleStr = juce::String(info[1].ToString().Utf8Value());
+
+    if (readStyleStr.compareIgnoreCase("average") == 0) {
+        readStyle = TagLib::AudioProperties::Average;
+    }
+    else if (readStyleStr.compareIgnoreCase("accurate") == 0) {
+        readStyle = TagLib::AudioProperties::Accurate;
+    }
+
     auto result = Object::New(env);
 
     try {
         juce::String trackFile = info[0].ToString().Utf8Value();
-        readAudioProperties(trackFile, result);
+        readAudioProperties(trackFile, readStyle, result);
     }
     catch (...) {
 

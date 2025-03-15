@@ -251,7 +251,7 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   static getMetadata(path: string): Metadata | undefined;
 
-  static getAudioProperties(path: string): AudioProperties;
+  static getAudioProperties(path: string, readMode?: AudioPropertiesReadMode): AudioProperties;
 
   static getCoverAndLyrics(path: string): CoverAndLyrics;
 
@@ -386,6 +386,8 @@ export type Metadata = {
   bpm?: number;
   comments: [string, string][];
 }
+
+export type AudioPropertiesReadMode = 'fast' | 'average' | 'accurate';
 
 export type AudioProperties = {
   channels?: number;
