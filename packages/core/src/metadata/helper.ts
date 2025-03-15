@@ -164,39 +164,7 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     return this.#runIfNeeded(`searchLyrics:${artist}:${title}`, async () => this.exec('searchLyrics', artist, title, provider));
   }
 
-  static getDefaultInstance() {
-    if (!instance) {
-      instance = new MetadataHelper();
-    }
-
-    return instance;
-  }
-
-  static metadata(path: string) {
-    return this.getDefaultInstance().metadata(path);
-  }
-
-  static audioProperties(path: string) {
-    return this.getDefaultInstance().audioProperties(path);
-  }
-
-  static coverAndLyrics(path: string) {
-    return this.getDefaultInstance().coverAndLyrics(path);
-  }
-
-  static fetchMetadata(track: Track<any>, musicDb: MusicDb | undefined, refresh = false) {
-    return this.getDefaultInstance().fetchMetadata(track, musicDb, refresh);
-  }
-
-  static isTrackLoadable(path: string, timeout?: number) {
-    return this.getDefaultInstance().isTrackLoadable(path, timeout);
-  }
-
   static #cache = cachedWith(async () => new MetadataHelper());
-
-  static searchLyrics(artist: string, title: string, provider: LyricProviderName) {
-    return this.getDefaultInstance().searchLyrics(artist, title, provider);
-  }
 
   static async for<R>(domain: string, fn: (helper: MetadataHelper) => R): Promise<Awaited<R>> {
     return await this.#cache(domain).then(fn)
