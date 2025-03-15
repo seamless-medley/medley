@@ -75,7 +75,7 @@ public:
     class AudioProperties
     {
     public:
-        AudioProperties(const File& file);
+        AudioProperties(const File& file, TagLib::AudioProperties::ReadStyle readStyle = TagLib::AudioProperties::ReadStyle::Fast);
 
         int getChannels() const { return channels; }
         int getBitrate() const { return bitrate; }
@@ -83,13 +83,13 @@ public:
         double getDuration() const { return duration; }
 
     private:
-        void read(const File& file);
-        void readMpeg(const File& f);
-        void readFLAC(const File& f);
-        void readOPUS(const File& f);
-        void readOggVorbis(const File& f);
-        void readWAV(const File& f);
-        void readAIFF(const File& f);
+        void read(const File& file, TagLib::AudioProperties::ReadStyle readStyle);
+        void readMpeg(const File& f, TagLib::AudioProperties::ReadStyle readStyle);
+        void readFLAC(const File& f, TagLib::AudioProperties::ReadStyle readStyle);
+        void readOPUS(const File& f, TagLib::AudioProperties::ReadStyle readStyle);
+        void readOggVorbis(const File& f, TagLib::AudioProperties::ReadStyle readStyle);
+        void readWAV(const File& f, TagLib::AudioProperties::ReadStyle readStyle);
+        void readAIFF(const File& f, TagLib::AudioProperties::ReadStyle readStyle);
         //
         void readAudioProperties(const TagLib::AudioProperties* props);
 

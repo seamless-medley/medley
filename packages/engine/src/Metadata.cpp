@@ -6,6 +6,7 @@
 #include <taglib/oggpageheader.h>
 #include <taglib/opusfile.h>
 #include <taglib/vorbisfile.h>
+#include <taglib/audioproperties.h>
 
 namespace {
 
@@ -765,12 +766,12 @@ void medley::Metadata::CoverAndLyrics::read(const File& file, bool readCover, bo
     }
 }
 
-medley::Metadata::AudioProperties::AudioProperties(const File& file)
+medley::Metadata::AudioProperties::AudioProperties(const File& file, TagLib::AudioProperties::ReadStyle readStyle)
 {
-    read(file);
+    read(file, readStyle);
 }
 
-void medley::Metadata::AudioProperties::read(const File& file)
+void medley::Metadata::AudioProperties::read(const File& file, TagLib::AudioProperties::ReadStyle readStyle)
 {
     channels = 0;
     bitrate = 0;
@@ -781,32 +782,32 @@ void medley::Metadata::AudioProperties::read(const File& file)
 
     switch (filetype) {
     case utils::FileType::MP3: {
-        readMpeg(file);
+        readMpeg(file, readStyle);
         return;
     }
 
     case utils::FileType::FLAC: {
-        readFLAC(file);
+        readFLAC(file, readStyle);
         return;
     }
 
     case utils::FileType::OPUS: {
-        readOPUS(file);
+        readOPUS(file, readStyle);
         return;
     }
 
     case utils::FileType::OGG: {
-        readOggVorbis(file);
+        readOggVorbis(file, readStyle);
         return;
     }
 
     case utils::FileType::WAV: {
-        readWAV(file);
+        readWAV(file, readStyle);
         return;
     }
 
     case utils::FileType::AIFF: {
-        readAIFF(file);
+        readAIFF(file, readStyle);
         return;
     }
 
@@ -821,7 +822,7 @@ void medley::Metadata::AudioProperties::read(const File& file)
     }
 }
 
-void medley::Metadata::AudioProperties::readMpeg(const File& f)
+void medley::Metadata::AudioProperties::readMpeg(const File& f, TagLib::AudioProperties::ReadStyle readStyle)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -833,7 +834,7 @@ void medley::Metadata::AudioProperties::readMpeg(const File& f)
 
     if (stream.isOpen()) {
         try {
-            TagLib::MPEG::File file(&stream, true, TagLib::AudioProperties::Fast);
+            TagLib::MPEG::File file(&stream, true, readStyle);
             readAudioProperties(file.audioProperties());
         }
         catch (...) {
@@ -842,7 +843,7 @@ void medley::Metadata::AudioProperties::readMpeg(const File& f)
     }
 }
 
-void medley::Metadata::AudioProperties::readFLAC(const File& f)
+void medley::Metadata::AudioProperties::readFLAC(const File& f, TagLib::AudioProperties::ReadStyle readStyle)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -854,7 +855,7 @@ void medley::Metadata::AudioProperties::readFLAC(const File& f)
 
     if (stream.isOpen()) {
         try {
-            TagLib::FLAC::File file(&stream, true, TagLib::AudioProperties::Fast);
+            TagLib::FLAC::File file(&stream, true, readStyle);
             readAudioProperties(file.audioProperties());
         }
         catch (...) {
@@ -863,7 +864,7 @@ void medley::Metadata::AudioProperties::readFLAC(const File& f)
     }
 }
 
-void medley::Metadata::AudioProperties::readOPUS(const File& f)
+void medley::Metadata::AudioProperties::readOPUS(const File& f, TagLib::AudioProperties::ReadStyle readStyle)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -875,7 +876,7 @@ void medley::Metadata::AudioProperties::readOPUS(const File& f)
 
     if (stream.isOpen()) {
         try {
-            TagLib::Ogg::Opus::File file(&stream, true, TagLib::AudioProperties::Fast);
+            TagLib::Ogg::Opus::File file(&stream, true, readStyle);
             readAudioProperties(file.audioProperties());
         }
         catch (...) {
@@ -884,7 +885,7 @@ void medley::Metadata::AudioProperties::readOPUS(const File& f)
     }
 }
 
-void medley::Metadata::AudioProperties::readOggVorbis(const File& f)
+void medley::Metadata::AudioProperties::readOggVorbis(const File& f, TagLib::AudioProperties::ReadStyle readStyle)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -896,7 +897,7 @@ void medley::Metadata::AudioProperties::readOggVorbis(const File& f)
 
     if (stream.isOpen()) {
         try {
-            TagLib::Ogg::Vorbis::File file(&stream, true, TagLib::AudioProperties::Fast);
+            TagLib::Ogg::Vorbis::File file(&stream, true, readStyle);
             readAudioProperties(file.audioProperties());
         }
         catch (...) {
@@ -905,7 +906,7 @@ void medley::Metadata::AudioProperties::readOggVorbis(const File& f)
     }
 }
 
-void medley::Metadata::AudioProperties::readWAV(const File& f)
+void medley::Metadata::AudioProperties::readWAV(const File& f, TagLib::AudioProperties::ReadStyle readStyle)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -917,7 +918,7 @@ void medley::Metadata::AudioProperties::readWAV(const File& f)
 
     if (stream.isOpen()) {
         try {
-            TagLib::RIFF::WAV::File file(&stream, true, TagLib::AudioProperties::Fast);
+            TagLib::RIFF::WAV::File file(&stream, true, readStyle);
             readAudioProperties(file.audioProperties());
         }
         catch (...) {
@@ -926,7 +927,7 @@ void medley::Metadata::AudioProperties::readWAV(const File& f)
     }
 }
 
-void medley::Metadata::AudioProperties::readAIFF(const File& f)
+void medley::Metadata::AudioProperties::readAIFF(const File& f, TagLib::AudioProperties::ReadStyle readStyle)
 {
 #ifdef _WIN32
     TagLib::FileName fileName((const wchar_t*)f.getFullPathName().toWideCharPointer());
@@ -938,7 +939,7 @@ void medley::Metadata::AudioProperties::readAIFF(const File& f)
 
     if (stream.isOpen()) {
         try {
-            TagLib::RIFF::AIFF::File file(&stream, true, TagLib::AudioProperties::Fast);
+            TagLib::RIFF::AIFF::File file(&stream, true, readStyle);
             readAudioProperties(file.audioProperties());
         }
         catch (...) {
