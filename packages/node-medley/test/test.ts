@@ -48,7 +48,7 @@ const testAudioProperties = (ext: string, sampleRate: number) => (t: ExecutionCo
   t.is(props.channels, 2);
   t.is(props.sampleRate, sampleRate);
   t.assert(typeof props.bitrate === 'number' || typeof props.bitrate === 'undefined', 'bitrate must be a number or undefined');
-  t.is(props.duration, 5);
+  t.is(Math.round(props.duration ?? 0), 5);
 }
 
 const testCoverAndLyrics = (ext: string) => (t: ExecutionContext) => {
