@@ -132,8 +132,8 @@ export type AutomatonEvents = {
 export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   readonly id: string;
 
-  botToken: string;
-  clientId: string;
+  #botToken: string;
+  #clientId: string;
 
   owners: Snowflake[] = [];
 
@@ -164,9 +164,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     this.id = options.id;
     this.#globalMode = options.globalMode;
-    this.botToken = options.botToken;
-    this.clientId = options.clientId;
-    this.owners = options.owners || [];
+    this.#botToken = options.botToken;
+    this.#clientId = options.clientId;
     this.#guildConfigs = options.guilds || {};
 
     this.#baseCommand = options.baseCommand || 'medley';
@@ -404,7 +403,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         this.#logger.info('Login');
 
         // Resolve the `login` method as soon as a login attempt is finish
-        const attemptResult = this.client.login(this.botToken).finally(notifyLoginAttempted);
+        const attemptResult = this.client.login(this.#botToken).finally(notifyLoginAttempted);
 
         // Catch any error during a login attempt
         await attemptResult.catch((e) => {
@@ -481,7 +480,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     if (!this.#globalMode) {
       this.#logger.info(`Registering commands with guild id: ${guild.id} (${guild.name})`);
 
-      new REST().setToken(this.botToken).put(Routes.applicationGuildCommands(this.clientId, guild.id),
+      new REST().setToken(this.#botToken).put(Routes.applicationGuildCommands(this.#clientId, guild.id),
         {
           body: [createCommandDeclarations(this.#baseCommand)]
         }
@@ -1060,14 +1059,14 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   async registerCommandsIfNeccessary() {
-    const rest = new REST().setToken(this.botToken);
+    const rest = new REST().setToken(this.#botToken);
 
     const guilds = [...await this.client.guilds.fetch().then(col => col.values())];
 
     const guildsCommand = new Map<string, APIApplicationCommand>();
 
     for (const guild of guilds) {
-      const guildCommand = await rest.get(Routes.applicationGuildCommands(this.clientId, guild.id))
+      const guildCommand = await rest.get(Routes.applicationGuildCommands(this.#clientId, guild.id))
         .then(list => (list as RESTGetAPIApplicationGuildCommandsResult).find(cmd => {
           return cmd.name === this.#baseCommand
         }))
@@ -1169,7 +1168,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
 
     if (this.#globalMode) {
-      const globalCommand = await rest.get(Routes.applicationCommands(this.clientId))
+      const globalCommand = await rest.get(Routes.applicationCommands(this.#clientId))
         .then(list => (list as RESTGetAPIApplicationCommandsResult).find(cmd => cmd.name === this.#baseCommand))
         .then(command => command as APIApplicationCommand | undefined);
 
@@ -1178,7 +1177,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       if (registrationCheck !== true) {
         this.#logger.info(`Registering global command, ${registrationCheck || 'not yet registered'}`);
 
-        await rest.put(Routes.applicationCommands(this.clientId),
+        await rest.put(Routes.applicationCommands(this.#clientId),
           {
             body: [declaredCommand]
           }
@@ -1194,7 +1193,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         if (existing) {
           this.#logger.info(`Deleting commands for guild id: ${guild.id} (${guild.name})`);
 
-          await rest.delete(Routes.applicationGuildCommand(this.clientId, guild.id, existing.id),
+          await rest.delete(Routes.applicationGuildCommand(this.#clientId, guild.id, existing.id),
             {
               body: [declaredCommand]
             }
@@ -1212,7 +1211,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         if (registrationCheck !== true) {
           this.#logger.info(`Registering commands with guild id (${registrationCheck || 'not yet registered'}): ${guild.id} (${guild.name})`);
 
-          await rest.put(Routes.applicationGuildCommands(this.clientId, guild.id),
+          await rest.put(Routes.applicationGuildCommands(this.#clientId, guild.id),
             {
               body: [declaredCommand]
             }
@@ -1241,7 +1240,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     );
 
     const url = new URL('/api/oauth2/authorize', 'https://discord.com')
-    url.searchParams.append('client_id', this.clientId);
+    url.searchParams.append('client_id', this.#clientId);
     url.searchParams.append('scope', scopes.join(' '));
     url.searchParams.append('permissions', permissions.bitfield.toString());
 
