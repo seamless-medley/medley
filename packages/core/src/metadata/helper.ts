@@ -1,5 +1,5 @@
 import { WorkerPoolOptions } from 'workerpool';
-import type { AudioProperties, CoverAndLyrics, Metadata } from '@seamless-medley/medley';
+import type { AudioProperties, AudioPropertiesReadMode, CoverAndLyrics, Metadata } from '@seamless-medley/medley';
 import { Track } from '../track';
 import { WorkerPoolAdapter } from '../worker_pool_adapter';
 import { MusicDb } from '../library/music_db';
@@ -29,7 +29,7 @@ export type FetchResult = {
 
 interface Methods {
   metadata(path: string): Metadata | undefined;
-  audioProperties(path: string): AudioProperties;
+  audioProperties(path: string, readMode?: AudioPropertiesReadMode): AudioProperties;
   coverAndLyrics(path: string): WorkerCoverAndLyrics | BoomBoxCoverAnyLyrics;
   isTrackLoadable(path: string): boolean;
   searchLyrics(artist: string, title: string, provider: LyricProviderName): LyricsSearchResult | undefined;
@@ -96,10 +96,10 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
     return (m ?? {}) as Metadata;
   }
 
-  async audioProperties(path: string) {
+  async audioProperties(path: string, readMode?: AudioPropertiesReadMode) {
     return this.#runIfNeeded(
       `audioProperties:${path}`,
-      async () => this.exec('audioProperties', path)
+      async () => this.exec('audioProperties', path, readMode)
     );
   }
 
