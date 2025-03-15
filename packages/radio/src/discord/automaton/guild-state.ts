@@ -692,7 +692,7 @@ export class GuildState {
               )
 
             if (!embed.data.thumbnail) {
-              const cover = await createCoverImageAttachment(track);
+              const cover = await createCoverImageAttachment(track, `cover-${this.#automaton.id}`);
               if (cover) {
                 embed.setThumbnail(cover.url);
               }
