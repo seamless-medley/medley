@@ -953,7 +953,7 @@ void medley::Metadata::AudioProperties::readAudioProperties(const TagLib::AudioP
         channels = props->channels();
         bitrate = props->bitrate();
         sampleRate = props->sampleRate();
-        duration = props->lengthInSeconds();
+        duration = props->lengthInMilliseconds() / 1000.0f;
     }
     catch (...) {
         channels = 0;
