@@ -171,7 +171,7 @@ void medley::Metadata::readMpeg(const juce::File& f)
     }
 
     try {
-        TagLib::MPEG::File file(&stream, false);
+        TagLib::MPEG::File file(&stream, false, TagLib::MPEG::Properties::Fast);
 
         if (!file.hasID3v2Tag()) {
             return;
@@ -201,7 +201,7 @@ void medley::Metadata::readFLAC(const File& f)
     }
 
     try {
-        TagLib::FLAC::File file(&stream, false);
+        TagLib::FLAC::File file(&stream, false, TagLib::FLAC::Properties::Fast);
 
         if (!file.hasXiphComment()) {
             return;
@@ -231,7 +231,7 @@ void medley::Metadata::readOPUS(const File& f)
     }
 
     try {
-        TagLib::Ogg::Opus::File file(&stream, false);
+        TagLib::Ogg::Opus::File file(&stream, false, TagLib::Ogg::Opus::Properties::Fast);
 
         auto& tag = *file.tag();
         readBasicTag(tag);
@@ -268,7 +268,7 @@ void medley::Metadata::readOggVorbis(const File& f)
     }
 
     try {
-        TagLib::Ogg::Vorbis::File file(&stream, false);
+        TagLib::Ogg::Vorbis::File file(&stream, false, TagLib::Ogg::Vorbis::Properties::Fast);
 
         auto& tag = *file.tag();
         readBasicTag(tag);
@@ -294,7 +294,7 @@ void medley::Metadata::readWAV(const File& f)
     }
 
     try {
-        TagLib::RIFF::WAV::File file(&stream, false);
+        TagLib::RIFF::WAV::File file(&stream, false, TagLib::RIFF::WAV::Properties::Fast);
 
         auto& tag = *file.tag();
         readBasicTag(tag);
@@ -323,7 +323,7 @@ void medley::Metadata::readAIFF(const File& f)
     }
 
     try {
-        TagLib::RIFF::AIFF::File file(&stream, false);
+        TagLib::RIFF::AIFF::File file(&stream, false, TagLib::RIFF::AIFF::Properties::Fast);
 
         auto& tag = *file.tag();
         readBasicTag(tag);
@@ -492,7 +492,7 @@ void medley::Metadata::CoverAndLyrics::readMpeg(const File& f, bool readCover, b
     }
 
     try {
-        TagLib::MPEG::File file(&stream, false);
+        TagLib::MPEG::File file(&stream, false, TagLib::MPEG::Properties::Fast);
 
         if (file.hasID3v2Tag()) {
             auto& tag = *file.ID3v2Tag();
@@ -520,7 +520,7 @@ void medley::Metadata::CoverAndLyrics::readFLAC(const File& f, bool readCover, b
     }
 
     try {
-        TagLib::FLAC::File file(&stream, false);
+        TagLib::FLAC::File file(&stream, false, TagLib::FLAC::Properties::Fast);
 
         if (readCover) {
             auto pictures = file.pictureList();
@@ -557,7 +557,7 @@ void medley::Metadata::CoverAndLyrics::readOPUS(const File& f, bool readCover, b
 
     try {
 
-        TagLib::Ogg::Opus::File file(&stream, false);
+        TagLib::Ogg::Opus::File file(&stream, false, TagLib::Ogg::Opus::Properties::Fast);
 
         auto tag = file.tag();
 
@@ -589,7 +589,7 @@ void medley::Metadata::CoverAndLyrics::readOggVorbis(const File& f, bool readCov
     }
 
     try {
-        TagLib::Ogg::Vorbis::File file(&stream, false);
+        TagLib::Ogg::Vorbis::File file(&stream, false, TagLib::Ogg::Vorbis::Properties::Fast);
 
         auto tag = file.tag();
 
@@ -621,7 +621,7 @@ void medley::Metadata::CoverAndLyrics::readWAV(const File& f, bool readCover, bo
     }
 
     try {
-        TagLib::RIFF::WAV::File file(&stream, false);
+        TagLib::RIFF::WAV::File file(&stream, false, TagLib::RIFF::WAV::Properties::Fast);
 
         if (file.hasID3v2Tag()) {
             auto& tag = *file.ID3v2Tag();
@@ -648,7 +648,7 @@ void medley::Metadata::CoverAndLyrics::readAIFF(const File& f, bool readCover, b
     }
 
     try {
-        TagLib::RIFF::AIFF::File file(&stream, false);
+        TagLib::RIFF::AIFF::File file(&stream, false, TagLib::RIFF::AIFF::Properties::Fast);
 
         if (file.hasID3v2Tag()) {
             readID3Tag(*file.tag(), readCover, readLyrics);
