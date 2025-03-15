@@ -63,7 +63,9 @@ type ActiveVoiceChannel = {
 }
 
 export class GuildState {
-  constructor (readonly guildId: Guild['id'], readonly adapter: GuildStateAdapter) {
+  constructor (readonly guildId: Guild['id'], adapter: GuildStateAdapter) {
+    this.#adapter = adapter;
+
     adapter.getClient().on('voiceStateUpdate', this.#handleVoiceStateUpdate);
 
     const config = adapter.getConfig(guildId);
@@ -74,6 +76,8 @@ export class GuildState {
   dispose() {
     this.adapter.getClient().off('voiceStateUpdate', this.#handleVoiceStateUpdate);
   }
+
+  #adapter: GuildStateAdapter;
 
   #preferredStation?: Station;
 
@@ -95,6 +99,13 @@ export class GuildState {
 
   #gain = 1.0;
 
+  private get adapter() {
+    return this.#adapter;
+  }
+
+  get #automaton() {
+    return this.#adapter.getAutomaton();
+  }
 
   get stationLink() {
     return this.#stationLink;
@@ -218,7 +229,7 @@ export class GuildState {
   }
 
   async tune(station: Station): Promise<Station | undefined> {
-    const { guildId, adapter, stationLink: oldLink } = this;
+    const { guildId, stationLink: oldLink } = this;
 
     this.#preferredStation = station;
     const newLink = await this.createStationLink();
@@ -236,7 +247,7 @@ export class GuildState {
     const newStation = newLink?.station;
 
     if (newStation) {
-      adapter.getAutomaton().emit('stationTuned', guildId, oldLink?.station, newStation);
+      this.#automaton.emit('stationTuned', guildId, oldLink?.station, newStation);
     }
 
     return newStation;
@@ -349,7 +360,7 @@ export class GuildState {
 
     let connector: VoiceConnector | undefined = VoiceConnector.connect(
       {
-        automatonId: this.adapter.getAutomaton().id,
+        automatonId: this.#automaton.id,
         channelId,
         guildId,
         selfDeaf: true,
@@ -629,7 +640,7 @@ export class GuildState {
       return;
     }
 
-    const isOwnerOverride = this.adapter.getAutomaton().owners.includes(message.author.id);
+    const isOwnerOverride = this.#automaton.owners.includes(message.author.id);
 
     const shouldCheckAudiences = !isOwnerOverride && this.adapter.getConfig(message.guildId)?.trackMessage?.always !== true;
 
@@ -705,7 +716,7 @@ export class GuildState {
           // so try using metadata we've got from given spotify url to search for tracks and let user pick one
 
           if (!trackInfo?.artist || !trackInfo?.title) {
-            const { baseCommand } = this.adapter.getAutomaton();
+            const { baseCommand } = this.#automaton;
 
             return {
               content: `Could not retrieve track information, please try again later or try using command ${inlineCode(`/${baseCommand} request`)} instead`
