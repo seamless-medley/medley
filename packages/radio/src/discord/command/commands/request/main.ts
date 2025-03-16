@@ -889,7 +889,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         id: artistId,
         artist
       })
-      .catch(e => new RequestError(automaton, guildId, 'Could not perform artist search with button'));
+      .catch(cause => new RequestError(automaton, guildId, 'Error while performing artist search', { cause }));
 
       if (result instanceof Error) {
         throw result;
@@ -935,7 +935,7 @@ export const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> =
         duration,
         noHistory: true
       })
-      .catch(e => new RequestError(automaton, guildId, 'Error while performing track search'));
+      .catch(cause => new RequestError(automaton, guildId, `Error while performing track search`, { cause }));
 
       if (result instanceof Error) {
         throw result;
@@ -962,8 +962,8 @@ async function fetchOriginalMessage(interaction: MessageComponentInteraction) {
 class RequestError extends AutomatonCommandError {
   readonly state?: GuildState;
 
-  constructor(automaton: MedleyAutomaton, guildId: string, message: string) {
-    super(automaton, message);
+  constructor(automaton: MedleyAutomaton, guildId: string, message: string, options?: ErrorOptions) {
+    super(automaton, message, options);
     this.state = automaton.getGuildState(guildId);
   }
 }
