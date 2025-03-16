@@ -1,6 +1,6 @@
 import { SearchQueryField } from "@seamless-medley/core";
 import { ApplicationCommandOptionChoiceData, AutocompleteInteraction } from "discord.js";
-import { chain } from "lodash";
+import { chain, truncate } from "lodash";
 import { InteractionHandlerFactory } from "../../type";
 
 export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteInteraction> = (automaton) => async (interaction) => {
@@ -27,6 +27,7 @@ export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteIn
 
   const completions = chain(suggestions)
       .take(25)
+      .map(s => truncate(s, { length: 100 }))
       .map<ApplicationCommandOptionChoiceData>(s => ({ name: s, value: s }))
       .value()
 
