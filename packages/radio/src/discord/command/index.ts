@@ -94,10 +94,10 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
 
         const [tag, ...params] = customId.split(':');
 
-        const handler = commandHandlers.get(tag);
+        const handlers = commandHandlers.get(tag);
 
-        if (handler?.button) {
-          return await handler.button(interaction, ...params);
+        if (handlers?.button) {
+          return await handlers.button(interaction, ...params);
         }
       }
 
@@ -106,14 +106,14 @@ export const createInteractionHandler = (automaton: MedleyAutomaton) => {
           return;
         }
 
-        const handler = commandHandlers.get(interaction.options.getSubcommand().toLowerCase());
+        const handlers = commandHandlers.get(interaction.options.getSubcommand().toLowerCase());
 
-        if (!handler?.autocomplete) {
+        if (!handlers?.autocomplete) {
           interaction.respond([]);
           return;
         }
 
-        return await handler.autocomplete(interaction);
+        return await handlers.autocomplete(interaction);
       }
     }
     catch (e) {
