@@ -248,7 +248,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
       return audioPropsPromises.get(track.id)!;
     }
 
-    const promise = fetchAudioProps(track) ?? Promise.resolve(undefined);
+    const promise = (fetchAudioProps(track, `audio-props-${automaton.id}`) ?? Promise.resolve(undefined)).catch(() => undefined);
     audioPropsPromises.set(track.id, promise);
 
     return promise;
@@ -277,14 +277,37 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
           fuzzy,
           noHistory
         })
-        .then(result => result.map(r => r.track));
+        .then(result => result.map(r => {
+          const trackTitle = r.track.extra?.tags?.title;
+          const artistName = r.track.extra?.tags?.artist;
+
+          const scores = {
+            title: trackTitle && title ? stringSimilarity(trackTitle, title) : 0,
+            artist: artistName && artist ? stringSimilarity(artistName, artist) : 0
+          }
+
+          const score = (scores.title * 1.9 + scores.artist) / 2;
+
+          return {
+            ...r.track,
+            ...(score >= 0.95
+              ? {
+                priority: 6 + score,
+                emoji: '📀'
+              }
+              : undefined
+            )
+          }
+        }));
+
+        const mostLikelyTracks: StationTrackForSelection[] = [];
 
         if (spotifyArtistId) {
           const artistTracks = await station.findTracksByComment('spotify:artist', spotifyArtistId, { valueDelimiter: ',' });
 
-          const scoredTracks: Array<{ track: StationTrack, score: number }> = [];
-
           let onlyExactTitle = false;
+
+          const scoredTracks: Array<{ track: StationTrack, score: number }> = [];
 
           for (const track of artistTracks) {
             let score = 0;
@@ -323,7 +346,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
             });
           };
 
-          const mostLikelyTracks = chain(scoredTracks)
+          mostLikelyTracks.push(...chain(scoredTracks)
             .sortBy([t => -t.score, t => t.track.extra?.tags?.title])
             .map<StationTrackForSelection>(t => ({
               ...t.track,
@@ -338,37 +361,43 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
                 }
               )
             }))
-            .value();
-
-          const specialities = chain(mostLikelyTracks)
-            .groupBy(t => t.id)
-            .reduce((o, tracks) => {
-              const likely = tracks.find(t => t.emoji !== undefined);
-              if (likely) {
-                o[likely.id] = {
-                  emoji: likely.emoji,
-                  priority: likely.priority,
-                  ...o[likely.id]
-                }
-              }
-
-              return o;
-            }, {} as Record<string, Speciality>)
             .value()
-
-          // re-apply priority/emoji to all tracks by its id
-          for (const track of searchResults) {
-            const speciality = specialities[track.id];
-            if (speciality) {
-              track.emoji = speciality.emoji;
-              track.priority = speciality.priority;
-            }
-          }
-
-          searchResults.push(...mostLikelyTracks);
+          );
         }
 
-        return uniqBy(searchResults, t => t.id);
+        const foundTracks: StationTrackForSelection[] = [...searchResults, ...mostLikelyTracks];
+
+        // re-apply priority/emoji to all tracks by its id
+        const specialities = chain(foundTracks)
+          .groupBy(t => t.id)
+          .reduce((o, tracks) => {
+
+            const likely = chain(tracks)
+              .filter(t => t.priority !== undefined)
+              .maxBy(t => t.priority)
+              .value();
+
+            if (likely?.priority) {
+              o[likely.id] = {
+                emoji: likely.emoji,
+                priority: likely.priority,
+                ...o[likely.id]
+              }
+            }
+
+            return o;
+          }, {} as Record<string, Speciality>)
+          .value();
+
+        for (const track of foundTracks) {
+          const speciality = specialities[track.id];
+          if (speciality) {
+            track.emoji = speciality.emoji;
+            track.priority = speciality.priority;
+          }
+        }
+
+        return uniqBy(foundTracks, t => t.id);
       }
 
       /**

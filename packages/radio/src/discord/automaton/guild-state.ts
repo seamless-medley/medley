@@ -737,15 +737,19 @@ export class GuildState {
 
           // Search by Spotify trackInfo and show the potentials
           const searchResult = await station.search({
-            q: {
-              title: trackInfo.title,
-              artist: trackInfo.artist
-            },
-            noHistory: true
-          });
+              q: {
+                title: trackInfo.title,
+                artist: trackInfo.artist
+              },
+              noHistory: true
+            })
+            .then(results => results.map(t => t.track));
 
           // This is possibly due to the track locale does not match, try to guess the locale and search again
-          if (!searchResult?.length && trackInfo.lang) {
+          //
+          // and this is just to find the potential and should not re-run on the request command
+          // search will be perform audio wise, and find most likely tracks
+          if (searchResult.length <= 0 && trackInfo.lang) {
             const lang = trackInfo.lang.toLowerCase();
 
             const trackLang = [trackInfo.title, trackInfo.artist]
@@ -771,17 +775,27 @@ export class GuildState {
                     noHistory: true
                   });
 
-                  searchResult.push(...localizedSearch);
+                  if (localizedSearch.length) {
+                    binding.artist = localizedInfo.artist;
+                    binding.title = localizedInfo.title;
+
+                    searchResult.push(...localizedSearch.map(t => t.track));
+                  }
                 }
               }
             }
           }
 
-          const banners = uniq(searchResult.map(r => getTrackBanner(r.track)));
-
-          if (banners.length == 0 && trackInfo.artist && trackInfo.title) {
-            banners.push(`${trackInfo.artist} - ${trackInfo.title}`);
+          if (searchResult.length <= 0 && artistId) {
+            const artistTracks = await station.findTracksByComment('spotify:artist', artistId, { valueDelimiter: ',' });
+            searchResult.push(...artistTracks);
           }
+
+          if (searchResult.length <= 0) {
+            return;
+          }
+
+          const banners = uniq(searchResult.map(getTrackBanner));
 
           const sampleBanners = take(banners, 3).map(s => `- ${s}`);
 
@@ -791,11 +805,7 @@ export class GuildState {
 
           const embed = new EmbedBuilder();
 
-          embed.setTitle(
-            searchResult.length > 0
-              ? `Found ${searchResult.length} potential track(s) for this title`
-              : 'Search to see more results'
-          )
+          embed.setTitle(`Found some potential tracks for this title`);
 
           if (sampleBanners.length) {
             embed.setDescription(sampleBanners.join('\n'))
@@ -803,7 +813,7 @@ export class GuildState {
 
           // transfer binding value via embed fields
           embed.addFields(
-            { name: 'artist', value: binding.artist, inline: true },
+            { name: 'artist', value: artistUrl ? hyperlink(binding.artist, artistUrl) : binding.artist, inline: true },
             { name: 'title', value: binding.title, inline: true },
           );
 
@@ -831,8 +841,6 @@ export class GuildState {
                 )
             ]
           }
-
-          break;
         }
 
         case 'artist': {
