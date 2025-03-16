@@ -30,5 +30,5 @@ export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteIn
       .map<ApplicationCommandOptionChoiceData>(s => ({ name: s, value: s }))
       .value()
 
-  interaction.respond(completions);
+  return interaction.respond(completions);
 }
