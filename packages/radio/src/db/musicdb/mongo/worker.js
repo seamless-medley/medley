@@ -208,7 +208,7 @@ async function findByComment(field, value, options) {
                 input: "$comments",
                 as: "value",
                 in: [
-                  { $arrayElemAt: ["$$value", 0] },
+                  { $toLower: { $arrayElemAt: ["$$value", 0] } },
                   {
                     $split: [
                       { $arrayElemAt: ["$$value", 1] },
