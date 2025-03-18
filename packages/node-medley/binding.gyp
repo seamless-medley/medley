@@ -217,9 +217,6 @@
                             "<!@(pkg-config freetype2 --libs)",
                             "-lasound"
                         ],
-                        "cflags": [
-                            "-std=c17"
-                        ],
                         "cflags_cc": [
                             "-std=c++17",
                             "<!@(pkg-config opus --cflags)",
