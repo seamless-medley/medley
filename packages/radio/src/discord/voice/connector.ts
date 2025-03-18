@@ -422,7 +422,7 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 	    return map;
     })();
 
-    const existing = group.get(joinConfig.automatonId);
+    const existing = group.get(joinConfig.guildId);
 
     if (existing && existing.state.status !== VoiceConnectorStatus.Destroyed) {
       if (existing.state.status === VoiceConnectorStatus.Disconnected) {
