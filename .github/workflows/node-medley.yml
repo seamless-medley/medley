@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - runs-on: ubuntu-latest
+          - runs-on: ubuntu-22.04
             node_version: 18
             node_arch: x64
             build-arch: linux-x64
