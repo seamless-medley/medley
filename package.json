@@ -27,7 +27,7 @@
     "mkdirp": "^3.0.1",
     "turbo": "^2.4.4",
     "type-fest": "^4.8.3",
-    "typescript": "5.4.5"
+    "typescript": "5.5.4"
   },
   "packageManager": "pnpm@10.6.2",
   "pnpm": {
@@ -50,7 +50,7 @@
       "rimraf": "*"
     },
     "overrides": {
-      "typescript": "5.4.5",
+      "typescript": "5.5.4",
       "micromatch": ">=4.0.8"
     }
   },
