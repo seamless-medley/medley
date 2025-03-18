@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - runs-on: ubuntu-22.04
+          - runs-on: ubuntu-latest
             node_version: 18
             node_arch: x64
             build-arch: linux-x64
@@ -46,7 +46,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.6.2
+          version: 10.6.4
 
       - name: Make sure pnpm fetch Node
         shell: bash
