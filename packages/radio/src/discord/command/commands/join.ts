@@ -71,7 +71,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   }
 
   try {
-    const result = await state.join(channelToJoin);
+    const result = await state.join({ channel: channelToJoin });
 
     switch (result.status) {
       case 'joined':
@@ -85,7 +85,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
       case 'no_station':
         createStationSelector(automaton, interaction, async (tuned) => {
           if (tuned) {
-            if ((await state.join(channelToJoin)).status !== 'joined') {
+            if ((await state.join({ channel: channelToJoin })).status !== 'joined') {
               deny(interaction, 'Could not tune and join');
               return;
             }

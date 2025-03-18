@@ -25,6 +25,7 @@ interface State {
 
 interface ConnectingState extends State {
   status: VoiceConnectorStatus.Connecting;
+  reconnecting?: boolean;
 }
 
 interface SignallingState extends Omit<State, 'connection'> {
@@ -291,8 +292,9 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 
     if (newState.code !== ConnectionStateCode.Closed) {
 			this.state = {
-				...this.state,
-				status: VoiceConnectorStatus.Connecting,
+        ...this.state,
+        status: VoiceConnectorStatus.Connecting,
+        reconnecting: true
 			};
 
       return;
@@ -361,22 +363,24 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
   }
 
   async waitForState(status: VoiceConnectorStatus, timeoutOrSignal: AbortSignal | number) {
-    if (this.#state.status !== status) {
+    if (this.#state.status === status) {
+      return;
+    }
 
-      const [ac, signal] = typeof timeoutOrSignal !== 'number'
-        ? [undefined, timeoutOrSignal]
-        : (controller => {
-            const timer = setTimeout(() => controller.abort(), timeoutOrSignal);
-            controller.signal.addEventListener('abort', () => clearTimeout(timer));
-            return [controller, controller.signal];
-          })(new AbortController)
+    const [ac, signal] = typeof timeoutOrSignal !== 'number'
+      ? [undefined, timeoutOrSignal]
+      : (controller => {
+          const timer = setTimeout(() => controller.abort(`timeout watiting for voice connector to become ${status} (${this.state.status})`), timeoutOrSignal);
+          controller.signal.addEventListener('abort', () => clearTimeout(timer));
+          return [controller, controller.signal];
+        })(new AbortController)
 
-      try {
-        await once(this as EventEmitter, status, { signal });
-      }
-      finally {
-        ac?.abort();
-      }
+    try {
+      await once(this as EventEmitter, status, { signal });
+      return this.state.status;
+    }
+    finally {
+      ac?.abort();
     }
   }
 
@@ -409,9 +413,9 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 			status: VoiceConnectorStatus.Disconnected,
 			reason: DisconnectReason.GatewayUnavailable,
 		};
+
 		return false;
 	}
-
 
   static connect(joinConfig: JoinConfig, adapter: DiscordGatewayAdapter) {
     const payload = makeVoiceStateUpdatePayload(joinConfig2Data(joinConfig));

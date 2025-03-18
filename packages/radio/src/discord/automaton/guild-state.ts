@@ -37,7 +37,7 @@ import {
 import { detectAll as detectLanguages } from 'tinyld';
 
 import { TrackMessage } from "../trackmessage/types";
-import { VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
+import { getVoiceConnector, VoiceConnector, VoiceConnectorStatus } from "../voice/connector";
 import { AudioDispatcher } from "../../audio/exciter";
 import { DiscordAudioPlayer } from "../voice/audio/player";
 import { GuildSpecificConfig, MedleyAutomaton } from "./automaton";
@@ -94,6 +94,8 @@ export class GuildState {
   #stationLink?: StationLink;
 
   #voiceConnector?: VoiceConnector;
+
+  #pendingJoin: Promise<JoinResult> | undefined;
 
   #karaokeEnabled = false;
 
@@ -172,7 +174,7 @@ export class GuildState {
     }
   }
 
-  hasVoiceConnection() {
+  hasVoiceConnector() {
     return this.#voiceConnector !== undefined;
   }
 
@@ -180,15 +182,14 @@ export class GuildState {
     return this.activeVoiceChannel?.channelId !== undefined;
   }
 
-  #destroyVoiceConnector(): void {
-    this.#voiceConnector?.destroy();
-    this.#voiceConnector = undefined;
+  get voiceConnectorStatus() {
+    return this.#voiceConnector?.state?.status;
   }
 
   /**
    * Just joined a voice channel, audiences for this guild should be reset to this channel's members
    */
-  #joinedVoiceChannel(channel: VoiceBasedChannel | null | undefined, muted: boolean) {
+  async #joinedVoiceChannel(channel: VoiceBasedChannel | null | undefined, muted: boolean) {
     this.activeVoiceChannel = channel?.id ? {
       channelId: channel.id,
       joinedTime: new Date()
@@ -209,23 +210,28 @@ export class GuildState {
       return;
     }
 
-    station.updateAudiences(
-      audienceGroup,
-      channel.members
-        .filter(member => !member.user.bot && !member.voice.deaf)
-        .map(member => member.id)
-    );
+    if (this.#voiceConnector === undefined) {
+      return;
+    }
+
+    if (this.#voiceConnector.isReady) {
+      this.#updateAudiences()
+      return;
+    }
+
+    this.#voiceConnector.once(VoiceConnectorStatus.Ready, () => this.#updateAudiences());
   }
 
   #leftVoiceChannel() {
-    // if the voiceConnection is defined, meaning the voice state has been forcefully closed
-    // if the voiceConnection is undefined here, meaning it might be the result of the `join` command
-
-    if (this.#voiceConnector !== undefined) {
-      this.detune();
-      this.#destroyVoiceConnector();
-      this.activeVoiceChannel = undefined;
+    if (!this.#voiceConnector) {
+      return;
     }
+
+    this.detune();
+
+    this.#voiceConnector?.destroy();
+    this.#voiceConnector = undefined;
+    this.activeVoiceChannel = undefined;
   }
 
   async tune(station: Station): Promise<Station | undefined> {
@@ -306,7 +312,9 @@ export class GuildState {
     this.#stationLink = undefined;
   }
 
-  async join(channel: BaseGuildVoiceChannel, timeout: number = 5000, retries: number = 0): Promise<JoinResult> {
+  async #doJoin(options: JoinOptions): Promise<JoinResult> {
+    const { channel, timeout = 5000, retries = 0, signal } = options;
+
     const { me } = channel.guild.members;
 
     const granted = me && channel.permissionsFor(me).has([PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak])
@@ -346,19 +354,14 @@ export class GuildState {
       return { status: 'no_station' };
     }
 
-    const existingConnection = this.#voiceConnector;
-
     // Release the voiceConnection to make VoiceStateUpdate handler aware of the this join command
     this.#voiceConnector = undefined;
-    // This is crucial for channel change detection to know about this new joining
-    this.activeVoiceChannel = undefined;
 
-    // This should be called after setting state.voiceConnection to `undefined`
-    existingConnection?.destroy();
+    getVoiceConnector(this.#automaton.id, this.guildId)?.destroy();
 
     const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
 
-    let connector: VoiceConnector | undefined = VoiceConnector.connect(
+    let connector = VoiceConnector.connect(
       {
         automatonId: this.#automaton.id,
         channelId,
@@ -374,41 +377,45 @@ export class GuildState {
     }
 
     try {
-      const conn = connector;
-      const link = stationLink;
-
       const result = await retryable<JoinResult>(async() => {
-        await conn.waitForState(VoiceConnectorStatus.Ready, timeout);
-
-        if (!link.exciter.started) {
-          await link.exciter.start(this.adapter.getAudioDispatcher());
-        }
-
-        link.exciter.addCarrier(conn);
-        this.#voiceConnector = conn;
-
-        this.#updateAudiences();
-
+        await connector.waitForState(VoiceConnectorStatus.Ready, timeout);
         return { status: 'joined', station: stationLink!.station };
-      }, { retries, wait: 1000, factor: 1 });
+      }, { retries, wait: 5000, factor: 1, signal });
 
       if (result === undefined) {
         throw new Error('Aborted');
       }
 
+      if (!stationLink.exciter.started) {
+        await stationLink.exciter.start(this.adapter.getAudioDispatcher());
+      }
+
+      stationLink.exciter.addCarrier(connector);
+
+      this.#voiceConnector = connector;
+      this.#updateAudiences();
+
       return result;
     }
-    catch (e) {
-      connector?.destroy();
-      connector = undefined;
-      this.#voiceConnector = undefined;
-      //
-      this.adapter.getLogger().error(e);
+    catch (e: any) {
+      this.adapter.getLogger().error((e.code === 'ABORT_ERR') ? new Error(e.cause) : e, 'Error joining a channel');
       return { status: 'not_joined' };
     }
   }
 
-  #updateAudiences() {
+  async join(options: JoinOptions): Promise<JoinResult> {
+    if (!this.#pendingJoin) {
+      this.#pendingJoin = this.#doJoin(options).finally(() => {
+        this.#pendingJoin = undefined
+      });
+    } else {
+      console.log('Re-using pending join');
+    }
+
+    return this.#pendingJoin;
+  }
+
+  async #updateAudiences() {
     if (!this.#voiceConnector) {
       return;
     }
@@ -420,13 +427,15 @@ export class GuildState {
     const channel = this.adapter.getChannel(this.voiceChannelId);
 
     if ((channel?.type === ChannelType.GuildVoice) || (channel?.type === ChannelType.GuildStageVoice)) {
+      const guild = await this.#adapter.getClient().guilds.fetch(this.guildId);
+      const shouldPlay = guild.members.me?.voice !== undefined && !guild.members.me.voice.mute;
+
       this.preferredStation.updateAudiences(
         this.adapter.makeAudienceGroup(this.guildId),
         channel.members
           .filter(member => !member.user.bot && !member.voice.deaf)
           .map(member => member.id),
-        // Do not update playback
-        { updatePlayback: false }
+        { updatePlayback: shouldPlay }
       );
     }
   }
@@ -456,13 +465,10 @@ export class GuildState {
       return;
     }
 
-    if (!this.activeVoiceChannel) {
-      if (newState.channelId) {
-        // Just joined
-        this.#joinedVoiceChannel(newState.channel, isVoiceStateMuted(newState));
-      }
-
-      return;
+    if (newState.channelId) {
+      // Just joined
+      this.#joinedVoiceChannel(newState.channel, isVoiceStateMuted(newState));
+      return
     }
 
     if (!newState.channelId) {
@@ -530,7 +536,7 @@ export class GuildState {
       return;
     }
 
-    const { channelId: activeVoiceChannelId } = this.activeVoiceChannel;
+    const { voiceChannelId: activeVoiceChannelId } = this;
 
     if ((activeVoiceChannelId !== oldState.channelId) && (activeVoiceChannelId !== newState.channelId)) {
       // Event occur in another channels
@@ -936,6 +942,13 @@ export class GuildState {
       message.reply(`‼️ Up to 3 Spotify links can be used at a time`);
     }
   }
+}
+
+export type JoinOptions = {
+  channel: BaseGuildVoiceChannel;
+  timeout?: number;
+  retries?: number;
+  signal?: AbortSignal;
 }
 
 export type JoinResult = {

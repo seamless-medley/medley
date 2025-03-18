@@ -47,6 +47,7 @@ import { Logger, createLogger } from "@seamless-medley/logging";
 import { intersection, isEqual, noop, sumBy, throttle } from "lodash";
 import { Command, CommandOption, OptionType, SubCommandLikeOption } from "../command/type";
 import { canSendMessageTo } from "../command/utils";
+import { VoiceConnectorStatus } from "../voice/connector";
 
 export enum AutomatonAccess {
   None = 0,
@@ -149,7 +150,9 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #logger: Logger;
 
-  #rejoining = false;
+  #rejoining = new Counters();
+
+  #rejoinInProgress = false;
 
   #shardReady = false;
 
@@ -196,7 +199,26 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.#logger.error(error, 'Automaton Error');
     });
 
+    this.#client.on('shardError', this.#handleShardError);
+
+    this.#client.on('shardResume', () => {
+      this.#logger.debug(`Shard resume`);
+
+      if (!this.#shardReady) {
+        this.#rejoinVoiceChannels(30);
+      }
+
+      this.#updateLibraryStats();
+
+      this.#shardReady = true;
+    });
+
+    this.#client.on('shardReady', () => {
+      this.#shardReady = true;
+    });
+
     this.#client.on('ready', this.#handleClientReady);
+
     this.#client.on('guildCreate', this.#handleGuildCreate);
     this.#client.on('guildDelete', this.#handleGuildDelete);
     this.#client.on('interactionCreate', createInteractionHandler(this));
@@ -228,42 +250,12 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.#stationEventHandlers.set(station, handlers);
     }
 
-    this.#client.once('ready', async () => {
-      this.#shardReady = true;
+    this.#checkVoiceConnection();
+  }
 
-      this.#client.on('shardError', this.#handleShardError);
-
-      this.#client.on('shardReconnecting', (shardId) => {
-        this.#logger.debug(`Shard ${shardId}, reconnecting`);
-      })
-
-      this.#client.on('shardResume', (shardId) => {
-        this.#logger.debug(`Shard ${shardId}, resume`);
-
-        if (!this.#shardReady) {
-          this.#rejoinVoiceChannels(30);
-        }
-
-        this.#updateLibraryStats();
-
-        this.#shardReady = true;
-      });
-
-      this.#client.on('shardReady', (shardId) => {
-        this.#shardReady = true;
-        this.#logger.debug(`Shard ${shardId}, ready`);
-        this.#rejoinVoiceChannels(30);
-      });
-
-      this.#updateLibraryStats();
-
-      Object.keys(this.#guildConfigs).map(async (guildId) => {
-        this.ensureGuildState(guildId);
-
-        await this.#autoTuneStation(guildId);
-        await this.#autoJoinVoiceChannel(guildId);
-      });
-    });
+  #checkVoiceConnection = async () => {
+    await this.#rejoinVoiceChannels(30);
+    setTimeout(this.#checkVoiceConnection, 5_000);
   }
 
   destroy() {
@@ -294,10 +286,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   #handleShardError = (error: Error, shardId: number) => {
-    this.#logger.error(error, `Shard ${shardId} error`);
-
     this.#shardReady = false;
-    this.#rejoining = false;
+    this.#rejoining = new Counters();
     this.#removeAllAudiences();
   }
 
@@ -329,6 +319,10 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   async #autoJoinVoiceChannel(guildId: string) {
+    if (this.#rejoining.peek(guildId) > 0) {
+      return;
+    }
+
     const config = this.#guildConfigs[guildId];
 
     if (!config?.autojoin) {
@@ -343,59 +337,103 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     const voiceChannel = guild.channels.cache.get(config.autojoin);
     if (voiceChannel?.isVoiceBased()) {
-      const { status } = await this.ensureGuildState(guildId).join(voiceChannel, 5_000, 5);
+      this.#rejoining.inc(guildId);
+
+      const { status } = await this.ensureGuildState(guildId).join({
+        channel: voiceChannel,
+        timeout: 5_000,
+        retries: 5
+      });
+
       this.#logger.info(
         { status, guild: guild.name, channel: voiceChannel.name },
         'Auto join result'
-      )
+      );
+
+      this.#rejoining.dec(guildId);
     }
   }
 
-  async #rejoinVoiceChannels(timeoutSeconds: number) {
-    if (this.#rejoining) {
+  async #rejoinVoiceChannel(guildId: string, timeoutSeconds: number, signal?: AbortSignal) {
+    if (this.#rejoining.peek(guildId)) {
       return;
     }
 
-    const joinTimeout = 5000;
+    this.#rejoining.inc(guildId);
 
-    for (const [guildId, state] of this.#guildStates) {
+    try {
+      const state = this.getGuildState(guildId);
+
+      if (!state) {
+        return;
+      }
 
       const { voiceChannelId } = state;
 
       if (!voiceChannelId) {
-        continue;
+        return;
+      }
+
+      if (state.voiceConnectorStatus === VoiceConnectorStatus.Ready) {
+        return;
       }
 
       const channel = this.client.channels.cache.get(voiceChannelId);
 
       if (!channel?.isVoiceBased()) {
-        continue;
+        return;
       }
 
-      if (!state.hasVoiceConnection()) {
-        continue;
-      }
-
-      this.#rejoining = true;
+      const joinTimeout = 5000;
 
       const retries = Math.ceil(timeoutSeconds * 1000 / (joinTimeout + 1000));
 
-      retryable<JoinResult>(async () => {
-        if (!this.#rejoining) {
-          return { status: 'not_joined' }
-        }
+      await retryable<JoinResult>(async () => {
+          // Prevent double join
+          if (state.voiceConnectorStatus === VoiceConnectorStatus.Ready && state.stationLink) {
+            return {
+              status: 'joined',
+              station: state.stationLink.station
+            }
+          }
 
-        const result = await state.join(channel, joinTimeout);
+          const result = await state.join({
+            channel,
+            timeout: joinTimeout,
+            signal
+          });
 
-        if (result.status !== 'joined') {
-          throw new Error('Rejoin again');
-        }
+          if (result.status !== 'joined') {
+            throw new Error('Retry');
+          }
 
-        this.#rejoining = false;
-        this.#logger.info({ guild: channel.guild.name, channel: channel.name }, 'Rejoined');
+          this.#logger.info({ guild: channel.guild.name, channel: channel.name }, 'Rejoined');
 
-        return result;
-      }, { retries, wait: 1000 }).then(() => state.preferredStation?.updatePlayback());
+          return result;
+        }, { retries, wait: 1000, signal }
+      )
+      .catch(noop); // `retryable` throw the error when reaching retries limit, so we silently ignore that and do it again in the next round
+
+    }
+    finally {
+      this.#rejoining.dec(guildId);
+    }
+  }
+
+  async #rejoinVoiceChannels(timeoutSeconds: number, signal?: AbortSignal) {
+    if (this.#rejoinInProgress) {
+      return;
+    }
+
+    this.#rejoinInProgress = true;
+    try {
+      await Promise.all(
+        Array.from(this.#guildStates.keys())
+          .map(guildId => this.#rejoinVoiceChannel(guildId, timeoutSeconds, signal))
+      );
+    }
+    finally {
+      this.#rejoinInProgress = false;
     }
   }
 
@@ -428,6 +466,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         return attemptResult;
 
       }, { wait: 5_000, maxWait: 60_000, factor: 1.09, signal: this.#loginAbortController?.signal });
+
+      this.#loginAbortController = undefined;
 
       if (result !== undefined) {
         this.#logger.info('Login OK');
@@ -478,6 +518,17 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     for (const { id } of guilds) {
       this.ensureGuildState(id);
     };
+
+    this.#shardReady = true;
+
+    Object.keys(this.#guildConfigs).map(async (guildId) => {
+      this.ensureGuildState(guildId);
+
+      await this.#autoTuneStation(guildId);
+      await this.#autoJoinVoiceChannel(guildId);
+    });
+
+    this.#updateLibraryStats();
 
     this.#logger.info('Ready');
     this.emit('ready');
@@ -1351,6 +1402,31 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         return AutomatonAccess.DJ;
       }
     }
+  }
+}
+
+class Counters<K = string> {
+  #counts = new Map<K, number>();
+
+  inc(key: K) {
+    if (!this.#counts.has(key)) {
+      this.#counts.set(key, 1);
+      return;
+    }
+
+    this.#counts.set(key, Math.max(0, this.peek(key) + 1));
+  }
+
+  dec(key: K) {
+    if (!this.#counts.has(key)) {
+      return;
+    }
+
+    this.#counts.set(key, Math.max(0, this.peek(key) - 1));
+  }
+
+  peek(key: K) {
+    return this.#counts.get(key) ?? 0;
   }
 }
 
