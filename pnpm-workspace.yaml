@@ -1,2 +1,8 @@
 packages:
-  - 'packages/*'
+  - packages/*
+onlyBuiltDependencies:
+  - "@discordjs/opus"
+  - bufferuti
+  - esbuild
+  - mediasoup
+  - ffmpeg-static
