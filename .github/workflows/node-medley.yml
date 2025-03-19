@@ -10,10 +10,10 @@ jobs:
     strategy:
       matrix:
         include:
-          - runs-on: ubuntu-22.04
-            node_version: 20.18.0
-            node_arch: x64
-            build-arch: linux-x64
+          # - runs-on: ubuntu-22.04
+          #   node_version: 20.18.0
+          #   node_arch: x64
+          #   build-arch: linux-x64
 
           - runs-on: windows-latest
             node_version: 20.18.0
@@ -126,10 +126,21 @@ jobs:
           name: ${{ matrix.build-arch }}
           path: ./packages/node-medley/prebuilds
 
-  # This job builds with Docker multi-platform on a self-hosted Apple Silicon machine
-  build-linux-arm64:
-    name: Build linux-arm64
-    runs-on: [self-hosted, macOS, ARM64, docker]
+  build-linux:
+    strategy:
+      matrix:
+        include:
+          - build-arch: linux-x64
+            platform: linux/amd64
+            runs-on: ubuntu-latest
+
+          - build-arch: linux-arm64
+            platform: linux/arm64
+            runs-on: [self-hosted, macOS, ARM64, docker]
+
+
+    name: ${{ matrix.build-arch }}
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -142,7 +153,7 @@ jobs:
           ephemeral_container_id: node-medley-prebuild-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           docker build \
-            --platform=linux/arm64 \
+            --platform=${{ matrix.platform }} \
             -f ./builder/linux/Dockerfile \
             --progress=plain \
             -t node-medley-prebuild ../.. && \
@@ -155,5 +166,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-arm64
+          name: ${{ matrix.build-arch }}
           path: ./packages/node-medley/prebuilds
