@@ -139,7 +139,7 @@ jobs:
             runs-on: [self-hosted, macOS, ARM64, docker]
 
 
-    name: ${{ matrix.build-arch }}
+    name: Build ${{ matrix.build-arch }}
     runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Checkout
