@@ -519,13 +519,13 @@ export class Station extends TypedEmitter<StationEvents> {
 
   #starting = false;
 
-  start() {
-    if (this.#starting) {
+  start(force?: boolean) {
+    if (this.#starting && !force) {
       return;
     }
 
-    if (this.playState !== PlayState.Playing) {
-      this.#starting = true;
+    if (force || !this.medley.playing || this.playState !== PlayState.Playing) {
+      this.#starting = !this.medley.playing;
       this.medley.play(false);
       this.#logger.info('Playing started');
 
@@ -751,6 +751,8 @@ export class Station extends TypedEmitter<StationEvents> {
       'Added a requested track'
     );
 
+    this.updatePlayback();
+
     return requestedTrack;
   }
 
@@ -864,7 +866,7 @@ export class Station extends TypedEmitter<StationEvents> {
 
   updatePlayback() {
     if (this.hasAudiences) {
-      this.start();
+      this.start(true);
     } else {
       this.pause('Update playback, no audiences');
     }
