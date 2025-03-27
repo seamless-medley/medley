@@ -27,6 +27,7 @@ import { ShoutAdapter } from "../streaming/shout/adapter";
 import { IcyAdapter } from "../streaming";
 import { UserModel } from '../db/models/user';
 import { retryable } from "@seamless-medley/utils";
+import {ExposedRadio} from "./expose/core/radio";
 
 const logger = createLogger({ name: 'medley-server' });
 
@@ -53,6 +54,8 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   #automatons = new Map<string, MedleyAutomaton>;
 
   #streamers = new Set<StreamingAdapter<any>>;
+
+  #radioInfo = new ExposedRadio()
 
   constructor(options: MedleyServerOptions) {
     super(options.io);
@@ -84,7 +87,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
       id,
       musicDb: this.musicDb
     });
-
+    this.#radioInfo.addStation(station.id);
     this.registerStation(station);
     this.#audioServer.publish(station);
     this.#rtcTransponder?.publish(station);
