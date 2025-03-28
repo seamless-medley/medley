@@ -864,7 +864,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
     });
 
     const dispose = async () => {
-      const refCount = this.surrogateRefCounters.get(objectId)! -1;
+      const refCount = (this.surrogateRefCounters.get(objectId) ?? 0) - 1;
 
       if (refCount > 0) {
         return;
