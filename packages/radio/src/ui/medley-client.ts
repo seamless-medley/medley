@@ -1,17 +1,24 @@
+import { createNamedFunc } from '@seamless-medley/utils';
 import { Device as MediaSoupDevice } from 'mediasoup-client';
+import { clamp } from 'lodash';
+
+import type { Remotable } from "../socket";
+
 import type { RemoteTypes } from "../remotes";
 import type { RTCTransponder } from "../remotes/rtc/transponder";
-import type { Remotable } from "../socket";
+import type { Station as RemoteStation } from '../remotes/core/station';
+import type { Global as RemoteGlobal } from '../remotes/core/global';
+
+import { StubGlobal } from "./stubs/core/global";
+import { StubStation } from './stubs/core/station';
+import { StubRTCTransponder } from "./stubs/rtc/transponder";
+
+import { IAudioTransport, waitForAudioTransportState } from "./audio/transport";
 import { WebSocketAudioTransport } from "./audio/transports/ws/transport";
 import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
+
 import { Client } from "./client";
-import { StubRTCTransponder } from "./stubs/rtc/transponder";
-import { IAudioTransport, waitForAudioTransportState } from "./audio/transport";
 import { KaraokeFx } from './audio/fx/karaoke';
-import { StubStation } from './stubs/core/station';
-import { Station as RemoteStation } from '../remotes/core/station';
-import { createNamedFunc } from '@seamless-medley/utils';
-import { clamp } from 'lodash';
 
 type MedleyClientEvents = {
   audioTransport(transport: IAudioTransport): void;
@@ -29,6 +36,8 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
   });
 
   #output: GainNode;
+
+  #global?: Remotable<RemoteGlobal>;
 
   #audioTransport?: IAudioTransport;
 
@@ -73,6 +82,8 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
 
   protected override async handleSocketConnect() {
     await super.handleSocketConnect();
+
+    this.#global = await this.surrogateOf(StubGlobal, 'global', '$');
 
     await this.#audioTransport?.dispose();
     this.#audioTransport = undefined;
@@ -251,4 +262,9 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
     this.#output.gain.setTargetAtTime(gain, this.#audioContext.currentTime + 0.08, 0.08 * 0.33);
     this.emit('volume', gain);
   }
+
+  async getStations(): Promise<string[]> {
+    return this.#global?.getStations() ?? [];
+  }
+
 }

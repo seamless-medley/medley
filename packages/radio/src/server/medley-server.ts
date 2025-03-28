@@ -66,7 +66,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   }
 
   #initialize = async () => {
-    this.register('global', '$x', new ExposedGlobal(this));
+    this.register('global', '$', new ExposedGlobal(this));
 
     if (this.#rtcTransponder) {
       this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
