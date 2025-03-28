@@ -55,7 +55,7 @@ const VolumeControl: React.FC<{ color: string }> = ({ color }) => {
     return () => {
       client.off('volume', setGain);
     }
-  }, []);
+  }, [client.volume]);
 
   const borderRadius = '1000px';
   const w = 8;

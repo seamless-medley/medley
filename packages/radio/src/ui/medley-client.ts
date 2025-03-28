@@ -20,6 +20,8 @@ type MedleyClientEvents = {
 }
 
 export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
+  #volume = 1.0;
+
   #audioContext = new AudioContext({
     // This is crucial as we're using Opus which always decode to 48KHz PCM samples
     sampleRate: 48_000,
@@ -239,15 +241,14 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
   }
 
   get volume() {
-    return this.#output.gain.value;
+    return this.#volume;
   }
 
   set volume(gain: number) {
     gain = clamp(gain, 0, 1);
-    this.emit('volume', gain);
-    this.#output.gain.setTargetAtTime(gain, this.#audioContext.currentTime + 0.08, 0.08 * 0.33);
-
+    this.#volume = gain;
     localStorage.setItem("volume", gain.toFixed(3));
+    this.#output.gain.setTargetAtTime(gain, this.#audioContext.currentTime + 0.08, 0.08 * 0.33);
+    this.emit('volume', gain);
   }
-
 }
