@@ -115,7 +115,7 @@ See: [Beta Testing Guide](https://github.com/seamless-medley/medley/wiki/Beta-Te
 ## Contributors
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-4-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-5-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
@@ -128,6 +128,7 @@ See: [Beta Testing Guide](https://github.com/seamless-medley/medley/wiki/Beta-Te
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/visualizeq"><img src="https://avatars.githubusercontent.com/u/396689?v=4?s=100" width="100px;" alt="Coke"/><br /><sub><b>Coke</b></sub></a><br /><a href="https://github.com/seamless-medley/medley/commits?author=visualizeq" title="Code">💻</a> <a href="#ideas-visualizeq" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-visualizeq" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#platform-visualizeq" title="Packaging/porting to new platform">📦</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/priesdelly"><img src="https://avatars.githubusercontent.com/u/304075?v=4?s=100" width="100px;" alt="Priesdelly"/><br /><sub><b>Priesdelly</b></sub></a><br /><a href="https://github.com/seamless-medley/medley/commits?author=priesdelly" title="Code">💻</a> <a href="#ideas-priesdelly" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-priesdelly" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#platform-priesdelly" title="Packaging/porting to new platform">📦</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Doldragon001"><img src="https://avatars.githubusercontent.com/u/24905753?v=4?s=100" width="100px;" alt="Doldragon001"/><br /><sub><b>Doldragon001</b></sub></a><br /><a href="https://github.com/seamless-medley/medley/issues?q=author%3ADoldragon001" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://wiktormalyska.ovh/"><img src="https://avatars.githubusercontent.com/u/108685269?v=4?s=100" width="100px;" alt="Wiktor Małyska"/><br /><sub><b>Wiktor Małyska</b></sub></a><br /><a href="https://github.com/seamless-medley/medley/commits?author=wiktormalyska" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
