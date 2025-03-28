@@ -63,25 +63,27 @@ export const Station: React.FC = () => {
       <AppShell.Navbar p="sm" style={{ overflow: 'hidden', textWrap: 'wrap', wordBreak: 'break-word' }}>
         <OverlayScrollbarsComponent>
           <NavLink
-            active={matchRoute({ to: stationIndexRoute.to as any }) !== false}
+            active={matchRoute({ to: stationIndexRoute.to }) !== false}
             component={Link}
             to={stationIndexRoute.to}
             label="Station"
           />
 
           <NavLink label="Collections" defaultOpened={collectionId !== undefined}>
+            {/* TODO: Elipsis, nowrap */}
             {collections.map(({ id, description }) => (
-              <NavLink
-                key={id}
-                component={Link}
-                label={description}
-                c={currentCollection === id ? 'green.5' : undefined}
-                fw={currentCollection === id ? 'bold' : undefined}
-                style={{ transition: 'all 1s ease' }}
-                active={collectionId === id}
-                to={collectionRoute.to}
-                params={{ collectionId: id }}
-              />
+                <NavLink
+                  key={id}
+                  component={Link}
+                  label={description}
+                  c={currentCollection === id ? 'green.5' : undefined}
+                  fw={currentCollection === id ? 'bold' : undefined}
+                  style={{ transition: 'all 1s ease' }}
+                  active={collectionId === id}
+                  from={stationRoute.id}
+                  to={collectionRoute.to}
+                  params={{ collectionId: id } as any}
+                />
             ))}
           </NavLink>
         </OverlayScrollbarsComponent>

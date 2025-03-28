@@ -23,7 +23,7 @@ const route = createRoute({
         } : undefined}
       >
         <AppShell.Header>
-          Header
+          Medley
         </AppShell.Header>
 
         <Outlet />
