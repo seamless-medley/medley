@@ -11,6 +11,7 @@ import { styled } from "@linaria/react";
 import { cx } from "@linaria/core";
 import { Link } from "@tanstack/react-router";
 import { collectionRoute, stationRoute } from "../pages/dj/route";
+import { AutoScroller } from "./AutoScoller";
 
 export type PlayDeckProps = {
   stationId: string | undefined;
@@ -249,45 +250,23 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
           <Box w="100%" h={24}>
             <PlayHead stationId={stationId} index={index} />
           </Box>
-{/*
-          <Flex direction="row" m={8}>
-            <Stack w="calc(100% - 11ch)" pr={20}>
-              <Text
-                h={`${theme.lineHeights.md}em`}
-                size="md"
-                fw={500}
-                style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
-              >
-                {trackPlay?.track.extra?.tags?.title ?? trackPlay?.track?.path}
-              </Text>
-
-              <Text
-                size="0.8em"
-                h="1.8em"
-                c="dark.1"
-                style={{ lineHeight: 'unset', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
-              >
-                {trackPlay?.track.extra?.tags?.artist}
-              </Text>
-            </Stack>
-
-            <Flex direction="row" w="11ch" justify="right">
-              <PlayHeadText stationId={stationId ?? ''} deckIndex={index} />
-            </Flex>
-          </Flex> */}
 
           <Flex direction="column" p={8}>
             <Flex justify="space-between">
-              <div
-                style={{
-                  fontSize: '1.1em',
-                  width: "calc(100% - 11ch)",
-                  height: '1.8em',
-                  transform: 'translateY(-2px)',
-                  textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
-              >
-                {trackPlay?.track.extra?.tags?.title ?? trackPlay?.track?.path}
-              </div>
+
+                <div
+                  style={{
+                    fontSize: '1.1em',
+                    width: "calc(100% - 11ch)",
+                    height: '1.8em',
+                    transform: 'translateY(-2px)',
+                    textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
+                >
+                  <AutoScroller title="Title">
+                    {trackPlay?.track.extra?.tags?.title ?? trackPlay?.track?.path}
+                  </AutoScroller>
+                </div>
+
               <div>
                 <PlayHeadText stationId={stationId ?? ''} deckIndex={index} />
               </div>
@@ -300,7 +279,9 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
                   transform: 'translateY(-2px)',
                   textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
               >
-                {trackPlay?.track.extra?.tags?.artist}
+                <AutoScroller title="Artist">
+                  {trackPlay?.track.extra?.tags?.artist}
+                </AutoScroller>
               </div>
             </Flex>
             <Flex justify="space-between">
@@ -308,7 +289,7 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
                 component={Link}
                 from={stationRoute.id}
                 to={collectionRoute.to}
-                params={{ collectionId: trackPlay?.track.collection?.id }}
+                params={{ collectionId: trackPlay?.track.collection?.id } as any}
                 style={{
                   fontSize: '0.7em',
                   height: '1.55em',
