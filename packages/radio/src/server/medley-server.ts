@@ -27,6 +27,7 @@ import { ShoutAdapter } from "../streaming/shout/adapter";
 import { IcyAdapter } from "../streaming";
 import { UserModel } from '../db/models/user';
 import { retryable } from "@seamless-medley/utils";
+import { ExposedGlobal } from "./expose/core/global";
 
 const logger = createLogger({ name: 'medley-server' });
 
@@ -65,6 +66,8 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
   }
 
   #initialize = async () => {
+    this.register('global', '$x', new ExposedGlobal(this));
+
     if (this.#rtcTransponder) {
       this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
     }
@@ -113,6 +116,10 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     logger.info('Completed stations construction');
 
     return new Map<string, Station>(stations.map(s => [s.id, s]));
+  }
+
+  get stations() {
+    return this.#stations;
   }
 
   async createAutomaton(id: string, config: AutomatonConfig) {
