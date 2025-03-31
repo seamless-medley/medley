@@ -4,7 +4,12 @@
   "description": "Configuration file for Medley",
   "type": "object",
   "properties": {
-    "instanceName": "Radio Name",
+    "instanceName": {
+      "type": "string",
+      "title": "Instance Name",
+      "description": "Name of this radio instance (optional)",
+      "minLength": 0
+    },
     "server": {
       "title": "Server",
       "description": "Web server configuration",
