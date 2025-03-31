@@ -30,13 +30,13 @@ const route = createRoute({
 
         <h2>Play</h2>
         <div>
-          {stations.map((statioId) => (
-            <div key={statioId}>
+          {stations.map((stationId) => (
+            <div key={stationId}>
               <Link
                 to={playRoute.id}
-                params={{ station: statioId }}
+                params={{ station: stationId }}
               >
-                {statioId}
+                {stationId}
               </Link>
             </div>
           ))}
