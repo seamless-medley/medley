@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
-import { z } from 'zod';
+import {z} from 'zod';
 import { DbConfig } from './db';
 import { StationConfig } from './station';
 import { AutomatonConfig } from './automaton';
@@ -15,6 +15,7 @@ async function parseYAML(s: string) {
 }
 
 const Config = z.object({
+  instanceName: z.string(),
   server: ServerConfig,
   db: DbConfig,
   webrtc: WebRtcConfig.optional(),
