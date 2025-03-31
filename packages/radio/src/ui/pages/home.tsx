@@ -26,7 +26,7 @@ const route = createRoute({
 
     return (
       <div>
-        <h2>{instanceName}</h2>
+        <h2>Hello from {instanceName}</h2>
 
         <h2>Play</h2>
         <div>
