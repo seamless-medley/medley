@@ -23,7 +23,7 @@ import { MedleyAutomaton } from "../discord/automaton";
 import { AutomatonConfig } from "../config/automaton";
 import { StreamingConfig } from "../config/streaming";
 import { StreamingAdapter } from "../streaming/types";
-import { ShoutAdapter } from "../streaming/shout/adapter";
+import { ShoutAdapter } from "../streaming";
 import { IcyAdapter } from "../streaming";
 import { UserModel } from '../db/models/user';
 import { retryable } from "@seamless-medley/utils";
