@@ -23,7 +23,7 @@ import { MedleyAutomaton } from "../discord/automaton";
 import { AutomatonConfig } from "../config/automaton";
 import { StreamingConfig } from "../config/streaming";
 import { StreamingAdapter } from "../streaming/types";
-import { ShoutAdapter } from "../streaming/shout/adapter";
+import { ShoutAdapter } from "../streaming";
 import { IcyAdapter } from "../streaming";
 import { UserModel } from '../db/models/user';
 import { retryable } from "@seamless-medley/utils";
@@ -39,6 +39,8 @@ export type MedleyServerOptions = {
 }
 
 export class MedleyServer extends SocketServerController<RemoteTypes> {
+  #instanceName: string | undefined = "Medley";
+
   #musicDb!: MusicDb;
 
   #settingsDb!: SettingsDb;
@@ -71,6 +73,9 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
     if (this.#rtcTransponder) {
       this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
     }
+
+    this.#instanceName = this.#configs.instanceName;
+    logger.info(`Medley server name: "${this.#instanceName}"`);
 
     this.#stations = await this.#createStations();
     this.#automatons = await this.#createAutomatons();
@@ -120,6 +125,10 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
 
   get stations() {
     return this.#stations;
+  }
+
+  get instanceName() {
+    return this.#instanceName;
   }
 
   async createAutomaton(id: string, config: AutomatonConfig) {
