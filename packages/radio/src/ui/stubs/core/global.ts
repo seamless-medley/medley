@@ -4,6 +4,7 @@ import { noop } from "lodash";
 
 class StubbingGlobal {
   getStations = noop as any;
+  getInstanceName = noop as any;
 }
 
 export const StubGlobal = StubOf<RemoteGlobal>(StubbingGlobal);
