@@ -264,7 +264,7 @@ export function findLyricLine(timeline: Timeline<any>, posMs: number, from: numb
     const { time: l } = timeline[i];
     const { time: r } = timeline[i + 1] ?? { time: 1e7 };
 
-    if (l <= posMs && posMs <= r) {
+    if (l <= posMs && posMs < r) {
       return i;
     }
   }
