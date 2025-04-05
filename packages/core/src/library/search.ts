@@ -1,6 +1,8 @@
 import { Query, SearchOptions as MiniSearchOptions, SearchResult, Suggestion } from 'minisearch';
 import type { OmitIndexSignature } from 'type-fest';
-import { BoomBoxTrack, extractArtists, getArtists } from '../playout';
+import { extractArtists } from '@seamless-medley/utils';
+
+import { BoomBoxTrack, getArtists } from '../playout';
 import { WorkerPoolAdapter } from '../worker_pool_adapter';
 
 export type { Query, SearchResult };

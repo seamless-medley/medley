@@ -2,16 +2,17 @@ import { parse as parsePath } from 'node:path';
 import { chain, flatten, isEqual, mapValues, matches, reject, some, toLower, trim, uniq, without } from "lodash";
 import { isString } from 'lodash/fp';
 import { TypedEmitter } from "tiny-typed-emitter";
+import { createLogger, Logger } from '@seamless-medley/logging';
+import { extractArtists, formatSongBanner, formatTags } from '@seamless-medley/utils';
 import { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions, AudioProperties } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track, TrackExtra } from "../track";
 import { TrackCollection, TrackIndex, WatchTrackCollection } from "../collections";
 import { SweeperInserter } from "./sweeper";
-import { createLogger, Logger } from '@seamless-medley/logging';
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from '../library/music_db';
 import { CrateProfile, CrateProfileBook } from '../crate/profile';
-import { formatSongBanner, stringSimilarity } from '../utils';
+import { stringSimilarity } from '../utils';
 
 export type TrackRecord = {
   trackId: string;
@@ -828,8 +829,6 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
   }
 }
 
-export const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).map(trim);
-
 export type GetArtistsOptions = {
   excludes: {
     originalArtist?: boolean;
@@ -874,14 +873,7 @@ export function getArtistStrings(extra: BoomBoxTrackExtra, options?: GetArtistsO
 
 export function getTrackBanner(track: BoomBoxTrack) {
   const tags = track.extra?.tags;
-
-  return formatSongBanner({
-    title: tags?.title,
-    artists: tags?.artist ? extractArtists(tags.artist) : undefined,
-    separators: {
-      artist: '/'
-    }
-  }) ?? parsePath(track.path).name;
+  return (tags ? formatTags(tags) : undefined) ?? parsePath(track.path).name;
 }
 
 export function trackRecordOf(track: BoomBoxTrack): TrackRecord {
