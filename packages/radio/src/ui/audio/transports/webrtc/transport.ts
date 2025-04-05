@@ -151,8 +151,10 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
       return 'transport_failed';
     }
 
+    this.#transponder.stopClientConsumer(this.#transport.id);
+
     const consumerInfo = await this.#transponder.initiateClientConsumer(
-      this.#transport!.id,
+      this.#transport.id,
       this.#device.rtpCapabilities,
       stationId
     );
