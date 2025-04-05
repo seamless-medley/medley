@@ -111,7 +111,7 @@ export class AudioWebSocketServer extends EventEmitter {
         await exciter.start(this.#dispatcher);
       }
 
-      socket.sendLatency(exciter.audioLatency);
+      socket.sendLatency(exciter.audioLatencyMs);
     }
 
     return true;
@@ -162,7 +162,7 @@ export class AudioWebSocketServer extends EventEmitter {
       }
     });
 
-    exciter.on('audioLatency', (latency) => {
+    exciter.on('audioLatency', (latencyMs) => {
       const listeners = this.#stationListeners.get(station.id);
 
       if (!listeners || listeners.size < 1)  {
@@ -170,7 +170,7 @@ export class AudioWebSocketServer extends EventEmitter {
       }
 
       for (const listener of listeners) {
-        listener.sendLatency(latency);
+        listener.sendLatency(latencyMs);
       }
     });
 

@@ -47,7 +47,7 @@ export type StoppedMessage = {
 
 export type AudioLatencyMessage = {
   type: 'audio-latency';
-  latency: number;
+  latencyMs: number;
 }
 
 export type OutputMessage = OpenMessage | StoppedMessage | AudioLatencyMessage;
@@ -110,6 +110,7 @@ function handleStream(ev: MessageEvent<ArrayBuffer>) {
 
 
   if (op === AudioSocketReply.Latency) {
+    // milliseconds
     const latency = view.getUint32(1, true);
     self.postMessage({ type: 'audio-latency', latency });
     return;

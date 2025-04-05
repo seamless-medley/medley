@@ -40,7 +40,7 @@ export type ClientConsumerInfo = {
   rtp: ConsumerResponse;
   audioLevelData?: DataConsumerResponse;
   eventData?: DataConsumerResponse;
-  audioLatency: number;
+  audioLatencyMs: number;
 }
 
 interface RTCTransponderEvents {
@@ -354,7 +354,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
         sctpStreamParameters: eventDataConsumer.sctpStreamParameters,
       } : undefined,
 
-      audioLatency: exciter.audioLatency
+      audioLatencyMs: exciter.audioLatencyMs
     }
   }
 

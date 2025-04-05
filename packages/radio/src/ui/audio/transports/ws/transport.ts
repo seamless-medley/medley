@@ -65,7 +65,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
   #audioLatencyListener = (e: MessageEvent<OutputMessage>) => {
     if (e.data.type === 'audio-latency') {
-      this.#audioLatency = e.data.latency / 1000;
+      this.#audioLatency = e.data.latencyMs / 1000;
       return;
     }
   }
@@ -83,8 +83,8 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
     this.emit('stateChanged', newState);
   }
 
-  set transmissionLatency(value: number) {
-    this.#transmissionLatency = value;
+  set transmissionLatency(seconds: number) {
+    this.#transmissionLatency = seconds;
   }
 
   async play(stationId: string) {
@@ -172,6 +172,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
   #audioLatency = 0;
 
+
   #pipelineLatency = 0;
 
   #delayedAudioExtra: AudioTransportExtra[] = [];
@@ -184,7 +185,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
 
     const now = Math.trunc(performance.timeOrigin + performance.now());
-    const pipelineLatency = (now - timestamp) / 1000;
+    this.#pipelineLatency = (now - timestamp) / 1000;
 
     this.#pushAudioExtra({
       audioLevels: {

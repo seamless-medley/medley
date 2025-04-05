@@ -65,13 +65,15 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
     this.volume = +(localStorage.getItem("volume") ?? 1.0);
   }
 
-  override set latency(ms: number) {
+  override set latency(seconds: number) {
     if (this.#audioTransport) {
-      this.#audioTransport.transmissionLatency = ms / 1000;
+      this.#audioTransport.transmissionLatency = seconds;
     }
+
+    this._latency = seconds;
   }
 
-  get transportLatency() {
+  override get latency() {
     return this.#audioTransport?.latency ?? 0;
   }
 

@@ -16,7 +16,7 @@ export interface IAudioTransport extends EventEmitter<AudioTransportEvents> {
   dispose(): Promise<void>;
   play(stationId: string, options?: any): Promise<AudioTransportPlayResult>;
   stop(): Promise<void>;
-  set transmissionLatency(value: number);
+  set transmissionLatency(seconds: number);
   get latency(): number;
 }
 

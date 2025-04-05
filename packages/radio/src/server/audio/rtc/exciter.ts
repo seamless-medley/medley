@@ -145,10 +145,10 @@ export class RTCExciter extends Exciter implements IExciter {
 
     this.#preparedAudioLevelInfo = encode(extra) as Buffer;
 
-    this.updateAudioLatency((latency) => {
+    this.updateAudioLatency((latencyMs) => {
       this.#preparedAudioLatencyInfo = encode({
         type: 'audio-latency',
-        latency
+        latencyMs
       }) as Buffer;
     });
   }

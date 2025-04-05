@@ -108,8 +108,8 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
         // Do ping
         const sentTime = performance.now();
         socket.data.lastPing = sentTime;
-        socket.emit('s:p', sentTime, (rcvdTime) => {
-          socket.data.latencyBacklog.push((performance.now() - rcvdTime) / 2);
+        socket.emit('s:p', sentTime, (serverTime) => {
+          socket.data.latencyBacklog.push((performance.now() - serverTime) / 2);
           if (socket.data.latencyBacklog.length > 5) {
             socket.data.latencyBacklog.shift();
           }

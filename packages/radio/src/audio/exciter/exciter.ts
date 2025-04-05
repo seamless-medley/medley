@@ -239,11 +239,11 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     return streamLatency + encoderLatency;
   }
 
-  #audioLatency = 0;
+  #audioLatencyMs = 0;
   #lastAudioLatencyUpdated = 0;
   #latencyBuffer: number[] = [];
 
-  protected updateAudioLatency(cb: (latency: number) => any) {
+  protected updateAudioLatency(cb: (latencyMs: number) => any) {
     if ((performance.now() - this.#lastAudioLatencyUpdated > 1000)) {
       this.#latencyBuffer.push(this.#calculateLatency());
       if (this.#latencyBuffer.length >= 30) {
@@ -253,8 +253,8 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
       // Reduce resolution by a decade
       const audioLatency = Math.trunc(mean(this.#latencyBuffer) / 10) * 10;
 
-      if (this.#audioLatency !== audioLatency) {
-        this.#audioLatency = audioLatency;
+      if (this.#audioLatencyMs !== audioLatency) {
+        this.#audioLatencyMs = audioLatency;
         this.#lastAudioLatencyUpdated = performance.now();
 
         cb(audioLatency);
@@ -262,8 +262,11 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     }
   }
 
-  get audioLatency() {
-    return this.#audioLatency;
+  /**
+   * Latency in milliseconds
+   */
+  get audioLatencyMs() {
+    return this.#audioLatencyMs;
   }
 
   prepare(): void {

@@ -9,7 +9,7 @@ import type { AudioTransportExtra, AudioTransportExtraPayload } from '../../../.
 
 type AudioLatencyEvent = {
   type: 'audio-latency';
-  latency: number;
+  latencyMs: number;
 }
 
 type TransportEvent = AudioLatencyEvent;
@@ -64,8 +64,8 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     return this.#state;
   }
 
-  set transmissionLatency(value: number) {
-    this.#transmissionLatency = value;
+  set transmissionLatency(seconds: number) {
+    this.#transmissionLatency = seconds;
   }
 
   #handleTransponderRenewal = async () => {
@@ -212,7 +212,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
       this.#eventConsumer.on('message', this.#eventConsumerMessageHandler);
     }
 
-    this.#audioLatency = (consumerInfo.audioLatency || 0) / 1000;
+    this.#audioLatency = (consumerInfo.audioLatencyMs || 0) / 1000;
 
     return result;
   }
@@ -222,7 +222,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
     switch (event.type) {
       case 'audio-latency':
-        this.#audioLatency = event.latency / 1000;
+        this.#audioLatency = event.latencyMs / 1000;
         break;
     }
   }
@@ -246,6 +246,9 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     });
   }
 
+  /**
+   * Total audio latency in seconds
+   */
   get latency() {
     return this.#audioLatency + this.#transmissionLatency + this.#ctx.outputLatency + this.#ctx.baseLatency;
   }

@@ -126,6 +126,9 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
 
   protected sessionData?: SessionData;
 
+  /**
+   * Latency in seconds
+   */
   protected _latency = 0;
 
   constructor() {
@@ -158,7 +161,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
   }
 
   private handleLatencyReport: ServerEvents['c:l'] = async (latencyMs) => {
-    this.latency = latencyMs;
+    this.latency = latencyMs / 1000;
   }
 
   private handleSessionResponse: ServerEvents['c:s'] = async (sessionData) => {
@@ -238,8 +241,8 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
     return this._latency;
   }
 
-  set latency(ms: number) {
-    this._latency = ms;
+  set latency(seconds: number) {
+    this._latency = seconds;
   }
 
   async #restoreObservingStores(pred: (kind: string, id: string, store: ObservingStore<any>) => boolean = () => true) {
