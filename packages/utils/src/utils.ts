@@ -1,4 +1,4 @@
-import { clamp, random, sample, sortBy, subtract, sum, uniq } from "lodash";
+import { castArray, clamp, random, sample, sortBy, subtract, sum, trim, uniq } from "lodash";
 import { inRange } from 'lodash/fp';
 
 export const decibelsToGain = (decibels: number): number => decibels > -100 ? Math.pow(10, decibels * 0.05) : 0;
@@ -131,6 +131,9 @@ export function interpolate(sourceValue: number, sourceRange: [min: number, max:
 
 type WaitOption = {
   wait: number;
+  /**
+   * @default 1.01
+   */
   factor?: number;
   maxWait?: number;
 }
@@ -240,3 +243,37 @@ export function formatDuration(seconds: number, options?: { withMs?: boolean }) 
 
   return options?.withMs ? `${result}.${ms}` : result;
 }
+
+export type TrackBannerOptions = {
+  separators?: Partial<Record<'title' | 'artist', string>>;
+}
+
+export type SongBannerFormatOptions = {
+  title?: string;
+  artists?: string[] | string;
+} & TrackBannerOptions;
+
+export function formatSongBanner(options: SongBannerFormatOptions): string | undefined {
+  const { title, artists, separators } = options;
+  const info: string[] = [];
+
+  if (artists) {
+    info.push(castArray(artists).join(separators?.artist ?? ','));
+  }
+
+  if (title) {
+    info.push(title);
+  }
+
+  return info.length ? info.join(separators?.title ?? ' - ') : undefined;
+}
+
+export const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).map(trim);
+
+export const formatTags = (tags: { title?: string; artist?: string }) => formatSongBanner({
+  title: tags.title,
+  artists: tags.artist ? extractArtists(tags.artist) : undefined,
+  separators: {
+    artist: '/'
+  }
+})
