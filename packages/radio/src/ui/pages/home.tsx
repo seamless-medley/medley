@@ -13,6 +13,7 @@ const route = createRoute({
     const { surrogate: $global } = useSurrogate(StubGlobal, 'global', '$');
 
     const [stations, setStations] = useState<string[]>([]);
+    const [instanceName, setInstanceName] = useState<string>();
 
     useEffect(() => {
       if (!$global ) {
@@ -20,19 +21,22 @@ const route = createRoute({
       }
 
       $global.getStations().then(setStations);
+      $global.getInstanceName().then(setInstanceName);
     }, [$global]);
 
     return (
       <div>
+        <h2>{instanceName}</h2>
+
         <h2>Play</h2>
         <div>
-          {stations.map((statioId) => (
-            <div key={statioId}>
+          {stations.map((stationId) => (
+            <div key={stationId}>
               <Link
                 to={playRoute.id}
-                params={{ station: statioId }}
+                params={{ station: stationId }}
               >
-                { statioId }
+                {stationId}
               </Link>
             </div>
           ))}
@@ -46,7 +50,7 @@ const route = createRoute({
                 to={stationRoute.id}
                 params={{ station: statioId }}
               >
-                { statioId }
+                {statioId}
               </Link>
             </div>
           ))}
@@ -56,4 +60,4 @@ const route = createRoute({
   }
 });
 
-export const indexRoute = route;
+export const indexRoute = route.addChildren([playRoute]);
