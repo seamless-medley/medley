@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { prominent } from 'color.js'
 import { Cover, CoverProps } from "../../components/play/cover/Cover";
-import { tree as route } from "./route";
 import { useDeck, useDeckCover, useDeckInfo } from "../../hooks/useDeck";
+import { playRoute } from "./route";
 import { useStation } from "../../hooks/useStation";
 import { Title } from "../../components/play/title/Title";
 

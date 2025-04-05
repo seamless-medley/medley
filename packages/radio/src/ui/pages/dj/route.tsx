@@ -62,7 +62,7 @@ export const collectionRoute = createRoute({
   component: lazyRouteComponent(() => import('./collection'))
 });
 
-export const tree = route.addChildren([
+export const djRoute = route.addChildren([
   stationRoute,
   stationIndexRoute,
   collectionRoute

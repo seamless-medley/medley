@@ -7,4 +7,4 @@ const route = createRoute({
   component: lazyRouteComponent(() => import('./view'))
 });
 
-export const tree = route;
+export const playRoute = route;
