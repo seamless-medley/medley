@@ -312,6 +312,34 @@ export class GuildState {
     this.#stationLink = undefined;
   }
 
+  async autoTune() {
+    if (this.#stationLink) {
+      return;
+    }
+
+    if (!this.preferredStation) {
+      const config = this.adapter.getConfig(this.guildId);
+      const stations = this.adapter.getStations();
+
+      if (config?.autotune) {
+        this.preferredStation = stations.get(config?.autotune);
+      }
+
+      if (!this.preferredStation) {
+        const singleStation = stations.size === 1 ? stations.first() : undefined;
+
+        if (singleStation) {
+          this.preferredStation = singleStation;
+        }
+      }
+    }
+
+    // A station was selected
+    if (this.preferredStation) {
+      await this.createStationLink();
+    }
+  }
+
   async #doJoin(options: JoinOptions): Promise<JoinResult> {
     const { channel, timeout = 5000, retries = 0, signal } = options;
 
@@ -323,32 +351,9 @@ export class GuildState {
       return { status: 'not_granted' }
     }
 
-    let { stationLink } = this;
+    await this.autoTune();
 
-    if (!stationLink) {
-      // Auto-tuning
-      if (!this.preferredStation) {
-        const config = this.adapter.getConfig(channel.guildId);
-        const stations = this.adapter.getStations();
-
-        if (config?.autotune) {
-          this.preferredStation = stations.get(config?.autotune);
-        }
-
-        if (!this.preferredStation) {
-          const singleStation = stations.size === 1 ? stations.first() : undefined;
-
-          if (singleStation) {
-            this.preferredStation = singleStation;
-          }
-        }
-      }
-
-      // A station was selected
-      if (this.preferredStation) {
-        stationLink = await this.createStationLink();
-      }
-    }
+    const { stationLink } = this;
 
     if (!stationLink) {
       return { status: 'no_station' };
@@ -408,8 +413,6 @@ export class GuildState {
       this.#pendingJoin = this.#doJoin(options).finally(() => {
         this.#pendingJoin = undefined
       });
-    } else {
-      console.log('Re-using pending join');
     }
 
     return this.#pendingJoin;

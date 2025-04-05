@@ -302,22 +302,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
   }
 
-  async #autoTuneStation(guildId: string) {
-    const config = this.#guildConfigs[guildId];
-
-    if (!config?.autotune) {
-      return;
-    }
-
-    const state = this.ensureGuildState(guildId);
-
-    const stationToTune = this.stations.get(config?.autotune);
-
-    if (stationToTune) {
-      await state.tune(stationToTune)
-    }
-  }
-
   async #autoJoinVoiceChannel(guildId: string) {
     if (this.#rejoining.peek(guildId) > 0) {
       return;
@@ -522,9 +506,9 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     this.#shardReady = true;
 
     Object.keys(this.#guildConfigs).map(async (guildId) => {
-      this.ensureGuildState(guildId);
+      const state = this.ensureGuildState(guildId);
+      await state.autoTune();
 
-      await this.#autoTuneStation(guildId);
       await this.#autoJoinVoiceChannel(guildId);
     });
 
