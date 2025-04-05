@@ -17,7 +17,7 @@ import { usePlayingStationId } from "../../hooks/useClient";
 
 import { PlayHeadText } from "../../components/PlayHeadText";
 import { DeckBanner } from "../../components/DeckBanner";
-import { findLyricLine } from "@seamless-medley/utils";
+import { EnhancedLine, findLyricLine } from "@seamless-medley/utils";
 
 type TransitionTextProps = PropsWithChildren<TextProps & TextTransitionProps> & {
   component?: any;
@@ -386,7 +386,14 @@ const LyricsBar: React.FC<StationIdProps> = ({ stationId }) => {
     return deck.addPropertyChangeListener('cp', handlePosChange);
   }, [deck]);
 
-  const lyricLine = line.current > -1 ? lyrics?.timeline?.[line.current] : undefined;
+  const lyricText = (() => {
+    if (line.current < 0) return undefined;
+    const ll = lyrics?.timeline?.[line.current];
+
+    return lyrics?.type === 'sync'
+      ? ll?.line as string
+      : (ll?.line as EnhancedLine)?.map(l => l.token).join('')
+  })();
 
   return (
     <Box pl={12}>
@@ -396,7 +403,7 @@ const LyricsBar: React.FC<StationIdProps> = ({ stationId }) => {
         truncate="end"
         style={style}
       >
-        {lyricLine?.text}
+        {lyricText}
       </TransitionText>
     </Box>
   )

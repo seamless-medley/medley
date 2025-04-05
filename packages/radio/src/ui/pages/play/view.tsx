@@ -225,8 +225,6 @@ export const Play: React.FC = () => {
       <Lyrics
         stationId={stationId}
         deckIndex={activeDeck}
-        lyrics={trackPlay?.track?.extra?.coverAndLyrics?.lyrics}
-        bpm={trackPlay?.track?.extra?.tags?.bpm}
         lineHeight={1.8}
         lines={8}
         colors={colors}

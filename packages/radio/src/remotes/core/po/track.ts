@@ -29,7 +29,7 @@ export type TrackExtra = Simplify<Writable<
   ConditionalPick<Omit<BoomBoxTrackExtra, 'kind'>, Jsonifiable | undefined> & {
     kind: TrackKind,
     coverAndLyrics?: Omit<ConditionalPick<CoverAndLyrics, Jsonifiable>, 'lyrics'> & {
-      lyrics: ConditionalPick<Lyrics, Jsonifiable>
+      lyrics: Lyrics;
     }
   }
 >>;

@@ -1,25 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { clamp, findIndex } from 'lodash';
-import type { LyricLine, Lyrics as CoreLyrics, Timeline } from '@seamless-medley/utils';
+import type { LyricLine, Lyrics as CoreLyrics, Timeline, EnhancedLine } from '@seamless-medley/utils';
 import { findLyricLine } from '@seamless-medley/utils';
 import { DeckIndex } from '@seamless-medley/core';
 import { useElementSize } from '@mantine/hooks';
-import { useDeck } from '../../../hooks/useDeck';
-import { Container, LineColors, Ticker, Line } from './elements';
+import { useDeck, useDeckInfo } from '../../../hooks/useDeck';
+import { Container, LineColors, Ticker, Line, EnhancedLineElementInfo } from './elements';
+import { client } from '../../../init';
 
 interface Colors {
   background: string;
   line: LineColors;
-}
-
-interface Props {
-  lines: number;
-  lineHeight: number;
-  lyrics: CoreLyrics | undefined;
-  colors: Colors | undefined;
-  bpm?: number;
-
-  position: number;
 }
 
 export const defaultColors = {
@@ -33,42 +24,44 @@ export const defaultColors = {
   }
 }
 
-const findNextLine = (timeline: Timeline, fromLine: number) => findIndex(timeline, ({ text }) => text.trim().length > 0, fromLine + 1);
+const findNextLine = (timeline: Timeline<string | EnhancedLine>, fromLine: number) => findIndex(timeline, ({ line }) => (typeof line === 'string' ? line : line?.map(e => e.token)?.join(''))?.trim().length > 0, fromLine + 1);
 
 export type LyricsProps = {
-  stationId?: string; deckIndex:
-  DeckIndex; lyrics:
-  CoreLyrics | undefined;
+  stationId?: string;
+  deckIndex: DeckIndex;
   lines: number;
   lineHeight: number;
   colors: Colors | undefined;
-  bpm?: number;
 }
 
 export const Lyrics: React.FC<LyricsProps> = (props) => {
   const [line, setLine] = useState(-1);
-  const { ref: tickerRef, width, height } = useElementSize();
+  const { ref: tickerRef, width, height } = useElementSize<HTMLDivElement>();
   const lineRefs = useRef<(Line | null)[]>([]);
   const { deck } = useDeck(props.stationId, props.deckIndex);
+  const { trackPlay } = useDeckInfo(props.stationId, props.deckIndex, 'trackPlay');
+
+  const lyrics = trackPlay?.track?.extra?.coverAndLyrics?.lyrics;
+  const bpm = trackPlay?.track?.extra?.tags?.bpm ?? 90;
 
   const canvas = useMemo(() => tickerRef.current?.parentElement?.querySelector('canvas'), [tickerRef.current]);
   const ctx = useMemo(() => canvas?.getContext('2d'), [canvas]);
 
   useEffect(() => {
     if (ctx) {
-      ctx.font = window.getComputedStyle(tickerRef.current).font;
+      ctx.font = window.getComputedStyle(tickerRef.current!).font;
     }
   });
 
   // Reset the line and re-render when lyrics changes
   useEffect(() => {
     setLine(-1);
-  }, [props.lyrics]);
+  }, [lyrics]);
 
   // Reset the references to Line components when lyrics changes
   useEffect(() => {
-    lineRefs.current = Array(props.lyrics?.timeline?.length ?? 0).fill(null);
-  }, [props.lyrics]);
+    lineRefs.current = Array(lyrics?.timeline?.length ?? 0).fill(null);
+  }, [lyrics]);
 
   // calculate ticker position, update on dimensions change
   const position = useMemo(() => {
@@ -85,19 +78,17 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
 
   // find the next line
   const nextLine = useMemo(() => {
-    if (!props.lyrics) {
+    if (!lyrics) {
       return -1;
     }
 
-    const n = findNextLine(props.lyrics.timeline, line);
+    const n = findNextLine(lyrics.timeline, line);
     return n !== line ? n : -1;
 
-  }, [line, props.lyrics]);
+  }, [line, lyrics]);
 
   // function to advance the lyric line
   const updateLine = useCallback((ms: number) => {
-    const { lyrics } = props;
-
     if (!lyrics) {
       return;
     }
@@ -107,18 +98,25 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
     if (foundLine > -1 && foundLine !== line) {
       setLine(foundLine);
     }
-  }, [deck, props.lyrics]);
 
-  const bpm = props.bpm ?? 90;
+    if (lyrics?.type === 'enhanced' && foundLine !== -1) {
+      const lineRef = lineRefs.current?.[foundLine];
+      if (lineRef) {
+        lineRef.setKaraokeTime(ms);
+      }
+    }
+
+  }, [deck, lyrics]);
+
   const beatInterval = useMemo(() => 6e4 / bpm, [bpm])
 
   // function to update progress of the next line far indicator
   const updateNextProgress = useCallback((ms: number, line: number) => {
-    if (!props.lyrics || line === -1) {
+    if (!lyrics || line === -1) {
       return;
     }
 
-    const { time, far } = props.lyrics.timeline[line];
+    const { time, far } = lyrics.timeline[line];
     const lineRef = lineRefs.current?.[line];
 
     if (!far || !lineRef) {
@@ -129,10 +127,10 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
 
     if (ms >= beatTimestamp) {
       const progress = clamp((time - ms) / (time - beatTimestamp), 0, 1);
-      lineRef.setProgress(progress);
+      lineRef.setFarProgress(progress);
     }
 
-  }, [props.lyrics]);
+  }, [lyrics]);
 
   // Monitor deck's play head
   const handleChange = useCallback((cp: number) => {
@@ -151,10 +149,10 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
 
     updateLine(ms);
 
-    if (props.lyrics?.timeline) {
+    if (lyrics?.timeline) {
       updateNextProgress(
         ms,
-        findNextLine(props.lyrics.timeline, line)
+        findNextLine(lyrics.timeline, line)
       );
     }
 
@@ -164,13 +162,39 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
   const colors = props.colors || defaultColors;
 
   // function to create Line component for each lyrics line
-  const mapLine = (lyricLine: LyricLine, index: number) => {
+  const mapLine = (lyricLine: LyricLine<string | EnhancedLine>, index: number) => {
+    const karaoke = lyrics?.type === 'enhanced';
+
+    const text = karaoke
+      ? (lyricLine.line as EnhancedLine)?.map(e => e.token).join('')
+      : lyricLine.line as string;
+
     // calculate scaling for each line
     let scale = 1;
     let zoomedScale = 1.12;
 
-    if (ctx && tickerRef.current) {
-      const textWidth = ctx.measureText(lyricLine.text).width;
+    const tokensInfo: Array<EnhancedLineElementInfo> = [];
+
+    if (ctx) {
+      if (karaoke) {
+        const tokens = lyricLine.line as EnhancedLine;
+
+        let acc = '';
+        let lastX = 0;
+
+        for (const token of tokens) {
+          acc += token.token;
+
+          tokensInfo.push({
+            ...token,
+            x: lastX
+          });
+
+          lastX = ctx.measureText(acc).width;
+        }
+      }
+
+      const textWidth = ctx.measureText(text).width;
 
       if (textWidth > 0) {
         const zoomedWidth = textWidth * zoomedScale;
@@ -184,7 +208,7 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
     }
 
     const far = (index === nextLine)
-      ? (props.lyrics!.timeline[nextLine].far ?? true)
+      ? (lyrics!.timeline[nextLine].far ?? true)
       : false;
 
     const storeRef = (index: number) => (lineRef: Line | null) => {
@@ -196,6 +220,7 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
     return (
       <Line
         key={index}
+        lineIndex={index}
         ref={storeRef(index)}
         colors={colors.line}
         scale={scale}
@@ -205,8 +230,9 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
         zoom={line === index}
         far={far}
         lineHeight={props.lineHeight}
+        tokens={tokensInfo}
       >
-        {lyricLine.text}
+        {text}
       </Line>
     );
   }
@@ -217,13 +243,13 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
     <>
       <Container background={colors.background}>
         <Ticker
-          ref={tickerRef}
+          ref={tickerRef as RefObject<HTMLDivElement> | undefined}
           lines={props.lines}
           lineHeight={props.lineHeight}
           beatInterval={beatInterval}
           position={position}
         >
-          {props.lyrics?.timeline?.map(mapLine)}
+          {lyrics?.timeline?.map(mapLine)}
         </Ticker>
       </Container>
     </>
