@@ -10,11 +10,6 @@ jobs:
     strategy:
       matrix:
         include:
-          # - runs-on: ubuntu-22.04
-          #   node_version: 20.18.0
-          #   node_arch: x64
-          #   build-arch: linux-x64
-
           - runs-on: windows-latest
             node_version: 20.18.0
             node_arch: x64
@@ -72,18 +67,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Dependencies (Linux)
-        if: contains(matrix.build-arch, 'linux')
-        run: |
-          sudo apt -y update && sudo apt -y install g++ make cmake pkg-config libasound2-dev libx11-dev libxext-dev libfreetype-dev libutfcpp-dev libopus-dev libopusfile-dev
 
-      - name: Dependencies (Linux)
+      - name: Install Dependencies (Darwin)
         if: contains(matrix.build-arch, 'darwin')
         run: |
           brew install utf8cpp opus opusfile
 
-      - name: Dependencies
-        if: contains(matrix.build-arch, 'darwin') || contains(matrix.build-arch, 'linux')
+      - name: Build Dependencies
+        if: contains(matrix.build-arch, 'darwin')
         run: |
           mkdir -p ./build/deps
           cp ${{ env.DEPS_INSTALL }} ./build/deps/
@@ -99,7 +90,7 @@ jobs:
             C:\vcpkg\installed
           key: windows-build-vcpkg-cache
 
-      - name: Dependencies (Windows)
+      - name: Install Dependencies (Windows)
         if: contains(matrix.build-arch, 'win32')
         run: |
           vcpkg integrate install
