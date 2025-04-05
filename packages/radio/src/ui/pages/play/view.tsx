@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { prominent } from 'color.js'
 import { Cover, CoverProps } from "../../components/play/cover/Cover";
-import { useDeck, useDeckCover, useDeckInfo } from "../../hooks/useDeck";
 import { playRoute } from "./route";
+import { useDeckCover, useDeckInfo } from "../../hooks/useDeck";
 import { useStation } from "../../hooks/useStation";
 import { Title } from "../../components/play/title/Title";
 
@@ -67,20 +67,13 @@ const Control = styled.div`
 `;
 
 export const Play: React.FC = () => {
-  const { station: stationId } = useParams({ from: route.id });
+  const { station: stationId } = useParams({ from: playRoute.id });
 
-  const { station, error: stationError } = useStation(stationId);
-  const maybyActiveDeck = useRemotableProp(station, 'activeDeck');
-
-  const activeDeck = maybyActiveDeck ?? 0;
+  const { station } = useStation(stationId);
+  const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
 
   const cover = useDeckCover(stationId, activeDeck);
-  const nextDeckIndex = getNextDeck(activeDeck);
-  const { deck: nextDeck } = useDeck(stationId, nextDeckIndex);
-
   const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
-
-  const nextTrackPlay = useRemotableProp(nextDeck, 'trackPlay');
 
   const [coverProps, setCoverProps] = useSetState<CoverProps>({
     colors: [],
@@ -211,6 +204,7 @@ export const Play: React.FC = () => {
   const simple = !!titleText && !cover && !lyrics?.timeline?.length;
 
   return (
+    <>
     <div style={{ height: '100vh', overflow: 'hidden' }}>
       <Control>
         <Button onClick={() => client.playAudio(stationId) }>
@@ -230,17 +224,16 @@ export const Play: React.FC = () => {
         colors={colors}
       />
       <Title text={titleText} bg={titleBg} center={simple} />
-      {/* <PlayHead
+      <PlayHead
+        stationId={stationId}
+        deckIndex={activeDeck}
+
         backgroundColor={colors?.background ?? defaultLyricsColors.background}
         textColor={colors?.line?.text ?? defaultLyricsColors.line.text}
         activeColor={colors?.line?.active ?? defaultLyricsColors.line.active}
-
-        next={formatSongBanner(nextTrackPlay?.track?.extra?.tags)}
-
-        position={info.cp * 1000}
-        duration={(info.duration ?? 0) * 1000}
-      /> */}
+      />
     </div>
+    </>
   )
 }
 

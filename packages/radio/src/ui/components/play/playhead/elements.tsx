@@ -7,6 +7,8 @@ export const Container = styled.div`
   right: 0;
   z-index: 30;
 
+  overflow: hidden;
+
   transition: bottom 4s ease;
   transition-delay: 0.8s;
 
@@ -27,6 +29,7 @@ export const Box = styled.div`
   transition: all 0.2s ease;
   white-space: nowrap;
   height: 1.0em;
+  min-width: 8ch;
   width: 10vw;
 
   transition: width 2s ease, height 2s ease;
@@ -104,7 +107,7 @@ export const Mask = styled.div`
 
   transform: translateZ(0) rotateZ(360deg);
 
-  transition: left 0.5s ease;
+  transition: clip-path 0.5s ease;
 `
 
 export const Next = styled.div<{ color: string }>`
@@ -114,6 +117,8 @@ export const Next = styled.div<{ color: string }>`
   bottom: 0;
   right: 0;
   z-index: 20;
+
+  min-width: 8ch;
 
   justify-content: center;
   align-items: center;
@@ -137,7 +142,7 @@ export const Next = styled.div<{ color: string }>`
     transition: opacity 0.6s ease, color 4s ease, width 2s ease;
   }
 
-  &.loading > * {
+  & > * {
     animation: blink 0.5s linear alternate infinite;
   }
 
