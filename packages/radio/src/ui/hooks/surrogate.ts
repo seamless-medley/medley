@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from "react";
+import { useEffect, useState } from "react";
 import { useForceUpdate } from "@mantine/hooks";
 import type { RemoteTypes } from "../../remotes";
 import type { Stub, Remotable } from "../../socket";
@@ -11,21 +11,6 @@ type SurrogateState<T> = {
   error?: Error;
 }
 
-type SurrogateAction<T> =
-  { type: 'set', surrogate?: Remotable<T> } |
-  { type: 'error', error?: Error }
-
-const useSurrogateReducer = <T>(state: SurrogateState<T>, action: SurrogateAction<T>) => {
-  switch (action.type) {
-    case 'set':
-      return { surrogate: action.surrogate };
-    case 'error':
-      return { error: action.error };
-    default:
-      return state;
-  }
-}
-
 export function useSurrogate<
   T extends RemoteTypes[Kind],
   Kind extends keyof RemoteTypes
@@ -35,22 +20,21 @@ export function useSurrogate<
   id: string | undefined,
   options?: RemoteObserveOptions
 ): SurrogateState<T> {
-
-  const [state, dispatch] = useReducer(useSurrogateReducer, {});
+  const [state, setState] = useState<SurrogateState<T>>({});
 
   const update = useForceUpdate();
 
   const onStart = () => void update();
-  const onDisconnect = () => dispatch({ type: 'set', surrogate: undefined });
+  const onDisconnect = () => setState({ surrogate: undefined });
 
   useEffect(() => {
     if (id && client.connected) {
       client.surrogateOf<Kind>(StubClass as any, kind, id, options)
-        .then(s => {
-          dispatch({ type: 'set', surrogate: s })
+        .then((s) => {
+          setState({ surrogate: s as unknown as Remotable<T> });
         })
         .catch(e => {
-          dispatch({ type: 'error', error: e })
+          setState({ error: e });
         });
     }
 
@@ -58,10 +42,10 @@ export function useSurrogate<
     client.on('disconnect', onDisconnect);
 
     return () => {
-      state.surrogate?.dispose();
+      state?.surrogate?.dispose();
 
       client.off('start', onStart);
-      client.off('disconnect', onDisconnect)
+      client.off('disconnect', onDisconnect);
     }
   }, [id, client.connected, client.session]);
 
