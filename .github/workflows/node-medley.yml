@@ -46,7 +46,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.6.4
+          version: 10.7.0
 
       - name: Make sure pnpm fetch Node
         shell: bash

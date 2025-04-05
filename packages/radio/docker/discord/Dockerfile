@@ -1,6 +1,6 @@
 FROM node:20.18.0 AS builder
 
-RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@10.6.4
+RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@10.7.0
 
 # install build dependencies
 RUN apt update \
