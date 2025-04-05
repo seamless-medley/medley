@@ -1,5 +1,5 @@
-import { formatSongBanner } from "@seamless-medley/core";
 import { bold, CommandInteraction, quote, time as formatTime } from "discord.js";
+import { formatSongBanner } from "@seamless-medley/utils";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, joinStrings } from "../utils";
 

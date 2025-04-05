@@ -31,6 +31,7 @@ import type { DeckIndex, Metadata } from "@seamless-medley/core";
 import { Button } from "@mantine/core";
 import { styled } from "@linaria/react";
 import { client } from "../../init";
+import { formatTags } from "@seamless-medley/utils";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -44,24 +45,6 @@ function findColor(base: string, predicate: (c: number) => boolean, fn: (deg: nu
 
   return c;
 }
-
-export function formatSongBanner(tags?: Metadata): string | undefined {
-  const artists = tags?.artist ? extractArtists(tags.artist) : undefined;
-
-  const info: string[] = [];
-
-  if (artists) {
-    info.push(castArray(artists).join(','));
-  }
-
-  if (tags?.title) {
-    info.push(tags?.title);
-  }
-
-  return info.length ? info.join(' - ') : undefined;
-}
-
-export const extractArtists = (artists: string) => uniq(artists.split(/[/;,]/)).map(trim);
 
 export const getNextDeck = (index: DeckIndex): DeckIndex => [1, 2, 0][index];
 
@@ -175,7 +158,7 @@ export const Play: React.FC = () => {
   useEffect(() => {
     const tags = trackPlay?.track?.extra?.tags;
 
-    setTitleText(formatSongBanner(tags) || '');
+    setTitleText((tags ? formatTags(tags) : '')|| '');
   }, [trackPlay?.track?.extra?.tags]);
 
   useEffect(() => {
