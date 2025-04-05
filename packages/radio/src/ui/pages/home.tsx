@@ -1,6 +1,6 @@
 import { createRoute, Link } from "@tanstack/react-router";
 import { rootRoute } from './rootRoute';
-import { playRoute as playRoute } from './play/route';
+import { playRoute } from './play/route';
 import { useSurrogate } from "../hooks/surrogate";
 import { StubGlobal } from "../stubs/core/global";
 import { useEffect, useState } from "react";
@@ -60,4 +60,4 @@ const route = createRoute({
   }
 });
 
-export const indexRoute = route.addChildren([playRoute]);
+export const indexRoute = route;
