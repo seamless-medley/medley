@@ -134,7 +134,7 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
 
   // Monitor deck's play head
   const handleChange = useCallback((cp: number) => {
-    const ms = cp * 1000;
+    const ms = (cp - client.latency) * 1000;
     updateLine(ms);
     updateNextProgress(ms, nextLine);
   }, [deck, updateLine, updateNextProgress, nextLine]);
@@ -145,7 +145,7 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
       return;
     }
 
-    const ms = deck.getProperties().cp * 1000;
+    const ms = (deck.getProperties().cp - client.latency) * 1000;
 
     updateLine(ms);
 

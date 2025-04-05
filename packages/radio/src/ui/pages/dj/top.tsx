@@ -365,7 +365,7 @@ const LyricsBar: React.FC<StationIdProps> = ({ stationId }) => {
       return;
     }
 
-    const found = findLyricLine(lyrics.timeline, (pos - client.transportLatency) * 1000, line.current);
+    const found = findLyricLine(lyrics.timeline, (pos - client.latency) * 1000, line.current);
 
     if (found !== -1 && found !== line.current) {
       line.current = found;
