@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import mkcert from 'vite-plugin-mkcert';
 import react from "@vitejs/plugin-react";
+import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import wyw from '@wyw-in-js/vite';
 
 export default defineConfig({
@@ -17,6 +18,7 @@ export default defineConfig({
         });
       },
     },
+    TanStackRouterVite({ enableRouteGeneration: false }),
     react({
       babel: {
         presets: ['@babel/preset-typescript', ['@babel/preset-react', { runtime: 'automatic' }]],
