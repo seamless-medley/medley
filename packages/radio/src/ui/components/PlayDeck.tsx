@@ -262,7 +262,7 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
                     transform: 'translateY(-2px)',
                     textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
                 >
-                  <AutoScroller title="Title">
+                  <AutoScroller>
                     {trackPlay?.track.extra?.tags?.title ?? trackPlay?.track?.path}
                   </AutoScroller>
                 </div>
@@ -279,7 +279,7 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
                   transform: 'translateY(-2px)',
                   textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
               >
-                <AutoScroller title="Artist">
+                <AutoScroller>
                   {trackPlay?.track.extra?.tags?.artist}
                 </AutoScroller>
               </div>

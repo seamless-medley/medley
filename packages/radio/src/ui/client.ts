@@ -618,10 +618,8 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
         await store.pending;
 
         if (store.error === undefined) {
-          console.log('remoteObserve from stores', kind, id, store.observed);
           resolve(store.observed)
         } else {
-          console.log('remoteObserve from stores reject', kind, id, store.error);
           reject(store.error);
         }
 
@@ -640,15 +638,12 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
         }
       })
 
-      console.log('remoteObserve r:ob', kind, id);
       this.socket.emit('r:ob', kind, id, options, async (response: RemoteResponse<any>) => {
         abortTimeout();
 
         store.add(handler);
 
         if (response.status === undefined) {
-          console.log('remoteObserve r:ob response no error', kind, id, response);
-
           store.observed = response.result;
 
           resolve(store.observed);
@@ -923,8 +918,6 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
         }
       }
     }) as Remotable<Types[any]>;
-
-    console.log('Returning surrogate', objectId, 'as', uuid);
 
     this.surrogates.set(uuid, surrogate);
     this.surrogateCache.set(objectId, new WeakRef(surrogate));
