@@ -1,5 +1,5 @@
 import { MixinEventEmitterOf } from "../../socket";
-import { Global as RemoteGlobal } from '../../../remotes/core/global';
+import { Global as RemoteGlobal } from '../../../remotes';
 import { Exposable } from "../../../socket";
 import { MedleyServer } from "../../medley-server";
 

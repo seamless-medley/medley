@@ -1,4 +1,4 @@
-import { DeckIndex, DeckPositions, PlayState } from "@seamless-medley/core";
+import type { DeckIndex, DeckPositions, PlayState } from "@seamless-medley/core";
 import * as deckPO from "./po/deck";
 import { TrackCollection } from "./po/track";
 

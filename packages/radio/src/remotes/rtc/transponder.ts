@@ -1,6 +1,26 @@
 import type { types } from 'mediasoup';
-import type { ClientConsumerInfo, ClientTransportInfo } from '../../server/audio/rtc/transponder';
 import type { Station } from '@seamless-medley/core';
+
+type ConsumerResponse = Pick<types.Consumer, 'id' | 'producerId' | 'kind' | 'rtpParameters'>;
+type DataConsumerResponse = Pick<types.DataConsumer, 'id' | 'dataProducerId' | 'label' | 'sctpStreamParameters'>;
+
+export type ClientConsumerInfo = {
+  rtp: ConsumerResponse;
+  audioLevelData?: DataConsumerResponse;
+  eventData?: DataConsumerResponse;
+  audioLatencyMs: number;
+}
+
+export type ClientTransportInfo = {
+  id: types.Transport['id'];
+  ice: {
+    params: types.WebRtcTransport['iceParameters'];
+    candidates: types.WebRtcTransport['iceCandidates'];
+  },
+  dtls: types.WebRtcTransport['dtlsParameters'];
+  sctp: types.WebRtcTransport['sctpParameters'];
+  tester: DataConsumerResponse;
+}
 
 export interface RTCTransponder {
   readonly caps: types.RtpCapabilities;

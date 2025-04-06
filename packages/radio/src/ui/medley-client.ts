@@ -6,8 +6,7 @@ import type { Remotable } from "../socket";
 
 import type { RemoteTypes } from "../remotes";
 import type { RTCTransponder } from "../remotes/rtc/transponder";
-import type { Station as RemoteStation } from '../remotes/core/station';
-import type { Global as RemoteGlobal } from '../remotes/core/global';
+import type { Station as RemoteStation, Global as RemoteGlobal } from '../remotes';
 
 import { StubGlobal } from "./stubs/core/global";
 import { StubStation } from './stubs/core/station';

@@ -6,20 +6,7 @@ import { RTCExciter } from './exciter';
 import { AudioDispatcher } from '../../../audio/exciter';
 import { type WebRtcConfig } from '../../../config/webrtc';
 import { createLogger } from '@seamless-medley/logging';
-
-type ConsumerResponse = Pick<types.Consumer, 'id' | 'producerId' | 'kind' | 'rtpParameters'>;;
-type DataConsumerResponse = Pick<types.DataConsumer, 'id' | 'dataProducerId' | 'label' | 'sctpStreamParameters'>;;
-
-export type ClientTransportInfo = {
-  id: types.Transport['id'];
-  ice: {
-    params: types.WebRtcTransport['iceParameters'];
-    candidates: types.WebRtcTransport['iceCandidates'];
-  },
-  dtls: types.WebRtcTransport['dtlsParameters'];
-  sctp: types.WebRtcTransport['sctpParameters'];
-  tester: DataConsumerResponse;
-}
+import { ClientConsumerInfo, ClientTransportInfo } from '../../../remotes/rtc/transponder';
 
 export type ClientTransportData = {
   socket: Socket<{}>;
@@ -34,13 +21,6 @@ export type ClientConsumerData = {
   closeHandler: () => void;
   transport: types.WebRtcTransport<ClientTransportData>;
   stationId: string;
-}
-
-export type ClientConsumerInfo = {
-  rtp: ConsumerResponse;
-  audioLevelData?: DataConsumerResponse;
-  eventData?: DataConsumerResponse;
-  audioLatencyMs: number;
 }
 
 interface RTCTransponderEvents {
