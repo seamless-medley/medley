@@ -39,7 +39,7 @@ export type MedleyServerOptions = {
 }
 
 export class MedleyServer extends SocketServerController<RemoteTypes> {
-  #instanceName: string | undefined = "Medley";
+  #instanceName = 'Medley';
 
   #musicDb!: MusicDb;
 
@@ -74,7 +74,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
       this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
     }
 
-    this.#instanceName = this.#configs.instanceName;
+    this.#instanceName = this.#configs.instanceName ?? 'Medley';
     logger.info(`Medley server name: "${this.#instanceName}"`);
 
     this.#stations = await this.#createStations();

@@ -5,15 +5,16 @@ import { useSurrogate } from "../hooks/surrogate";
 import { StubGlobal } from "../stubs/core/global";
 import { useEffect, useState } from "react";
 import { stationRoute } from "./dj/route";
+import { useRemotableProps } from "../hooks/remotable";
 
 const route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: () => {
     const { surrogate: $global } = useSurrogate(StubGlobal, 'global', '$');
+    const $globalProps = useRemotableProps($global);
 
     const [stations, setStations] = useState<string[]>([]);
-    const [instanceName, setInstanceName] = useState<string>();
 
     useEffect(() => {
       if (!$global ) {
@@ -21,12 +22,11 @@ const route = createRoute({
       }
 
       $global.getStations().then(setStations);
-      $global.getInstanceName().then(setInstanceName);
     }, [$global]);
 
     return (
       <div>
-        <h2>{instanceName}</h2>
+        <h2>{$globalProps?.instanceName}</h2>
 
         <h2>Play</h2>
         <div>
