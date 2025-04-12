@@ -16,27 +16,27 @@ export enum VoiceConnectorStatus {
   Signalling = "signalling"
 }
 
-interface State {
+interface BaseVoiceState {
   status: VoiceConnectorStatus;
   //
   connection: VoiceConnection;
   gateway: GatewayFunctions;
 }
 
-interface ConnectingState extends State {
+interface ConnectingState extends BaseVoiceState {
   status: VoiceConnectorStatus.Connecting;
   reconnecting?: boolean;
 }
 
-interface SignallingState extends Omit<State, 'connection'> {
+interface SignallingState extends Omit<BaseVoiceState, 'connection'> {
   status: VoiceConnectorStatus.Signalling;
 }
 
-interface ReadyState extends State {
+interface ReadyState extends BaseVoiceState {
   status: VoiceConnectorStatus.Ready;
 }
 
-interface DisconnectedBaseState extends Omit<State, 'connection'> {
+interface DisconnectedBaseState extends Omit<BaseVoiceState, 'connection'> {
   status: VoiceConnectorStatus.Disconnected;
 }
 
@@ -60,6 +60,8 @@ interface DestroyedState {
 }
 
 type VoiceConnectorState = ConnectingState | SignallingState | ReadyState | DisconnectedState | DisconnectedWebSocketState | DestroyedState;
+
+const isConnectionVoiceState = (state: any): state is BaseVoiceState => 'connection' in state;
 
 interface GatewayHandler {
   onVoiceStateUpdate(data: GatewayVoiceStateUpdateDispatchData): void;
@@ -262,7 +264,7 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 
     connection.on('stateChange', this.#onConnectionStateChange);
     connection.on('error', this.#onConnectionError);
-    connection.once('close', this.#onConnecitonClose);
+    connection.on('close', this.#onConnecitonClose);
     connection.on('ping', this.#onConnectionPing);
 
     this.state = {
@@ -277,28 +279,32 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
       return;
     }
 
-    if (this.state.status !== VoiceConnectorStatus.Connecting && this.state.status !== VoiceConnectorStatus.Ready) {
-			return;
+    if (!isConnectionVoiceState(this.state)) {
+      return;
     }
 
+    const { connection, gateway } = this.state;
+
     if (newState.code === ConnectionStateCode.Ready) {
-			this.state = {
-				...this.state,
-				status: VoiceConnectorStatus.Ready,
-			};
+      this.state = {
+        gateway,
+        connection,
+        status: VoiceConnectorStatus.Ready
+      };
 
       return;
-		}
+    }
 
     if (newState.code !== ConnectionStateCode.Closed) {
-			this.state = {
-        ...this.state,
+      this.state = {
+        gateway,
+        connection,
         status: VoiceConnectorStatus.Connecting,
         reconnecting: true
-			};
+      };
 
       return;
-		}
+    }
   }
 
   #onConnectionError: VoiceConnectionEvents['error'] = (error) => {
@@ -333,8 +339,9 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 
     this.rejoinAttempts++;
 
-    if (!this.state.gateway.sendPayload(makeVoiceStateUpdatePayload(joinConfig2Data(this.joinConfig)))) {
+    const rejoinPayload = makeVoiceStateUpdatePayload(joinConfig2Data(this.joinConfig));
 
+    if (!this.state.gateway.sendPayload(rejoinPayload)) {
       this.state = {
         ...this.state,
         status: VoiceConnectorStatus.Disconnected,
