@@ -7,6 +7,8 @@ import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types"
 import { getVersion } from "../../helper";
 import { createLogger, Logger } from "@seamless-medley/logging";
 
+const audienceGroup = makeAudienceGroupId(AudienceType.Streaming, 'shout');
+
 const outputFormats = ['mp3', 'aac', 'he-aac', 'vorbis', 'opus', 'flac'] as const;
 
 type OutputFormats = typeof outputFormats[number];
@@ -182,9 +184,21 @@ export class ShoutAdapter extends FFMpegAdapter {
     );
   }
 
+  get #audience() {
+    const { host, port } = this.#options.icecast;
+    return `${host}:${port}${this.#getMountPoint()}`;
+  }
+
   protected override started() {
     this.#logger.debug('Started');
+
+    this.station.addAudience(audienceGroup, this.#audience);
+
     setTimeout(this.#postMetadata, 2000);
+  }
+
+  protected stopped(): any {
+    this.station.removeAudience(audienceGroup, this.#audience);
   }
 
   protected override log(line: FFMpegLine) {
@@ -234,6 +248,10 @@ export class ShoutAdapter extends FFMpegAdapter {
       return;
     }
 
+    if (!this.overseer?.running) {
+      return;
+    }
+
     const { username, password, host, port, tls, userAgent } = this.#options.icecast;
     const song = getTrackBanner(this.#currentTrackPlay.track);
 
@@ -255,6 +273,9 @@ export class ShoutAdapter extends FFMpegAdapter {
     })
     .catch((e: AxiosError) => {
       const { url, params } = e.config!;
+
+      this.#logger.error({ error: this.error, stats: this.statistics }, e.message);
+
       if (e.code === 'ERR_BAD_REQUEST') {
         this.#logger.error(e, 'Error updating metadata, mount point might not support metadata');
       } else {
@@ -264,8 +285,7 @@ export class ShoutAdapter extends FFMpegAdapter {
   }
 
   override start() {
-    const { host, port } = this.#options.icecast;
-    this.station.addAudience(makeAudienceGroupId(AudienceType.Streaming, 'shout'), `${host}:${port}${this.#getMountPoint()}`);
+
   }
 
   override stop() {
