@@ -320,14 +320,20 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
       return;
     }
 
+    // https://discord.com/developers/docs/topics/opcodes-and-status-codes#voice
+    const disconnectionCodes = [
+      4014, // Should not reconnect, according to the documentation
+      4022  // Undocumented, but seems to be sent when the bot is being moved to another channel
+    ];
+
     // Should not reconnect
-    if (code === 4014) {
 			this.state = {
 				...this.state,
 				status: VoiceConnectorStatus.Disconnected,
 				reason: DisconnectReason.WebSocketClose,
 				closeCode: code,
 			};
+    if (disconnectionCodes.includes(code)) {
 
       return;
 		}
