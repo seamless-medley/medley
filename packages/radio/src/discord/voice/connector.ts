@@ -111,13 +111,16 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
       destroy: () => this.destroy(true)
     })
 
-    this.#state = { status: VoiceConnectorStatus.Signalling, gateway };
+    this.#state = {
+      status: VoiceConnectorStatus.Signalling,
+      gateway
+    };
   }
 
   destroy(fromGateway = false) {
     if (this.state.status === VoiceConnectorStatus.Destroyed) {
-			throw new Error('Cannot destroy VoiceConnection - it has already been destroyed');
-		}
+      throw new Error('Cannot destroy VoiceConnection - it has already been destroyed');
+    }
 
     const { automatonId, guildId } = this.joinConfig;
 
@@ -131,10 +134,10 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
         channelId: null
       }));
 
-			this.state.gateway.sendPayload(payload);
-		}
+      this.state.gateway.sendPayload(payload);
+    }
 
-		this.state = { status: VoiceConnectorStatus.Destroyed };
+    this.state = { status: VoiceConnectorStatus.Destroyed };
   }
 
   get state(): VoiceConnectorState {
@@ -144,36 +147,36 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
   set state(newState: VoiceConnectorState) {
     const oldState = this.#state;
 
-		const oldNetworking = Reflect.get(oldState, 'connection') as VoiceConnection | undefined;
-		const newNetworking = Reflect.get(newState, 'connection') as VoiceConnection | undefined;
+    const oldNetworking = Reflect.get(oldState, 'connection') as VoiceConnection | undefined;
+    const newNetworking = Reflect.get(newState, 'connection') as VoiceConnection | undefined;
 
     if (oldNetworking !== newNetworking) {
       if (oldNetworking) {
-				oldNetworking.on('error', noop);
-				oldNetworking.off('error', this.#onConnectionError);
-				oldNetworking.off('close', this.#onConnecitonClose);
-				oldNetworking.off('stateChange', this.#onConnectionStateChange);
+        oldNetworking.on('error', noop);
+        oldNetworking.off('error', this.#onConnectionError);
+        oldNetworking.off('close', this.#onConnecitonClose);
+        oldNetworking.off('stateChange', this.#onConnectionStateChange);
         oldNetworking.off('ping', this.#onConnectionPing)
-				oldNetworking.destroy();
-			}
+        oldNetworking.destroy();
+      }
     }
 
     if (newState.status === VoiceConnectorStatus.Ready) {
-			this.rejoinAttempts = 0;
-		}
+      this.rejoinAttempts = 0;
+    }
 
-		// If destroyed, the adapter can also be destroyed so it can be cleaned up by the user
-		if (oldState.status !== VoiceConnectorStatus.Destroyed && newState.status === VoiceConnectorStatus.Destroyed) {
-			oldState.gateway.destroy();
-		}
+    // If destroyed, the adapter can also be destroyed so it can be cleaned up by the user
+    if (oldState.status !== VoiceConnectorStatus.Destroyed && newState.status === VoiceConnectorStatus.Destroyed) {
+      oldState.gateway.destroy();
+    }
 
     this.#state = newState;
 
-		this.emit('stateChange', oldState, newState);
+    this.emit('stateChange', oldState, newState);
 
-		if (oldState.status !== newState.status) {
-			this.emit(newState.status, oldState, newState as any);
-		}
+    if (oldState.status !== newState.status) {
+      this.emit(newState.status, oldState, newState as any);
+    }
   }
 
   get #readyState(): ReadyState | undefined {
@@ -196,11 +199,11 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
   }
 
   dispatchAudio(): boolean {
-		if (this.#state.status !== VoiceConnectorStatus.Ready) {
+    if (this.#state.status !== VoiceConnectorStatus.Ready) {
       return false;
     }
 
-		return this.#state.connection.dispatchAudio();
+    return this.#state.connection.dispatchAudio();
   }
 
   #onVoiceServerUpdate: GatewayHandler['onVoiceServerUpdate'] = (data) => {
@@ -212,11 +215,11 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
     }
 
     if (this.state.status !== VoiceConnectorStatus.Destroyed) {
-			this.state = {
-				...this.state,
-				status: VoiceConnectorStatus.Disconnected,
-				reason: DisconnectReason.EndpointRemoved,
-			};
+      this.state = {
+        ...this.state,
+        status: VoiceConnectorStatus.Disconnected,
+        reason: DisconnectReason.EndpointRemoved,
+      };
     }
   }
 
@@ -327,16 +330,16 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
     ];
 
     // Should not reconnect
-			this.state = {
-				...this.state,
-				status: VoiceConnectorStatus.Disconnected,
-				reason: DisconnectReason.WebSocketClose,
-				closeCode: code,
-			};
     if (disconnectionCodes.includes(code)) {
+      this.state = {
+        ...this.state,
+        status: VoiceConnectorStatus.Disconnected,
+        reason: DisconnectReason.WebSocketClose,
+        closeCode: code,
+      };
 
       return;
-		}
+    }
 
     this.state = {
       ...this.state,
@@ -363,15 +366,13 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
 
       if (connection.state.code === ConnectionStateCode.Ready) {
         return {
-          ws: connection.state.ws.ping,
-          udp: connection.state.udp.ping
+          ws: connection.state.ws.ping
         }
       }
     }
 
     return {
-      ws: undefined,
-      udp: undefined
+      ws: undefined
     }
   }
 
@@ -398,45 +399,45 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
   }
 
   public rejoin(joinConfig?: Omit<JoinConfig, 'guildId' | 'automatonId'>) {
-		if (this.#state.status === VoiceConnectorStatus.Destroyed) {
-			return false;
-		}
+    if (this.#state.status === VoiceConnectorStatus.Destroyed) {
+      return false;
+    }
 
-		const notReady = this.state.status !== VoiceConnectorStatus.Ready;
+    const notReady = this.state.status !== VoiceConnectorStatus.Ready;
 
-		if (notReady) {
+    if (notReady) {
       this.rejoinAttempts++;
     }
 
-		Object.assign(this.joinConfig, joinConfig);
+    Object.assign(this.joinConfig, joinConfig);
 
-		if (this.#state.gateway.sendPayload(makeVoiceStateUpdatePayload(joinConfig2Data(this.joinConfig)))) {
-			if (notReady) {
-				this.state = {
-					...this.#state,
-					status: VoiceConnectorStatus.Signalling,
-				};
-			}
+    if (this.#state.gateway.sendPayload(makeVoiceStateUpdatePayload(joinConfig2Data(this.joinConfig)))) {
+      if (notReady) {
+        this.state = {
+          ...this.#state,
+          status: VoiceConnectorStatus.Signalling,
+        };
+      }
 
-			return true;
-		}
+      return true;
+    }
 
-		this.state = {
-			gateway: this.#state.gateway,
-			status: VoiceConnectorStatus.Disconnected,
-			reason: DisconnectReason.GatewayUnavailable,
-		};
+    this.state = {
+      gateway: this.#state.gateway,
+      status: VoiceConnectorStatus.Disconnected,
+      reason: DisconnectReason.GatewayUnavailable,
+    };
 
-		return false;
-	}
+    return false;
+  }
 
   static connect(joinConfig: JoinConfig, adapter: DiscordGatewayAdapter) {
     const payload = makeVoiceStateUpdatePayload(joinConfig2Data(joinConfig));
 
     const group = connectors.get(joinConfig.automatonId) ?? (() => {
       const map = new Map<Guild['id'], VoiceConnector>();
-	    connectors.set(joinConfig.automatonId, map);
-	    return map;
+      connectors.set(joinConfig.automatonId, map);
+      return map;
     })();
 
     const existing = group.get(joinConfig.guildId);

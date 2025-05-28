@@ -6,7 +6,6 @@ export interface UDPConnectionEvents {
   close(): void;
   error(error: Error): void;
   message(message: Buffer): void;
-  ping(latency: number): void;
 }
 
 export type SocketConfig = {
@@ -24,8 +23,6 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
   readonly #keepAliveBuffer = Buffer.alloc(8);
 
   #keepAliveTimer: NodeJS.Timeout;
-
-  #ping?: number;
 
   constructor(readonly config: SocketConfig) {
     super();
@@ -49,10 +46,6 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
     }
 
     clearInterval(this.#keepAliveTimer);
-  }
-
-  get ping() {
-    return this.#ping;
   }
 
   #onMessage = (buffer: Buffer) => {
