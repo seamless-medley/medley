@@ -5,7 +5,7 @@ const workerpool = require('workerpool');
 const { threadId } = require('node:worker_threads');
 const { MongoClient, Db, Collection, AggregationCursor } = require('mongodb');
 const { random, omitBy, capitalize } = require('lodash');
-const { createLogger } = require('@seamless-medley/logging');
+const { createLogger } = require('../../../logging');
 
 /** @typedef {import('../../../core').MusicDb} MusicDb */
 /** @typedef {import('../../../core').MusicDbTrack} MusicDbTrack */

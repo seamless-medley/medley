@@ -2,7 +2,7 @@ import { parse as parsePath } from 'node:path';
 import { chain, flatten, isEqual, mapValues, matches, reject, some, toLower, uniq, without } from "lodash";
 import { isString } from 'lodash/fp';
 import { TypedEmitter } from "tiny-typed-emitter";
-import { createLogger, Logger } from '@seamless-medley/logging';
+import { createLogger, type Logger } from '../../logging';
 import { extractArtists, formatTags } from '@seamless-medley/utils';
 import type { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions, AudioProperties } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";

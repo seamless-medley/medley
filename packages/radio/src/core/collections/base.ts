@@ -4,7 +4,7 @@ import { createHash } from 'crypto';
 import { TypedEmitter } from "tiny-typed-emitter";
 import { castArray, chain, chunk, clamp, omit, partition, random, sample, shuffle, sortBy, zip } from "lodash";
 import normalizePath from 'normalize-path';
-import { Logger, createLogger } from '@seamless-medley/logging';
+import { type Logger, createLogger } from '../../logging';
 import { moveArrayElements, moveArrayIndexes, waitFor } from '@seamless-medley/utils';
 import { Track, TrackExtra, TrackExtraOf } from "../track";
 import { getThreadPoolSize } from '../utils';

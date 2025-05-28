@@ -15,7 +15,7 @@ import {
 
 import { Socket, ClientData } from './types';
 
-import { createLogger } from '@seamless-medley/logging';
+import { createLogger } from "../../logging";
 import { SettingsDb } from '../../db/types';
 import { getDependents, hasObjectGuardAccess } from './decorator';
 import { PlainUser } from '../../db/persistent/user';

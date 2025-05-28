@@ -1,6 +1,6 @@
 import { castArray, chain, isString, partition, stubFalse, uniq } from 'lodash';
 import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents, WatchPathWithOption, RescanStats, TracksUpdateEvent } from '../collections';
-import { Logger, createLogger } from '@seamless-medley/logging';
+import { createLogger, type Logger } from '../../logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
 import { SearchEngine, Query, TrackDocumentFields, SearchQuery, TrackDocumentResult } from './search';

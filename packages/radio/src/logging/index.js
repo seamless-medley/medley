@@ -36,4 +36,3 @@ function createLogger(options) {
 module.exports = {
   createLogger
 }
-

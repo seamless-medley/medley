@@ -4,7 +4,7 @@ import { Socket } from 'socket.io';
 import { RTCExciter } from './exciter';
 import { AudioDispatcher } from '../../../audio/exciter';
 import { type WebRtcConfig } from '../../../config/webrtc';
-import { createLogger } from '@seamless-medley/logging';
+import { createLogger } from "../../../logging";
 import { ClientConsumerInfo, ClientTransportInfo } from '../../../remotes/rtc/transponder';
 import { AudienceType, makeAudienceGroupId, Station } from '../../../core';
 

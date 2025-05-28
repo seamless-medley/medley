@@ -9,7 +9,7 @@ import {
 } from "../../core";
 
 import { AbortRetryError, formatDuration, retryable } from "@seamless-medley/utils";
-import { Logger } from "@seamless-medley/logging";
+import { type Logger } from "../../logging";
 
 import {
   ActionRowBuilder,

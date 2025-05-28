@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import { curry, sample, sortBy } from "lodash";
-import { createLogger, Logger } from "@seamless-medley/logging";
+import { createLogger, type Logger } from '../../logging';
 import { BoomBox, BoomBoxEvents, BoomBoxTrackCollection, TrackKind } from "./boombox";
 
 export type SweeperInsertionRule = {

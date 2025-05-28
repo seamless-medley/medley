@@ -4,7 +4,7 @@ import { MongoMusicDb } from "../db/musicdb/mongo";
 import { loadConfig } from "../config";
 import { ZodError } from "zod";
 import { createAutomaton, createStation, getVersionLine, showVersionBanner } from "../helper";
-import { createLogger } from "@seamless-medley/logging";
+import { createLogger } from "../logging";
 import { retryable } from "@seamless-medley/utils";
 
 const logger = createLogger({ name: 'main' });

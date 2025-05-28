@@ -1,5 +1,6 @@
-import type { Logger } from 'pino';
-export type { Logger } from 'pino';
+import type { Logger as PinoLogger } from 'pino';
+
+export type Logger = PinoLogger;
 
 export type LoggerOptions = {
   name: string;

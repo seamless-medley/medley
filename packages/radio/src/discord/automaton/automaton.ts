@@ -24,7 +24,7 @@ import { intersection, isEqual, noop, sumBy, throttle } from "lodash";
 import { TypedEmitter } from 'tiny-typed-emitter';
 
 import type { DeckIndex } from "@seamless-medley/medley";
-import { Logger, createLogger } from "@seamless-medley/logging";
+import { createLogger, type Logger } from "../../logging";
 import { retryable, waitFor } from "@seamless-medley/utils";
 
 import { createCommandDeclarations, createInteractionHandler } from "../command";

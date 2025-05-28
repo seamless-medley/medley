@@ -3,7 +3,7 @@ const workerpool = require('workerpool');
 const fg = require('fast-glob');
 const normalizePath = require('normalize-path');
 const { access } = require('node:fs/promises');
-const { createLogger } = require('@seamless-medley/logging');
+const { createLogger } = require('../../logging');
 
 const logger = createLogger({ name: 'scanner' });
 

@@ -1,6 +1,6 @@
 import { map, noop } from "lodash";
 import { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Interaction, InteractionType } from "discord.js";
-import { createLogger } from "@seamless-medley/logging";
+import { createLogger } from "../../logging";
 
 import { all as descriptors  } from './commands';
 import { AutomatonPermissionError, Command, CommandError, CommandType, GuardError, GuildHandler, InteractionHandler, SubCommandLikeOption } from "./type";

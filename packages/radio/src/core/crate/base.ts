@@ -1,6 +1,6 @@
 import { isFunction, random, sample, shuffle, sortBy, stubFalse, sumBy } from "lodash";
 import { Track } from "../track";
-import { createLogger, Logger } from '@seamless-medley/logging';
+import { createLogger, type Logger } from '../../logging';
 import { createNamedFunc, weightedSample } from "@seamless-medley/utils";
 import { CrateProfile } from "./profile";
 

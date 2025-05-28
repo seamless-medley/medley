@@ -13,7 +13,7 @@ import {
   Queue
 } from "@seamless-medley/medley";
 
-import { createLogger, Logger } from "@seamless-medley/logging";
+import { createLogger, type Logger } from '../../logging';
 
 import { TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
 import { Crate, LatchOptions, LatchSession } from "../crate";

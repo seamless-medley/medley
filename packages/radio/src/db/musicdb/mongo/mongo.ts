@@ -1,5 +1,5 @@
 import { noop } from "lodash";
-import { createLogger, Logger } from "@seamless-medley/logging";
+import { createLogger, type Logger } from "../../../logging";
 import { Db, MongoClient, type MongoClientOptions } from "mongodb";
 
 import { SettingsDb } from "../../types";

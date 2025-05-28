@@ -3,7 +3,7 @@ import { debounce, isObjectLike } from "lodash";
 import { TrackCollection } from "../collections";
 import { SequencedTrack, Track, TrackExtra, TrackSequencing } from "../track";
 import { Crate } from "./base";
-import { Logger, createLogger } from "@seamless-medley/logging";
+import { createLogger, type Logger } from '../../logging';
 import { randomUUID } from "crypto";
 import { CrateProfile } from "./profile";
 

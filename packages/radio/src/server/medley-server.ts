@@ -1,6 +1,6 @@
 import { noop } from "lodash";
 
-import { createLogger } from "@seamless-medley/logging";
+import { createLogger } from "../logging";
 
 import { SettingsDb } from '../db/types';
 import { MongoMusicDb } from "../db/musicdb/mongo";

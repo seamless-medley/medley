@@ -5,7 +5,7 @@ import http from 'node:http';
 import express from 'express';
 import { ZodError } from "zod";
 import { Command } from '@commander-js/extra-typings';
-import { createLogger } from '@seamless-medley/logging';
+import { createLogger } from '../logging';
 import { SocketServer as SocketIOServer } from './socket';
 import { MedleyServer } from './medley-server';
 import { AudioWebSocketServer } from './audio/ws/server';

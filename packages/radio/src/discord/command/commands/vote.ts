@@ -1,4 +1,4 @@
-import { createLogger } from "@seamless-medley/logging";
+import { createLogger } from "../../../logging";
 import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, PermissionsBitField, userMention, time as formatTime, quote, } from "discord.js";
 import { chain, isEqual, keyBy, noop, sample, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";

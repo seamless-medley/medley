@@ -4,7 +4,7 @@ import { pipeline } from "node:stream";
 import { FFMpegCapabilities, FFmpegChildProcess, FFMpegLine, getFFmpegCaps, InfoLine, ProgressValue } from "../ffmpeg";
 import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
 import { getVersion } from "../../helper";
-import { createLogger, Logger } from "@seamless-medley/logging";
+import { createLogger, type Logger } from "../../logging";
 import { AudienceType, BoomBoxTrackPlay, getTrackBanner, makeAudienceGroupId, Station, StationEvents, TrackKind } from "../../core";
 
 const audienceGroup = makeAudienceGroupId(AudienceType.Streaming, 'shout');

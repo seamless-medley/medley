@@ -1,5 +1,5 @@
 import workerpool, { Pool as WorkerPool, WorkerPoolOptions } from "workerpool";
-import { createLogger } from "@seamless-medley/logging";
+import { createLogger } from "../logging";
 
 export abstract class WorkerPoolAdapter<Methods extends { [name: string]: any }> {
   protected logger = createLogger({
