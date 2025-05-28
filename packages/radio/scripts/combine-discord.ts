@@ -4,7 +4,7 @@ import type { PackageJson } from 'type-fest';
 import { chain } from 'lodash';
 import simpleGit  from 'simple-git';
 
-async function getFunctionString(mainVersion: string) {
+async function getVersionString(mainVersion: string) {
   const git = simpleGit();
 
   const branch = await git.revparse(['--abbrev-ref', 'HEAD']);
@@ -23,9 +23,7 @@ async function combine() {
   await emptyDir(combinePath);
 
   const copyTasks = [
-    copy('../logging', join(combinePath, 'logging'), { filter: src => !/(package.json|node_modules)$/.test(src) }),
     copy('../utils/dist', join(combinePath, 'utils'), { filter: src => !/package.json$/.test(src) }),
-    copy('../core/dist', join(combinePath, 'core'), { filter: src => !/package.json$/.test(src) }),
     copy('dist', join(combinePath, 'radio'), {
       filter: (src) => {
         const [, group] = src.split(sep);
@@ -46,7 +44,7 @@ async function combine() {
   const deps = chain({})
     .extend(
       ...[
-        'logging', 'utils', 'core'
+        'utils'
       ].map(name => (require(`../../${name}/package.json`) as PackageJson).dependencies),
       mainPackage.dependencies
     )
@@ -68,7 +66,7 @@ async function combine() {
     .extend({ dependencies: deps })
     .value();
 
-  result.version = await getFunctionString(result.version!);
+  result.version = await getVersionString(result.version!);
 
   await outputJson(join(combinePath, 'package.json'), result, { spaces: 2 });
 
