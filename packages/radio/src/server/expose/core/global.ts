@@ -1,5 +1,5 @@
 import { MixinEventEmitterOf } from "../../socket";
-import { Global as RemoteGlobal } from '../../../remotes/core/global';
+import { Global as RemoteGlobal } from '../../../remotes';
 import { Exposable } from "../../../socket";
 import { MedleyServer } from "../../medley-server";
 
@@ -13,11 +13,11 @@ export class ExposedGlobal extends MixinEventEmitterOf<RemoteGlobal>() implement
     this.#medley = medley;
   }
 
-  getStations(): string[] {
+  getStations() {
     return Array.from(this.#medley.stations.keys());
   }
 
-  getInstanceName(): string {
-    return this.#medley.instanceName
+  get instanceName() {
+    return this.#medley.instanceName;
   }
 }

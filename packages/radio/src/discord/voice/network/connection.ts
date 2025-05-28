@@ -204,6 +204,8 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
   }
 
   #onWsClose: WebSocketConnectionEvents['close'] = (e) => {
+    this.emit('close', e.code);
+
     const canResume = e.code < 4000 || e.code === 4015;
 
     if (canResume && this.#state.code === ConnectionStateCode.Ready) {
@@ -218,7 +220,6 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
     if (this.#state.code !== ConnectionStateCode.Closed) {
       this.destroy();
-			this.emit('close', e.code);
       return;
     }
   }

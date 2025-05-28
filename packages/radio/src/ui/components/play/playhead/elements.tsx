@@ -39,17 +39,13 @@ export const Box = styled.div`
 export const ProgressText = styled.div<{ backgroundColor: string, textColor: string }>`
   position: absolute;
   display: flex;
-  background-size: 300vw;
 
-  justify-content: left;
+  justify-content: center;
   align-items: center;
   left: 0;
   right: 0;
   top: 0;
   bottom: 0;
-
-  padding-left: calc(50% - (0.6em * 5 / 2));
-  padding-top: 0.15em;
 
   border-radius: 0.25em 0px 0px 0px;
 

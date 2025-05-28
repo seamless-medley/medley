@@ -149,6 +149,10 @@ export type RetryInfo = {
   previousError: unknown;
 }
 
+export class AbortRetryError extends Error {
+
+}
+
 export function retryable<R>(fn: (info: RetryInfo) => Promise<R>, options: RetryOptions) {
   let attempts = 0;
   let previousError: unknown;
@@ -161,6 +165,10 @@ export function retryable<R>(fn: (info: RetryInfo) => Promise<R>, options: Retry
 
       return await fn({ attempts, previousError });
     } catch (e) {
+      if (e instanceof AbortRetryError) {
+        return;
+      }
+
       if (n !== undefined && n <= 0) {
         throw e;
       }

@@ -9,7 +9,7 @@ import {
   getTrackBanner,
 } from "@seamless-medley/core";
 
-import { formatDuration, retryable } from "@seamless-medley/utils";
+import { AbortRetryError, formatDuration, retryable } from "@seamless-medley/utils";
 import { Logger } from "@seamless-medley/logging";
 
 import {
@@ -57,9 +57,9 @@ export type GuildStateAdapter = {
   makeAudienceGroup(guildId: string): AudienceGroupId;
 }
 
-type ActiveVoiceChannel = {
+type DesignatedVoiceChannel = {
   channelId: string;
-  joinedTime: Date;
+  timestamp: number;
 }
 
 export class GuildState {
@@ -74,14 +74,23 @@ export class GuildState {
   }
 
   dispose() {
-    this.adapter.getClient().off('voiceStateUpdate', this.#handleVoiceStateUpdate);
+    this.#adapter.getClient().off('voiceStateUpdate', this.#handleVoiceStateUpdate);
   }
 
   #adapter: GuildStateAdapter;
 
   #preferredStation?: Station;
 
-  private activeVoiceChannel?: ActiveVoiceChannel;
+  /**
+   * The designated voice channel
+   *
+   */
+  #designatedVC?: DesignatedVoiceChannel;
+
+  /**
+   * The currently joined voice channel
+   */
+  #voiceChannelId?: string;
 
   textChannelId?: string;
 
@@ -93,17 +102,13 @@ export class GuildState {
 
   #stationLink?: StationLink;
 
-  #voiceConnector?: VoiceConnector;
-
-  #pendingJoin: Promise<JoinResult> | undefined;
+  #rejoinAC?: AbortController;
 
   #karaokeEnabled = false;
 
   #gain = 1.0;
 
-  private get adapter() {
-    return this.#adapter;
-  }
+  #checkVCTimer?: NodeJS.Timeout;
 
   get #automaton() {
     return this.#adapter.getAutomaton();
@@ -118,12 +123,12 @@ export class GuildState {
   }
 
   get maxTrackMessages() {
-    const config = this.adapter.getConfig(this.guildId);
+    const config = this.#adapter.getConfig(this.guildId);
     return config?.trackMessage?.max || 3;
   }
 
   get trackMessageCreator(): TrackMessageCreator {
-    const type = this.adapter.getConfig(this.guildId)?.trackMessage?.type || 'extended';
+    const type = this.#adapter.getConfig(this.guildId)?.trackMessage?.type || 'extended';
 
     if (this.#trackMessageCreator?.name !== type) {
       this.#trackMessageCreator = makeCreator(type, this.#automaton);
@@ -142,10 +147,6 @@ export class GuildState {
 
   get tunedStation() {
     return this.stationLink?.station;
-  }
-
-  get voiceChannelId() {
-    return this.activeVoiceChannel?.channelId;
   }
 
   get serverMuted() {
@@ -174,28 +175,24 @@ export class GuildState {
     }
   }
 
-  hasVoiceConnector() {
-    return this.#voiceConnector !== undefined;
+  get voiceChannelId() {
+    return this.#voiceChannelId;
   }
 
   hasVoiceChannel() {
-    return this.activeVoiceChannel?.channelId !== undefined;
+    return this.#voiceChannelId !== undefined;
   }
 
-  get voiceConnectorStatus() {
-    return this.#voiceConnector?.state?.status;
+  #getVoiceConnector() {
+    return getVoiceConnector(this.#automaton.id, this.guildId);
   }
 
   /**
    * Just joined a voice channel, audiences for this guild should be reset to this channel's members
    */
-  async #joinedVoiceChannel(channel: VoiceBasedChannel | null | undefined, muted: boolean) {
-    this.activeVoiceChannel = channel?.id ? {
-      channelId: channel.id,
-      joinedTime: new Date()
-    } : undefined;
-
+  async #joinedVoiceChannel(channel: VoiceBasedChannel, muted: boolean) {
     this.#serverMuted = muted;
+    this.#voiceChannelId = channel.id;
 
     const station = this.tunedStation;
 
@@ -203,35 +200,52 @@ export class GuildState {
       return;
     }
 
-    const audienceGroup = this.adapter.makeAudienceGroup(this.guildId);
+    return new Promise<void>((resolve) => {
+      const connector = this.#getVoiceConnector();
 
-    if (muted || !channel) {
-      station.removeAudiencesForGroup(audienceGroup);
-      return;
-    }
+      if (connector === undefined) {
+        resolve();
+        return;
+      }
 
-    if (this.#voiceConnector === undefined) {
-      return;
-    }
+      const setDesignatedVC = () => {
+        this.#designatedVC = {
+          channelId: channel.id,
+          timestamp: Date.now()
+        }
 
-    if (this.#voiceConnector.isReady) {
-      this.#updateAudiences()
-      return;
-    }
+        if (muted) {
+          const audienceGroup = this.#adapter.makeAudienceGroup(this.guildId);
+          station.removeAudiencesForGroup(audienceGroup);
+        }
 
-    this.#voiceConnector.once(VoiceConnectorStatus.Ready, () => this.#updateAudiences());
+        this.#updateAudiences('voice connector become ready');
+
+        resolve();
+      }
+
+      if (connector.isReady) {
+        setDesignatedVC();
+        return;
+      }
+
+      connector.once(VoiceConnectorStatus.Ready, setDesignatedVC);
+    });
   }
 
   #leftVoiceChannel() {
-    if (!this.#voiceConnector) {
-      return;
-    }
+    const connector = this.#getVoiceConnector();
 
     this.detune();
 
-    this.#voiceConnector?.destroy();
-    this.#voiceConnector = undefined;
-    this.activeVoiceChannel = undefined;
+    connector?.destroy();
+    this.#designatedVC = undefined;
+    this.#voiceChannelId = undefined;
+  }
+
+
+  disconnectedFromVoiceChannel() {
+    this.#voiceChannelId = undefined;
   }
 
   async tune(station: Station): Promise<Station | undefined> {
@@ -239,16 +253,17 @@ export class GuildState {
 
     this.#preferredStation = station;
     const newLink = await this.createStationLink();
+    const connector = this.#getVoiceConnector();
 
-    if (newLink && this.#voiceConnector) {
+    if (newLink && connector) {
       if (!newLink.exciter.started) {
-        await newLink.exciter.start(this.adapter.getAudioDispatcher());
+        await newLink.exciter.start(this.#adapter.getAudioDispatcher());
       }
 
-      newLink.exciter.addCarrier(this.#voiceConnector);
+      newLink.exciter.addCarrier(connector);
     }
 
-    this.#updateAudiences();
+    this.#updateAudiences('Tuned');
 
     const newStation = newLink?.station;
 
@@ -276,7 +291,7 @@ export class GuildState {
       this.detune();
     }
 
-    const config = this.adapter.getConfig(this.guildId);
+    const config = this.#adapter.getConfig(this.guildId);
     const bitrate = (config?.bitrate ?? 256) * 1000;
     const exciter = new DiscordAudioPlayer(preferredStation, {
       gain: this.#gain,
@@ -300,14 +315,15 @@ export class GuildState {
     }
 
     const { station, exciter } = this.stationLink;
+    const connector = this.#getVoiceConnector();
 
-    if (this.#voiceConnector) {
-      if (exciter.removeCarrier(this.#voiceConnector) <= 0) {
+    if (connector) {
+      if (exciter.removeCarrier(connector) <= 0) {
         exciter.stop();
       }
     }
 
-    station.removeAudiencesForGroup(this.adapter.makeAudienceGroup(this.guildId));
+    station.removeAudiencesForGroup(this.#adapter.makeAudienceGroup(this.guildId));
 
     this.#stationLink = undefined;
   }
@@ -318,8 +334,8 @@ export class GuildState {
     }
 
     if (!this.preferredStation) {
-      const config = this.adapter.getConfig(this.guildId);
-      const stations = this.adapter.getStations();
+      const config = this.#adapter.getConfig(this.guildId);
+      const stations = this.#adapter.getStations();
 
       if (config?.autotune) {
         this.preferredStation = stations.get(config?.autotune);
@@ -341,7 +357,7 @@ export class GuildState {
   }
 
   async #doJoin(options: JoinOptions): Promise<JoinResult> {
-    const { channel, timeout = 5000, retries = 0, signal } = options;
+    const { channel, timeout = 5000, retries = 0 } = options;
 
     const { me } = channel.guild.members;
 
@@ -359,10 +375,7 @@ export class GuildState {
       return { status: 'no_station' };
     }
 
-    // Release the voiceConnection to make VoiceStateUpdate handler aware of the this join command
-    this.#voiceConnector = undefined;
-
-    getVoiceConnector(this.#automaton.id, this.guildId)?.destroy();
+    this.#getVoiceConnector()?.destroy();
 
     const { id: channelId, guildId, guild: { voiceAdapterCreator } } = channel;
 
@@ -377,64 +390,154 @@ export class GuildState {
       voiceAdapterCreator
     );
 
-    if (!connector) {
+    if (!connector || options?.signal?.aborted) {
       return { status: 'not_joined' };
     }
 
+    const ac = new AbortController;
+    const signal = options.signal ? AbortSignal.any([options.signal, ac.signal]) : ac.signal;
+    const timer = setTimeout(() => ac.abort(``), timeout);
+    ac.signal.addEventListener('abort', () => clearTimeout(timer));
+
     try {
       const result = await retryable<JoinResult>(async() => {
-        await connector.waitForState(VoiceConnectorStatus.Ready, timeout);
+        await connector.waitForState(VoiceConnectorStatus.Ready, signal);
+
+        if (signal.aborted) {
+          throw new AbortRetryError();
+        }
+
         return { status: 'joined', station: stationLink!.station };
       }, { retries, wait: 5000, factor: 1, signal });
 
       if (result === undefined) {
-        throw new Error('Aborted');
+        return { status: 'aborted' };
       }
 
       if (!stationLink.exciter.started) {
-        await stationLink.exciter.start(this.adapter.getAudioDispatcher());
+        await stationLink.exciter.start(this.#adapter.getAudioDispatcher());
       }
 
       stationLink.exciter.addCarrier(connector);
 
-      this.#voiceConnector = connector;
-      this.#updateAudiences();
-
       return result;
     }
     catch (e: any) {
-      this.adapter.getLogger().error((e.code === 'ABORT_ERR') ? new Error(e.cause) : e, 'Error joining a channel');
-      return { status: 'not_joined' };
+      const wasAborted = e.code === 'ABORT_ERR';
+      this.#adapter.getLogger().error(wasAborted ? new Error(e.cause) : e, 'Error joining channel: %s - guild: %s', channel.name, channel.guild.name);
+      return { status: wasAborted ? 'aborted' : 'not_joined' };
+    }
+    finally {
+      clearTimeout(timer);
     }
   }
 
   async join(options: JoinOptions): Promise<JoinResult> {
-    if (!this.#pendingJoin) {
-      this.#pendingJoin = this.#doJoin(options).finally(() => {
-        this.#pendingJoin = undefined
-      });
-    }
-
-    return this.#pendingJoin;
+    this.#rejoinAC?.abort('join() called');
+    return this.#doJoin(options);
   }
 
-  async #updateAudiences() {
-    if (!this.#voiceConnector) {
+  async #checkVoiceConnector(timeoutSeconds: number) {
+    if (!this.#designatedVC?.channelId) {
       return;
     }
 
-    if (!this.voiceChannelId || !this.preferredStation) {
+    const isVoiceConnectorReady = () => this.#getVoiceConnector()?.state.status === VoiceConnectorStatus.Ready;
+
+    if (isVoiceConnectorReady()) {
       return;
     }
 
-    const channel = this.adapter.getChannel(this.voiceChannelId);
+    this.#rejoinAC?.abort();
+    this.#rejoinAC = new AbortController();
+
+    const client = this.#adapter.getClient();
+
+    const joinTimeout = 5000;
+
+    const retries = Math.ceil(timeoutSeconds * 1000 / (joinTimeout + 1000));
+
+    await retryable<JoinResult>(async () => {
+      // Prevent double join
+      if (isVoiceConnectorReady() && this.stationLink) {
+        return {
+          status: 'joined',
+          station: this.stationLink.station
+        }
+      }
+
+      const channel = this.#designatedVC?.channelId ? client.channels.cache.get(this.#designatedVC.channelId) : undefined;
+
+      if (!channel?.isVoiceBased()) {
+        throw new AbortRetryError('not a voice based');
+      }
+
+      const result = await this.#doJoin({
+        channel,
+        timeout: joinTimeout,
+        signal: this.#rejoinAC?.signal
+      });
+
+      if (result.status !== 'joined') {
+        throw new Error('Retry');
+      }
+
+      this.#adapter.getLogger().info({ guild: channel.guild.name, channel: channel.name }, 'Rejoined');
+
+      return result;
+      }, { retries, wait: 1000, signal: this.#rejoinAC.signal }
+    )
+    .catch(noop) // `retryable` throw the error when reaching retries limit, so we silently ignore that and do it again in the next round
+    .finally(() => {
+      this.#rejoinAC = undefined;
+    })
+  }
+
+  async startVCMonitor(interval: number) {
+    // stop previous timer
+    this.stopVCMonitor();
+
+    this.#checkVCTimer = setTimeout(async () => {
+      await this.#checkVoiceConnector(30);
+      this.startVCMonitor(interval);
+    }, interval);
+  }
+
+  async stopVCMonitor() {
+    if (this.#checkVCTimer) {
+      clearTimeout(this.#checkVCTimer);
+      this.#checkVCTimer = undefined;
+    }
+  }
+
+  async refreshVoiceState() {
+    const guild = await this.#adapter.getClient().guilds.fetch(this.guildId);
+    const vs = await guild.voiceStates.fetch('@me').catch(() => undefined);
+
+    if (vs?.channel?.isVoiceBased()) {
+      await this.#joinedVoiceChannel(vs.channel, isVoiceStateMuted(vs));
+    }
+
+    this.#updateAudiences('refreshVoiceState');
+  }
+
+  async #updateAudiences(reason?: string) {
+    if (!this.#getVoiceConnector()) {
+      return;
+    }
+
+    if (!this.#voiceChannelId || !this.preferredStation) {
+      return;
+    }
+
+    const channel = this.#adapter.getChannel(this.#voiceChannelId);
 
     if ((channel?.type === ChannelType.GuildVoice) || (channel?.type === ChannelType.GuildStageVoice)) {
       const guild = await this.#adapter.getClient().guilds.fetch(this.guildId);
       const shouldPlay = guild.members.me?.voice !== undefined && !guild.members.me.voice.mute;
 
       this.preferredStation.updateAudiences(
-        this.adapter.makeAudienceGroup(this.guildId),
+        this.#adapter.makeAudienceGroup(this.guildId),
         channel.members
           .filter(member => !member.user.bot && !member.voice.deaf)
           .map(member => member.id),
@@ -452,8 +555,8 @@ export class GuildState {
       return;
     }
 
-    const myId = this.adapter.getClient().user?.id;
-    const isMe = (newState.member.id === myId);
+    const myId = this.#adapter.getClient().user?.id;
+    const isMe = myId && (newState.member.id === myId);
 
     if (isMe) {
       this.#handleSelfState(oldState, newState);
@@ -462,31 +565,27 @@ export class GuildState {
     }
   }
 
-  #handleSelfState(oldState: VoiceState, newState: VoiceStateWithMember) {
+  async #handleSelfState(oldState: VoiceState | null, newState: VoiceStateWithMember) {
     if (!this.tunedStation) {
       // Not tuned
       return;
     }
 
-    if (newState.channelId) {
-      // Just joined
-      this.#joinedVoiceChannel(newState.channel, isVoiceStateMuted(newState));
-      return
-    }
+    if (!newState.channel) {
+      // Not in a re-joining process
+      if (this.#rejoinAC === undefined) {
+        this.#leftVoiceChannel();
+      }
 
-    if (!newState.channelId) {
-      // Simply left
-      this.#leftVoiceChannel();
       return;
     }
 
-    if (newState.channelId !== oldState.channelId) {
-      // Moved by some entity
-      this.#joinedVoiceChannel(newState.channel, isVoiceStateMuted(newState));
-      return;
+    if ((newState.channelId !== oldState?.channelId) || (newState.sessionId !== oldState.sessionId)) {
+      // clear the active channel, this must be set when a voice connection is ready
+      this.#designatedVC = undefined;
+      await this.#joinedVoiceChannel(newState.channel, isVoiceStateMuted(newState));
     }
 
-    // Stationary
     if (isVoiceStateMuted(oldState) !== isVoiceStateMuted(newState)) {
       this.#serverMuted = isVoiceStateMuted(newState);
       this.#serverMuteStateChanged(newState.channel);
@@ -500,10 +599,14 @@ export class GuildState {
       return;
     }
 
-    const audienceGroup = this.adapter.makeAudienceGroup(this.guildId);
+    const audienceGroup = this.#adapter.makeAudienceGroup(this.guildId);
 
     if (this.#serverMuted || !channel) {
       station.removeAudiencesForGroup(audienceGroup);
+      return;
+    }
+
+    if (!this.#voiceChannelId) {
       return;
     }
 
@@ -534,14 +637,12 @@ export class GuildState {
       return;
     }
 
-    if (!this.activeVoiceChannel) {
+    if (!this.#voiceChannelId) {
       // Me not in a channel, ignoring...
       return;
     }
 
-    const { voiceChannelId: activeVoiceChannelId } = this;
-
-    if ((activeVoiceChannelId !== oldState.channelId) && (activeVoiceChannelId !== newState.channelId)) {
+    if ((this.#voiceChannelId !== oldState.channelId) && (this.#voiceChannelId !== newState.channelId)) {
       // Event occur in another channels
       return;
     }
@@ -552,22 +653,26 @@ export class GuildState {
       return;
     }
 
-    const channel = this.adapter.getChannel(activeVoiceChannelId);
+    const channel = this.#adapter.getChannel(this.#voiceChannelId);
     if (!channel?.isVoiceBased()) {
       return;
     }
 
-    const audienceGroup = this.adapter.makeAudienceGroup(this.guildId);
+    if (!this.#getVoiceConnector()) {
+      return;
+    }
+
+    const audienceGroup = this.#adapter.makeAudienceGroup(this.guildId);
 
     if (oldState.channelId !== newState.channelId) {
 
-      if (oldState.channelId === activeVoiceChannelId) {
+      if (oldState.channelId === this.#voiceChannelId) {
         // Move away or leave
         station.removeAudience(audienceGroup, newState.member.id);
         return;
       }
 
-      if (newState.channelId === activeVoiceChannelId) {
+      if (newState.channelId === this.#voiceChannelId) {
         // Joined
         if (!this.#serverMuted && !newState.deaf) {
           // Add this audience only if they're not deaf and me is not muted
@@ -651,10 +756,10 @@ export class GuildState {
 
     const isOwnerOverride = this.#automaton.owners.includes(message.author.id);
 
-    const shouldCheckAudiences = !isOwnerOverride && this.adapter.getConfig(message.guildId)?.trackMessage?.always !== true;
+    const shouldCheckAudiences = !isOwnerOverride && this.#adapter.getConfig(message.guildId)?.trackMessage?.always !== true;
 
     if (shouldCheckAudiences) {
-      const audiences = station.getAudiences(this.adapter.makeAudienceGroup(this.guildId));
+      const audiences = station.getAudiences(this.#adapter.makeAudienceGroup(this.guildId));
 
       if (!audiences?.has(message.author.id)) {
         return;
@@ -955,7 +1060,7 @@ export type JoinOptions = {
 }
 
 export type JoinResult = {
-  status: 'no_station' | 'not_granted' | 'not_joined';
+  status: 'no_station' | 'not_granted' | 'not_joined' | 'aborted';
 } | {
   status: 'joined';
   station: Station;
@@ -974,8 +1079,8 @@ function isVoiceStateWithMember(s: VoiceState): s is VoiceStateWithMember {
   return s.member !== null;
 }
 
-function isVoiceStateMuted(s: VoiceState) {
-  return (s.suppress || s.serverMute) === true;
+function isVoiceStateMuted(s: VoiceState | null) {
+  return (s?.suppress || s?.serverMute) === true;
 }
 
 function detectLanguage(s: string) {

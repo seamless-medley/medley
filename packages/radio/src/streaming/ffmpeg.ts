@@ -1,6 +1,6 @@
 import { ChildProcessByStdio, StdioPipe, spawn } from "child_process";
 import ffmpegPath from "ffmpeg-static";
-import { camelCase } from "lodash";
+import { camelCase, noop } from "lodash";
 import { createInterface } from "readline";
 import { Readable, Writable } from "node:stream";
 import { CamelCase } from "type-fest";
@@ -23,7 +23,9 @@ export type FFmpegOverseerOptions = {
   beforeSpawn?: () => Promise<boolean | undefined>;
   afterSpawn?: (process: FFmpegChildProcess) => Promise<void>;
   started?: () => any;
+  stopped?:() => any;
   log?: (line: FFMpegLine) => any;
+  stopOnSpawnError?: boolean;
 }
 
 export type FFmpegOverseer = {
@@ -236,7 +238,10 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
               break;
 
             case 'error':
-              stopped = true;
+              if (options.stopOnSpawnError) {
+                stopped = true;
+              }
+
               reject(new FFMpegOverseerStartupError(parsed.text, lastInfo));
               return;
           }
@@ -257,13 +262,18 @@ export async function createFFmpegOverseer(options: FFmpegOverseerOptions): Prom
         }
       });
 
-      process.on('exit', () => {
+      process.on('exit', async () => {
+        if (running) {
+          options?.stopped?.();
+        }
+
         running = false;
 
         unwatch();
 
         if (!stopped) {
-          delay().then(spawn);
+          await delay();
+          await spawn().catch(noop);
         }
       });
 

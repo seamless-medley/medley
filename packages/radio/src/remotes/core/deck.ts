@@ -1,4 +1,4 @@
-import { DeckPositions } from "@seamless-medley/core";
+import type { DeckPositions } from "@seamless-medley/core";
 import { TrackPlay } from "./po/track";
 
 export interface Deck extends Omit<DeckPositions, 'current'> {

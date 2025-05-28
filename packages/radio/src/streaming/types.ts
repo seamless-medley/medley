@@ -70,6 +70,7 @@ export abstract class FFMpegAdapter<S = ProgressValue> extends BaseStreamingAdap
         beforeSpawn: () => this.beforeSpawn(),
         afterSpawn: process => this.afterSpawn(process),
         started: () => this.started(),
+        stopped: () => this.stopped(),
         log: line => this.log(line)
       }
     );
@@ -96,6 +97,10 @@ export abstract class FFMpegAdapter<S = ProgressValue> extends BaseStreamingAdap
   }
 
   protected started(): any {
+
+  }
+
+  protected stopped(): any {
 
   }
 

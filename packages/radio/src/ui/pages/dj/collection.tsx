@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useCollection } from "../../hooks/useCollection";
-import { Track } from "../../../remotes/core/po/track";
+import type { Track } from "../../../remotes";
 import { collectionRoute, stationRoute } from "./route";
 
 const CollectionList: React.FC = () => {

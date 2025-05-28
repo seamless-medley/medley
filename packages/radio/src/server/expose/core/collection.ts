@@ -2,8 +2,8 @@ import { MusicTrackCollection, MusicTrackCollectionEvents, Station } from "@seam
 import { isFunction, isObject, omitBy } from "lodash";
 import { $Exposing, Exposable } from "../../../socket";
 import { MixinEventEmitterOf } from "../../socket";
-import { toTrack } from "../../../remotes/core/po/track";
-import { type Collection } from "../../../remotes/core/collection";
+import { toTrack } from "../../../remotes";
+import { type Collection } from "../../../remotes";
 
 export class ExposedColection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
   [$Exposing]: MusicTrackCollection<Station>;

@@ -1,11 +1,10 @@
 import type { DeckIndex } from "@seamless-medley/core";
 import { useCallback, useEffect, useState } from "react";
-import { type Deck } from "../../remotes/core/deck";
-import { type TrackPlay } from "../../remotes/core/po/track";
+import { useSetState } from "@mantine/hooks";
+import type { Deck, TrackPlay } from "../../remotes";
 import { StubDeck } from "../stubs/core/deck";
 import { $AnyProp } from "../../socket";
 import { useSurrogate } from "./surrogate";
-import { useSetState } from "@mantine/hooks";
 
 export function useDeck(stationId: string | undefined, index: DeckIndex | undefined) {
   const { surrogate: deck, error } = useSurrogate(StubDeck, 'deck', stationId ? `${stationId}/${index}` : undefined);

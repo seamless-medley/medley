@@ -1,4 +1,4 @@
-import { TrackCollectionBasicOptions } from "@seamless-medley/core";
+import type { TrackCollectionBasicOptions } from "@seamless-medley/core";
 import { Track } from "./po/track";
 
 /**

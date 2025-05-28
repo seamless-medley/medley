@@ -1,6 +1,6 @@
 import { noop } from "lodash";
 import { StubOf } from "../../../socket";
-import { type Station } from "../../../remotes/core/station";
+import type { Station } from "../../../remotes";
 
 class StubbingStation {
   id = undefined as any;

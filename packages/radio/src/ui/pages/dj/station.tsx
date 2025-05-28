@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { AppShell, Box, NavLink } from '@mantine/core';
+import { Link, Outlet, useMatchRoute, useParams } from '@tanstack/react-router';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 
 import { useStation } from '../../hooks/useStation';
-import type { Station as RemoteStation } from '../../../remotes/core/station';
+import type { Station as RemoteStation } from '../../../remotes';
 import { collectionRoute, stationIndexRoute, stationRoute } from './route';
 import { TopBar } from './top';
-import { Link, Outlet, useMatchRoute, useParams } from '@tanstack/react-router';
 
 type CollectionInfo = {
   id: string;

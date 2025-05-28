@@ -1,15 +1,15 @@
-import { Global } from './core/global';
-import { Station } from "./core/station";
-import { Deck } from "./core/deck";
-import { Collection } from "./core/collection";
-import { RTCTransponder } from "./rtc/transponder";
+import * as core from './core';
+import * as rtc from "./rtc";
+
+export * from './core';
+export * from './rtc';
+
 
 export interface RemoteTypes {
-  global: Global;
-  station: Station;
-  deck: Deck;
-  collection: Collection;
+  global: core.Global;
+  station: core.Station;
+  deck: core.Deck;
+  collection: core.Collection;
   //
-  transponder: RTCTransponder;
+  transponder: rtc.RTCTransponder;
 }
-
