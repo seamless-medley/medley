@@ -47,7 +47,6 @@ import { Logger, createLogger } from "@seamless-medley/logging";
 import { intersection, isEqual, noop, sumBy, throttle } from "lodash";
 import { Command, CommandOption, OptionType, SubCommandLikeOption } from "../command/type";
 import { canSendMessageTo } from "../command/utils";
-import { VoiceConnectorStatus } from "../voice/connector";
 
 export enum AutomatonAccess {
   None = 0,
@@ -150,10 +149,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #logger: Logger;
 
-  #rejoining = new Counters();
-
-  #rejoinInProgress = false;
-
   #shardReady = false;
 
   #stations: IReadonlyLibrary<Station>;
@@ -192,7 +187,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     });
 
     this.#client.on('warn', message => {
-      this.#logger.warn(`Automaton Warning ${message}`);
+      this.#logger.warn(`Automaton Warning: ${message}`);
     });
 
     this.#client.on('error', (error) => {
@@ -205,7 +200,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.#logger.debug(`Shard resume`);
 
       if (!this.#shardReady) {
-        this.#rejoinVoiceChannels(30);
+        this.#refreshVoiceState();
+        this.#startVCMonitors();
       }
 
       this.#updateLibraryStats();
@@ -215,6 +211,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     this.#client.on('shardReady', () => {
       this.#shardReady = true;
+      this.#startVCMonitors();
     });
 
     this.#client.on('ready', this.#handleClientReady);
@@ -249,13 +246,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
       this.#stationEventHandlers.set(station, handlers);
     }
-
-    this.#checkVoiceConnection();
-  }
-
-  #checkVoiceConnection = async () => {
-    await this.#rejoinVoiceChannels(30);
-    setTimeout(this.#checkVoiceConnection, 5_000);
   }
 
   destroy() {
@@ -287,13 +277,11 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
   #handleShardError = (error: Error, shardId: number) => {
     this.#shardReady = false;
-    this.#rejoining = new Counters();
-    this.#removeAllAudiences();
-  }
 
-  #removeAllAudiences() {
-    // Remove audiences from all stations
+    // Remove Discord audiences from all stations
     for (const [guildId, state] of this.#guildStates) {
+      state.disconnectedFromVoiceChannel();
+
       const group = this.makeAudienceGroup(guildId);
 
       for (const station of this.stations) {
@@ -303,10 +291,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
   }
 
   async #autoJoinVoiceChannel(guildId: string) {
-    if (this.#rejoining.peek(guildId) > 0) {
-      return;
-    }
-
     const config = this.#guildConfigs[guildId];
 
     if (!config?.autojoin) {
@@ -321,8 +305,6 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     const voiceChannel = guild.channels.cache.get(config.autojoin);
     if (voiceChannel?.isVoiceBased()) {
-      this.#rejoining.inc(guildId);
-
       const { status } = await this.ensureGuildState(guildId).join({
         channel: voiceChannel,
         timeout: 5_000,
@@ -333,92 +315,20 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         { status, guild: guild.name, channel: voiceChannel.name },
         'Auto join result'
       );
-
-      this.#rejoining.dec(guildId);
     }
   }
 
-  async #rejoinVoiceChannel(guildId: string, timeoutSeconds: number, signal?: AbortSignal) {
-    if (this.#rejoining.peek(guildId)) {
-      return;
-    }
-
-    this.#rejoining.inc(guildId);
-
-    try {
-      const state = this.getGuildState(guildId);
-
-      if (!state) {
-        return;
-      }
-
-      const { voiceChannelId } = state;
-
-      if (!voiceChannelId) {
-        return;
-      }
-
-      if (state.voiceConnectorStatus === VoiceConnectorStatus.Ready) {
-        return;
-      }
-
-      const channel = this.client.channels.cache.get(voiceChannelId);
-
-      if (!channel?.isVoiceBased()) {
-        return;
-      }
-
-      const joinTimeout = 5000;
-
-      const retries = Math.ceil(timeoutSeconds * 1000 / (joinTimeout + 1000));
-
-      await retryable<JoinResult>(async () => {
-          // Prevent double join
-          if (state.voiceConnectorStatus === VoiceConnectorStatus.Ready && state.stationLink) {
-            return {
-              status: 'joined',
-              station: state.stationLink.station
-            }
-          }
-
-          const result = await state.join({
-            channel,
-            timeout: joinTimeout,
-            signal
-          });
-
-          if (result.status !== 'joined') {
-            throw new Error('Retry');
-          }
-
-          this.#logger.info({ guild: channel.guild.name, channel: channel.name }, 'Rejoined');
-
-          return result;
-        }, { retries, wait: 1000, signal }
-      )
-      .catch(noop); // `retryable` throw the error when reaching retries limit, so we silently ignore that and do it again in the next round
-
-    }
-    finally {
-      this.#rejoining.dec(guildId);
+  async #refreshVoiceState() {
+    for (const guildState of this.#guildStates.values()) {
+      guildState.refreshVoiceState();
     }
   }
 
-  async #rejoinVoiceChannels(timeoutSeconds: number, signal?: AbortSignal) {
-    if (this.#rejoinInProgress) {
-      return;
-    }
-
-    this.#rejoinInProgress = true;
-    try {
-      await Promise.all(
-        Array.from(this.#guildStates.keys())
-          .map(guildId => this.#rejoinVoiceChannel(guildId, timeoutSeconds, signal))
-      );
-    }
-    finally {
-      this.#rejoinInProgress = false;
-    }
+  async #startVCMonitors(interval = 15_000) {
+    await Promise.all(
+      Array.from(this.#guildStates.values())
+        .map(guildState => guildState.startVCMonitor(interval))
+    );
   }
 
   get isReady() {
@@ -511,6 +421,8 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
       await this.#autoJoinVoiceChannel(guildId);
     });
+
+    this.#startVCMonitors();
 
     this.#updateLibraryStats();
 
@@ -1388,29 +1300,3 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
     }
   }
 }
-
-class Counters<K = string> {
-  #counts = new Map<K, number>();
-
-  inc(key: K) {
-    if (!this.#counts.has(key)) {
-      this.#counts.set(key, 1);
-      return;
-    }
-
-    this.#counts.set(key, Math.max(0, this.peek(key) + 1));
-  }
-
-  dec(key: K) {
-    if (!this.#counts.has(key)) {
-      return;
-    }
-
-    this.#counts.set(key, Math.max(0, this.peek(key) - 1));
-  }
-
-  peek(key: K) {
-    return this.#counts.get(key) ?? 0;
-  }
-}
-
