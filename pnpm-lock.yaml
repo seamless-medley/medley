@@ -55,73 +55,6 @@ importers:
         specifier: 5.5.4
         version: 5.5.4
 
-  packages/core:
-    dependencies:
-      '@parcel/watcher':
-        specifier: ^2.3.0
-        version: 2.4.1
-      '@seamless-medley/logging':
-        specifier: ../logging
-        version: link:../logging
-      '@seamless-medley/medley':
-        specifier: 0.5.3
-        version: 0.5.3
-      '@seamless-medley/utils':
-        specifier: ../utils
-        version: link:../utils
-      axios:
-        specifier: '>=1.7.4'
-        version: 1.7.7
-      fast-glob:
-        specifier: ^3.3.1
-        version: 3.3.2
-      fastest-levenshtein:
-        specifier: ^1.0.16
-        version: 1.0.16
-      lodash:
-        specifier: ^4.17.21
-        version: 4.17.21
-      minimatch:
-        specifier: 10.0.1
-        version: 10.0.1
-      minisearch:
-        specifier: ^7.1.0
-        version: 7.1.0
-      normalize-path:
-        specifier: ^3.0.0
-        version: 3.0.0
-      tiny-typed-emitter:
-        specifier: ^2.1.0
-        version: 2.1.0
-      workerpool:
-        specifier: ^9.0.3
-        version: 9.2.0
-    devDependencies:
-      '@types/normalize-path':
-        specifier: ^3.0.1
-        version: 3.0.2
-      node-gyp-build:
-        specifier: ^4.6.1
-        version: 4.8.2
-      rimraf:
-        specifier: ^6.0.1
-        version: 6.0.1
-      tsx:
-        specifier: ^4.6.2
-        version: 4.19.1
-      typescript:
-        specifier: 5.5.4
-        version: 5.5.4
-
-  packages/logging:
-    dependencies:
-      pino:
-        specifier: ^8.16.2
-        version: 8.21.0
-      pino-pretty:
-        specifier: ^10.2.3
-        version: 10.3.1
-
   packages/node-medley:
     dependencies:
       node-gyp-build:
@@ -203,9 +136,6 @@ importers:
       '@parcel/watcher':
         specifier: ^2.3.0
         version: 2.4.1
-      '@seamless-medley/logging':
-        specifier: ../logging
-        version: link:../logging
       '@seamless-medley/medley':
         specifier: 0.5.3
         version: 0.5.3
@@ -308,6 +238,12 @@ importers:
       paraphrase:
         specifier: ^3.1.1
         version: 3.1.1
+      pino:
+        specifier: ^8.16.2
+        version: 8.21.0
+      pino-pretty:
+        specifier: ^10.2.3
+        version: 10.3.1
       polished:
         specifier: ^4.3.1
         version: 4.3.1
@@ -1775,8 +1711,8 @@ packages:
   '@tanstack/store@0.7.0':
     resolution: {integrity: sha512-CNIhdoUsmD2NolYuaIs8VfWM467RK6oIBAW4nPEKZhg1smZ+/CwtCdpURgp7nxSqOaV9oKkzdWD80+bC66F/Jg==}
 
-  '@tanstack/virtual-file-routes@1.114.29':
-    resolution: {integrity: sha512-DufKsQy/qxDpOTiggJCgshhJkpSyUygwHHfl2LA66CXOf3aUjZtlNu4io1UpmJNf8C/9lVlGARhkoq5fTRRk0w==}
+  '@tanstack/virtual-file-routes@1.115.0':
+    resolution: {integrity: sha512-XLUh1Py3AftcERrxkxC5Y5m5mfllRH3YR6YVlyjFgI2Tc2Ssy2NKmQFQIafoxfW459UJ8Dn81nWKETEIJifE4g==}
     engines: {node: '>=12'}
 
   '@tsconfig/node10@1.0.11':
@@ -2117,9 +2053,6 @@ packages:
   awaitqueue@3.2.0:
     resolution: {integrity: sha512-yFka1VP9+ucU7n3wGerwZ9OzrdxluWl6qngiOlSe+nQyn6PtrR2BQt6HEoShI6sjo1sXAYQHQlUtPXzXSYAJfA==}
     engines: {node: '>=18'}
-
-  axios@1.7.7:
-    resolution: {integrity: sha512-S4kL7XrjgBmvdGut0sN3yJxqYzrDOnivkBiN0OFs6hLiUam3UPvswUo0kqGyhqUZGEOytHyumEdXsAkgCOUf3Q==}
 
   axios@1.8.4:
     resolution: {integrity: sha512-eBSYY4Y68NNlHbHBMdeDmKNtDgXWhQsJcGqzO3iLUM0GraQFSS9cVgPX5I9b3lbdFKyYoAEGAZF1DwhTaljNAw==}
@@ -2861,10 +2794,6 @@ packages:
   foreground-child@3.3.0:
     resolution: {integrity: sha512-Ld2g8rrAyMYFXBhEqMz8ZAHBi4J4uS1i/CxGMDnjyFWddMXLVcDp051DZfu+t7+ab7Wv6SMqpWmyFIj5UbfFvg==}
     engines: {node: '>=14'}
-
-  form-data@4.0.1:
-    resolution: {integrity: sha512-tzN8e4TX8+kkxGPK8D5u0FNmjPUjw3lwC9lSLxxoB/+GtsJG91CO8bSWy73APlgAZzZbXEYZJuxjkHH2w+Ezhw==}
-    engines: {node: '>= 6'}
 
   form-data@4.0.2:
     resolution: {integrity: sha512-hGfm/slu0ZabnNt4oaRZ6uREyfCj6P4fT/n6A1rGV+Z0VdGXjfOhVUpkn6qVQONHGIFwmveGXyDs75+nr6FM8w==}
@@ -6184,7 +6113,7 @@ snapshots:
 
   '@tanstack/router-generator@1.114.29(@tanstack/react-router@1.114.29(react-dom@18.2.0(react@18.2.0))(react@18.2.0))':
     dependencies:
-      '@tanstack/virtual-file-routes': 1.114.29
+      '@tanstack/virtual-file-routes': 1.115.0
       prettier: 3.5.3
       tsx: 4.19.3
       zod: 3.24.2
@@ -6202,7 +6131,7 @@ snapshots:
       '@tanstack/router-core': 1.114.29
       '@tanstack/router-generator': 1.114.29(@tanstack/react-router@1.114.29(react-dom@18.2.0(react@18.2.0))(react@18.2.0))
       '@tanstack/router-utils': 1.114.29
-      '@tanstack/virtual-file-routes': 1.114.29
+      '@tanstack/virtual-file-routes': 1.115.0
       '@types/babel__core': 7.20.5
       '@types/babel__template': 7.4.4
       '@types/babel__traverse': 7.20.7
@@ -6225,7 +6154,7 @@ snapshots:
 
   '@tanstack/store@0.7.0': {}
 
-  '@tanstack/virtual-file-routes@1.114.29': {}
+  '@tanstack/virtual-file-routes@1.115.0': {}
 
   '@tsconfig/node10@1.0.11': {}
 
@@ -6662,14 +6591,6 @@ snapshots:
       debug: 4.4.0(supports-color@10.0.0)
     transitivePeerDependencies:
       - supports-color
-
-  axios@1.7.7:
-    dependencies:
-      follow-redirects: 1.15.9(debug@4.3.7)
-      form-data: 4.0.1
-      proxy-from-env: 1.1.0
-    transitivePeerDependencies:
-      - debug
 
   axios@1.8.4(debug@4.3.7):
     dependencies:
@@ -7500,12 +7421,6 @@ snapshots:
     dependencies:
       cross-spawn: 7.0.3
       signal-exit: 4.1.0
-
-  form-data@4.0.1:
-    dependencies:
-      asynckit: 0.4.0
-      combined-stream: 1.0.8
-      mime-types: 2.1.35
 
   form-data@4.0.2:
     dependencies:
