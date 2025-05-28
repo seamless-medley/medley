@@ -3,14 +3,14 @@ import { Join } from 'type-fest';
 import { chain, sumBy } from 'lodash';
 
 import {
-  AudioLevels,
-  DeckIndex,
-  DeckPositions,
+  type AudioLevels,
+  type DeckIndex,
+  type DeckPositions,
+  type RequestAudioOptions,
+  type TrackPlay,
+  type UpdateAudioStreamOptions,
   Medley,
-  Queue,
-  RequestAudioOptions,
-  TrackPlay,
-  UpdateAudioStreamOptions
+  Queue
 } from "@seamless-medley/medley";
 
 import { createLogger, Logger } from "@seamless-medley/logging";

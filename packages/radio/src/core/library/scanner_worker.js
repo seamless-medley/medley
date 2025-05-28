@@ -3,6 +3,9 @@ const workerpool = require('workerpool');
 const fg = require('fast-glob');
 const normalizePath = require('normalize-path');
 const { access } = require('node:fs/promises');
+const { createLogger } = require('@seamless-medley/logging');
+
+const logger = createLogger({ name: 'scanner' });
 
 /**
  * @async
@@ -10,7 +13,8 @@ const { access } = require('node:fs/promises');
  * @returns {Promise<false | string[]>}
  */
 async function scanDir(dir) {
-  return fg(
+  logger.debug(`scanDir: ${dir}`);
+  const result = await fg(
     `${normalizePath(dir)}/**/*`,
     {
       absolute: true,
@@ -20,6 +24,10 @@ async function scanDir(dir) {
     }
   )
   .catch(stubFalse);
+
+  logger.debug(`scanDir: ${dir} done: ${result.length} entries`);
+
+  return result;
 }
 
 /**

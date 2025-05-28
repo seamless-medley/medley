@@ -1,7 +1,7 @@
 import React, { PropsWithChildren, useCallback, useEffect, useRef, useState } from "react";
 import classNames from "classnames";
 import { Box, Container, Mask, Next, ProgressText } from "./elements";
-import { DeckIndex } from "@seamless-medley/core";
+import type { DeckIndex } from "@seamless-medley/medley";
 import { useDeck } from "../../../hooks/useDeck";
 import { client } from "../../../init";
 import { getNextDeck } from "../../../pages/play/view";

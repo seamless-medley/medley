@@ -20,6 +20,25 @@ import {
   BaseInteraction
 } from "discord.js";
 
+import { intersection, isEqual, noop, sumBy, throttle } from "lodash";
+import { TypedEmitter } from 'tiny-typed-emitter';
+
+import type { DeckIndex } from "@seamless-medley/medley";
+import { Logger, createLogger } from "@seamless-medley/logging";
+import { retryable, waitFor } from "@seamless-medley/utils";
+
+import { createCommandDeclarations, createInteractionHandler } from "../command";
+import { Command, CommandOption, OptionType, SubCommandLikeOption } from "../command/type";
+import { canSendMessageTo } from "../command/utils";
+
+import { TrackMessage, TrackMessageStatus } from "../trackmessage/types";
+import { isChannelSuitableForTrackMessage, trackMessageToMessageOptions } from "../trackmessage";
+import { CreatorNames } from "../trackmessage/creator";
+
+import { GuildState, GuildStateAdapter } from "./guild-state";
+import { AudioDispatcher } from "../../audio/exciter";
+
+
 import {
   IReadonlyLibrary, TrackKind,
   Station,
@@ -27,26 +46,10 @@ import {
   AudienceGroupId,
   AudienceType,
   extractAudienceGroupFromId,
-  DeckIndex,
   StationEvents,
   StationTrack,
   StationTrackPlay,
-} from "@seamless-medley/core";
-
-import { TypedEmitter } from 'tiny-typed-emitter';
-
-import { createCommandDeclarations, createInteractionHandler } from "../command";
-
-import { retryable, waitFor } from "@seamless-medley/utils";
-import { TrackMessage, TrackMessageStatus } from "../trackmessage/types";
-import { isChannelSuitableForTrackMessage, trackMessageToMessageOptions } from "../trackmessage";
-import { GuildState, GuildStateAdapter, JoinResult } from "./guild-state";
-import { AudioDispatcher } from "../../audio/exciter";
-import { CreatorNames } from "../trackmessage/creator";
-import { Logger, createLogger } from "@seamless-medley/logging";
-import { intersection, isEqual, noop, sumBy, throttle } from "lodash";
-import { Command, CommandOption, OptionType, SubCommandLikeOption } from "../command/type";
-import { canSendMessageTo } from "../command/utils";
+} from "../../core";
 
 export enum AutomatonAccess {
   None = 0,

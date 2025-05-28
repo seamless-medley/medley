@@ -1,7 +1,7 @@
-import { Station } from "@seamless-medley/core";
 import { encode } from 'notepack.io';
 import { IExciter, Exciter } from "../../../audio/exciter";
 import { AudioTransportExtraPayload } from "../../../audio/types";
+import { Station } from '../../../core';
 
 interface WebSocketExciterEvents {
   packet(packet: Buffer): void;

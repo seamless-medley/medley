@@ -1,4 +1,4 @@
-import type { AudioLevel } from "@seamless-medley/core";
+import type { AudioLevel } from "@seamless-medley/medley";
 import type { TypedArray } from "type-fest";
 import type { AudioTransportExtraPayload } from "../../../../audio/types";
 

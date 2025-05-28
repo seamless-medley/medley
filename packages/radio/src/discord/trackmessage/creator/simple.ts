@@ -1,7 +1,7 @@
-import { getTrackBanner } from "@seamless-medley/core";
 import { bold, quote } from "discord.js";
 import { CreateTrackMessageOptionsEx, getEmbedDataForTrack, TrackMessageCreator } from "./base";
 import { createCoverImageAttachment } from "../../helpers/message";
+import { getTrackBanner } from "../../../core";
 
 export class Simple extends TrackMessageCreator {
   name = "simple";

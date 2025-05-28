@@ -3,9 +3,9 @@ import { ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonSty
 import { truncate } from "lodash";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { guildStationGuard, reply, makeAnsiCodeBlock, joinStrings, deferReply } from "../utils";
-import { AudienceType, getTrackBanner, makeRequester } from '@seamless-medley/core';
 import { ansi } from '../../format/ansi';
 import { interact } from '../interactor';
+import { AudienceType, getTrackBanner, makeRequester } from '../../../core';
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,

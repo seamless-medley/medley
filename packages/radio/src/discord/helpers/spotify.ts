@@ -1,4 +1,5 @@
-import { BoomBoxTrack, MetadataFields, extractCommentMetadata } from "@seamless-medley/core";
+import type { MetadataFields } from "@seamless-medley/medley";
+import { BoomBoxTrack, extractCommentMetadata } from "../../core";
 import axios from "axios";
 import { hyperlink } from "discord.js";
 import { chain } from "lodash";

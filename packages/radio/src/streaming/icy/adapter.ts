@@ -3,11 +3,10 @@ import {
   BoomBoxTrackPlay,
   getTrackBanner,
   makeAudienceGroupId,
-  RequestAudioStreamResult,
   Station,
   StationEvents,
   TrackKind
-} from "@seamless-medley/core";
+} from "../../core";
 
 import { RequestHandler, Router } from "express";
 import { OutgoingHttpHeaders } from "node:http";
@@ -17,6 +16,7 @@ import { IcyMetadata, MetadataMux } from "./mux";
 import { FFmpegChildProcess, FFMpegLine, InfoLine, ProgressValue } from "../ffmpeg";
 import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
 import { getVersion } from "../../helper";
+import type { RequestAudioStreamResult } from "@seamless-medley/medley";
 
 const mimeTypes = {
   mp3: 'audio/mpeg',

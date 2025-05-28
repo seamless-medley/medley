@@ -7,15 +7,15 @@ const { MongoClient, Db, Collection, AggregationCursor } = require('mongodb');
 const { random, omitBy, capitalize } = require('lodash');
 const { createLogger } = require('@seamless-medley/logging');
 
-/** @typedef {import('@seamless-medley/core').MusicDb} MusicDb */
-/** @typedef {import('@seamless-medley/core').MusicDbTrack} MusicDbTrack */
-/** @typedef {import('@seamless-medley/core').SearchHistory} SearchHistory */
-/** @typedef {import('@seamless-medley/core').SearchQuery} SearchQuery */
-/** @typedef {import('@seamless-medley/core').TrackHistory} TrackHistory */
-/** @typedef {import('@seamless-medley/core').RecentSearchRecord} RecentSearchRecord */
-/** @typedef {import('@seamless-medley/core').SearchRecord} SearchRecord */
-/** @typedef {import('@seamless-medley/core').TimestampedTrackRecord} TimestampedTrackRecord */
-/** @typedef {import('@seamless-medley/core').FindByCommentOptions} FindByCommentOptions */
+/** @typedef {import('../../../core').MusicDb} MusicDb */
+/** @typedef {import('../../../core').MusicDbTrack} MusicDbTrack */
+/** @typedef {import('../../../core').SearchHistory} SearchHistory */
+/** @typedef {import('../../../core').SearchQuery} SearchQuery */
+/** @typedef {import('../../../core').TrackHistory} TrackHistory */
+/** @typedef {import('../../../core').RecentSearchRecord} RecentSearchRecord */
+/** @typedef {import('../../../core').SearchRecord} SearchRecord */
+/** @typedef {import('../../../core').TimestampedTrackRecord} TimestampedTrackRecord */
+/** @typedef {import('../../../core').FindByCommentOptions} FindByCommentOptions */
 /** @typedef {import('./mongo').Options} Options */
 
 /** @type {MongoClient} */

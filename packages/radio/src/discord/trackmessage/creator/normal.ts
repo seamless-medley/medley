@@ -1,4 +1,4 @@
-import { MetadataFields } from "@seamless-medley/core";
+import type { MetadataFields } from "@seamless-medley/medley";
 import { APIEmbedField, blockQuote, bold, hyperlink, inlineCode, quote, userMention } from "discord.js";
 import { chunk, isEmpty, startCase, upperCase, zip } from "lodash";
 import { formatDuration } from "@seamless-medley/utils";

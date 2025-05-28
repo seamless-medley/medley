@@ -1,21 +1,20 @@
+import { ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
+import { chain, get, isEmpty, sample } from "lodash";
+import { parse as parsePath } from 'node:path';
+import type { DeckPositions, Metadata, MetadataFields } from "@seamless-medley/medley";
+
 import {
   Requester,
   AudienceType,
-  DeckPositions,
   isRequestTrack,
-  Metadata,
-  MetadataFields,
   Station,
   StationTrack,
   StationTrackPlay,
   TrackSequencingLatch,
   TrackWithRequester,
   CrateProfile
-} from "@seamless-medley/core";
+} from "../../../core";
 
-import { ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
-import { chain, get, isEmpty, sample } from "lodash";
-import { parse as parsePath } from 'node:path';
 import { TrackMessage, TrackMessageStatus } from "../types";
 import { CoverImageAttachment } from "../../helpers/message";
 import { MedleyAutomaton } from "../../automaton";

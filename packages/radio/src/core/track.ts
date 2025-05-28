@@ -1,4 +1,4 @@
-import { TrackInfo } from "@seamless-medley/medley";
+import type { TrackInfo } from "@seamless-medley/medley";
 import { Crate, LatchSession } from "./crate";
 import { TrackCollection } from "./collections";
 

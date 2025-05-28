@@ -1,11 +1,19 @@
 import { createLogger } from "@seamless-medley/logging";
-import { Requester, AudienceType, getTrackBanner, makeRequester, RequestTrackLockPredicate, StationRequestedTrack, TrackIndex } from "@seamless-medley/core";
 import { CommandInteraction, Message, EmbedBuilder, MessageReaction, ActionRowBuilder, MessageActionRowComponentBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageComponentInteraction, PermissionsBitField, userMention, time as formatTime, quote, } from "discord.js";
 import { chain, isEqual, keyBy, noop, sample, sampleSize, take, without } from "lodash";
 import { MedleyAutomaton } from "../../automaton";
 import * as emojis from "../../helpers/emojis";
 import { CommandDescriptor, GuildHandlerFactory, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deferReply, guildStationGuard, isTrackRequestedFromGuild, joinStrings, makeRequestPreview, reply, warn } from "../utils";
+import {
+  Requester,
+  AudienceType,
+  getTrackBanner,
+  makeRequester,
+  RequestTrackLockPredicate,
+  StationRequestedTrack,
+  TrackIndex
+} from "../../../core";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,

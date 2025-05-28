@@ -1,7 +1,6 @@
 import os from 'node:os';
 import { distance } from "fastest-levenshtein";
-import { castArray } from "lodash";
-import { AudioProperties } from "@seamless-medley/medley";
+import type { AudioProperties } from "@seamless-medley/medley";
 import { BoomBoxTrack } from "./playout";
 import { MetadataHelper } from "./metadata";
 

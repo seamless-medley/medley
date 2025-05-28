@@ -1,4 +1,3 @@
-import { isRequestTrack, Requester, StationTrack } from "@seamless-medley/core";
 import { ButtonInteraction, CommandInteraction, userMention } from "discord.js";
 import { AutomatonAccess, MedleyAutomaton } from "../../automaton";
 import { extractRequestersForGuild } from "../../trackmessage/creator/base";
@@ -6,6 +5,7 @@ import { ansi } from "../../format/ansi";
 import { CommandDescriptor,  InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { declare, deny, guildStationGuard, makeAnsiCodeBlock, reply, warn } from "../utils";
 import { reject } from "lodash";
+import { isRequestTrack, Requester, StationTrack } from "../../../core";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,

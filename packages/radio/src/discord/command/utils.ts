@@ -1,14 +1,4 @@
 import {
-  getTrackBanner,
-  TrackPeek,
-  Station,
-  AudienceType,
-  TrackWithRequester,
-  BoomBoxTrack,
-  Requester
-} from "@seamless-medley/core";
-
-import {
   BaseInteraction,
   GuildChannel,
   InteractionDeferReplyOptions,
@@ -27,6 +17,16 @@ import { MedleyAutomaton } from "../automaton";
 import { ansi, Colors, ColorsAndFormat, Formats, simpleFormat } from "../format/ansi";
 import { formatMention, MentionType } from "../format/format";
 import { AutomatonCommandError, CommandError, GuardError, Strings } from "./type";
+
+import {
+  getTrackBanner,
+  TrackPeek,
+  Station,
+  AudienceType,
+  TrackWithRequester,
+  BoomBoxTrack,
+  Requester
+} from "../../core";
 
 export const maxSelectMenuOptions = 25;
 

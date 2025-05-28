@@ -2,9 +2,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import { css } from "@linaria/core";
 import { styled } from "@linaria/react";
 import { Box, Text, TextProps } from "@mantine/core";
-import type { DeckIndex } from "@seamless-medley/core";
+import type { DeckIndex } from "@seamless-medley/medley";
 import { useDeck } from "../hooks/useDeck";
-import { over } from "lodash";
 
 const PlayHeadStyledText = styled(Text)`
   display: inline-block;

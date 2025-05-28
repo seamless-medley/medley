@@ -2,7 +2,7 @@ import React, { RefObject, useCallback, useEffect, useMemo, useRef, useState } f
 import { clamp, findIndex } from 'lodash';
 import type { LyricLine, Lyrics as CoreLyrics, Timeline, EnhancedLine } from '@seamless-medley/utils';
 import { findLyricLine } from '@seamless-medley/utils';
-import { DeckIndex } from '@seamless-medley/core';
+import type { DeckIndex } from '@seamless-medley/medley';
 import { useElementSize } from '@mantine/hooks';
 import { useDeck, useDeckInfo } from '../../../hooks/useDeck';
 import { Container, LineColors, Ticker, Line, EnhancedLineElementInfo } from './elements';

@@ -1,4 +1,4 @@
-import type { StationAudioLevels } from "@seamless-medley/core";
+import { StationAudioLevels } from "../core";
 
 export type AudioTransportExtraPayload = [
   left_mag: number,

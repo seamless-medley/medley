@@ -1,4 +1,3 @@
-import { Station } from "@seamless-medley/core";
 import { Logger, createLogger } from "@seamless-medley/logging";
 import { encode } from 'notepack.io';
 import { type types } from 'mediasoup';
@@ -6,6 +5,7 @@ import { Exciter, IExciter } from "../../../audio/exciter";
 import { RTPData, createRTPHeader, incRTPData } from "../../../audio/network/rtp";
 import { randomNBit } from "@seamless-medley/utils";
 import type { AudioTransportExtraPayload } from "../../../audio/types";
+import { Station } from "../../../core";
 
 const payloadType = 119;
 

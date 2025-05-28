@@ -1,11 +1,11 @@
-import { MusicTrackCollection, MusicTrackCollectionEvents, Station } from "@seamless-medley/core";
 import { isFunction, isObject, omitBy } from "lodash";
 import { $Exposing, Exposable } from "../../../socket";
 import { MixinEventEmitterOf } from "../../socket";
 import { toTrack } from "../../../remotes";
 import { type Collection } from "../../../remotes";
+import { MusicTrack, MusicTrackCollection, MusicTrackCollectionEvents, Station, TrackCollectionView } from "../../../core";
 
-export class ExposedColection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
+export class ExposedCollection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
   [$Exposing]: MusicTrackCollection<Station>;
 
   constructor(collection: MusicTrackCollection<Station>) {

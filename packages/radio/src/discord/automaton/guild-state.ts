@@ -3,11 +3,10 @@ import { clamp, first, noop, sortBy, take, uniq } from "lodash";
 import {
   AudienceGroupId,
   IReadonlyLibrary,
-  KaraokeUpdateParams,
   Station,
   getStationTrackSorters,
   getTrackBanner,
-} from "@seamless-medley/core";
+} from "../../core";
 
 import { AbortRetryError, formatDuration, retryable } from "@seamless-medley/utils";
 import { Logger } from "@seamless-medley/logging";
@@ -45,6 +44,7 @@ import { TrackMessageCreator } from "../trackmessage/creator/base";
 import { makeCreator } from "../trackmessage/creator";
 import { createCoverImageAttachment } from "../helpers/message";
 import { extractSpotifyUrl, fetchSpotifyInfo, formatSpotifyField } from "../helpers/spotify";
+import type { KaraokeUpdateParams } from "@seamless-medley/medley";
 
 export type GuildStateAdapter = {
   getAutomaton(): MedleyAutomaton;

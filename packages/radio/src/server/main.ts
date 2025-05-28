@@ -6,7 +6,6 @@ import express from 'express';
 import { ZodError } from "zod";
 import { Command } from '@commander-js/extra-typings';
 import { createLogger } from '@seamless-medley/logging';
-import { Medley } from '@seamless-medley/core';
 import { SocketServer as SocketIOServer } from './socket';
 import { MedleyServer } from './medley-server';
 import { AudioWebSocketServer } from './audio/ws/server';
@@ -14,6 +13,7 @@ import { Config, loadConfig } from '../config';
 import { RTCTransponder } from './audio/rtc/transponder';
 import { getVersionLine, showVersionBanner } from '../helper';
 import { extname } from 'node:path';
+import { Medley } from '@seamless-medley/medley';
 
 const logger = createLogger({ name: 'main' });
 

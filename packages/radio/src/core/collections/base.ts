@@ -8,6 +8,7 @@ import { Logger, createLogger } from '@seamless-medley/logging';
 import { moveArrayElements, moveArrayIndexes, waitFor } from '@seamless-medley/utils';
 import { Track, TrackExtra, TrackExtraOf } from "../track";
 import { getThreadPoolSize } from '../utils';
+import { TrackCollectionView } from './view';
 
 export type TrackAddingMode = 'prepend' | 'append' | 'spread';
 
@@ -601,5 +602,9 @@ export class TrackCollection<
 
   all(): T[] {
     return [...this.tracks];
+  }
+
+  createView(numItems: number, topIndex?: number) {
+    return new TrackCollectionView(this, numItems, topIndex);
   }
 }

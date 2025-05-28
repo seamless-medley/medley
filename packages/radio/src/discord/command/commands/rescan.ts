@@ -1,9 +1,9 @@
 import { CommandInteraction, MessageFlags, blockQuote, inlineCode, unorderedList } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deferReply, deny, guildStationGuard, joinStrings, reply } from "../utils";
-import { LibraryRescanStats, Station } from "@seamless-medley/core";
 import { once } from "lodash";
 import { AutomatonAccess } from "../../automaton";
+import { LibraryRescanStats, Station } from "../../../core";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,

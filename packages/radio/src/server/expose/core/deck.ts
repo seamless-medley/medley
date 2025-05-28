@@ -1,8 +1,9 @@
 import { Writable } from "type-fest";
-import { DeckIndex, DeckPositions, Station, StationEvents } from "@seamless-medley/core";
 import { $Exposing, Exposable } from "../../../socket";
+import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import { fromDeckInfoWithPositions } from "../../../remotes";
 import type { Deck, DeckInfoWithPositions,  } from "../../../remotes";
+import { Station, StationEvents } from "../../../core";
 
 export class ExposedDeck implements Exposable<Deck> {
   [$Exposing]:  Writable<Deck> = {

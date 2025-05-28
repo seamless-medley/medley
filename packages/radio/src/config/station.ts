@@ -1,5 +1,5 @@
-import { TrackAddingMode } from "@seamless-medley/core";
 import { z } from "zod";
+import { TrackAddingMode } from "../core";
 
 const WatchOptions = z.object({
 

@@ -1,4 +1,4 @@
-import { MetadataHelper, StationTrack } from "@seamless-medley/core";
+import { MetadataHelper, StationTrack } from "../../core";
 import { AttachmentBuilder } from "discord.js";
 import mime from 'mime-types';
 

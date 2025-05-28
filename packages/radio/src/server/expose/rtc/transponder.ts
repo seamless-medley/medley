@@ -4,7 +4,7 @@ import { $Exposing, Exposable } from "../../../socket";
 import { MixinEventEmitterOf } from '../../socket';
 import type { ClientConsumerInfo, ClientTransportInfo, RTCTransponder as RemoteRTCTransponder } from '../../../remotes/rtc/transponder';
 import type { RTCTransponder } from "../../audio/rtc/transponder";
-import { type Station } from '@seamless-medley/core';
+import type { Station } from '../../../core';
 
 export class ExposedTransponder extends MixinEventEmitterOf<RemoteRTCTransponder>() implements Exposable<RemoteRTCTransponder> {
   [$Exposing]: RTCTransponder;

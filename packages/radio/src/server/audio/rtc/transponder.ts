@@ -1,4 +1,3 @@
-import { AudienceType, makeAudienceGroupId, type Station } from '@seamless-medley/core';
 import { type types, createWorker } from 'mediasoup';
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { Socket } from 'socket.io';
@@ -7,6 +6,7 @@ import { AudioDispatcher } from '../../../audio/exciter';
 import { type WebRtcConfig } from '../../../config/webrtc';
 import { createLogger } from '@seamless-medley/logging';
 import { ClientConsumerInfo, ClientTransportInfo } from '../../../remotes/rtc/transponder';
+import { AudienceType, makeAudienceGroupId, Station } from '../../../core';
 
 export type ClientTransportData = {
   socket: Socket<{}>;

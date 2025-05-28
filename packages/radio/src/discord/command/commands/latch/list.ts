@@ -1,7 +1,7 @@
 import { guildStationGuard, joinStrings, makeAnsiCodeBlock, reply } from "../../utils";
 import { ansi } from "../../../format/ansi";
-import { Station } from "@seamless-medley/core";
 import { SubCommandHandlerOptions } from "./type";
+import { Station } from "../../../../core";
 
 export const getLatchSessionsListing = (station: Station) => station.allLatches.map((l) => {
   const from =  ansi` from {{bgOrange}} {{white|u}}${l.collection.extra.description}{{bgOrange|n}} {{reset}} collection`;

@@ -18,7 +18,7 @@ import {
   crateLimitFromSequenceLimit,
   createChanceable,
   scanDir
-} from "@seamless-medley/core";
+} from "./core";
 
 import {
   type StationConfig,

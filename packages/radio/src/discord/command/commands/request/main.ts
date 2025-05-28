@@ -1,17 +1,4 @@
 import {
-  AudienceType,
-  AudioProperties,
-  fetchAudioProps,
-  getStationTrackSorters,
-  getTrackBanner,
-  LibrarySearchParams,
-  makeRequester,
-  Station,
-  StationTrack,
-  stringSimilarity
-} from "@seamless-medley/core";
-
-import {
   ActionRowBuilder,
   ButtonBuilder,
   ChatInputCommandInteraction,
@@ -33,15 +20,29 @@ import { chain, chunk, clamp, Dictionary, identity, isUndefined, truncate, uniqB
 import { parse as parsePath, extname } from 'node:path';
 import { createHash } from 'crypto';
 
+import { groupByAsync } from "@seamless-medley/utils";
+import type { AudioProperties } from "@seamless-medley/medley";
+
 import { toEmoji } from "../../../helpers/emojis";
 import { AutomatonCommandError, InteractionHandlerFactory } from "../../type";
 import { declare, deferReply, guildStationGuard, joinStrings, makeAnsiCodeBlock, makeColoredMessage, makeRequestPreview, maxSelectMenuOptions, peekRequestsForGuild, reply } from "../../utils";
 import { ansi } from "../../../format/ansi";
 import { createVoteButton, getVoteMessage } from "../vote";
 import { interact } from "../../interactor";
-import { groupByAsync } from "@seamless-medley/utils";
 import { MedleyAutomaton } from "../../../automaton";
 import { GuildState } from "../../../automaton/guild-state";
+
+import {
+  AudienceType,
+  fetchAudioProps,
+  getStationTrackSorters,
+  getTrackBanner,
+  LibrarySearchParams,
+  makeRequester,
+  Station,
+  StationTrack,
+  stringSimilarity
+} from "../../../../core";
 
 type Selection = {
   title: string;

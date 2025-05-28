@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "@mantine/core";
-import { DeckIndex } from "@seamless-medley/core";
+import type { DeckIndex } from "@seamless-medley/medley";
 
 export const DeckBanner: React.FC<{ deckIndex: DeckIndex, align?: 'start' | 'center' | 'end', bg?: string }> = React.memo(({ deckIndex, align = 'center', bg }) => (
   <Box

@@ -1,5 +1,5 @@
-import type { TrackCollectionBasicOptions } from "@seamless-medley/core";
 import { Track } from "./po/track";
+import type { TrackCollectionBasicOptions } from "../../core";
 
 /**
  * Although this is named as Collection, but in fact it should be used with WatchTrackCollection

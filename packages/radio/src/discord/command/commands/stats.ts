@@ -1,8 +1,8 @@
 import { ChatInputCommandInteraction, Guild } from "discord.js";
 import { AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { AutomatonAccess, MedleyAutomaton } from "../../automaton";
-import { Station } from "@seamless-medley/core";
 import { deny, joinStrings, reply } from "../utils";
+import { Station } from "../../../core";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,

@@ -1,4 +1,4 @@
-import { Medley } from "@seamless-medley/core";
+import { Medley } from '@seamless-medley/medley';
 import { Command } from '@commander-js/extra-typings';
 import { MongoMusicDb } from "../db/musicdb/mongo";
 import { loadConfig } from "../config";

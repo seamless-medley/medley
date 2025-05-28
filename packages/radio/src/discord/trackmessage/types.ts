@@ -1,5 +1,5 @@
-import { Station, StationTrackPlay } from "@seamless-medley/core";
 import { AttachmentBuilder, ButtonBuilder, EmbedBuilder, GuildEmoji, Message } from "discord.js";
+import { Station, StationTrackPlay } from "../../core";
 
 export enum TrackMessageStatus {
   Playing,

@@ -1,5 +1,5 @@
 import { noop } from "lodash";
-import { MusicDb, Station, StationEvents } from "@seamless-medley/core";
+
 import { createLogger } from "@seamless-medley/logging";
 
 import { SettingsDb } from '../db/types';
@@ -12,7 +12,7 @@ import type { RemoteTypes } from "../remotes";
 import type { Unpacked } from "../types";
 //
 import { ExposedStation } from "./expose/core/station";
-import { ExposedColection } from "./expose/core/collection";
+import { ExposedCollection } from "./expose/core/collection";
 import { ExposedDeck } from "./expose/core/deck";
 import { AudioWebSocketServer } from "./audio/ws/server";
 import { RTCTransponder } from "./audio/rtc/transponder";
@@ -28,6 +28,7 @@ import { IcyAdapter } from "../streaming";
 import { UserModel } from '../db/models/user';
 import { retryable } from "@seamless-medley/utils";
 import { ExposedGlobal } from "./expose/core/global";
+import { MusicDb, Station, StationEvents } from "../core";
 
 const logger = createLogger({ name: 'medley-server' });
 
@@ -323,7 +324,7 @@ export class MedleyServer extends SocketServerController<RemoteTypes> {
    */
   registerCollection(collection: Unpacked<Station['collections']>) {
     const station = collection.extra.owner;
-    this.register('collection', `${station.id}/${collection.id}`, new ExposedColection(collection));
+    this.register('collection', `${station.id}/${collection.id}`, new ExposedCollection(collection));
   }
 
   deregisterCollection(collection: Unpacked<Station['collections']>) {

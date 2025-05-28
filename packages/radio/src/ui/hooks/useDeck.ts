@@ -1,8 +1,7 @@
-import type { DeckIndex } from "@seamless-medley/core";
+import type { DeckIndex } from "@seamless-medley/medley";
 import { useCallback, useEffect, useState } from "react";
 import { useSetState } from "@mantine/hooks";
 import type { Deck, TrackPlay } from "../../remotes";
-import { StubDeck } from "../stubs/core/deck";
 import { $AnyProp } from "../../socket";
 import { useSurrogate } from "./surrogate";
 

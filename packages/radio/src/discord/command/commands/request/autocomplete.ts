@@ -1,7 +1,7 @@
-import { SearchQueryField } from "@seamless-medley/core";
 import { ApplicationCommandOptionChoiceData, AutocompleteInteraction } from "discord.js";
 import { chain, truncate } from "lodash";
 import { InteractionHandlerFactory } from "../../type";
+import { SearchQueryField } from "../../../../core";
 
 export const createAutocompleteHandler: InteractionHandlerFactory<AutocompleteInteraction> = (automaton) => async (interaction) => {
   const { guildId } = interaction;

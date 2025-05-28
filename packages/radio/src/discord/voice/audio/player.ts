@@ -1,4 +1,4 @@
-import { Station } from "@seamless-medley/core";
+import { Station } from "../../../core";
 import { Exciter, ICarriableExciter } from "../../../audio/exciter";
 
 export type DiscordAudioPlayerOptions = {

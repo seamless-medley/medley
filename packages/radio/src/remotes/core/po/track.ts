@@ -1,17 +1,18 @@
+import type { CoverAndLyrics } from "@seamless-medley/medley";
+import { Lyrics, parseLyrics } from "@seamless-medley/utils";
+
+import type { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
+
+import { Collection } from "../collection";
+
 import {
   type BoomBoxTrack,
   type BoomBoxTrackExtra,
   type BoomBoxTrackPlay,
-  type CoverAndLyrics,
   type LatchSession as CoreLatchSession,
   isRequestTrack,
   TrackKind as CoreTrackKind
-} from "@seamless-medley/core";
-
-import { Lyrics, parseLyrics } from "@seamless-medley/utils";
-
-import type { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
-import { Collection } from "../collection";
+} from "../../../core";
 
 type IdOnly<T extends { id: any }> = Writable<Pick<T, 'id'>>;
 

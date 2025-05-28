@@ -1,7 +1,8 @@
-import { KaraokeUpdateParams, RequestAudioOptions, RequestAudioStreamResult, Station } from '@seamless-medley/core';
-import { isEqual, mean, noop } from 'lodash';
+import { mean, noop } from 'lodash';
 import { pipeline, Readable } from 'node:stream';
+import type { KaraokeUpdateParams, RequestAudioOptions, RequestAudioStreamResult } from '@seamless-medley/medley';
 import { ListenerSignature, TypedEmitter } from 'tiny-typed-emitter';
+import { Station } from '../../core';
 import { EncodedPacketInfo, OpusPacketEncoder, OpusPacketEncoderOptions } from '../codecs/opus/stream';
 import { AudioDispatcher, DispatcherPrivate } from './dispatcher';
 
