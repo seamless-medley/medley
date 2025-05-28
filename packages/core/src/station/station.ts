@@ -520,12 +520,12 @@ export class Station extends TypedEmitter<StationEvents> {
   #starting = false;
 
   start(force?: boolean) {
-    if (this.#starting && !force) {
+    if (this.#starting) {
       return;
     }
 
     if (force || !this.medley.playing || this.playState !== PlayState.Playing) {
-      this.#starting = !this.medley.playing;
+      this.#starting = true;
       this.medley.play(false);
       this.#logger.info('Playing started');
 
