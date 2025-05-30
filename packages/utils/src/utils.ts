@@ -1,5 +1,17 @@
-import { castArray, clamp, random, sample, sortBy, subtract, sum, trim, uniq } from "lodash";
+import { castArray, clamp, isFunction, isString, pickBy, random, sample, sortBy, subtract, sum, trim, uniq } from "lodash";
 import { inRange } from 'lodash/fp';
+
+export function isPublicPropertyName(name: any) {
+  return isString(name) && !/^[_$ϟ]/.test(name) && !['constructor'].includes(name);
+}
+
+export function propertyDescriptorOf(o: any) {
+  return pickBy(Object.getOwnPropertyDescriptors(o), (_, prop) => isPublicPropertyName(prop));
+}
+
+export function isProperty(desc: PropertyDescriptor): boolean {
+  return (!!desc.get || !!desc.set) || !isFunction(desc.value);
+}
 
 export const decibelsToGain = (decibels: number): number => decibels > -100 ? Math.pow(10, decibels * 0.05) : 0;
 
