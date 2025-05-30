@@ -1,5 +1,5 @@
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
-import type { PlayState } from "../../core";
+import type { PlayState } from "../../../core";
 import type { DeckInfoWithPositions, DeckPositionsWithTrackKind } from "./deck";
 import type { TrackCollection } from "./track";
 

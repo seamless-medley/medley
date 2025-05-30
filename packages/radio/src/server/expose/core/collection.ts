@@ -206,4 +206,72 @@ export class ExposedCollection extends MixinEventEmitterOf<Collection>() impleme
   async all() {
     return Promise.all(this.#collection.all().map(t => toTrack(t, true)));
   }
+
+  createView(numItems: number, topIndex?: number): Exposable<CollectionView> {
+    return new ExposedCollectionView(this.#collection.createView(numItems, topIndex));
+  }
+}
+
+export class ExposedCollectionView extends MixinEventEmitterOf<CollectionView>() implements Exposable<CollectionView> {
+  [$Exposing]: TrackCollectionView<MusicTrack<Station>>;
+  [$Kind] = 'collection_view';
+
+  constructor(collection: TrackCollectionView<MusicTrack<Station>>) {
+    super();
+
+    this[$Exposing] = collection;
+  }
+
+  get #view() {
+    return this[$Exposing];
+  }
+
+  get length() {
+    return this.#view.length;
+  }
+
+  set length(val) {
+    this.#view.length = val;
+  }
+
+  get topIndex() {
+    return this.#view.topIndex;
+  }
+
+  set topIndex(val) {
+    this.#view.topIndex = val;
+  }
+
+  get bottomIndex() {
+    return this.#view.bottomIndex;
+  }
+
+  get ranges() {
+    return this.#view.ranges;
+  }
+
+  dispose(): void {
+    this.#view.dispose();
+  }
+
+  updateView(topIndex: number, length: number): void {
+    this.#view.updateView(topIndex, length);
+  }
+
+  absolute(localIndex: number): number {
+    return this.#view.absolute(localIndex);
+  }
+
+  isIndexInView(absoluteIndex: number): boolean {
+    return this.#view.isIndexInView(absoluteIndex);
+  }
+
+  async at(index: number) {
+    const track = this.#view.at(index);
+    return track ? toTrack(track) : undefined;
+  }
+
+  async items() {
+    return Promise.all(this.#view.items().map(item => toTrack(item)));
+  }
 }

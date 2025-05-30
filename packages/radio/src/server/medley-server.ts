@@ -8,7 +8,7 @@ import { MongoMusicDb } from "../db/musicdb/mongo";
 import type { Config } from "../config";
 //
 import { Socket, SocketServer, SocketServerController } from "./socket";
-import type { RemoteTypes } from "../remotes";
+import type { RemoteObjects } from "../remotes/objects";
 import type { Unpacked } from "../types";
 //
 import { ExposedStation } from "./expose/core/station";
@@ -39,7 +39,7 @@ export type MedleyServerOptions = {
   configs: Config;
 }
 
-export class MedleyServer extends SocketServerController<RemoteTypes> {
+export class MedleyServer extends SocketServerController<RemoteObjects> {
   #instanceName = 'Medley';
 
   #musicDb!: MusicDb;

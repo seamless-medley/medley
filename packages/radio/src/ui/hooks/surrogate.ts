@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForceUpdate } from "@mantine/hooks";
-import type { RemoteTypes } from "../../remotes";
-import type { Stub, Remotable } from "../../socket";
+import type { RemoteObjects } from "../../remotes/objects";
+import type { Remotable } from "../../socket";
 import { useRemotableProps } from "./remotable";
 import { RemoteObserveOptions } from "../../socket";
 import { client } from "../init";
@@ -12,8 +12,8 @@ type SurrogateState<T> = {
 }
 
 export function useSurrogate<
-  T extends RemoteTypes[Kind],
-  Kind extends keyof RemoteTypes
+  T extends RemoteObjects[Kind],
+  Kind extends keyof RemoteObjects
 >(
   kind: Kind,
   id: string | undefined,
@@ -55,7 +55,7 @@ export function useSurrogate<
  *
  * @deprecated
  */
-export function useSurrogateWithRemotable<Kind extends keyof RemoteTypes>(kind: Kind, id: string) {
+export function useSurrogateWithRemotable<Kind extends keyof RemoteObjects>(kind: Kind, id: string) {
   const { surrogate: remote, error } = useSurrogate(kind, id);
   const values = useRemotableProps(remote);
 

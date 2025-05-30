@@ -10,7 +10,7 @@ import {
   type BoomBoxTrackExtra,
   type BoomBoxTrackPlay,
   type LatchSession as CoreLatchSession
-} from "../../core";
+} from "../../../core";
 
 export type IdOnly<T extends { id: any }> = Writable<Pick<T, 'id'>>;
 

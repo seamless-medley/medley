@@ -4,9 +4,11 @@ import { clamp } from 'lodash';
 
 import type { Remotable } from "../socket";
 
-import type { RemoteTypes } from "../remotes";
-import type { RTCTransponder } from "../remotes/rtc/transponder";
-import type { Station as RemoteStation, Global as RemoteGlobal } from '../remotes';
+import type {
+  RemoteObjects,
+  Station as RemoteStation, Global as RemoteGlobal,
+  RTCTransponder
+} from "../remotes/objects";
 
 import { IAudioTransport, waitForAudioTransportState } from "./audio/transport";
 import { WebSocketAudioTransport } from "./audio/transports/ws/transport";
@@ -21,7 +23,7 @@ type MedleyClientEvents = {
   volume(gain: number): void;
 }
 
-export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
+export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
   #volume = 1.0;
 
   #audioContext = new AudioContext({

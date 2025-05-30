@@ -4,12 +4,12 @@ import * as rtc from "./rtc";
 export * from './core';
 export * from './rtc';
 
-
-export interface RemoteTypes {
+export interface RemoteObjects {
   global: core.Global;
   station: core.Station;
   deck: core.Deck;
   collection: core.Collection;
+  collection_view: core.CollectionView;
   //
   transponder: rtc.RTCTransponder;
 }
