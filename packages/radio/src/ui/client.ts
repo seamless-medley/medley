@@ -13,7 +13,7 @@ import {
 } from "../socket";
 import { Callable, ParametersOf, ReturnTypeOf } from "../types";
 import { waitFor } from "@seamless-medley/utils";
-import { IAudioTransport, type AudioTransportEvents } from "./audio/transport";
+import { type AudioTransportEvents } from "./audio/transport";
 import { Stubs } from "./stubs";
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, changes: ObservedPropertyChange<T>[]) => Promise<any>;
@@ -283,6 +283,13 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
             }
           }
 
+          if (response.status === 'exposed') {
+            response = {
+              status: 'exception',
+              message: 'Remote property of type exposed is not supported'
+            }
+          }
+
           store.reject(new RemoteObservationError(response, kind, id));
           resolve();
         });
@@ -429,6 +436,13 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
           }
         }
 
+        if (response.status === 'exposed') {
+          response = {
+            status: 'exception',
+            message: 'Remote property of type exposed is not supported'
+          }
+        }
+
         reject(new RemotePropertyError(response, kind, id, prop as string, 'get'));
       });
     });
@@ -460,6 +474,13 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
           response = {
             status: 'exception',
             message: 'Remote property of type stream is not supported'
+          }
+        }
+
+        if (response.status === 'exposed') {
+          response = {
+            status: 'exception',
+            message: 'Remote property of type exposed is not supported'
           }
         }
 
@@ -513,6 +534,30 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
           }
         }
 
+        if (response.status === 'exposed') {
+          const [exposedId, id2] = response.result;
+
+          if ((exposedId ^ id2) === 0x1eafc0b7) {
+            const result = await this.surrogateOf(response.kind as any, `${exposedId}`).catch(() => undefined);
+
+            if (result) {
+              result.addDisposeListener(async () => this.socket.emit('o:dis', kind, `${exposedId}`));
+              resolve(result);
+              return;
+            }
+
+            response = {
+              status: 'exception',
+              message: 'Could not retrieve remote object information'
+            }
+          }
+
+          response = {
+            status: 'exception',
+            message: 'The exposed returned by the remote invocation is invalid'
+          }
+        }
+
         reject(new RemoteInvocationError(response, kind, id, method as string));
       })
     })
@@ -551,6 +596,13 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
           response = {
             status: 'exception',
             message: 'Remote subscription of type stream is not possible'
+          }
+        }
+
+        if (response.status === 'exposed') {
+          response = {
+            status: 'exception',
+            message: 'Remote subscription of type exposed is not possible'
           }
         }
 
@@ -602,6 +654,12 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
           }
         }
 
+        if (response.status === 'exposed') {
+          response = {
+            status: 'exception',
+            message: 'Remote subscription of type exposed is not possible'
+          }
+        }
 
         reject(new RemoteSubscriptionError(response, kind, id, event));
       })
@@ -658,6 +716,13 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
           }
         }
 
+        if (response.status === 'exposed') {
+          response = {
+            status: 'exception',
+            message: 'Remote observation of type exposed is not supported'
+          }
+        }
+
         const error = new RemoteObservationError(response, kind, id);
         store.reject(error);
         reject(error);
@@ -700,6 +765,13 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
           response = {
             status: 'exception',
             message: 'Remote observation of type stream is not supported'
+          }
+        }
+
+        if (response.status === 'exposed') {
+          response = {
+            status: 'exception',
+            message: 'Remote observation of type exposed is not supported'
           }
         }
 
