@@ -3,16 +3,16 @@ import { EventEmitter } from "eventemitter3";
 import { io, Socket } from "socket.io-client";
 import msgpackParser from 'socket.io-msgpack-parser';
 import { PassThrough } from 'readable-stream';
+import { isProperty, waitFor } from "@seamless-medley/utils";
+
 import {
   ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents, RemoteObserveOptions,
   $AnyProp, AnyProp, ObservedPropertyChange, PickMethod, PickProp, Remotable, Stub,
-  isProperty,
   getRemoteTimeout,
   SessionData,
   AuthData
 } from "../socket";
 import { Callable, ParametersOf, ReturnTypeOf } from "../types";
-import { waitFor } from "@seamless-medley/utils";
 import { type AudioTransportEvents } from "./audio/transport";
 import { Stubs } from "./stubs";
 

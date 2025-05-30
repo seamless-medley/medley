@@ -1,5 +1,6 @@
 import "reflect-metadata";
-import { propertyDescriptorOf } from "./utils";
+import { propertyDescriptorOf } from "@seamless-medley/utils";
+
 import { WithoutEvents } from "./types";
 
 type StubCtor<T> = abstract new (...args: any) => WithoutEvents<T>;

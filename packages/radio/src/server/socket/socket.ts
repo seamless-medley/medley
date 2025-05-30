@@ -6,14 +6,16 @@ import { Server as IOServer } from "socket.io";
 import msgpackParser from 'socket.io-msgpack-parser';
 import { ConditionalKeys } from "type-fest";
 import { TypedEmitter } from "tiny-typed-emitter";
+import { isProperty, isPublicPropertyName, propertyDescriptorOf } from '@seamless-medley/utils';
 
 import {
   $Exposing, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents,
-  ClientEvents, RemoteCallback, RemoteResponse, ServerEvents,
-  isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf, AuthData,
+  isReadableStream, AuthData,
   Exposable,
   $Kind
 } from "../../socket";
+
+import type { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "../../remotes/socket";
 
 import { Socket, ClientData } from './types';
 
