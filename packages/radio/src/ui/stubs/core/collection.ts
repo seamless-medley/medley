@@ -12,4 +12,5 @@ export const StubCollection = StubOf<Collection>(class StubbingCollection {
   clear = noop as any;
   shuffle = noop as any;
   all = noop as any;
+  createView = noop as any;
 });
