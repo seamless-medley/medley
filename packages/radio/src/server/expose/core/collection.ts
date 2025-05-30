@@ -1,9 +1,126 @@
 import { isFunction, isObject, omitBy } from "lodash";
 import { $Exposing, Exposable } from "../../../socket";
+import { parseLyrics } from "@seamless-medley/utils";
+
+import {
+  type BoomBoxTrack,
+  type MusicTrack,
+  type MusicTrackCollection,
+  type MusicTrackCollectionEvents,
+  type Station,
+  type TrackCollectionView,
+  type TrackKind as CoreTrackKind,
+  isRequestTrack,
+  BoomBoxTrackExtra,
+  BoomBoxTrackPlay
+} from "../../../core";
+
 import { MixinEventEmitterOf } from "../../socket";
-import { toTrack } from "../../../remotes";
-import { type Collection } from "../../../remotes";
-import { MusicTrack, MusicTrackCollection, MusicTrackCollectionEvents, Station, TrackCollectionView } from "../../../core";
+
+import type {
+  Collection,
+  CollectionView,
+  IdOnly,
+  LatchSession,
+  Sequencing,
+  SequencingLatch,
+  Track,
+  TrackCollection,
+  TrackExtra,
+  TrackKind,
+  TrackPlay,
+  TrackSequencing,
+  TrackSequencingLatch
+} from "../../../remotes";
+
+export const pickId = <T extends { id: any }>({ id }: T): IdOnly<T> => ({ id });
+
+export const toTrack = async (
+  track: BoomBoxTrack,
+  noCover?: boolean
+): Promise<Track> => {
+  const { id, path, musicId, cueInPosition, cueOutPosition, disableNextLeadIn, extra, sequencing, collection } = track;
+
+  const actualExtra = isRequestTrack(track) ? track.original.extra : extra;
+
+  return {
+    id,
+    path,
+    musicId,
+    cueInPosition,
+    cueOutPosition,
+    disableNextLeadIn,
+    extra: actualExtra ? await toTrackExtra(actualExtra, noCover) : undefined,
+    sequencing: sequencing ? toTrackSequencing(sequencing): undefined,
+    collection: toTrackCollection(collection)
+  }
+}
+
+const trackKinds = ['normal', 'request', 'insert'] as const;
+
+export const trackKindToString = (k: CoreTrackKind): TrackKind => trackKinds[k.valueOf()];
+
+export const toTrackExtra = async (
+  { kind, source, tags, maybeCoverAndLyrics }: BoomBoxTrackExtra,
+  noCover?: boolean
+): Promise<TrackExtra> => {
+  const coverAndLyrics = !noCover ? await maybeCoverAndLyrics : undefined;
+  const lyrics = coverAndLyrics ? parseLyrics(coverAndLyrics?.lyrics, { bpm: tags?.bpm }) : undefined;
+
+  return {
+    kind: trackKindToString(kind),
+    source,
+    tags,
+    coverAndLyrics: coverAndLyrics ? {
+      ...coverAndLyrics,
+      lyrics: lyrics!
+    } : undefined
+  }
+}
+
+export const toTrackCollection = (collection: BoomBoxTrack['collection']): TrackCollection => {
+  return {
+    id: collection.id,
+    description: collection.extra?.description
+  }
+}
+
+export const toTrackSequencing = ({ playOrder, crate, latch }: Sequencing): TrackSequencing => ({
+  playOrder,
+  crate: pickId(crate),
+  latch: latch ? toTrackSequencingLatch(latch) : undefined
+});
+
+export const toTrackSequencingLatch = (
+  {
+    order,
+    session
+  }: SequencingLatch
+): TrackSequencingLatch => ({
+  order,
+  session: toLatchSession(session)
+});
+
+export const toLatchSession = (
+  {
+    uuid,
+    count,
+    max: max,
+    collection
+  } : NonNullable<SequencingLatch['session']>
+): LatchSession => ({
+  uuid,
+  count,
+  max: max,
+  collection: toTrackCollection(collection)
+})
+
+export const toTrackPlay = async ({ uuid, track, duration }: BoomBoxTrackPlay): Promise<TrackPlay> => ({
+  uuid,
+  duration,
+  track: await toTrack(track),
+});
+
 
 export class ExposedCollection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
   [$Exposing]: MusicTrackCollection<Station>;

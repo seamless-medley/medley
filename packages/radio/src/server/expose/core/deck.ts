@@ -1,9 +1,28 @@
-import { Writable } from "type-fest";
+import type { Writable } from "type-fest";
 import { $Exposing, Exposable } from "../../../socket";
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
-import { fromDeckInfoWithPositions } from "../../../remotes";
-import type { Deck, DeckInfoWithPositions,  } from "../../../remotes";
-import { Station, StationEvents } from "../../../core";
+
+import type { Deck, DeckInfo, DeckInfoWithPositions,  } from "../../../remotes";
+
+import {
+  Station,
+  type StationEvents,
+  type DeckInfo as CoreDeckInfo,
+  type DeckInfoWithPositions as CoreDeckInfoWithPositions
+} from "../../../core";
+
+import { toTrackPlay } from "./collection";
+
+export const fromDeckInfo = async ({ trackPlay, active, playing }: CoreDeckInfo): Promise<DeckInfo> => ({
+  trackPlay: trackPlay ? await toTrackPlay(trackPlay) : undefined,
+  active,
+  playing
+});
+
+export const fromDeckInfoWithPositions = async (p: CoreDeckInfoWithPositions): Promise<DeckInfoWithPositions> => ({
+  ...await fromDeckInfo(p),
+  positions: p.positions
+})
 
 export class ExposedDeck implements Exposable<Deck> {
   [$Exposing]:  Writable<Deck> = {

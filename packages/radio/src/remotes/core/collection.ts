@@ -1,4 +1,4 @@
-import { Track } from "./po/track";
+import type { Track } from "./track";
 import type { TrackCollectionBasicOptions } from "../../core";
 
 /**

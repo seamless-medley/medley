@@ -1,6 +1,6 @@
 import { last } from 'lodash';
-import { type types } from 'mediasoup';
 import { $Exposing, Exposable } from "../../../socket";
+import type { types } from 'mediasoup';
 import { MixinEventEmitterOf } from '../../socket';
 import type { ClientConsumerInfo, ClientTransportInfo, RTCTransponder as RemoteRTCTransponder } from '../../../remotes/rtc/transponder';
 import type { RTCTransponder } from "../../audio/rtc/transponder";

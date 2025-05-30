@@ -1,7 +1,7 @@
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import type { PlayState } from "../../core";
-import * as deckPO from "./po/deck";
-import { TrackCollection } from "./po/track";
+import type { DeckInfoWithPositions, DeckPositionsWithTrackKind } from "./deck";
+import type { TrackCollection } from "./track";
 
 export interface Station {
   readonly id: string;
@@ -20,15 +20,15 @@ export interface Station {
   skip(): Promise<boolean>;
 
   getDeckPositions(deckIndec: DeckIndex): DeckPositions;
-  getDeckInfo(deckIndex: DeckIndex): Promise<deckPO.DeckInfoWithPositions>;
+  getDeckInfo(deckIndex: DeckIndex): Promise<DeckInfoWithPositions>;
 
   getCurrentCollection(): string | undefined;
   getCollections(): TrackCollection[];
 
-  ϟdeckLoaded(deckIndex: number, info: deckPO.DeckInfoWithPositions): void;
+  ϟdeckLoaded(deckIndex: number, info: DeckInfoWithPositions): void;
   ϟdeckUnloaded(deckIndex: number): void;
-  ϟdeckStarted(deckIndex: number, position: deckPO.DeckPositionsWithTrackKind): void;
-  ϟdeckActive(deckIndex: number, position: deckPO.DeckPositionsWithTrackKind): void;
+  ϟdeckStarted(deckIndex: number, position: DeckPositionsWithTrackKind): void;
+  ϟdeckActive(deckIndex: number, position: DeckPositionsWithTrackKind): void;
 
   ϟcollectionChange(prevCollection: string | undefined, newCollection: string, fromRequestTrack: boolean): void;
   ϟcrateChange: (oldCrate: string | undefined, newCrate: string) => void;
