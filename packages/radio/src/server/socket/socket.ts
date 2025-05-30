@@ -10,7 +10,9 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import {
   $Exposing, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents,
   ClientEvents, RemoteCallback, RemoteResponse, ServerEvents,
-  isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf, AuthData
+  isProperty, isPublicPropertyName, isReadableStream, propertyDescriptorOf, AuthData,
+  Exposable,
+  $Kind
 } from "../../socket";
 
 import { Socket, ClientData } from './types';
@@ -55,6 +57,9 @@ export type SocketServerEvents = {
   ready(): void;
 }
 
+type KindName = string;
+type ObjectId = string;
+
 export class SocketServerController<Remote> extends TypedEmitter<SocketServerEvents> {
   constructor(protected io: SocketServer) {
     super();
@@ -62,7 +67,9 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     setInterval(this.#pingSockets, 1000);
   }
 
-  #objectNamespaces = new Map<string, Map<string, ObjectObserver<object>>>();
+  #objectGlobalObservers = new Map<KindName, Map<ObjectId, ObjectObserver<object>>>();
+
+  #objectSocketObservers = new Map<Socket, Map<KindName, Map<ObjectId, ObjectObserver<object>>>>();
 
   #socketSubscriptions = new Map<Socket, Map<object, { [event: string]: (...args: any[]) => any }>>();
 
@@ -121,6 +128,11 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
   }
 
   #removeSocket(socket: Socket) {
+    this.#objectSocketObservers.delete(socket);
+
+    this.#registeredExposed.get(socket)?.forEach(o => o.dispose());
+    this.#registeredExposed.delete(socket);
+
     const subscriptions = this.#socketSubscriptions.get(socket);
 
     if (subscriptions) {
@@ -167,13 +179,11 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
   }
 
-  #registeredStreams = new Map<number, Readable>();
-
-  #makeStreamId() {
+  #makeEphemeralId(has: (id: number) => boolean) {
     while (true) {
       const id = random(2 ** 31);
 
-      if (this.#registeredStreams.has(id)) {
+      if (has(id)) {
         continue;
       }
 
@@ -181,20 +191,46 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
   }
 
-  #registerStream(socket: Socket, stream: Readable): [number, number] {
-    const id = this.#makeStreamId();
+  #registeredStreams = new Map<number, Readable>();
 
-    stream.on('data', data => {
+  #registerStream(socket: Socket, stream: Readable): [number, number] {
+    const id = this.#makeEphemeralId(newId => this.#registeredStreams.has(newId));
+
+    const onData = (data: any) => {
       if (Buffer.isBuffer(data)) {
         socket.emit('r:sd', id, data);
       }
-    });
+    }
 
-
-    stream.on('close', () => {
+    const cleanup = () => {
       this.#registeredStreams.delete(id);
+      stream.off('data', onData);
+    }
+
+    stream.on('data', onData);
+
+    stream.once('close', () => {
+      cleanup();
       socket.emit('r:sc', id);
     });
+
+    socket.once('disconnect', cleanup);
+
+    this.#registeredStreams.set(id, stream);
+
+    return [id, id ^ 0x1eafc0b7];
+  }
+
+  #registeredExposed = new Map<Socket, Map<number, Exposable<unknown>>>();
+
+  #registerExposed(socket: Socket, exposed: Exposable<unknown>): [number, number] {
+    if (!this.#registeredExposed.has(socket)) {
+      this.#registeredExposed.set(socket, new Map());
+    }
+
+    const id = this.#makeEphemeralId(newId => objects.has(newId));
+    const objects = this.#registeredExposed.get(socket)!;
+    objects.set(id, exposed);
 
     return [id, id ^ 0x1eafc0b7];
   }
@@ -210,10 +246,10 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     execute: (object: any, value: any, observer: ObjectObserver<any> | undefined) => Promise<any>,
     callback: RemoteCallback<any>
   ) {
-    const namespace = this.#objectNamespaces.get(kind);
-    const object = namespace?.get(id) as any;
+    const observers = this.#objectSocketObservers.get(socket)?.get(kind) ?? this.#objectGlobalObservers.get(kind);
+    const object = observers?.get(id) as any;
     const observed = object instanceof ObjectObserver ? object : undefined;
-    const instance: Record<any, any> = observed?.instance ?? object;
+    const instance = observed?.instance ?? object;
     const cb = isFunction(callback) ? callback : undefined;
 
     if (typeof instance !== 'object') {
@@ -264,6 +300,16 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
         resp = {
           status: 'stream',
           result: this.#registerStream(socket, result)
+        }
+      } else if (typeof result === 'object') {
+        const kind = result[$Kind];
+
+        if (($Exposing in result) && kind) {
+          resp = {
+            status: 'exposed',
+            kind,
+            result: this.#registerExposed(socket, result)
+          }
         }
       }
 
@@ -455,41 +501,62 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
         },
         callback
       );
+    },
+
+    /**
+     * Client requests to dispose a remote object created by them
+     */
+    'o:dis': async (socket, kind, id) => {
+      // TODO: Handle this
     }
   }
 
-  protected register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: WithoutEvents<Remote[Kind]>) {
+  protected register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: WithoutEvents<Remote[Kind]>, scopedWith?: Socket) {
     if (typeof o !== 'object') {
       return;
     }
 
-    if (!this.#objectNamespaces.has(kind)) {
-      this.#objectNamespaces.set(kind, new Map());
+    const objectObservers = (scopedWith ? this.#objectSocketObservers.get(scopedWith) : undefined) ?? this.#objectGlobalObservers;
+
+    if (!objectObservers.has(kind)) {
+      objectObservers.set(kind, new Map());
     }
 
-    const scoped = this.#objectNamespaces.get(kind)!;
+    const observers = objectObservers.get(kind)!;
     const instance = o as unknown as object;
 
-    if (scoped.get(id)?.instance === instance) {
+    if (observers.get(id)?.instance === instance) {
       // Already registered
       return;
     }
 
-    this.deregister(kind, id);
-    this.#objectNamespaces.get(kind)?.set(id, new ObjectObserver(instance, this.#makeObserverPropertyHandler(kind, id)));
+    this.deregister(kind, id, scopedWith);
+
+    observers.set(id, new ObjectObserver(instance, async (instance, changes) => {
+      if (scopedWith) {
+        this.#notifySocketForPropertyChanges(scopedWith, kind, id, instance, changes);
+        return;
+      }
+
+      for (const socket of this.io.sockets.sockets.values()) {
+        this.#notifySocketForPropertyChanges(socket, kind, id, instance, changes);
+      }
+    }));
   }
 
-  protected deregister<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string) {
-    const namespace = this.#objectNamespaces.get(kind);
-    if (!namespace) {
+  protected deregister<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, scopedWith?: Socket) {
+    const objectObservers = (scopedWith ? this.#objectSocketObservers.get(scopedWith) : undefined) ?? this.#objectGlobalObservers;
+
+    const observers = objectObservers.get(kind);
+    if (!observers) {
       return;
     }
 
-    if (!namespace?.has(id)) {
+    if (!observers?.has(id)) {
       return;
     }
 
-    const object = namespace.get(id)!;
+    const object = observers.get(id)!;
 
     if (object instanceof EventEmitter) {
       for (const [socket, subscriptions] of [...this.#socketSubscriptions]) {
@@ -520,36 +587,36 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
 
 
-    namespace.delete(id);
+    observers.delete(id);
 
-    if (namespace.size <= 0) {
-      this.#objectNamespaces.delete(kind);
+    if (observers.size <= 0) {
+      objectObservers.delete(kind);
     }
   }
 
-  #makeObserverPropertyHandler = (kind: string, id: string): ObservedPropertyHandler<object> => async (instance, changes) => {
-    for (const [, socket] of this.io.sockets.sockets) {
-      if (!await hasObjectGuardAccess(socket, instance)) {
-        continue;
-      }
+  async #notifySocketForPropertyChanges(socket: Socket, kind: string, id: string, instance: object, changes: ObservedPropertyChange<any>[]) {
+    if (!await hasObjectGuardAccess(socket, instance)) {
+      return;
+    }
 
-      const observation = this.#socketObservations.get(socket);
+    const observation = this.#socketObservations.get(socket);
 
-      if (observation) {
-        const changesWithGuards = await Promise.all(changes.map(async change => ({
-          change,
-          allowed: await hasObjectGuardAccess(socket, instance, change.p)
-        })));
+    if (!observation) {
+      return;
+    }
 
-        const filteredChanges = changesWithGuards.filter(({ allowed }) => allowed).map(({ change }) => change);
+    const changesWithGuards = await Promise.all(changes.map(async change => ({
+      change,
+      allowed: await hasObjectGuardAccess(socket, instance, change.p)
+    })));
 
-        if (filteredChanges.length) {
-          const key = `${kind}:${id}` as `${string}:${string}`;
-          const handler = observation.get(key);
+    const filteredChanges = changesWithGuards.filter(({ allowed }) => allowed).map(({ change }) => change);
 
-          handler?.(instance, filteredChanges).catch(noop);
-        }
-      }
+    if (filteredChanges.length) {
+      const key = `${kind}:${id}` as `${string}:${string}`;
+      const handler = observation.get(key);
+
+      handler?.(instance, filteredChanges).catch(noop);
     }
   }
 }
