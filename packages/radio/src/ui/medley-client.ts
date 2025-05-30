@@ -8,10 +8,6 @@ import type { RemoteTypes } from "../remotes";
 import type { RTCTransponder } from "../remotes/rtc/transponder";
 import type { Station as RemoteStation, Global as RemoteGlobal } from '../remotes';
 
-import { StubGlobal } from "./stubs/core/global";
-import { StubStation } from './stubs/core/station';
-import { StubRTCTransponder } from "./stubs/rtc/transponder";
-
 import { IAudioTransport, waitForAudioTransportState } from "./audio/transport";
 import { WebSocketAudioTransport } from "./audio/transports/ws/transport";
 import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
@@ -84,7 +80,7 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
   protected override async handleSocketConnect() {
     await super.handleSocketConnect();
 
-    this.#global = await this.surrogateOf(StubGlobal, 'global', '$');
+    this.#global = await this.surrogateOf('global', '$');
 
     await this.#audioTransport?.dispose();
     this.#audioTransport = undefined;
@@ -92,7 +88,7 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
     this.#transportCreators = [];
     this.#transponder = undefined;
 
-    this.#transponder = await this.surrogateOf(StubRTCTransponder, 'transponder', '~').catch(() => undefined);
+    this.#transponder = await this.surrogateOf('transponder', '~').catch(() => undefined);
 
     if (this.#transponder) {
       const device = new MediaSoupDevice();
@@ -211,7 +207,7 @@ export class MedleyClient extends Client<RemoteTypes, MedleyClientEvents> {
       return;
     }
 
-    this.#station = await this.surrogateOf(StubStation, 'station', this.#playingStationId).catch(() => undefined);
+    this.#station = await this.surrogateOf('station', this.#playingStationId).catch(() => undefined);
     this.#station?.on('deckStarted', this.#onDeckStarted);
   }
 

@@ -6,7 +6,7 @@ import { $AnyProp } from "../../socket";
 import { useSurrogate } from "./surrogate";
 
 export function useDeck(stationId: string | undefined, index: DeckIndex | undefined) {
-  const { surrogate: deck, error } = useSurrogate(StubDeck, 'deck', stationId ? `${stationId}/${index}` : undefined);
+  const { surrogate: deck, error } = useSurrogate('deck', stationId ? `${stationId}/${index}` : undefined);
   return {
     deck,
     error

@@ -2,7 +2,6 @@ import { createRoute, Link } from "@tanstack/react-router";
 import { rootRoute } from './rootRoute';
 import { playRoute } from './play/route';
 import { useSurrogate } from "../hooks/surrogate";
-import { StubGlobal } from "../stubs/core/global";
 import { useEffect, useState } from "react";
 import { stationRoute } from "./dj/route";
 import { useRemotableProps } from "../hooks/remotable";
@@ -11,7 +10,7 @@ const route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: () => {
-    const { surrogate: $global } = useSurrogate(StubGlobal, 'global', '$');
+    const { surrogate: $global } = useSurrogate('global', '$');
     const $globalProps = useRemotableProps($global);
 
     const [stations, setStations] = useState<string[]>([]);

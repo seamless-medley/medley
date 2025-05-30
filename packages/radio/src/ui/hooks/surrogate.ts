@@ -15,7 +15,6 @@ export function useSurrogate<
   T extends RemoteTypes[Kind],
   Kind extends keyof RemoteTypes
 >(
-  StubClass: Stub<T>,
   kind: Kind,
   id: string | undefined,
   options?: RemoteObserveOptions
@@ -29,7 +28,7 @@ export function useSurrogate<
 
   useEffect(() => {
     if (id && client.connected) {
-      client.surrogateOf<Kind>(StubClass as any, kind, id, options)
+      client.surrogateOf<Kind>(kind, id, options)
         .then((s) => {
           setState({ surrogate: s as unknown as Remotable<T> });
         })
@@ -56,15 +55,8 @@ export function useSurrogate<
  *
  * @deprecated
  */
-export function useSurrogateWithRemotable<
-  T extends RemoteTypes[Kind],
-  Kind extends keyof RemoteTypes
->(
-  StubClass: Stub<T>,
-  kind: Kind,
-  id: string
-) {
-  const { surrogate: remote, error } = useSurrogate(StubClass, kind, id);
+export function useSurrogateWithRemotable<Kind extends keyof RemoteTypes>(kind: Kind, id: string) {
+  const { surrogate: remote, error } = useSurrogate(kind, id);
   const values = useRemotableProps(remote);
 
   return [remote, values, error] as const;

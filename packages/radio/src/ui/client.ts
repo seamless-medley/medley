@@ -14,6 +14,7 @@ import {
 import { Callable, ParametersOf, ReturnTypeOf } from "../types";
 import { waitFor } from "@seamless-medley/utils";
 import { IAudioTransport, type AudioTransportEvents } from "./audio/transport";
+import { Stubs } from "./stubs";
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, changes: ObservedPropertyChange<T>[]) => Promise<any>;
 
@@ -724,7 +725,6 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
   async surrogateOf<
     Kind extends Extract<keyof Types, string>,
   >(
-    StubClass: Stub<Types[Kind]>,
     kind: Kind,
     id: string,
     observeOptions?: Omit<RemoteObserveOptions, 'excludes'>
@@ -741,6 +741,8 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
     }
 
     const uuid = uniqueId(`surrogate:${objectId}--`);
+
+    const StubClass = Stubs[kind];
 
     const { descriptors } = StubClass;
     const mergedDescs = { ...descriptors.own, ...descriptors.proto };
