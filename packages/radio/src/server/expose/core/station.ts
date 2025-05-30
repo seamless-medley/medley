@@ -1,5 +1,5 @@
-import { $Exposing, Exposable } from "../../../socket";
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
+import { $Exposing, $Kind, Exposable } from "../../../socket";
 import { MixinEventEmitterOf } from "../../socket";
 import type { DeckInfoWithPositions, Station as RemoteStation } from "../../../remotes";
 import { Station, type StationEvents, type PlayState } from "../../../core";
@@ -7,6 +7,7 @@ import { fromDeckInfoWithPositions } from "./deck";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
   [$Exposing]: Station;
+  [$Kind] = 'station';
 
   constructor(station: Station) {
     super();

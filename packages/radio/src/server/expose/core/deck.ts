@@ -1,5 +1,5 @@
 import type { Writable } from "type-fest";
-import { $Exposing, Exposable } from "../../../socket";
+import { $Exposing, $Kind, Exposable } from "../../../socket";
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 
 import type { Deck, DeckInfo, DeckInfoWithPositions,  } from "../../../remotes";
@@ -39,6 +39,8 @@ export class ExposedDeck implements Exposable<Deck> {
     transitionEnd: 0,
     trackPlay: (() => undefined) as any // A fake getter, just to force register this virtual object
   };
+
+  [$Kind] = 'deck';
 
   constructor(station: Station, deckIndex: DeckIndex) {
     this.#station = station;

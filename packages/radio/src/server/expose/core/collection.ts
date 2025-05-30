@@ -1,5 +1,5 @@
 import { isFunction, isObject, omitBy } from "lodash";
-import { $Exposing, Exposable } from "../../../socket";
+import { $Exposing, $Kind, Exposable } from "../../../socket";
 import { parseLyrics } from "@seamless-medley/utils";
 
 import {
@@ -124,6 +124,7 @@ export const toTrackPlay = async ({ uuid, track, duration }: BoomBoxTrackPlay): 
 
 export class ExposedCollection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
   [$Exposing]: MusicTrackCollection<Station>;
+  [$Kind] = 'collection';
 
   constructor(collection: MusicTrackCollection<Station>) {
     super();
