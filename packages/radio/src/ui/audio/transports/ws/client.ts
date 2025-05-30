@@ -111,8 +111,8 @@ function handleStream(ev: MessageEvent<ArrayBuffer>) {
 
   if (op === AudioSocketReply.Latency) {
     // milliseconds
-    const latency = view.getUint32(1, true);
-    self.postMessage({ type: 'audio-latency', latency });
+    const latencyMs = view.getUint32(1, true);
+    self.postMessage({ type: 'audio-latency', latencyMs });
     return;
   }
 
