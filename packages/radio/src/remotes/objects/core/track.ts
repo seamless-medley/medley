@@ -1,7 +1,6 @@
+import type { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
 import type { CoverAndLyrics } from "@seamless-medley/medley";
 import type { Lyrics } from "@seamless-medley/utils";
-
-import type { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
 
 import type { Collection } from "./collection";
 
