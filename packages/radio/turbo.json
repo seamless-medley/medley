@@ -2,11 +2,9 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "dependsOn": ["@seamless-medley/core#build"],
       "outputs": ["dist/**"]
     },
     "build:server": {
-      "dependsOn": ["@seamless-medley/core#build"],
       "outputs": ["dist/**"]
     },
     "combine-discord": {

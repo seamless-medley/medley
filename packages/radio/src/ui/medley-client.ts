@@ -103,6 +103,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
       }
     }
 
+    // See: https://developer.mozilla.org/en-US/docs/Web/API/Window/crossOriginIsolated
     if (window.crossOriginIsolated) {
       this.#transportCreators.push(createNamedFunc('create_ws', async () => {
         if (!this.socket.id) {

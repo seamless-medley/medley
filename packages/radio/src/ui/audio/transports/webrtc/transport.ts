@@ -18,6 +18,14 @@ export type PlayOptions = {
   timeout?: number;
 }
 
+/**
+ * This transport uses Mediasoup for its WebRTC functionalities,
+ * and is the first transport to be used at client-side where possible.
+ *
+ * Proper network setup must be done to make sure this transport is available to the client.
+ *
+ * Fallback to WebSocketAudioTransport if the WebRTC negotiation failed
+ */
 export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> implements IAudioTransport {
   readonly #transponder: Remotable<RTCTransponder>;
 

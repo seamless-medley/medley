@@ -1,14 +1,25 @@
 import { EventEmitter } from "eventemitter3";
 import worklet from "./worklets/stream-consumer-module.js?worker&url";
 import AudioClientWorker from './client?worker';
-import type { AudioClientIntf, OpenMessage, OutputMessage } from "./client";
+import type { AudioClientIntf, OutputMessage } from "./client";
 import { AudioTransportExtraPayloadWithTimestamp, RingBufferWithExtra } from "./ringbuffer";
-import type { AudioTransportExtra, AudioTransportExtraPayload } from "../../../../audio/types";
+import type { AudioTransportExtra } from "../../../../audio/types";
 import type { MedleyStreamProcessorNodeOptions } from "./worklets/stream-consumer";
 import type { AudioTransportEvents, AudioTransportState, IAudioTransport } from "../../transport";
 
 /**
- * This is where the whole audio pipeline happens
+ * WebSocketAudioTransport carries audio data via Websocket which does not require additional TCP/UDP ports and network setup,
+ * but the performance is not good as WebRTCAudioTransport and it requires secure context (HTTPS) and cross-origin isolated at client-side
+ *
+ * In order for this transport to work, make sure that:
+ *
+ * - The server must send these headers:
+ *  - Cross-Origin-Embedder-Policy: require-corp
+ *  - Cross-Origin-Opener-Policy: same-origin
+ *
+ * - The page is in a secure context:
+ *  - URL is local, e.g. http://127.0.0.1, http://localhost, http://*.localhost
+ *  - Any other URLs must be served over HTTPS
  */
 export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> implements IAudioTransport {
   /**

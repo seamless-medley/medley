@@ -1,6 +1,6 @@
 import { gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { mapValues } from "lodash";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { AudioTransportExtra } from "../../audio/types";
 import type { StationAudioLevels } from "../../core";
 import { client } from "../init";
