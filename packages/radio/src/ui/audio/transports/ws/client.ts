@@ -6,9 +6,9 @@
  */
 
 import { decode, encode } from "notepack.io";
-import { AudioSocketCommand, AudioSocketCommandMap, AudioSocketReply } from "../../../../socket";
+import { AudioSocketCommand, AudioSocketCommandMap, AudioSocketReply } from "../../../../remotes/socket";
 import Decoder from "./decoder?worker";
-import type { Decoder as DecoderInft } from "./decoder";
+import type { Decoder as DecoderIntf } from "./decoder";
 import type { AudioTransportExtraPayload } from "../../../../audio/types";
 import { RingBufferWithExtra } from "./ringbuffer";
 
@@ -87,7 +87,7 @@ let pcmBuffer: RingBufferWithExtra | undefined;
 /**
  * Another Web Worker for docoding Opus Packets
  */
-const decoder = new Decoder() as unknown as DecoderInft<AudioTransportExtraPayload>;
+const decoder = new Decoder() as unknown as DecoderIntf<AudioTransportExtraPayload>;
 
 decoder.addEventListener('message', (e) => {
   const { decoded: { channelData, samplesDecoded }, extra, timestamp } = e.data;

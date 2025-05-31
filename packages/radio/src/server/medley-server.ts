@@ -9,7 +9,6 @@ import type { Config } from "../config";
 //
 import { Socket, SocketServer, SocketServerController } from "./socket";
 import type { RemoteObjects } from "../remotes/objects";
-import type { Unpacked } from "../types";
 //
 import { ExposedStation } from "./expose/core/station";
 import { ExposedCollection } from "./expose/core/collection";
@@ -31,6 +30,8 @@ import { ExposedGlobal } from "./expose/core/global";
 import { MusicDb, Station, StationEvents } from "../core";
 
 const logger = createLogger({ name: 'medley-server' });
+
+type Unpacked<T> = T extends (infer U)[] ? U : T;
 
 export type MedleyServerOptions = {
   io: SocketServer;

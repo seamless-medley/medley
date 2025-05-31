@@ -1,5 +1,5 @@
-import { StubOf } from "../../../socket";
-import type { Deck } from "../../../remotes";
+import { StubOf } from "../stub";
+import type { Deck } from "../../../remotes/objects";
 
 export const StubDeck = StubOf<Deck>(class StubbingDeck {
   active = undefined as any;

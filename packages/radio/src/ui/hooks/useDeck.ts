@@ -1,8 +1,7 @@
 import type { DeckIndex } from "@seamless-medley/medley";
 import { useCallback, useEffect, useState } from "react";
 import { useSetState } from "@mantine/hooks";
-import type { Deck, TrackPlay } from "../../remotes";
-import { $AnyProp } from "../../socket";
+import type { Deck, TrackPlay } from "../../remotes/objects";
 import { useSurrogate } from "./surrogate";
 
 export function useDeck(stationId: string | undefined, index: DeckIndex | undefined) {
@@ -63,6 +62,8 @@ export function useDeckCover(stationId: string | undefined, index: DeckIndex) {
 export type UseDeckInfoResult<K extends keyof Deck> = {
   [P in K]: Deck[P];
 }
+
+const $AnyProp: unique symbol = Symbol.for('$AnyProp');
 
 export function useDeckInfo<Only extends keyof Deck = keyof Deck>(stationId: string | undefined, index: DeckIndex, ...onlyProps: Only[]): UseDeckInfoResult<Only> {
   type PV = Deck[keyof Deck];

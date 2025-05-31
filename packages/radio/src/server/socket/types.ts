@@ -1,7 +1,8 @@
 import EventEmitter from "node:events";
 import type TypedEventEmitter from "typed-emitter";
 import { Socket as IOSocket } from "socket.io";
-import { ClientEvents, ServerEvents, PickEvent } from "../../socket";
+import type { ClientEvents, ServerEvents } from "../../remotes/socket";
+import type { PickEvent } from "../../remotes/types";
 import { UserModel } from "../../db/models/user";
 
 export type TypedEventEmitterOf<T> = TypedEventEmitter<

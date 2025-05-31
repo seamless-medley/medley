@@ -1,7 +1,6 @@
 import "reflect-metadata";
 import { propertyDescriptorOf } from "@seamless-medley/utils";
-
-import { WithoutEvents } from "./types";
+import { WithoutEvents } from "../../remotes/types";
 
 type StubCtor<T> = abstract new (...args: any) => WithoutEvents<T>;
 
@@ -43,7 +42,7 @@ export function StubOf<T>(wrapped: StubCtor<T>): Stub<T> {
   return Stubbed;
 }
 
-const $RemoteTimeout = Symbol("$RemoteTimeout");
+const $RemoteTimeout = Symbol.for("$RemoteTimeout");
 
 export const RemoteTimeout = (n: number = 60_000) => (target: any, prop?: string) => {
   if (prop) {

@@ -3,8 +3,9 @@ import { createLogger, type Logger } from "../../../logging";
 import { Db, MongoClient, type MongoClientOptions } from "mongodb";
 
 import { SettingsDb } from "../../types";
-import { PlainUser, User } from "../../persistent/user";
 import { FindByCommentOptions, MusicDb, MusicDbTrack, SearchHistory, TrackHistory, WorkerPoolAdapter } from "../../../core";
+import { User } from "../../persistent/user";
+import { PlainUser } from "../../../remotes/types";
 
 export type Options = {
   url: string;

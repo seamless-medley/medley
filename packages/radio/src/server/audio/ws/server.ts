@@ -3,7 +3,7 @@ import http, { IncomingMessage } from "node:http";
 import { decode } from "notepack.io";
 import { Duplex } from "node:stream";
 import { WebSocket, WebSocketServer } from "ws";
-import { AudioSocketCommand, AudioSocketReply } from "../../../socket";
+import { AudioSocketCommand, AudioSocketReply } from "../../../remotes/socket";
 import { AudioDispatcher } from "../../../audio/exciter/dispatcher";
 import { WebSocketExciter } from "./exciter";
 import { AudienceType, makeAudienceGroupId, Station } from "../../../core";

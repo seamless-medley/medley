@@ -1,5 +1,4 @@
 import { isFunction, isObject, omitBy } from "lodash";
-import { $Exposing, $Kind, Exposable } from "../../../socket";
 import { parseLyrics } from "@seamless-medley/utils";
 
 import {
@@ -31,7 +30,8 @@ import type {
   TrackPlay,
   TrackSequencing,
   TrackSequencingLatch
-} from "../../../remotes";
+} from "../../../remotes/objects";
+import { Exposable } from "../../../remotes/expose";
 
 export const pickId = <T extends { id: any }>({ id }: T): IdOnly<T> => ({ id });
 
@@ -121,15 +121,14 @@ export const toTrackPlay = async ({ uuid, track, duration }: BoomBoxTrackPlay): 
   track: await toTrack(track),
 });
 
-
 export class ExposedCollection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
-  [$Exposing]: MusicTrackCollection<Station>;
-  [$Kind] = 'collection';
+  $Exposing: MusicTrackCollection<Station>;
+  $Kind = 'collection';
 
   constructor(collection: MusicTrackCollection<Station>) {
     super();
 
-    this[$Exposing] = collection;
+    this.$Exposing = collection;
 
     this.#collection.on('refresh', this.#onRefresh);
     this.#collection.on('trackShift', this.#onTracksShift);
@@ -147,7 +146,7 @@ export class ExposedCollection extends MixinEventEmitterOf<Collection>() impleme
   }
 
   get #collection() {
-    return this[$Exposing];
+    return this.$Exposing;
   }
 
   #onRefresh: MusicTrackCollectionEvents<Station>['refresh'] = () => {
@@ -213,17 +212,17 @@ export class ExposedCollection extends MixinEventEmitterOf<Collection>() impleme
 }
 
 export class ExposedCollectionView extends MixinEventEmitterOf<CollectionView>() implements Exposable<CollectionView> {
-  [$Exposing]: TrackCollectionView<MusicTrack<Station>>;
-  [$Kind] = 'collection_view';
+  $Exposing: TrackCollectionView<MusicTrack<Station>>;
+  $Kind = 'collection_view';
 
   constructor(collection: TrackCollectionView<MusicTrack<Station>>) {
     super();
 
-    this[$Exposing] = collection;
+    this.$Exposing = collection;
   }
 
   get #view() {
-    return this[$Exposing];
+    return this.$Exposing;
   }
 
   get length() {

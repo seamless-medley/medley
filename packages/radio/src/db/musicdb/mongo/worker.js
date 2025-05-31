@@ -510,7 +510,7 @@ const search_unmatchedItems = async(stationId) => {
 
 /* SettingsDb */
 
-/** @typedef {import('../../persistent/user').PlainUser} RawUser*/
+/** @typedef {typeof import('../../persistent/user').PlainUser} RawUser*/
 
 /**
  *

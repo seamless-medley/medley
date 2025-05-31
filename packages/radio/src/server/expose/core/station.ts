@@ -1,17 +1,17 @@
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
-import { $Exposing, $Kind, Exposable } from "../../../socket";
 import { MixinEventEmitterOf } from "../../socket";
-import type { DeckInfoWithPositions, Station as RemoteStation } from "../../../remotes";
+import type { DeckInfoWithPositions, Station as RemoteStation } from "../../../remotes/objects";
 import { Station, type StationEvents, type PlayState } from "../../../core";
 import { fromDeckInfoWithPositions } from "./deck";
+import { Exposable } from "../../../remotes/expose";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
-  [$Exposing]: Station;
-  [$Kind] = 'station';
+  $Exposing: Station;
+  $Kind = 'station';
 
   constructor(station: Station) {
     super();
-    this[$Exposing] = station;
+    this.$Exposing = station;
 
     this.#station.on('deckLoaded', this.#onDeckLoaded);
     this.#station.on('deckUnloaded', this.#onDeckUnloaded);
@@ -30,7 +30,7 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   }
 
   get #station() {
-    return this[$Exposing];
+    return this.$Exposing;
   }
 
   #prefixWithStationId(s: string) {

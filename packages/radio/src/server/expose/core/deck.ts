@@ -1,8 +1,7 @@
 import type { Writable } from "type-fest";
-import { $Exposing, $Kind, Exposable } from "../../../socket";
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 
-import type { Deck, DeckInfo, DeckInfoWithPositions,  } from "../../../remotes";
+import type { Deck, DeckInfo, DeckInfoWithPositions,  } from "../../../remotes/objects";
 
 import {
   Station,
@@ -12,6 +11,7 @@ import {
 } from "../../../core";
 
 import { toTrackPlay } from "./collection";
+import { Exposable } from "../../../remotes/expose";
 
 export const fromDeckInfo = async ({ trackPlay, active, playing }: CoreDeckInfo): Promise<DeckInfo> => ({
   trackPlay: trackPlay ? await toTrackPlay(trackPlay) : undefined,
@@ -25,7 +25,7 @@ export const fromDeckInfoWithPositions = async (p: CoreDeckInfoWithPositions): P
 })
 
 export class ExposedDeck implements Exposable<Deck> {
-  [$Exposing]:  Writable<Deck> = {
+  $Exposing:  Writable<Deck> = {
     active: false,
     playing: false,
     cp: 0,
@@ -40,7 +40,7 @@ export class ExposedDeck implements Exposable<Deck> {
     trackPlay: (() => undefined) as any // A fake getter, just to force register this virtual object
   };
 
-  [$Kind] = 'deck';
+  $Kind = 'deck';
 
   constructor(station: Station, deckIndex: DeckIndex) {
     this.#station = station;
@@ -72,7 +72,7 @@ export class ExposedDeck implements Exposable<Deck> {
   #timer: NodeJS.Timeout;
 
   get #deck() {
-    return this[$Exposing];
+    return this.$Exposing;
   }
 
   get active() {

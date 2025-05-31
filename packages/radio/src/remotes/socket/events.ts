@@ -1,4 +1,4 @@
-import type { ObservedPropertyChange, SessionData } from "./types";
+import type { ObservedPropertyChange, SessionData } from "../types";
 
 export type ServerEvents = {
   // Server Ping
@@ -28,6 +28,12 @@ export type StreamResponse = {
   result: [number, number];
 }
 
+export type ExposedResponse = {
+  status: 'exposed';
+  kind: string;
+  result: [number, number];
+}
+
 export type ProhibitedErrorResponse = {
   status: 'prohibited';
   id: string;
@@ -51,7 +57,7 @@ export type ExceptionResponse = {
 
 export type ErrorResponse = IdErrorResponse | KeyErrorResponse | ProhibitedErrorResponse | ExceptionResponse;;
 
-export type RemoteResponse<T> = OKResponse<T> | StreamResponse | ErrorResponse;
+export type RemoteResponse<T> = OKResponse<T> | StreamResponse | ExposedResponse | ErrorResponse;
 
 export type ResponseStatus = RemoteResponse<any>['status'];
 
@@ -78,4 +84,7 @@ export type ClientEvents = {
   // observ
   'r:ob': (kind: string, id: string, options: RemoteObserveOptions | undefined, callback: RemoteCallback<{ [prop: string]: any }>) => void;
   'r:ub': (kind: string, id: string, callback: RemoteCallback) => void;
+  // object handling
+  // TODO: Implement this, the client send this event to inform that the socket scoped exposed object should be disposed at the server end
+  'o:dis': (kind: string, id: string) => void;
 }

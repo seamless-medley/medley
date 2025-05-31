@@ -1,4 +1,4 @@
-import { Readable } from 'node:stream';
+import { Readable, Stream, Writable } from 'node:stream';
 import EventEmitter from "node:events";
 import http from "node:http";
 import { capitalize, isEqual, isFunction, isObject, mapValues, mean, noop, omit, pickBy, random } from "lodash";
@@ -8,14 +8,8 @@ import { ConditionalKeys } from "type-fest";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { isProperty, isPublicPropertyName, propertyDescriptorOf } from '@seamless-medley/utils';
 
-import {
-  $Exposing, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents,
-  isReadableStream, AuthData,
-  Exposable,
-  $Kind
-} from "../../socket";
-
 import type { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "../../remotes/socket";
+import type { AuthData, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents } from '../../remotes/types';
 
 import { Socket, ClientData } from './types';
 
@@ -24,8 +18,31 @@ import { SettingsDb } from '../../db/types';
 import { getDependents, hasObjectGuardAccess } from './decorator';
 import { PlainUser } from '../../db/persistent/user';
 import { $ActualObject } from '../../db/models/base';
+import { Exposable } from '../../remotes/expose';
+
 
 const logger = createLogger({ name: 'socket-server' });
+
+function isStream(o: any): o is Stream  {
+	return o !== null
+		&& typeof o === 'object'
+		&& typeof o.pipe === 'function';
+}
+
+function isWritableStream(o: any): o is Writable {
+	return isStream(o)
+		&& (o as any).writable !== false
+		&& typeof (o as any)._write === 'function'
+		&& typeof (o as any)._writableState === 'object';
+}
+
+function isReadableStream(o: any): o is Readable {
+	return isStream(o)
+		&& (o as any).readable !== false
+		&& typeof (o as any)._read === 'function'
+		&& typeof (o as any)._readableState === 'object';
+}
+
 
 export class SocketServer extends IOServer<ClientEvents, ServerEvents, never, ClientData> {
   constructor(httpServer: http.Server, path: string) {
@@ -53,7 +70,6 @@ const isAuthData = (o: any): o is AuthData => {
 
   return false;
 }
-
 
 export type SocketServerEvents = {
   ready(): void;
@@ -304,9 +320,9 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
           result: this.#registerStream(socket, result)
         }
       } else if (typeof result === 'object') {
-        const kind = result[$Kind];
+        const kind = result.$Kind;
 
-        if (($Exposing in result) && kind) {
+        if (('$Exposing' in result) && kind) {
           resp = {
             status: 'exposed',
             kind,
@@ -726,8 +742,8 @@ export class ObjectObserver<T extends object> {
   }
 
   #getExposing() {
-    if ($Exposing in this.instance) {
-      const exposed = (this.instance as any)[$Exposing];
+    if ('$Exposing' in this.instance) {
+      const exposed = (this.instance as any)['$Exposing'];
 
       if (isObject(exposed)) {
         return exposed;

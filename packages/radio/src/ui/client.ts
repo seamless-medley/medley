@@ -5,16 +5,31 @@ import msgpackParser from 'socket.io-msgpack-parser';
 import { PassThrough } from 'readable-stream';
 import { isProperty, waitFor } from "@seamless-medley/utils";
 
-import {
-  ClientEvents as SocketClientEvents, ErrorResponse, RemoteResponse, ServerEvents, RemoteObserveOptions,
-  $AnyProp, AnyProp, ObservedPropertyChange, PickMethod, PickProp, Remotable, Stub,
-  getRemoteTimeout,
-  SessionData,
-  AuthData
-} from "../socket";
-import { Callable, ParametersOf, ReturnTypeOf } from "../types";
+import type {
+  ClientEvents as SocketClientEvents,
+  ErrorResponse,
+  RemoteResponse,
+  ServerEvents,
+  RemoteObserveOptions
+} from "../remotes/socket";
+
+import type {
+  AuthData,
+  ObservedPropertyChange,
+  PickMethod,
+  PickProp,
+  Remotable,
+  SessionData
+} from "../remotes/types";
+
 import { type AudioTransportEvents } from "./audio/transport";
-import { Stubs } from "./stubs";
+import { getRemoteTimeout, Stubs } from "./stubs";
+
+type Callable = (...args: any[]) => any;
+
+type ParametersOf<T> = T extends (...args: infer A) => any ? A : never;
+
+type ReturnTypeOf<T> = T extends (...args: any) => infer R ? R : never;
 
 type ObserverHandler<Kind, T = any> = (kind: Kind, id: string, changes: ObservedPropertyChange<T>[]) => Promise<any>;
 
@@ -113,6 +128,8 @@ function rejectAfter({ timeout, reject, reason = 'Timeout' }: RejectAfterOptions
 
   return () => ac.abort();
 }
+
+const $AnyProp: unique symbol = Symbol.for('$AnyProp');
 
 export class Client<Types extends { [key: string]: any }, E extends {}> extends EventEmitter<E | ClientEvents> {
   protected socket!: Socket<ServerEvents, SocketClientEvents>;
@@ -822,7 +839,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
     const propertyDescs = pickBy(mergedDescs, isProperty);
     const methodDescs = pickBy(mergedDescs, desc => isFunction(desc.value));
 
-    const propertyChangeHandlers = new Map<string | AnyProp, Set<(newValue: any, oldValue: any, prop: string) => Promise<any>>>();
+    const propertyChangeHandlers = new Map<string | typeof $AnyProp, Set<(newValue: any, oldValue: any, prop: string) => Promise<any>>>();
 
     const propertyObserver: ObserverHandler<Kind> = async (kind, id, changes) => {
 
@@ -851,7 +868,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
       }
     }
 
-    const addPropertyChangeListener = (propKey: string | AnyProp, handler: (newValue: any, oldValue: any, prop: string) => any) => {
+    const addPropertyChangeListener = (propKey: string | typeof $AnyProp, handler: (newValue: any, oldValue: any, prop: string) => any) => {
       if (!propertyChangeHandlers.has(propKey)) {
         propertyChangeHandlers.set(propKey, new Set());
       }

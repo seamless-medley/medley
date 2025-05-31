@@ -1,6 +1,6 @@
 import { noop } from "lodash";
-import { StubOf } from "../../../socket";
-import { Global as RemoteGlobal } from '../../../remotes';
+import { StubOf } from "../stub";
+import type { Global as RemoteGlobal } from '../../../remotes/objects';
 
 class StubbingGlobal {
   getStations = noop as any;

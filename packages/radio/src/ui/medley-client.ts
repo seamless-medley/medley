@@ -2,8 +2,6 @@ import { createNamedFunc } from '@seamless-medley/utils';
 import { Device as MediaSoupDevice } from 'mediasoup-client';
 import { clamp } from 'lodash';
 
-import type { Remotable } from "../socket";
-
 import type {
   RemoteObjects,
   Station as RemoteStation, Global as RemoteGlobal,
@@ -16,6 +14,7 @@ import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
 
 import { Client } from "./client";
 import { KaraokeFx } from './audio/fx/karaoke';
+import { Remotable } from '../remotes/types';
 
 type MedleyClientEvents = {
   audioTransport(transport: IAudioTransport): void;

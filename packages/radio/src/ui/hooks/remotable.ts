@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { $AnyProp, type PickProp, type Remotable } from "../../socket";
+import { PickProp, Remotable } from "../../remotes/types";
+
+const $AnyProp: unique symbol = Symbol.for('$AnyProp');
 
 export function useRemotableProp<
   T extends { [key: string]: any },

@@ -1,5 +1,5 @@
 import type { Track } from "./track";
-import type { Exposable } from "../../../socket";
+import { Exposable } from "../../expose";
 import type { TrackCollectionBasicOptions } from "../../../core";
 
 /**

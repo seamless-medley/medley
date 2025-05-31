@@ -1,6 +1,6 @@
 import { noop } from "lodash";
-import { type RTCTransponder } from "../../../remotes/rtc/transponder";
-import { StubOf } from "../../../socket";
+import { StubOf } from "../stub";
+import type { RTCTransponder } from "../../../remotes/objects";
 
 class StubbingRTCTransponder {
   caps = undefined as any;

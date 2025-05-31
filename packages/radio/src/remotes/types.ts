@@ -1,18 +1,17 @@
-
 import type { ConditionalExcept } from "type-fest";
-import type { AsyncFunctionOf } from "../types";
-import type { PlainUser } from "../db/persistent/user";
 
-export type SelectKeyBy<O, C> = { [Key in keyof O]: Key extends C ? Key : never}[keyof O];
-export type SelectKeyByValue<O, C> = { [Key in keyof O]: O[Key] extends C ? Key : never}[keyof O];
+type SelectKeyBy<O, C> = { [Key in keyof O]: Key extends C ? Key : never}[keyof O];
+type SelectKeyByValue<O, C> = { [Key in keyof O]: O[Key] extends C ? Key : never}[keyof O];
+type EventNameOf<T> = T extends `ϟ${infer Name}` ? Name : never;
+
 export type WithoutEvents<T> = Omit<T, SelectKeyBy<T, `ϟ${string}`>>;
-export type EventNameOf<T> = T extends `ϟ${infer Name}` ? Name : never;
 
 export type PickEvent<T> = {
   [K in keyof T as EventNameOf<K>]: T[K];
 }
 
 export type PickMethod<T> = Pick<T, SelectKeyByValue<WithoutEvents<T>, Function>>;
+
 export type PickProp<T> = ConditionalExcept<T, Function>;
 
 export type EventEmitterOf<T, Events = PickEvent<T>> = keyof Events extends never ? {} : {
@@ -28,12 +27,11 @@ type SettersOf<T> = {
   [K in keyof T]: (newValue: T[K]) => Promise<T[K]>;
 }
 
+type AsyncFunctionOf<T> = T extends (...args: infer A) => infer R ? (...args: A) => Promise<Awaited<R>> : never;
+
 type AsyncFunctionsOf<T> = {
   [K in keyof T]: AsyncFunctionOf<T[K]>;
 }
-
-export const $AnyProp: unique symbol = Symbol('$AnyProp');
-export type AnyProp = typeof $AnyProp;
 
 export type Remotable<T, Props = PickProp<T>> =
   EventEmitterOf<T> &
@@ -56,7 +54,7 @@ export type Remotable<T, Props = PickProp<T>> =
    *
    * Call the returned function to stop listening
    */
-  addPropertyChangeListener<P extends keyof Props>(props: P | AnyProp, listener: (newValue: Props[P], oldValue: Props[P], prop: P) => any): () => void;
+  addPropertyChangeListener<P extends keyof Props>(props: P | symbol, listener: (newValue: Props[P], oldValue: Props[P], prop: P) => any): () => void;
 
   addDisposeListener(listener: () => Promise<any>): ThisType<T>;
   //
@@ -74,6 +72,11 @@ export type ObservedPropertyHandler<T> = (instance: T, changes: ObservedProperty
 export type AuthData = {
   nn: number[];
   up: [number[], number[]];
+}
+
+export type PlainUser = {
+  username: string;
+  flags: string;
 }
 
 export type SessionData = {

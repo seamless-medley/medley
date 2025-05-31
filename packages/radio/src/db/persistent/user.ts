@@ -12,5 +12,3 @@ export type User = z.infer<typeof User>;
 export const PlainUser = WithPlainId(User).extend({
   flags: BitFieldString(UserFlags)
 });
-
-export type PlainUser = z.infer<typeof PlainUser>;

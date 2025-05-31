@@ -5,8 +5,8 @@ import { RTCExciter } from './exciter';
 import { AudioDispatcher } from '../../../audio/exciter';
 import { type WebRtcConfig } from '../../../config/webrtc';
 import { createLogger } from "../../../logging";
-import { ClientConsumerInfo, ClientTransportInfo } from '../../../remotes/rtc/transponder';
 import { AudienceType, makeAudienceGroupId, Station } from '../../../core';
+import { ClientConsumerInfo, ClientTransportInfo } from '../../../remotes/objects';
 
 export type ClientTransportData = {
   socket: Socket<{}>;

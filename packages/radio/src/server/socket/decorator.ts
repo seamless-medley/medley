@@ -1,9 +1,10 @@
 import "reflect-metadata";
-import type { PickProp } from "../../socket/types";
+
 import { GuardPredicate, Socket } from "./types";
 import { loggedIn } from "./guards";
+import { PickProp } from "../../remotes/types";
 
-const $Dependents = Symbol("$Dependents");
+const $Dependents = Symbol.for("$Dependents");
 
 export function DependsOn<T extends object>(...names: (keyof PickProp<T>)[]): (target: object, propertyKey: string | symbol) => void {
   return (target, prop) => {
@@ -18,7 +19,7 @@ export function getDependents(target: any, prop: string): string[] {
   return Reflect.getMetadata($Dependents, target.constructor, prop) ?? [];
 }
 
-const $Guard = Symbol("$Guard");
+const $Guard = Symbol.for("$Guard");
 
 export const Guarded = (predicate: GuardPredicate) => (target: any, prop?: string) => {
   if (prop) {

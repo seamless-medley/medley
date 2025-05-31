@@ -1,15 +1,12 @@
-import { PickProp, WithoutEvents } from "./types";
-
-export const $Exposing: unique symbol = Symbol('$Exposing');
-export const $Kind: unique symbol = Symbol('$Kind');
+import type { PickProp, WithoutEvents } from "./types";
 
 type AsyncSetOfName<T> = `asyncSet${Capitalize<Extract<T, string>>}`;
 
 export type Exposable<T, Props = PickProp<T>> =
   WithoutEvents<T> &
   {
-    [$Exposing]: any;
-    [$Kind]: string;
+    $Exposing: any;
+    $Kind: string;
     dispose(): void;
   } &
   {
