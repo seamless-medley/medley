@@ -1,13 +1,8 @@
-// This module works in Node env only
+// This module works on Node env only
 
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import { Worker, MessageChannel } from "node:worker_threads";
-
-// type Loader = {
-//   new(options?: Partial<OpusOptions>): Opus;
-//   load: () => boolean;
-// }
 
 export type OpusOptions = {
   /**
