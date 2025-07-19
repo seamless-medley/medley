@@ -3,8 +3,8 @@ import { decode } from "notepack.io";
 import { stubFalse } from 'lodash';
 import { Device as MediaSoupDevice, type types } from 'mediasoup-client';
 import type { AudioTransportEvents, AudioTransportPlayResult, AudioTransportState, IAudioTransport } from "../../transport";
-import { type RTCTransponder } from '../../../../remotes/rtc/transponder';
-import { type Remotable } from '../../../../socket';
+import { type RTCTransponder } from '../../../../remotes/objects';
+import type { Remotable } from '../../../../remotes/types';
 import type { AudioTransportExtra, AudioTransportExtraPayload } from '../../../../audio/types';
 
 type AudioLatencyEvent = {

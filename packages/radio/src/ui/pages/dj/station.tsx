@@ -5,7 +5,7 @@ import { Link, Outlet, useMatchRoute, useParams } from '@tanstack/react-router';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 
 import { useStation } from '../../hooks/useStation';
-import type { Station as RemoteStation } from '../../../remotes';
+import type { Station as RemoteStation } from '../../../remotes/objects';
 import { collectionRoute, stationIndexRoute, stationRoute } from './route';
 import { TopBar } from './top';
 

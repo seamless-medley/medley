@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useForceUpdate } from "@mantine/hooks";
 import type { RemoteObjects } from "../../remotes/objects";
-import type { Remotable } from "../../socket";
 import { useRemotableProps } from "./remotable";
-import { RemoteObserveOptions } from "../../socket";
 import { client } from "../init";
+import { Remotable } from "../../remotes/types";
+import { RemoteObserveOptions } from "../../remotes/socket";
 
 type SurrogateState<T> = {
   surrogate?: Remotable<T>;
