@@ -1,7 +1,7 @@
-import { BitField } from "@seamless-medley/utils";
 import { ObjectId } from "mongodb";
 import { Class } from "type-fest";
 import { z } from "zod";
+import { BitField } from "../../flags/bitfield";
 
 export const MongoDbObjectIdString = z.string().regex(/^([0-9a-zA-Z]{2}){12}$/, 'invalid object id');
 
