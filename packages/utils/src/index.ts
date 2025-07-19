@@ -5,7 +5,6 @@ export * from './wait';
 export * from './audio';
 export * from './format';
 export * from './utils';
-export * from './bitfield';
 export * from './cache';
 export * from './retryable';
 export * from './lyrics';
