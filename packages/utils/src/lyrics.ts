@@ -1,4 +1,4 @@
-import { chain, clamp, findIndex, flatMap, max, reject, some } from "lodash";
+import { chain, clamp, findIndex, max, reject } from "lodash";
 
 type ParsedLine = {
   infos: [string, string][];
@@ -100,7 +100,7 @@ export function parseLyrics(s: string, { bpm = 90 }: ParseLyricOptions = {}): Ly
 
   const offset = max((infos.offset || []).map(Number)) || 0;
 
-  const timeline = flatMap<ParsedLine | undefined, LyricLine | undefined>(lines, line => {
+  const timeline = lines.flatMap(line => {
     if (line === undefined) {
       return;
     }
@@ -109,7 +109,7 @@ export function parseLyrics(s: string, { bpm = 90 }: ParseLyricOptions = {}): Ly
     return times.map(time => ({ time: time - offset, line: text }))
   });
 
-  if (some(timeline, isLyricLine)) {
+  if (timeline.some(isLyricLine)) {
     let index = 0;
     while (index < timeline.length) {
       const nextIndex = findIndex(timeline, isLyricLine, index + 1);
