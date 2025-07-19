@@ -183,7 +183,6 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
   #audioLatency = 0;
 
-
   #pipelineLatency = 0;
 
   #delayedAudioExtra: AudioTransportExtra[] = [];
@@ -193,7 +192,6 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
       extra: [left_mag, left_peak, right_mag, right_peak, reduction],
       timestamp
     } = payload;
-
 
     const now = Math.trunc(performance.timeOrigin + performance.now());
     this.#pipelineLatency = (now - timestamp) / 1000;

@@ -1,4 +1,4 @@
-import { RgbColor } from "polished/lib/types/color";
+import type { RgbColor } from "polished/lib/types/color";
 
 export const isSameRgb = (a: RgbColor, b: RgbColor) => !(
   (a.red !== b.red) ||

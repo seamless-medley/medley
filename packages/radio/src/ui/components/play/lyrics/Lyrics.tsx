@@ -1,6 +1,6 @@
 import React, { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { clamp, findIndex } from 'lodash';
-import type { LyricLine, Lyrics as CoreLyrics, Timeline, EnhancedLine } from '@seamless-medley/utils';
+import type { LyricLine, Timeline, EnhancedLine } from '@seamless-medley/utils';
 import { findLyricLine } from '@seamless-medley/utils';
 import type { DeckIndex } from '@seamless-medley/medley';
 import { useElementSize } from '@mantine/hooks';

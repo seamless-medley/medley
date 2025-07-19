@@ -7,8 +7,6 @@ import { omitBy, negate } from 'lodash/fp';
 import { BoomBoxCoverAnyLyrics } from '../playout';
 import { isEqual, omit, stubFalse } from 'lodash';
 import { LyricProviderName, LyricsSearchResult } from './lyrics/types';
-
-let instance: MetadataHelper;
 import { cachedWith } from '@seamless-medley/utils';
 
 const falsy = negate(Boolean);
