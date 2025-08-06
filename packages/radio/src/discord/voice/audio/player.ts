@@ -14,7 +14,7 @@ export class DiscordAudioPlayer extends Exciter implements ICarriableExciter {
     super(
       station,
       {
-        bufferSize: 48000 * 2.5, // This should be large enough to hold PCM data while waiting for node stream to comsume
+        bufferSize: 48000 * 1.5, // This should be large enough to hold PCM data while waiting for node stream to comsume
         buffering: 960 * Math.max(1, backlog / 4),
         gain,
         // buffering: 0,
