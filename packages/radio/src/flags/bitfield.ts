@@ -1,5 +1,5 @@
+import { createNamedFunc } from "@seamless-medley/utils";
 import { noop } from "lodash";
-import { createNamedFunc } from "@seamless-medley/utils/src/utils";
 
 export const $console$inspect = Symbol.for('nodejs.util.inspect.custom');
 

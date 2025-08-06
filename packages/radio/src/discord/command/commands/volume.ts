@@ -2,7 +2,7 @@ import { decibelsToGain, gainToDecibels, interpolate } from "@seamless-medley/ut
 import { ChatInputCommandInteraction } from "discord.js";
 import { range, round } from "lodash";
 import { ansi } from "../../format/ansi";
-import { AutomatonCommandError, AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
+import { AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { declare, deny, guildIdGuard, makeAnsiCodeBlock, warn } from "../utils";
 import { AutomatonAccess } from "../../automaton";
 
