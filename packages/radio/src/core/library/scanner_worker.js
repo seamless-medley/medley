@@ -13,7 +13,6 @@ const logger = createLogger({ name: 'scanner' });
  * @returns {Promise<false | string[]>}
  */
 async function scanDir(dir) {
-  logger.debug(`scanDir: ${dir}`);
   const result = await fg(
     `${normalizePath(dir)}/**/*`,
     {
@@ -24,8 +23,6 @@ async function scanDir(dir) {
     }
   )
   .catch(stubFalse);
-
-  logger.debug(`scanDir: ${dir} done: ${result.length} entries`);
 
   return result;
 }
