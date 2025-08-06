@@ -102,6 +102,11 @@ export class GuildState {
 
   #stationLink?: StationLink;
 
+  #pendingJoin?: {
+    options: JoinOptions;
+    promise: Promise<JoinResult>;
+  }
+
   #rejoinAC?: AbortController;
 
   #karaokeEnabled = false;
@@ -357,6 +362,25 @@ export class GuildState {
   }
 
   async #doJoin(options: JoinOptions): Promise<JoinResult> {
+    if (this.#pendingJoin?.options.channel.id === options.channel.id) {
+      return this.#pendingJoin.promise;
+    }
+
+    const joinPromise = this.#internalJoin(options);
+
+    this.#pendingJoin = {
+      options,
+      promise: joinPromise
+    }
+
+    joinPromise.finally(() => {
+      this.#pendingJoin = undefined;
+    });
+
+    return joinPromise;
+  }
+
+  async #internalJoin(options: JoinOptions): Promise<JoinResult> {
     const { channel, timeout = 5000, retries = 0 } = options;
 
     const { me } = channel.guild.members;
@@ -397,7 +421,7 @@ export class GuildState {
 
     const ac = new AbortController;
     const signal = options.signal ? AbortSignal.any([options.signal, ac.signal]) : ac.signal;
-    const timer = setTimeout(() => ac.abort(``), timeout);
+    const timer = setTimeout(() => ac.abort('timeout'), timeout);
     ac.signal.addEventListener('abort', () => clearTimeout(timer));
 
     try {
@@ -424,9 +448,13 @@ export class GuildState {
       return result;
     }
     catch (e: any) {
-      const wasAborted = e.code === 'ABORT_ERR';
-      this.#adapter.getLogger().error(wasAborted ? new Error(e.cause) : e, 'Error joining channel: %s - guild: %s', channel.name, channel.guild.name);
-      return { status: wasAborted ? 'aborted' : 'not_joined' };
+      if (signal.aborted) {
+        this.#adapter.getLogger().error(new Error(e.cause), 'Error joining channel, the operation was aborted (%s): channel: %s - guild: %s', signal.reason || 'N/A', channel.name, channel.guild.name);
+        return { status: 'aborted' };
+      }
+
+      this.#adapter.getLogger().error(e, 'Error joining channel: %s - guild: %s', channel.name, channel.guild.name);
+      return { status: 'not_joined' };
     }
     finally {
       clearTimeout(timer);
@@ -439,6 +467,10 @@ export class GuildState {
   }
 
   async #checkVoiceConnector(timeoutSeconds: number) {
+    if (this.#pendingJoin) {
+      return;
+    }
+
     if (!this.#designatedVC?.channelId) {
       return;
     }
@@ -449,7 +481,7 @@ export class GuildState {
       return;
     }
 
-    this.#rejoinAC?.abort();
+    this.#rejoinAC?.abort('checkVoiceConnector');
     this.#rejoinAC = new AbortController();
 
     const client = this.#adapter.getClient();
@@ -574,7 +606,7 @@ export class GuildState {
 
     if (!newState.channel) {
       // Not in a re-joining process
-      if (this.#rejoinAC === undefined) {
+      if (this.#pendingJoin === undefined && this.#rejoinAC === undefined) {
         this.#leftVoiceChannel();
       }
 
