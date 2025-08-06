@@ -106,6 +106,10 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
       case 'not_joined':
         deny(interaction, 'Could not join, error establishing a voice connection');
         return;
+
+      case 'aborted':
+        deny(interaction, 'Could not join, the operation was aborted');
+        return;
     }
   }
   catch (e) {
