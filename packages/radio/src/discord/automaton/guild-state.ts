@@ -367,6 +367,7 @@ export class GuildState {
       return { status: 'not_granted' }
     }
 
+    await this.detune();
     await this.autoTune();
 
     const { stationLink } = this;
