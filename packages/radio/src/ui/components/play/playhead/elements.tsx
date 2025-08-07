@@ -21,20 +21,21 @@ export const Container = styled.div`
   }
 `;
 
-export const Box = styled.div`
+export const Box = styled.div<{ width?: string }>`
   position: relative;
-  padding: 0.12em 0.6em;
+  padding: 0.44em 0.6em;
   border-radius: 0.25em 0px 0px 0px;
   background-color: rgba(200, 200, 255, 0.3);
   transition: all 0.2s ease;
   white-space: nowrap;
-  height: 1.0em;
+  height: 1em;
+  min-height: fit-content;
   min-width: 8ch;
-  width: 10vw;
+
+  width: ${props => props.width ?? ''};
 
   transition: width 2s ease, height 2s ease;
 `;
-
 
 export const ProgressText = styled.div<{ backgroundColor: string, textColor: string }>`
   position: absolute;
@@ -53,14 +54,18 @@ export const ProgressText = styled.div<{ backgroundColor: string, textColor: str
 
   & > span {
     display: inline-block;
+
+    margin-top: -4px;
+
     width: 0.6em;
     text-align: center;
+
     color: inherit;
   }
 
   will-change: background-position, background-image, color;
 
-  background-size: 2.5vh 2.5vh;
+  background-size: 0.5em 0.5em;
   animation: move 2s linear infinite;
 
   @keyframes move {
@@ -68,7 +73,7 @@ export const ProgressText = styled.div<{ backgroundColor: string, textColor: str
       background-position: 0 0;
     }
     100% {
-      background-position: 2.5vh 2.5vh;
+      background-position: 0.5em 0.5em;
     }
   }
 
