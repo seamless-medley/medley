@@ -7,7 +7,7 @@ import { SearchEngine, Query, TrackDocumentFields, SearchQuery, TrackDocumentRes
 import { MetadataHelper } from '../metadata';
 import { FindByCommentOptions, MusicDb } from './music_db';
 import { TrackExtraOf, TrackWithCollectionExtra } from '../track';
-import { fileExists, scanDir } from './scanner';
+import { fileExists, scanDir, scanDirStream } from './scanner';
 
 export type MusicCollectionWatch = WatchPathWithOption | string;
 
@@ -285,7 +285,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
         {
           ...options,
           trackCreator: this.#trackCreator,
-          scanner: scanDir,
+          scanner: scanDirStream,
           fileExistentChecker: fileExists
         }
       );

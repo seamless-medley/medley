@@ -825,7 +825,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
             sentMessage.edit({ embeds, components })
               .then(resolve)
               .catch((error) => {
-                this.#logger.error(error, 'Error updating track message in guild %s', sentMessage.guild?.name);
+                this.#logger.error(error, 'Error updating track message in guild %s', sentMessage.guild?.name ?? 'unknown');
               });
           });
         })
