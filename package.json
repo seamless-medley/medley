@@ -47,7 +47,8 @@
       "gauge": "*",
       "glob": "*",
       "inflight": "*",
-      "rimraf": "*"
+      "rimraf": "*",
+      "node-domexception": "*"
     },
     "overrides": {
       "typescript": "5.5.4",

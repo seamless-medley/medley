@@ -2,7 +2,8 @@ packages:
   - packages/*
 onlyBuiltDependencies:
   - "@discordjs/opus"
-  - bufferuti
+  - "@parcel/watcher"
+  - bufferutil
   - esbuild
   - mediasoup
   - ffmpeg-static
