@@ -136,7 +136,7 @@ export const StationConfig = z.object({
   ]).optional(),
   duplicationSimilarity: z.number().optional(),
 
-  musicCollections: z.record(MusicCollection),
+  musicCollections: z.record(z.string(), MusicCollection),
 
   profiles: StationProfiles
 }).strict();

@@ -19,11 +19,11 @@ const Config = z.object({
   server: ServerConfig,
   db: DbConfig,
   webrtc: WebRtcConfig.optional(),
-  stations: z.record(StationConfig, { required_error: 'No stations' }),
-  automatons: z.record(AutomatonConfig, { required_error: 'No automatons' }),
+  stations: z.record(z.string(), StationConfig, { error: () => 'No stations' }),
+  automatons: z.record(z.string(), AutomatonConfig, { error: () => 'No automatons' }),
   streaming: StreamingConfigs.optional()
 }, {
-  required_error: 'Configuration file is empty or malformed'
+  error: (issue) => 'Configuration file is empty or malformed'
 }).strict();
 
 

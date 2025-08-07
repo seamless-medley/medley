@@ -28,7 +28,7 @@ export const MongoClientOptions = z.object({
   }),
   authSource: z.string(),
   authMechanism: z.custom<MongoClientOptionsType['authMechanism']>(),
-  authMechanismProperties: z.record(z.any()),
+  authMechanismProperties: z.record(z.string(), z.any()),
   serverSelectionTimeoutMS: z.number(),
   heartbeatFrequencyMS: z.number(),
   minHeartbeatFrequencyMS: z.number(),
@@ -50,12 +50,9 @@ export const MongoDbConfig = z.object({
     .optional()
 }).strict();
 
-export const DbConfig = z.discriminatedUnion('driver', [
-  MongoDbConfig
-], {
-  errorMap: (issue, ctx) => ({
-    message: issue.code === 'invalid_union_discriminator'
-      ? `Unknown driver, valid values are: ${issue.options.join(', ')}`
-      : getErrorMap()(issue, ctx).message
-  })
+
+export const DbConfig = z.discriminatedUnion('driver', [MongoDbConfig], {
+  error: (issue) => issue.code === 'invalid_union'
+    ? 'Unknown driver'
+    : issue.message
 });

@@ -92,7 +92,7 @@ const ShoutFormat = z.discriminatedUnion('codec', [
 ]);
 
 const IcecastConfig = z.object({
-  host: z.string().ip().or(z.string().min(1)),
+  host: z.ipv4().or(z.string().min(1)),
   port: z.number().min(1).max(65565),
   tls: z.boolean().optional(),
   mountpoint: z.string().startsWith('/'),
