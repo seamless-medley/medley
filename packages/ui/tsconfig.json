@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "ES2022"],
+    "module": "commonjs",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "strict": true,
+    "experimentalDecorators": true,
+    "esModuleInterop": true,
+    "moduleResolution": "Node",
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "plugins": [
+      {
+        "name": "@styled/typescript-styled-plugin"
+      }
+    ]
+  },
+  "include": [
+    "src"
+  ]
+}

@@ -5,7 +5,7 @@ import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import wyw from '@wyw-in-js/vite';
 
 export default defineConfig({
-  root: './src/ui/app',
+  root: './src/app',
   plugins: [
     mkcert(),
     {
