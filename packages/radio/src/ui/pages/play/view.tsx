@@ -24,7 +24,7 @@ import { getLuminance,
 
 import { Lyrics, defaultColors as defaultLyricsColors } from "../../components/play/lyrics/Lyrics";
 import { PlayHead } from "../../components/play/playhead/PlayHead";
-import { castArray, chain, random, sortBy, trim, uniq } from "lodash";
+import { chain, random, sortBy } from "lodash";
 import { useRemotableProp } from "../../hooks/remotable";
 import { useSetState } from "@mantine/hooks";
 import type { DeckIndex } from "@seamless-medley/medley";
@@ -157,7 +157,6 @@ export const Play: React.FC = () => {
   useEffect(() => {
     const overrides = {
       overflow: 'hidden',
-      'font-family': "'IBM Plex Sans Thai', Arial",
       'font-size': 'calc(100vh / 30)'
     }
 
@@ -204,7 +203,6 @@ export const Play: React.FC = () => {
   const simple = !!titleText && !cover && !lyrics?.timeline?.length;
 
   return (
-    <>
     <div style={{ height: '100vh', overflow: 'hidden' }}>
       <Control>
         <Button onClick={() => client.playAudio(stationId) }>
@@ -233,7 +231,6 @@ export const Play: React.FC = () => {
         activeColor={colors?.line?.active ?? defaultLyricsColors.line.active}
       />
     </div>
-    </>
   )
 }
 
