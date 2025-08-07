@@ -253,7 +253,7 @@ export const CoverImage = styled.img`
 `;
 
 export const CoverDecorator = styled.div`
-  position:absolute;
+  position: absolute;
   top: 50%;
   left: 50%;
   width: 43%;
@@ -263,8 +263,8 @@ export const CoverDecorator = styled.div`
   border-radius: 100%;
   background: radial-gradient(
     circle closest-side,
-    black 7%,
-    transparent 7.5%,
+    rgba(0,0,0,0.8) 5%,
+    transparent 5.5%,
     transparent 96%,
     rgba(255,255,255,0.5) 96.5%
   );
