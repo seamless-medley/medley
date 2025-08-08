@@ -1,5 +1,7 @@
 /// <reference path="main.d.ts" />
 
+export * from '../core';
+
 import { createServer } from 'node:net';
 import http from 'node:http';
 import express from 'express';
