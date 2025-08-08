@@ -1,8 +1,9 @@
-name: Build combine-discord and publish to ghcr.io
+name: Build, package and publish to ghcr.io
 
 on:
   push:
     branches:
+      # TODO: on tag? or release?
       - combine-discord
 
 env:
@@ -57,7 +58,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./packages/radio/docker/discord/Dockerfile
+          file: ./packages/radio/docker/Dockerfile
           build-args: |
             ARCH=${{ matrix.arch }}
           platforms: ${{ matrix.platforms }}
