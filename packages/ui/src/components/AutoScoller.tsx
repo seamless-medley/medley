@@ -163,8 +163,6 @@ export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
     }
   }, []);
 
-  console.log(scrollerRef.current?.style.getPropertyValue('--trans-x'));
-
   return (
     <Container ref={containerRef} title={props.title}>
       <div ref={clipperRef} style={{ overflow: 'hidden' }}>
