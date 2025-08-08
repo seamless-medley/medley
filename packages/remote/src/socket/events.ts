@@ -1,4 +1,5 @@
-import type { ObservedPropertyChange, SessionData } from "../types";
+import type { SessionData } from "../types";
+import type { ObservedPropertyChange } from "../type-utils";
 
 export type ServerEvents = {
   // Server Ping

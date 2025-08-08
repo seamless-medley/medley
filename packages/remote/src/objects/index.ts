@@ -1,5 +1,5 @@
-import * as core from './core';
-import * as rtc from "./rtc";
+import type * as core from './core';
+import type * as rtc from "./rtc";
 
 export * from './core';
 export * from './rtc';

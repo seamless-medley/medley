@@ -1,4 +1,4 @@
-import type { PickProp, WithoutEvents } from "./types";
+import type { PickProp, WithoutEvents } from "./type-utils";
 
 type AsyncSetOfName<T> = `asyncSet${Capitalize<Extract<T, string>>}`;
 

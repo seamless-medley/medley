@@ -1,6 +1,6 @@
 import type { Track } from "./track";
-import { Exposable } from "../../expose";
 import type { TrackCollectionBasicOptions } from "../../../core";
+import type { Exposable } from "../../expose";
 
 /**
  * Although this is named as Collection, but in fact it should be used with WatchTrackCollection
