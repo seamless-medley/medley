@@ -17,29 +17,25 @@ async function getVersionString(mainVersion: string) {
   return `${branch}:${shortHash}`;
 }
 
-async function combine() {
-  const combinePath = './combine/discord';
+async function packageApp() {
+  const packagePath = './package';
 
-  await emptyDir(combinePath);
+  await emptyDir(packagePath);
 
   const copyTasks = [
-    copy('../utils/dist', join(combinePath, 'utils'), { filter: src => !/package.json$/.test(src) }),
-    copy('dist', join(combinePath, 'radio'), {
-      filter: (src) => {
-        const [, group] = src.split(sep);
-
-        if (/^(server|ui|socket|remotes|streaming|poc-)/.test(group)) {
-          return false;
-        }
-
-        return true
-      }
-    })
+    copy('../utils/dist', join(packagePath, 'utils'), { filter: src => !/package.json$/.test(src) }),
+    copy('../ui/dist', join(packagePath, 'ui')),
+    copy('build', join(packagePath, 'radio'))
   ]
 
   await Promise.all(copyTasks);
 
   const mainPackage = require('../package.json') as PackageJson;
+
+  const depTransformMap = new Map<string, string | false>([
+    ['@seamless-medley/utils', './utils'],
+    ['@seamless-medley/remote', false]
+  ]);
 
   const deps = chain({})
     .extend(
@@ -48,12 +44,11 @@ async function combine() {
       ].map(name => (require(`../../${name}/package.json`) as PackageJson).dependencies),
       mainPackage.dependencies
     )
-    .omitBy((_, name) => /^(socket\.io|react|express|@mantine|framer-motion|ffmpeg|reflect-metadata|notepack.io|opus-decoder|mediasoup|polished|@tanstack|@fontsource|@linaria|@tabler|@wyw|overlayscrollbars)/.test(name ?? ''))
     .transform((o, value, key) => {
-      if (key.startsWith('@seamless-medley/') && value?.startsWith('..')) {
-        o[key] = value.substring(1);
-      } else {
-        o[key] = value;
+      const newValue = depTransformMap.get(key);
+
+      if (newValue !== false) {
+        o[key] = newValue || value;
       }
 
       return o;
@@ -62,25 +57,25 @@ async function combine() {
 
   const result = chain(mainPackage)
     .pick('name', 'version', 'description', 'author', 'keyword', 'license')
-    .extend({ main: 'radio/discord/bot_main.js' })
+    .extend({ main: 'radio/server/main.js' })
     .extend({ dependencies: deps })
     .value();
 
   result.version = await getVersionString(result.version!);
 
-  await outputJson(join(combinePath, 'package.json'), result, { spaces: 2 });
+  await outputJson(join(packagePath, 'package.json'), result, { spaces: 2 });
 
-  await outputFile(join(combinePath, 'banner.txt'), [
-    'Medley (Discord)',
+  await outputFile(join(packagePath, 'banner.txt'), [
+    'Medley',
     `Version: ${result.version}`,
     `Build date: ${Date()}`
   ].join('\n'));
 
-  await outputFile(join(combinePath, 'README.md'), [
+  await outputFile(join(packagePath, 'README.md'), [
     '```sh',
     'npm i',
     '```'
   ].join('\n'));
 }
 
-combine();
+packageApp();
