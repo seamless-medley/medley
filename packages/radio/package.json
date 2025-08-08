@@ -29,7 +29,7 @@
   "dependencies": {
     "@commander-js/extra-typings": "^14.0.0",
     "@discordjs/opus": "0.10.0",
-    "@discordjs/rest": "2.4.3",
+    "@discordjs/rest": "2.5.1",
     "@node-rs/argon2": "^2.0.2",
     "@parcel/watcher": "^2.3.0",
     "@seamless-medley/medley": "0.5.3",
@@ -50,7 +50,7 @@
     "mime-types": "^3.0.1",
     "minimatch": "10.0.1",
     "minisearch": "^7.1.0",
-    "mongodb": "6.13.1",
+    "mongodb": "6.18.0",
     "node-html-parser": "^7.0.1",
     "normalize-path": "^3.0.0",
     "notepack.io": "^3.0.1",
