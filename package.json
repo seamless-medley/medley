@@ -9,8 +9,8 @@
   "license": "GPL-3.0",
   "scripts": {
     "clean": "turbo run clean",
-    "build:radio": "turbo run build --filter=@seamless-medley/radio",
-    "combine-discord": "turbo run combine-discord --filter=@seamless-medley/radio",
+    "build": "turbo run build",
+    "package": "turbo run package --filter=@seamless-medley/radio",
     "prepare": "husky"
   },
   "devDependencies": {
