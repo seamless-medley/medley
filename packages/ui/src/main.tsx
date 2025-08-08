@@ -1,9 +1,9 @@
 import { RouterProvider } from "@tanstack/react-router";
 import { MantineProvider } from '@mantine/core';
 
-import { initRoot } from '../init';
-import { router } from "../pages/router";
-import { theme } from "../theme/theme";
+import { initRoot } from './init';
+import { router } from "./pages/router";
+import { theme } from "./theme/theme";
 import { OverlayScrollbars } from "overlayscrollbars";
 
 OverlayScrollbars(

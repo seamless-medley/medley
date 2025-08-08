@@ -5,7 +5,7 @@ import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import wyw from '@wyw-in-js/vite';
 
 export default defineConfig({
-  root: './src/app',
+  root: './src',
   plugins: [
     mkcert(),
     {
@@ -52,7 +52,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: './dist',
+    outDir: '../dist',
     emptyOutDir: false,
     chunkSizeWarningLimit: 640,
     rollupOptions: {

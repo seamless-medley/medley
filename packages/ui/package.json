@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "vite --port 9586 --host",
-    "build": "vite build"
+    "build": "vite build",
+    "clean": "rimraf .turbo dist"
   },
   "dependencies": {
     "@fontsource-variable/anuphan": "^5.0.12",
