@@ -200,6 +200,7 @@ export function parseLyrics(s: string, { bpm = 90 }: ParseLyricOptions = {}): Ly
     }
   }
 
+  // Enhanced format
   if (finalTimeline.find(({ line }) => /<\d+:\d+\.\d+?>/g.test(line))) {
     let lastLinetokens: EnhancedLine | undefined = undefined;
 
