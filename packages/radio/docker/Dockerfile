@@ -18,9 +18,9 @@ COPY . ./build
 
 WORKDIR /build
 RUN pnpm install --ignore-scripts
-RUN pnpm combine-discord
+RUN pnpm package
 
-RUN cp -R /build/packages/radio/combine/discord/* /app
+RUN cp -R /build/packages/radio/package/* /app
 
 WORKDIR /app
 RUN pnpm install
@@ -46,7 +46,7 @@ RUN mkdir -p /data/musics /data/drops
 
 ENV UV_THREADPOOL_SIZE=4
 
-COPY packages/radio/docker/discord/entrypoint.sh /entrypoint.sh
+COPY packages/radio/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 
