@@ -40,6 +40,7 @@
   "devDependencies": {
     "@ava/typescript": "^5.0.0",
     "@types/fs-extra": "^11.0.3",
+    "@types/lodash": "^4.14.200",
     "@types/semver": "^7.5.4",
     "fs-extra": "^11.2.0",
     "ava": "^6.1.3",
