@@ -20,9 +20,7 @@
     "dev": "cross-env MEDLEY_DEV_NO_TRACE=1 DEBUG=1 NODE_ENV=development ts-node src/server/main.ts",
     "build": "tsc --build tsconfig.build.json",
     "package": "tsx scripts/package.ts",
-    "package:docker": "docker build -f ./docker/Dockerfile -t medley ../..",
-    "poc:bits": "ts-node src/poc-bits.ts",
-    "poc:lyrics": "cross-env ts-node src/poc-lyrics.ts",
+    "package:docker": "docker build -f ./docker/Dockerfile -t medley ../.."
   },
   "dependencies": {
     "@commander-js/extra-typings": "^14.0.0",
