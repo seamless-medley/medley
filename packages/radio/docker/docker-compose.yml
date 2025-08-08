@@ -8,9 +8,11 @@ services:
 
   radio:
     image: ghcr.io/seamless-medley/medley:latest
-    restart: always
+    restart: unless-stopped
     depends_on:
       - mongo
+    ports:
+      - 3001:3001
     environment:
       MEDLEY_MUSIC_PATH: /data/musics
       MEDLEY_DROP_PATH: /data/drops
