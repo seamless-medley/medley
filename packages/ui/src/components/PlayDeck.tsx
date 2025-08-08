@@ -6,7 +6,7 @@ import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { transparentize } from "polished";
 import { theme } from "../theme/theme";
 import { PlayHeadText } from "./PlayHeadText";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, MotionNodeOptions } from "framer-motion";
 import { styled } from "@linaria/react";
 import { cx } from "@linaria/core";
 import { Link } from "@tanstack/react-router";
@@ -198,7 +198,7 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
 
   const hasCover = (trackPlay?.track?.extra?.coverAndLyrics?.cover?.byteLength ?? 0) !== 0;
 
-  const animatePresenceProps = {
+  const animatePresenceProps: MotionNodeOptions = {
     initial: { opacity: 0 },
     exit: { opacity: 0 },
     animate: { opacity: 1 },
