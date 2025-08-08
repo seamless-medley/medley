@@ -52,7 +52,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../../../dist/ui',
+    outDir: './dist',
     emptyOutDir: false,
     chunkSizeWarningLimit: 640,
     rollupOptions: {
