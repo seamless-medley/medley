@@ -1,5 +1,6 @@
 packages:
   - packages/*
+ignoreWorkspaceCycles: true
 onlyBuiltDependencies:
   - "@discordjs/opus"
   - "@parcel/watcher"
