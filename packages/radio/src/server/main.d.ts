@@ -3,3 +3,9 @@ declare module 'node:events' {
     off: NodeJS.EventEmitter['off'];
   }
 }
+
+namespace NodeJS {
+  interface ProcessEnv {
+    NODE_ENV?: 'development' | 'production';
+  }
+}

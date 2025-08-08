@@ -14,7 +14,7 @@ import { AudioWebSocketServer } from './audio/ws/server';
 import { Config, loadConfig } from '../config';
 import { RTCTransponder } from './audio/rtc/transponder';
 import { getVersionLine, showVersionBanner } from '../helper';
-import { extname } from 'node:path';
+import { extname, resolve as resolvePath } from 'node:path';
 import { Medley } from '@seamless-medley/medley';
 
 const logger = createLogger({ name: 'main' });
@@ -68,12 +68,18 @@ async function startServer(configs: Config) {
       (_, res) => void res.status(503).end('Unknown stream')
     );
 
-    expressApp.use('/', express.static('dist/ui'), (req, res, next) => {
+    const staticPath = resolvePath(__dirname,
+      process.env.NODE_ENV === 'development'
+        ? '../../../ui/dist'
+        : '../../ui'
+    );
+
+    expressApp.use('/', express.static(staticPath), (req, res, next) => {
       const ext = extname(req.path);
 
       if (!ext) {
         res.sendFile('index.html', {
-          root: 'dist/ui',
+          root: staticPath,
           dotfiles: 'deny'
         });
         return;
@@ -109,7 +115,9 @@ async function startServer(configs: Config) {
         .once('error', listenErrorHandler)
         .listen(listeningPort, listeningAddr, () => {
           httpServer.off('error', listenErrorHandler);
+
           logger.info(`Listening on port ${listeningPort}`);
+          logger.info(`Serving UI at: ${staticPath}`);
 
           const { streamers } = server;
 
