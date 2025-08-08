@@ -1,6 +1,6 @@
 import { encode } from 'notepack.io';
+import type { AudioTransportExtraPayload } from "@seamless-medley/remote";
 import { IExciter, Exciter } from "../../../audio/exciter";
-import { AudioTransportExtraPayload } from "../../../audio/types";
 import { Station } from '../../../core';
 
 interface WebSocketExciterEvents {

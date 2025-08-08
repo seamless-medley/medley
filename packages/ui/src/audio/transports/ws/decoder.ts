@@ -5,7 +5,6 @@
  */
 
 import { OpusDecodedAudio, OpusDecoder } from 'opus-decoder';
-import { type Timestamp } from './ringbuffer';
 
 export type InputMessage<T> = {
   opus: Uint8Array;

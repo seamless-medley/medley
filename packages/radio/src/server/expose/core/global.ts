@@ -1,7 +1,6 @@
+import type { Global as RemoteGlobal, Exposable } from "@seamless-medley/remote";
 import { MixinEventEmitterOf } from "../../socket";
-import { Global as RemoteGlobal } from '../../../remotes/objects';
 import { MedleyServer } from "../../medley-server";
-import { Exposable } from "../../../remotes/expose";
 
 export class ExposedGlobal extends MixinEventEmitterOf<RemoteGlobal>() implements Exposable<RemoteGlobal> {
   $Exposing = undefined;

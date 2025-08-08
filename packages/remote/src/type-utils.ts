@@ -1,5 +1,6 @@
 import type { ConditionalExcept } from "type-fest";
 
+
 type SelectKeyBy<O, C> = { [Key in keyof O]: Key extends C ? Key : never}[keyof O];
 type SelectKeyByValue<O, C> = { [Key in keyof O]: O[Key] extends C ? Key : never}[keyof O];
 type EventNameOf<T> = T extends `ϟ${infer Name}` ? Name : never;
@@ -68,17 +69,3 @@ export type ObservedPropertyChange<T = any> = {
 }
 
 export type ObservedPropertyHandler<T> = (instance: T, changes: ObservedPropertyChange[]) => Promise<any>;
-
-export type AuthData = {
-  nn: number[];
-  up: [number[], number[]];
-}
-
-export type PlainUser = {
-  username: string;
-  flags: string;
-}
-
-export type SessionData = {
-  user?: PlainUser;
-}

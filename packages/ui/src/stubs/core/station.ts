@@ -1,6 +1,6 @@
 import { noop } from "lodash";
 import { StubOf } from "../stub";
-import type { Station } from "../../../remotes/objects";
+import type { Station } from "@seamless-medley/remote";
 
 class StubbingStation {
   id = undefined as any;

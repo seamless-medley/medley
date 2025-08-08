@@ -1,5 +1,5 @@
-import { type EventEmitter } from "eventemitter3";
-import { type AudioTransportExtra } from "../../audio/types";
+import type { EventEmitter } from "eventemitter3";
+import type { AudioTransportExtra } from "@seamless-medley/remote";
 
 export type AudioTransportState = 'new' | 'failed' | 'ready';
 

@@ -1,6 +1,6 @@
 import { noop } from "lodash";
 import { StubOf } from "../stub";
-import type { RTCTransponder } from "../../../remotes/objects";
+import type { RTCTransponder } from "@seamless-medley/remote";
 
 class StubbingRTCTransponder {
   caps = undefined as any;

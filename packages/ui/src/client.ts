@@ -10,17 +10,14 @@ import type {
   ErrorResponse,
   RemoteResponse,
   ServerEvents,
-  RemoteObserveOptions
-} from "../remotes/socket";
-
-import type {
+  RemoteObserveOptions,
   AuthData,
   ObservedPropertyChange,
   PickMethod,
   PickProp,
   Remotable,
   SessionData
-} from "../remotes/types";
+} from "@seamless-medley/remote";
 
 import { type AudioTransportEvents } from "./audio/transport";
 import { getRemoteTimeout, Stubs } from "./stubs";

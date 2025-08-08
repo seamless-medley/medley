@@ -1,7 +1,7 @@
 import type { Writable } from "type-fest";
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 
-import type { Deck, DeckInfo, DeckInfoWithPositions,  } from "../../../remotes/objects";
+import type { Deck, DeckInfo, DeckInfoWithPositions, Exposable } from "@seamless-medley/remote";
 
 import {
   Station,
@@ -11,7 +11,6 @@ import {
 } from "../../../core";
 
 import { toTrackPlay } from "./collection";
-import { Exposable } from "../../../remotes/expose";
 
 export const fromDeckInfo = async ({ trackPlay, active, playing }: CoreDeckInfo): Promise<DeckInfo> => ({
   trackPlay: trackPlay ? await toTrackPlay(trackPlay) : undefined,

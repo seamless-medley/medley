@@ -8,8 +8,7 @@ import { ConditionalKeys } from "type-fest";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { isProperty, isPublicPropertyName, propertyDescriptorOf } from '@seamless-medley/utils';
 
-import type { ClientEvents, RemoteCallback, RemoteResponse, ServerEvents } from "../../remotes/socket";
-import type { AuthData, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents } from '../../remotes/types';
+import type { Exposable, ClientEvents, RemoteCallback, RemoteResponse, ServerEvents, AuthData, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents  } from "@seamless-medley/remote";
 
 import { Socket, ClientData } from './types';
 
@@ -18,8 +17,6 @@ import { SettingsDb } from '../../db/types';
 import { getDependents, hasObjectGuardAccess } from './decorator';
 import { PlainUser } from '../../db/persistent/user';
 import { $ActualObject } from '../../db/models/base';
-import { Exposable } from '../../remotes/expose';
-
 
 const logger = createLogger({ name: 'socket-server' });
 

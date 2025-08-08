@@ -29,9 +29,9 @@ import type {
   TrackKind,
   TrackPlay,
   TrackSequencing,
-  TrackSequencingLatch
-} from "../../../remotes/objects";
-import { Exposable } from "../../../remotes/expose";
+  TrackSequencingLatch,
+  Exposable
+} from "@seamless-medley/remote";
 
 export const pickId = <T extends { id: any }>({ id }: T): IdOnly<T> => ({ id });
 

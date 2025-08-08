@@ -1,6 +1,6 @@
 import { noop } from "lodash";
 import { StubOf } from "../stub";
-import type { Collection } from "../../../remotes/objects";
+import type { Collection } from "@seamless-medley/remote";
 
 export const StubCollection = StubOf<Collection>(class StubbingCollection {
   id = undefined as any;

@@ -1,8 +1,8 @@
 import "reflect-metadata";
 
+import type { PickProp } from "@seamless-medley/remote";
 import { GuardPredicate, Socket } from "./types";
 import { loggedIn } from "./guards";
-import { PickProp } from "../../remotes/types";
 
 const $Dependents = Symbol.for("$Dependents");
 

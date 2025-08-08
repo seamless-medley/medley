@@ -3,7 +3,7 @@ import http, { IncomingMessage } from "node:http";
 import { decode } from "notepack.io";
 import { Duplex } from "node:stream";
 import { WebSocket, WebSocketServer } from "ws";
-import { AudioSocketCommand, AudioSocketReply } from "../../../remotes/socket";
+import type { AudioSocketCommand, AudioSocketReply } from "@seamless-medley/remote";
 import { AudioDispatcher } from "../../../audio/exciter/dispatcher";
 import { WebSocketExciter } from "./exciter";
 import { AudienceType, makeAudienceGroupId, Station } from "../../../core";
@@ -203,18 +203,18 @@ class AudioWebSocket {
     const data = decode(m.subarray(1));
 
     switch (command) {
-      case AudioSocketCommand.Identify:
+      case 0: /* AudioSocketCommand_Identify */
         this.#socketId = data;
         break;
 
-      case AudioSocketCommand.Tune:
+      case 1: /* AudioSocketCommand_Tune */
         const stationId = data;
         if (await this.server.tuneAudioSocket(stationId, this)) {
           this.#stationId = stationId;
         }
         break;
 
-      case AudioSocketCommand.Detune:
+      case 2: /* AudioSocketCommand_Detune */
         this.server.detuneAudioSocket(this);
         break;
     }
@@ -238,12 +238,12 @@ class AudioWebSocket {
   }
 
   sendPacket(packet: Buffer) {
-    this.sendPayload(AudioSocketReply.Opus, packet);
+    this.sendPayload(0xCC /* AudioSocketReply.Opus */, packet);
   }
 
   sendLatency(ms: number) {
     const data = Buffer.alloc(4);
     data.writeUInt32LE(ms);
-    this.sendPayload(AudioSocketReply.Latency, data);
+    this.sendPayload(0x00 /* AudioSocketReply.Latency */, data);
   }
 }

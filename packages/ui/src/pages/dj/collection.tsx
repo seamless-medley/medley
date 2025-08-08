@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useCollection } from "../../hooks/useCollection";
-import type { Track } from "../../../remotes/objects";
+import type { Track } from "@seamless-medley/remote";
 import { collectionRoute, stationRoute } from "./route";
 
 const CollectionList: React.FC = () => {

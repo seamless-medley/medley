@@ -1,9 +1,9 @@
 import { EventEmitter } from "eventemitter3";
+import type { AudioTransportExtra } from "@seamless-medley/remote";
 import worklet from "./worklets/stream-consumer-module.js?worker&url";
 import AudioClientWorker from './client?worker';
 import type { AudioClientIntf, OutputMessage } from "./client";
 import { AudioTransportExtraPayloadWithTimestamp, RingBufferWithExtra } from "./ringbuffer";
-import type { AudioTransportExtra } from "../../../../audio/types";
 import type { MedleyStreamProcessorNodeOptions } from "./worklets/stream-consumer";
 import type { AudioTransportEvents, AudioTransportState, IAudioTransport } from "../../transport";
 

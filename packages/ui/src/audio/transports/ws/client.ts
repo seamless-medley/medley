@@ -6,10 +6,9 @@
  */
 
 import { decode, encode } from "notepack.io";
-import { AudioSocketCommand, AudioSocketCommandMap, AudioSocketReply } from "../../../../remotes/socket";
+import type { AudioSocketCommand, AudioSocketCommandMap, AudioTransportExtraPayload } from "@seamless-medley/remote";
 import Decoder from "./decoder?worker";
 import type { Decoder as DecoderIntf } from "./decoder";
-import type { AudioTransportExtraPayload } from "../../../../audio/types";
 import { RingBufferWithExtra } from "./ringbuffer";
 
 export type InitMessage = {
@@ -109,14 +108,14 @@ function handleStream(ev: MessageEvent<ArrayBuffer>) {
 
 
 
-  if (op === AudioSocketReply.Latency) {
+  if (op === 0x00 /* AudioSocketReply_Latency */) {
     // milliseconds
     const latencyMs = view.getUint32(1, true);
     self.postMessage({ type: 'audio-latency', latencyMs });
     return;
   }
 
-  if (op === AudioSocketReply.Opus) {
+  if (op === 0xCC /* AudioSocketReply.Opus */) {
     const data = new Uint8Array(ev.data, 1);
     handleOpus(data);
     return;
@@ -154,7 +153,7 @@ async function connect(socketId: string): Promise<void> {
 
   ws.onopen = () => {
     self.postMessage({ type: 'open' });
-    sendCommand(AudioSocketCommand.Identify, socketId);
+    sendCommand(0 /* AudioSocketCommand_Identify */, socketId);
   }
 
   ws.addEventListener('message', handleStream);
@@ -179,11 +178,11 @@ function sendCommand<T extends AudioSocketCommand>(command: T, data: Parameters<
 }
 
 function play(stationId: string) {
-  sendCommand(AudioSocketCommand.Tune, stationId);
+  sendCommand(1 /* AudioSocketCommand.Tune */, stationId);
 }
 
 function stop() {
-  sendCommand(AudioSocketCommand.Detune, undefined);
+  sendCommand(2 /* AudioSocketCommand.Detune */, undefined);
   self.postMessage({ type: 'stopped' });
 }
 

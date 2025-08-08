@@ -6,7 +6,7 @@ import { AudioDispatcher } from '../../../audio/exciter';
 import { type WebRtcConfig } from '../../../config/webrtc';
 import { createLogger } from "../../../logging";
 import { AudienceType, makeAudienceGroupId, Station } from '../../../core';
-import { ClientConsumerInfo, ClientTransportInfo } from '../../../remotes/objects';
+import type { ClientConsumerInfo, ClientTransportInfo } from '@seamless-medley/remote';
 
 export type ClientTransportData = {
   socket: Socket<{}>;

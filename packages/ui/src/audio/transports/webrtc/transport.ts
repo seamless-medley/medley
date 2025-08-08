@@ -3,9 +3,7 @@ import { decode } from "notepack.io";
 import { stubFalse } from 'lodash';
 import { Device as MediaSoupDevice, type types } from 'mediasoup-client';
 import type { AudioTransportEvents, AudioTransportPlayResult, AudioTransportState, IAudioTransport } from "../../transport";
-import { type RTCTransponder } from '../../../../remotes/objects';
-import type { Remotable } from '../../../../remotes/types';
-import type { AudioTransportExtra, AudioTransportExtraPayload } from '../../../../audio/types';
+import type { RTCTransponder, Remotable, AudioTransportExtra, AudioTransportExtraPayload } from '@seamless-medley/remote';
 
 type AudioLatencyEvent = {
   type: 'audio-latency';

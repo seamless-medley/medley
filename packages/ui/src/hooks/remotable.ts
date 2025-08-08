@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PickProp, Remotable } from "../../remotes/types";
+import type { PickProp, Remotable } from "@seamless-medley/remote";
 
 const $AnyProp: unique symbol = Symbol.for('$AnyProp');
 

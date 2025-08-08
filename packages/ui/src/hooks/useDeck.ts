@@ -1,7 +1,7 @@
 import type { DeckIndex } from "@seamless-medley/medley";
 import { useCallback, useEffect, useState } from "react";
 import { useSetState } from "@mantine/hooks";
-import type { Deck, TrackPlay } from "../../remotes/objects";
+import type { Deck, TrackPlay } from "@seamless-medley/remote";
 import { useSurrogate } from "./surrogate";
 
 export function useDeck(stationId: string | undefined, index: DeckIndex | undefined) {

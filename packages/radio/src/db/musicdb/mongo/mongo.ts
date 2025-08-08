@@ -1,11 +1,12 @@
 import { noop } from "lodash";
-import { createLogger, type Logger } from "../../../logging";
 import { Db, MongoClient, type MongoClientOptions } from "mongodb";
+import type { PlainUser } from "@seamless-medley/remote";
+
+import { createLogger, type Logger } from "../../../logging";
 
 import { SettingsDb } from "../../types";
 import { FindByCommentOptions, MusicDb, MusicDbTrack, SearchHistory, TrackHistory, WorkerPoolAdapter } from "../../../core";
 import { User } from "../../persistent/user";
-import { PlainUser } from "../../../remotes/types";
 
 export type Options = {
   url: string;

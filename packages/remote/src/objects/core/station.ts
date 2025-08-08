@@ -1,7 +1,9 @@
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import type { DeckInfoWithPositions, DeckPositionsWithTrackKind } from "./deck";
 import type { TrackCollection } from "./track";
-import type { PlayState } from "../../../core";
+
+
+export type PlayState = 'idle' | 'playing' | 'paused';
 
 export interface Station {
   readonly id: string;

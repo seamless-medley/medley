@@ -1,5 +1,5 @@
 import { StubOf } from "../stub";
-import type { Deck } from "../../../remotes/objects";
+import type { Deck } from "@seamless-medley/remote";
 
 export const StubDeck = StubOf<Deck>(class StubbingDeck {
   active = undefined as any;

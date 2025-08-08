@@ -3,7 +3,6 @@ import { Join } from 'type-fest';
 import { chain, sumBy } from 'lodash';
 
 import {
-  type AudioLevels,
   type DeckIndex,
   type DeckPositions,
   type RequestAudioOptions,
@@ -12,6 +11,8 @@ import {
   Medley,
   Queue
 } from "@seamless-medley/medley";
+
+import type { StationAudioLevels } from '@seamless-medley/remote';
 
 import { createLogger, type Logger } from '../../logging';
 
@@ -34,10 +35,6 @@ import {
 
 import { SearchQueryField } from "../library/search";
 import { CrateProfile } from "../crate/profile";
-
-export type StationAudioLevels = AudioLevels & {
-  reduction: number;
-}
 
 export enum PlayState {
   Idle = 'idle',

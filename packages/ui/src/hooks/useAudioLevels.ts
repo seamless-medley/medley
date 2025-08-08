@@ -1,8 +1,7 @@
 import { gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { mapValues } from "lodash";
 import { useCallback, useEffect } from "react";
-import { AudioTransportExtra } from "../../audio/types";
-import type { StationAudioLevels } from "../../core";
+import type { StationAudioLevels, AudioTransportExtra } from "@seamless-medley/remote";
 import { client } from "../init";
 
 const emptyLevel: StationAudioLevels = {

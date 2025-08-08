@@ -1,0 +1,8 @@
+{
+  "name": "@seamless-medley/remote",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "dependencies": {
+    "@seamless-medley/medley": "0.5.3"
+  }
+}
