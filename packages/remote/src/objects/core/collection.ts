@@ -1,6 +1,6 @@
 import type { Track } from "./track";
-import type { TrackCollectionBasicOptions } from "../../../core";
 import type { Exposable } from "../../expose";
+import type { TrackCollectionBasicOptions } from "@seamless-medley/radio";
 
 /**
  * Although this is named as Collection, but in fact it should be used with WatchTrackCollection

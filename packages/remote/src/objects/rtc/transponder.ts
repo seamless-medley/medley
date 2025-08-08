@@ -1,5 +1,5 @@
 import type { types } from 'mediasoup';
-import type { Station } from '../../../core';
+import type { Station } from "@seamless-medley/radio";
 
 type ConsumerResponse = Pick<types.Consumer, 'id' | 'producerId' | 'kind' | 'rtpParameters'>;
 type DataConsumerResponse = Pick<types.DataConsumer, 'id' | 'dataProducerId' | 'label' | 'sctpStreamParameters'>;

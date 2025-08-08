@@ -4,12 +4,12 @@ import type { Lyrics } from "@seamless-medley/utils";
 
 import type { Collection } from "./collection";
 
-import {
-  type BoomBoxTrack,
-  type BoomBoxTrackExtra,
-  type BoomBoxTrackPlay,
-  type LatchSession as CoreLatchSession
-} from "../../../core";
+import type {
+  BoomBoxTrack,
+  BoomBoxTrackExtra,
+  BoomBoxTrackPlay,
+  LatchSession as CoreLatchSession
+} from "@seamless-medley/radio";
 
 export type IdOnly<T extends { id: any }> = Writable<Pick<T, 'id'>>;
 

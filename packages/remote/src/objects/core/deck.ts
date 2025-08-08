@@ -1,8 +1,9 @@
-import type { DeckPositions } from "@seamless-medley/medley";
 import type { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
+import type { DeckPositions } from "@seamless-medley/medley";
+
+import type { DeckInfo as CoreDeckInfo } from "@seamless-medley/radio";
 
 import type { TrackKind, TrackPlay } from "./track";
-import type { DeckInfo as CoreDeckInfo } from '../../../core';
 
 export type DeckInfo = Simplify<Writable<
   ConditionalPick<CoreDeckInfo, Jsonifiable | undefined> & {
