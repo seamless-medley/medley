@@ -2,10 +2,11 @@
   "name": "@seamless-medley/remote",
   "version": "0.1.0",
   "main": "src/index.ts",
-  "dependencies": {
+  "devDependencies": {
     "@seamless-medley/medley": "0.5.3",
     "@seamless-medley/radio": "../radio",
     "@seamless-medley/utils": "../utils",
-    "mediasoup": "^3.15.6"
+    "mediasoup": "^3.15.6",
+    "type-fest": "^4.8.3"
   }
 }

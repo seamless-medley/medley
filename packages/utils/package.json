@@ -13,8 +13,11 @@
     "lodash": "^4.17.21"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.200",
+    "mkdirp": "^3.0.1",
     "rimraf": "^6.0.1",
     "tsx": "^4.6.2",
+    "type-fest": "^4.8.3",
     "typescript": "5.5.4"
   }
 }

@@ -50,6 +50,7 @@
     "@styled/typescript-styled-plugin": "^1.0.0",
     "@tanstack/router-plugin": "^1.114.30",
     "@types/audioworklet": "^0.0.82",
+    "@types/lodash": "^4.14.200",
     "@types/react": "18.2.33",
     "@types/react-dom": "18.2.14",
     "@types/readable-stream": "^4.0.4",
@@ -59,6 +60,7 @@
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.6.2",
+    "type-fest": "^4.8.3",
     "typescript": "5.5.4",
     "vite": "7.1.0",
     "vite-plugin-mkcert": "^1.17.1"
