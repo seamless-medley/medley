@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "main": "src/index.ts",
   "dependencies": {
-    "@seamless-medley/medley": "0.5.3"
+    "@seamless-medley/medley": "0.5.3",
+    "mediasoup": "^3.15.6"
   }
 }
