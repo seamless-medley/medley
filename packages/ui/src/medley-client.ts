@@ -5,8 +5,9 @@ import { clamp } from 'lodash';
 import type {
   RemoteObjects,
   Station as RemoteStation, Global as RemoteGlobal,
-  RTCTransponder
-} from "../remotes/objects";
+  RTCTransponder,
+  Remotable
+} from "@seamless-medley/remote";
 
 import { IAudioTransport, waitForAudioTransportState } from "./audio/transport";
 import { WebSocketAudioTransport } from "./audio/transports/ws/transport";
@@ -14,7 +15,6 @@ import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
 
 import { Client } from "./client";
 import { KaraokeFx } from './audio/fx/karaoke';
-import { Remotable } from '../remotes/types';
 
 type MedleyClientEvents = {
   audioTransport(transport: IAudioTransport): void;
