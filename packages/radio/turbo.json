@@ -2,14 +2,12 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "outputs": ["dist/**"]
+      "dependsOn": ["@seamless-medley/utils#build", "@seamless-medley/ui#build"],
+      "outputs": ["build/**"]
     },
-    "build:server": {
-      "outputs": ["dist/**"]
-    },
-    "combine-discord": {
-      "dependsOn": ["build:server"],
-      "outputs": ["combine/discord/**"]
+    "package": {
+      "dependsOn": ["build"],
+      "outputs": ["package/**"]
     }
   }
 }
