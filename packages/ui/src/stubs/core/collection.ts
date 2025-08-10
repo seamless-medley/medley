@@ -1,5 +1,5 @@
 import { noop } from "lodash";
-import { StubOf } from "../stub";
+import { StubOf } from "@ui/stubs";
 import type { Collection } from "@seamless-medley/remote";
 
 export const StubCollection = StubOf<Collection>(class StubbingCollection {

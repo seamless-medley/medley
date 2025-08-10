@@ -2,8 +2,8 @@ import EventEmitter from 'eventemitter3';
 import { decode } from "notepack.io";
 import { stubFalse } from 'lodash';
 import { Device as MediaSoupDevice, type types } from 'mediasoup-client';
-import type { AudioTransportEvents, AudioTransportPlayResult, AudioTransportState, IAudioTransport } from "../../transport";
 import type { RTCTransponder, Remotable, AudioTransportExtra, AudioTransportExtraPayload } from '@seamless-medley/remote';
+import type { AudioTransportEvents, AudioTransportPlayResult, AudioTransportState, IAudioTransport } from "@ui/audio/transport";
 
 type AudioLatencyEvent = {
   type: 'audio-latency';

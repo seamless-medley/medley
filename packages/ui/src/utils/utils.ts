@@ -1,3 +1,4 @@
+import type { DeckIndex } from "@seamless-medley/medley";
 import type { RgbColor } from "polished/lib/types/color";
 
 export const isSameRgb = (a: RgbColor, b: RgbColor) => !(
@@ -15,3 +16,5 @@ export function colorInterpolate(a: RgbColor, b: RgbColor, p: number): RgbColor 
     blue: lerp(a.blue, b.blue),
   }
 }
+
+export const getNextDeck = (index: DeckIndex): DeckIndex => [1, 2, 0][index];

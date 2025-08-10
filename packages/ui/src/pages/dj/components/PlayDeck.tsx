@@ -1,17 +1,18 @@
 import React, { useEffect, useRef } from "react";
-import type { DeckIndex } from "@seamless-medley/medley";
-import { useDeckCover, useDeckInfo } from "../hooks/useDeck";
-import { Anchor, Box, Card, Flex, Image, Stack, Text } from "@mantine/core";
-import { useElementSize, useMergedRef } from "@mantine/hooks";
-import { transparentize } from "polished";
-import { theme } from "../theme/theme";
-import { PlayHeadText } from "./PlayHeadText";
-import { AnimatePresence, motion, MotionNodeOptions } from "framer-motion";
+import { Link } from "@tanstack/react-router";
 import { styled } from "@linaria/react";
 import { cx } from "@linaria/core";
-import { Link } from "@tanstack/react-router";
-import { collectionRoute, stationRoute } from "../pages/dj/route";
-import { AutoScroller } from "./AutoScoller";
+import { Anchor, Box, Card, Flex, Image, Text } from "@mantine/core";
+import { useElementSize, useMergedRef } from "@mantine/hooks";
+import { transparentize } from "polished";
+import { AnimatePresence, motion, MotionNodeOptions } from "framer-motion";
+
+import type { DeckIndex } from "@seamless-medley/medley";
+import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
+import { theme } from "@ui/theme/theme";
+// import { collectionRoute, stationRoute } from "../pages/dj/route";
+import { AutoScroller } from "@ui/components/AutoScoller";
+import { PlayHeadText } from "./PlayHeadText";
 
 export type PlayDeckProps = {
   stationId: string | undefined;
@@ -287,8 +288,8 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
             <Flex justify="space-between">
               <Anchor
                 component={Link}
-                from={stationRoute.id}
-                to={collectionRoute.to}
+                // from={stationRoute.id}
+                // to={collectionRoute.to}
                 params={{ collectionId: trackPlay?.track.collection?.id } as any}
                 style={{
                   fontSize: '0.7em',

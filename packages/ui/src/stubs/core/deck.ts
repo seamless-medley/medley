@@ -1,4 +1,4 @@
-import { StubOf } from "../stub";
+import { StubOf } from "@ui/stubs";
 import type { Deck } from "@seamless-medley/remote";
 
 export const StubDeck = StubOf<Deck>(class StubbingDeck {

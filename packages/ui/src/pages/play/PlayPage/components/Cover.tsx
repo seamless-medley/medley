@@ -1,14 +1,9 @@
-
-import React, { PropsWithChildren, forwardRef, useEffect, useState } from 'react';
+import React, { forwardRef, PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
 import { chain, first } from 'lodash';
 import { rgba, transparentize } from "polished";
 import { styled } from '@linaria/react';
 
-export interface ColorsProp {
-  colors: string[];
-}
-
-export const CoverContainer = styled.div`
+const CoverContainer = styled.div`
   position: absolute;
   bottom: 0;
   left: 0;
@@ -135,6 +130,10 @@ const strongLightning = `conic-gradient(
 )`;
 //#endregion
 
+interface ColorsProp {
+  colors: string[];
+}
+
 const CoverDiscElement = styled.div<ColorsProp>`
   width: 100%;
   height: 100%;
@@ -185,11 +184,11 @@ const CoverDiscElement = styled.div<ColorsProp>`
   }
 `;
 
-export type CoverDisc = React.ComponentType & {
+type CoverDisc = React.ComponentType & {
 
 }
 
-export const CoverDisc = forwardRef<CoverDisc, PropsWithChildren<ColorsProp>>((props, ref) => {
+const CoverDisc = forwardRef<CoverDisc, PropsWithChildren<ColorsProp>>((props, ref) => {
   const [background, setBackground] = useState<string>();
 
 
@@ -218,7 +217,7 @@ export const CoverDisc = forwardRef<CoverDisc, PropsWithChildren<ColorsProp>>((p
   );
 });
 
-export const CoverImage = styled.img`
+const CoverImage = styled.img`
   position:absolute;
   top: 50%;
   left: 50%;
@@ -252,7 +251,7 @@ export const CoverImage = styled.img`
   }
 `;
 
-export const CoverDecorator = styled.div`
+const CoverDecorator = styled.div`
   position: absolute;
   top: 50%;
   left: 50%;
@@ -269,3 +268,89 @@ export const CoverDecorator = styled.div`
     rgba(255,255,255,0.5) 96.5%
   );
 `;
+
+export type CoverProps = {
+  url?: string;
+  colors: string[];
+  center: boolean;
+  uuid: string;
+}
+
+export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid }) => {
+  const containerEl = useRef<HTMLDivElement>(null);
+  const imageEl = useRef<HTMLImageElement>(null);
+
+  const [discColors, setDiscColors] = useState(colors);
+
+  const updateCenter = () => {
+    const c = 'center';
+
+    if (center) {
+      containerEl.current?.classList.add(c);
+    } else {
+      containerEl.current?.classList.remove(c);
+    }
+  }
+
+  const hide = () => {
+    containerEl.current?.classList.remove('visible');
+  }
+
+  const reveal = useCallback(() => {
+    setDiscColors(colors);
+
+    if (imageEl.current) {
+      imageEl.current.classList.remove('visible');
+      imageEl.current.src = url || '';
+
+      imageEl.current.classList.add('visible');
+    }
+
+    containerEl.current?.classList.add('visible');
+  }, [url]);
+
+  const animationTimer = useRef<number>();
+
+  const revealThenCenter = () => {
+    hide();
+
+    if (animationTimer.current) {
+      clearTimeout(animationTimer.current);
+    }
+
+    animationTimer.current = setTimeout(() => {
+      reveal();
+      setTimeout(updateCenter, 1e3);
+    }, 1.1e3) as unknown as number;
+  }
+
+  const centerThenReveal = () => {
+    updateCenter();
+
+    if (animationTimer.current) {
+      clearTimeout(animationTimer.current);
+    }
+
+    animationTimer.current = setTimeout(() => {
+      hide();
+      setTimeout(reveal, 1.1e3);
+    }, 1e3) as unknown as number;
+  }
+
+  useEffect(() => {
+    const isCentered = containerEl.current?.classList.contains('center') ?? false;
+    const animate =  (isCentered && !center) ? centerThenReveal : revealThenCenter;
+    animate();
+  }, [center, url, colors, uuid]);
+
+  return (
+    <>
+      <CoverContainer ref={containerEl} className='visible'>
+        <CoverDisc colors={discColors}>
+          <CoverImage ref={imageEl} style={{ opacity: url ? 0.77 : 0 }} />
+          <CoverDecorator />
+        </CoverDisc>
+      </CoverContainer>
+    </>
+  )
+}

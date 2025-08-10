@@ -1,8 +1,8 @@
-import { times } from "lodash";
-import { styled } from "@linaria/react";
-import { stationRoute } from "./route";
-import { PlayDeck } from "../../components";
 import { Flex } from "@mantine/core";
+import { styled } from "@linaria/react";
+import { times } from "lodash";
+import { PlayDeck } from "@ui/pages/dj/components/PlayDeck";
+import { Route } from "./route"
 
 const Container = styled.div`
   display: flex;
@@ -24,8 +24,8 @@ const DeckBox = styled.div`
   }
 `
 
-export const Index: React.FC = () => {
-  const stationId = stationRoute.useParams({ select: ({ station }) => station  });
+export const DJConsolePage = () => {
+  const { station: stationId } = Route.useParams();
 
   return (
     <Flex justify="center">
@@ -39,5 +39,3 @@ export const Index: React.FC = () => {
     </Flex>
   )
 }
-
-export default Index;

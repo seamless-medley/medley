@@ -1,5 +1,5 @@
 import { noop } from "lodash";
-import { StubOf } from "../stub";
+import { StubOf } from "@ui/stubs";
 import type { Global as RemoteGlobal } from '@seamless-medley/remote';
 
 class StubbingGlobal {

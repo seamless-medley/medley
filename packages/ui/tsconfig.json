@@ -14,6 +14,12 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ui/*": [
+        "./src/*"
+      ]
+    },
     "outDir": "./dist",
     "plugins": [
       {

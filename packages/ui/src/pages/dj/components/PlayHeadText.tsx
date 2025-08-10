@@ -3,7 +3,7 @@ import { css } from "@linaria/core";
 import { styled } from "@linaria/react";
 import { Box, Text, TextProps } from "@mantine/core";
 import type { DeckIndex } from "@seamless-medley/medley";
-import { useDeck } from "../hooks/useDeck";
+import { useDeck } from "@ui/hooks/useDeck";
 
 const PlayHeadStyledText = styled(Text)`
   display: inline-block;

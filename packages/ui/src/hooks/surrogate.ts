@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForceUpdate } from "@mantine/hooks";
 import type { RemoteObjects, Remotable, RemoteObserveOptions } from "@seamless-medley/remote";
 import { useRemotableProps } from "./remotable";
-import { client } from "../init";
+import { client } from "@ui/init";
 
 type SurrogateState<T> = {
   surrogate?: Remotable<T>;

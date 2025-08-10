@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "@tanstack/react-router";
+
+import { styled } from "@linaria/react";
+import { Button } from "@mantine/core";
+import { useSetState } from "@mantine/hooks";
+
+import { formatTags } from "@seamless-medley/utils";
+
 import { prominent } from 'color.js'
-import { Cover, CoverProps } from "../../components/play/cover/Cover";
-import { playRoute } from "./route";
-import { useDeckCover, useDeckInfo } from "../../hooks/useDeck";
-import { useStation } from "../../hooks/useStation";
-import { Title } from "../../components/play/title/Title";
+
+import { chain, random, sample, sortBy } from "lodash";
 
 import { getLuminance,
   darken,
@@ -18,20 +21,21 @@ import { getLuminance,
   rgb,
   parseToHsl,
   setSaturation,
-  hsl,
-  radialGradient
+  hsl
 } from 'polished';
 
-import { Lyrics, defaultColors as defaultLyricsColors } from "../../components/play/lyrics/Lyrics";
-import { PlayHead } from "../../components/play/playhead/PlayHead";
-import { chain, random, sortBy } from "lodash";
-import { useRemotableProp } from "../../hooks/remotable";
-import { useSetState } from "@mantine/hooks";
-import type { DeckIndex } from "@seamless-medley/medley";
-import { Button } from "@mantine/core";
-import { styled } from "@linaria/react";
-import { client } from "../../init";
-import { formatTags } from "@seamless-medley/utils";
+import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
+import { useStation } from "@ui/hooks/useStation";
+import { useRemotableProp } from "@ui/hooks/remotable";
+
+import { client } from "@ui/init";
+
+import { Cover, CoverProps } from "./components/Cover";
+import { Title } from "./components/Title";
+import { Lyrics, defaultColors as defaultLyricsColors } from "./components/Lyrics";
+import { PlayHead } from "./components/PlayHead";
+
+import { Route } from "./route";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -45,8 +49,6 @@ function findColor(base: string, predicate: (c: number) => boolean, fn: (deg: nu
 
   return c;
 }
-
-export const getNextDeck = (index: DeckIndex): DeckIndex => [1, 2, 0][index];
 
 const Control = styled.div`
   position: absolute;
@@ -67,7 +69,7 @@ const Control = styled.div`
 `;
 
 export const Play: React.FC = () => {
-  const { station: stationId } = useParams({ from: playRoute.id });
+  const { station: stationId } = Route.useParams();
 
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
@@ -85,10 +87,12 @@ export const Play: React.FC = () => {
   const [titleText, setTitleText] = useState('');
   const [titleBg, setTitleBg] = useState('');
 
-  const sortColors = (colors: string[]) => sortBy(colors, getLuminance);
+  const sortColors = (colors: string[]) => sortBy(colors, c => parseToHsl(c).hue);
 
   useEffect(() => {
     if (!cover) {
+      console.log('No cover');
+
       const main = hsl(random(360), random(0.5, 0.9, true), random(0.6, 0.8, true));
       const deg = random(15, 20);
 
@@ -101,6 +105,8 @@ export const Play: React.FC = () => {
 
       return;
     }
+
+    console.log('Prominent colors');
 
     prominent(cover, { format: 'hex', amount: 6 }).then(out => {
       setCoverProps({
@@ -115,35 +121,49 @@ export const Play: React.FC = () => {
   useEffect(() => {
     let gradient;
 
+    console.log('Colors', coverProps.colors);
+
+    const extent = ['farthest-side at', sample(['left', 'right']), sample(['top', 'bottom'])].join(' ');
+
     if (coverProps.colors.length) {
       const titleColor = chain(coverProps.colors)
         .map(c => {
           const hsl = parseToHsl(c);
 
-          if (hsl.saturation < 0.5) {
-            c = setSaturation(0.5, c);
+          if (hsl.saturation < 0.7) {
+            c = setSaturation(0.7, c);
           }
 
-          if (hsl.lightness < 0.5) {
+          if (hsl.lightness < 0.3) {
             c = setLightness(0.5, c);
           }
 
-          return findColor(adjustHue(-20, c), v => v < 0.3, lighten);
+          // return findColor(adjustHue(-30, c), v => v < 0.3, lighten);
+          // return adjustHue(-30, c);
+          return c;
         })
         .shuffle()
-        .flatMap(c => [c, adjustHue(random(15, 90), c)])
+        // .flatMap(c => [c, adjustHue(random(15, 90), c)])
         .value();
 
-      gradient = radialGradient({
-        colorStops: titleColor,
-        position: 'circle'
+      const colorStops = titleColor.concat([...titleColor].reverse());
+
+      gradient = linearGradient({
+        colorStops,
+        toDirection: 'to right bottom'
       }).backgroundImage;
     } else {
+      const colorStops = defaultCoverColors.concat([...defaultCoverColors].reverse());
+
+      console.log('colorStops', colorStops);
+
       gradient = linearGradient({
-        colorStops: defaultCoverColors,
-        toDirection: 'to right',
+        colorStops,
+        toDirection: 'to right bottom'
       }).backgroundImage;
     }
+
+    console.log({ gradient })
 
     setTitleBg(gradient.toString() ?? '');
   }, [cover]);
@@ -157,7 +177,7 @@ export const Play: React.FC = () => {
   useEffect(() => {
     const overrides = {
       overflow: 'hidden',
-      'font-size': 'calc(100vh / 30)'
+      'font-size': 'calc(100cqh / 30)'
     }
 
     const saved: Partial<Record<string, string>> = {};
@@ -221,6 +241,7 @@ export const Play: React.FC = () => {
         lines={8}
         colors={colors}
       />
+      {/* TODO: Use ref to change bg */}
       <Title text={titleText} bg={titleBg} center={simple} />
       <PlayHead
         stationId={stationId}
@@ -233,5 +254,3 @@ export const Play: React.FC = () => {
     </div>
   )
 }
-
-export default Play;

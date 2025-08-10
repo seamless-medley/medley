@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { client } from "../init";
+import { client } from "@ui/init";
 
 
 export function usePlayingStationId() {

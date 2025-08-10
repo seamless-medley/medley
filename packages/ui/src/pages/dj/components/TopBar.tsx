@@ -1,4 +1,3 @@
-import { random, take, zip } from "lodash";
 import React, { PropsWithChildren, useCallback, useEffect, useRef, useState } from "react";
 import { ActionIcon, Box, Center, Flex, Image, Stack, Text, TextProps, Tooltip, rem } from "@mantine/core";
 import { useElementSize, useForceUpdate, useId, useMove } from "@mantine/hooks";
@@ -7,17 +6,18 @@ import { adjustHue, hsl, linearGradient, setLightness, transparentize } from "po
 import { AnimatePresence, motion } from "framer-motion";
 import TextTransition, { presets, TextTransitionProps } from 'react-text-transition';
 
-import { VUBar } from "../../components";
-import { useRemotableProp } from "../../hooks/remotable";
-import { useDeck, useDeckCover, useDeckInfo } from "../../hooks/useDeck";
-
-import { useStation } from "../../hooks/useStation";
-import { client } from "../../init";
-import { usePlayingStationId } from "../../hooks/useClient";
-
-import { PlayHeadText } from "../../components/PlayHeadText";
-import { DeckBanner } from "../../components/DeckBanner";
+import { random, take, zip } from "lodash";
 import { EnhancedLine, findLyricLine } from "@seamless-medley/utils";
+
+import { useRemotableProp } from "@ui/hooks/remotable";
+import { usePlayingStationId } from "@ui/hooks/useClient";
+import { useStation } from "@ui/hooks/useStation";
+import { useDeck, useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
+import { client } from "@ui/init";
+
+import { VUBar } from "./VUBar";
+import { PlayHeadText } from "./PlayHeadText";
+import { DeckBanner } from "./DeckBanner";
 
 type TransitionTextProps = PropsWithChildren<TextProps & TextTransitionProps> & {
   component?: any;

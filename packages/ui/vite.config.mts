@@ -1,12 +1,14 @@
 import { defineConfig } from "vite";
 import mkcert from 'vite-plugin-mkcert';
 import react from "@vitejs/plugin-react";
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import tsconfigPaths from 'vite-tsconfig-paths'
+import { tanstackRouter  } from '@tanstack/router-plugin/vite'
 import wyw from '@wyw-in-js/vite';
 
 export default defineConfig({
   root: './src',
   plugins: [
+    tsconfigPaths(),
     mkcert(),
     {
       name: "configure-response-headers",
@@ -18,7 +20,12 @@ export default defineConfig({
         });
       },
     },
-    TanStackRouterVite({ enableRouteGeneration: false }),
+    tanstackRouter({
+      target: 'react',
+      virtualRouteConfig: './src/pages/routes.ts',
+      routesDirectory: './src/pages',
+      generatedRouteTree: './src/pages/routeTree.gen.ts'
+    }),
     react({
       babel: {
         presets: ['@babel/preset-typescript', ['@babel/preset-react', { runtime: 'automatic' }]],

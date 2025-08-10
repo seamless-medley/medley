@@ -1,14 +1,13 @@
-import React, { useCallback, useEffect } from "react";
-import { useRef } from "react";
-import { UseAudioLevelsData, useAudioLevels } from "../hooks/useAudioLevels";
-import { styled } from "@linaria/react";
-import { theme } from "../theme/theme";
-import { useElementSize, useMergedRef } from "@mantine/hooks";
-import { parseToRgb, rgbToColorString, transparentize } from "polished";
-import { RgbColor } from "polished/lib/types/color";
-import { easeOut } from "framer-motion";
+import React, { useCallback, useEffect, useRef } from "react";
 import { Box, Flex, FlexProps, MantineStyleProps } from "@mantine/core";
-import { colorInterpolate, isSameRgb } from "../utils/utils";
+import { useElementSize, useMergedRef } from "@mantine/hooks";
+import { styled } from "@linaria/react";
+import { parseToRgb, rgbToColorString, transparentize } from "polished";
+import { easeOut } from "framer-motion";
+
+import { UseAudioLevelsData, useAudioLevels } from "@ui/hooks/useAudioLevels";
+import { theme } from "@ui/theme/theme";
+import { colorInterpolate, isSameRgb } from "@ui/utils";
 
 const Container = styled.div`
   width: 100%;
