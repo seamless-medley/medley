@@ -1,10 +1,10 @@
-import React, { PropsWithChildren, useCallback, useEffect, useRef, useState } from "react";
-import { ActionIcon, Box, Center, Flex, Image, Stack, Text, TextProps, Tooltip, rem } from "@mantine/core";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ActionIcon, Box, Center, Flex, Image, Stack, Text, Tooltip, rem } from "@mantine/core";
 import { useElementSize, useForceUpdate, useId, useMove } from "@mantine/hooks";
 import { IconPlayerPause, IconPlayerPlayFilled, IconPlayerTrackNext, IconVolume, IconVolumeOff } from "@tabler/icons-react";
 import { adjustHue, hsl, linearGradient, setLightness, transparentize } from "polished";
 import { AnimatePresence, motion } from "framer-motion";
-import TextTransition, { presets, TextTransitionProps } from 'react-text-transition';
+import { presets } from 'react-text-transition';
 
 import { random, take, zip } from "lodash";
 import { EnhancedLine, findLyricLine } from "@seamless-medley/utils";
@@ -18,28 +18,7 @@ import { client } from "@ui/init";
 import { VUBar } from "./VUBar";
 import { PlayHeadText } from "./PlayHeadText";
 import { DeckBanner } from "./DeckBanner";
-
-type TransitionTextProps = PropsWithChildren<TextProps & TextTransitionProps> & {
-  component?: any;
-};
-
-const TransitionText: React.FC<TransitionTextProps> = React.memo((props) => {
-  const {
-    children,
-    direction, inline, delay, springConfig, style, translateValue,
-    ...textProps
-  } = props;
-
-  const transitionProps = { direction, inline, delay, springConfig, style, translateValue };
-
-  return (
-    <TextTransition {...transitionProps}>
-      <Text {...textProps}>
-        {children}
-      </Text>
-    </TextTransition>
-  )
-});
+import { TransitionText } from "@ui/components/TransitionText";
 
 const VolumeControl: React.FC<{ color: string }> = ({ color }) => {
   const [gain, setGain] = useState(client.volume);
@@ -408,7 +387,6 @@ const LyricsBar: React.FC<StationIdProps> = ({ stationId }) => {
     </Box>
   )
 }
-
 function makeColorStops(colors: string[], stops: number[]) {
   const count = Math.min(colors.length, stops.length);
   return zip(take(colors, count), take(stops, count)).map(([c, s]) => `${c} ${s!.toFixed(2)}%`);
