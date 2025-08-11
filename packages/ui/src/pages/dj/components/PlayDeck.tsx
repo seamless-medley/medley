@@ -10,9 +10,9 @@ import { AnimatePresence, motion, MotionNodeOptions } from "framer-motion";
 import type { DeckIndex } from "@seamless-medley/medley";
 import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
 import { theme } from "@ui/theme/theme";
-// import { collectionRoute, stationRoute } from "../pages/dj/route";
 import { AutoScroller } from "@ui/components/AutoScoller";
-import { PlayHeadText } from "./PlayHeadText";
+import { PlayHeadText } from "@ui/components/PlayHeadText";
+// import { collectionRoute, stationRoute } from "../pages/dj/route";
 
 export type PlayDeckProps = {
   stationId: string | undefined;

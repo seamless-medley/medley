@@ -14,11 +14,12 @@ import { useStation } from "@ui/hooks/useStation";
 import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
 import { client } from "@ui/init";
 
-import { VUBar } from "./VUBar";
-import { PlayHeadText } from "./PlayHeadText";
-import { DeckBanner } from "./DeckBanner";
+import { PlayHeadText } from "@ui/components/PlayHeadText";
 import { TransitionText } from "@ui/components/TransitionText";
 import { LyricsBar } from "@ui/components/LyricsBar";
+
+import { VUBar } from "./VUBar";
+import { DeckBanner } from "./DeckBanner";
 
 const VolumeControl: React.FC<{ color: string }> = ({ color }) => {
   const [gain, setGain] = useState(client.volume);
