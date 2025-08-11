@@ -32,7 +32,7 @@ export function useDeckCover(stationId: string | undefined, index: DeckIndex) {
 
     updateCover(
       cover && coverMimeType
-        ? URL.createObjectURL(new Blob([cover], { type: coverMimeType }))
+        ? URL.createObjectURL(new Blob([cover as BufferSource], { type: coverMimeType }))
         : undefined
     );
   }
