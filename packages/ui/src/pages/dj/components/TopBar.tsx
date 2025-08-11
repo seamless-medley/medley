@@ -406,7 +406,7 @@ export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
           />
         </Box>
 
-        <Flex direction="row" align="center">
+        <Flex direction="row" align="center" gap="md">
           <TransportControl stationId={stationId} />
           <LyricsBar stationId={stationId} />
         </Flex>
