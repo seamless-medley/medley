@@ -1,24 +1,24 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActionIcon, Box, Center, Flex, Image, Stack, Text, Tooltip, rem } from "@mantine/core";
-import { useElementSize, useForceUpdate, useId, useMove } from "@mantine/hooks";
+import { useElementSize, useId, useMove } from "@mantine/hooks";
 import { IconPlayerPause, IconPlayerPlayFilled, IconPlayerTrackNext, IconVolume, IconVolumeOff } from "@tabler/icons-react";
 import { adjustHue, hsl, linearGradient, setLightness, transparentize } from "polished";
 import { AnimatePresence, motion } from "framer-motion";
 import { presets } from 'react-text-transition';
 
 import { random, take, zip } from "lodash";
-import { EnhancedLine, findLyricLine } from "@seamless-medley/utils";
 
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { usePlayingStationId } from "@ui/hooks/useClient";
 import { useStation } from "@ui/hooks/useStation";
-import { useDeck, useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
+import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
 import { client } from "@ui/init";
 
 import { VUBar } from "./VUBar";
 import { PlayHeadText } from "./PlayHeadText";
 import { DeckBanner } from "./DeckBanner";
 import { TransitionText } from "@ui/components/TransitionText";
+import { LyricsBar } from "@ui/components/LyricsBar";
 
 const VolumeControl: React.FC<{ color: string }> = ({ color }) => {
   const [gain, setGain] = useState(client.volume);
@@ -326,67 +326,6 @@ const TrackInfo: React.FC<StationIdProps> = ({ stationId }) => {
   )
 }
 
-const LyricsBar: React.FC<StationIdProps> = ({ stationId }) => {
-  const { station } = useStation(stationId);
-  const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
-  const { deck } = useDeck(stationId, activeDeck);
-
-  const line = useRef(-1);
-  const update = useForceUpdate();
-
-  const [style] = useState<any>({ alignItems: 'center' });
-
-  const lyrics = deck?.trackPlay?.()?.track?.extra?.coverAndLyrics?.lyrics;
-
-  const handlePosChange = useCallback((pos: number) => {
-    if (!lyrics) {
-      line.current = -1;
-      return;
-    }
-
-    const found = findLyricLine(lyrics.timeline, (pos - client.latency) * 1000, line.current);
-
-    if (found !== -1 && found !== line.current) {
-      line.current = found;
-      update();
-    }
-  }, [lyrics]);
-
-  useEffect(() => {
-    if (!deck) {
-      return;
-    }
-
-    line.current = -1;
-    update();
-
-    handlePosChange(deck.cp());
-
-    return deck.addPropertyChangeListener('cp', handlePosChange);
-  }, [deck]);
-
-  const lyricText = (() => {
-    if (line.current < 0) return undefined;
-    const ll = lyrics?.timeline?.[line.current];
-
-    return lyrics?.type === 'sync'
-      ? ll?.line as string
-      : (ll?.line as EnhancedLine)?.map(l => l.token).join('')
-  })();
-
-  return (
-    <Box pl={12}>
-      <TransitionText
-        size="1.2em"
-        display="flex"
-        truncate="end"
-        style={style}
-      >
-        {lyricText}
-      </TransitionText>
-    </Box>
-  )
-}
 function makeColorStops(colors: string[], stops: number[]) {
   const count = Math.min(colors.length, stops.length);
   return zip(take(colors, count), take(stops, count)).map(([c, s]) => `${c} ${s!.toFixed(2)}%`);
