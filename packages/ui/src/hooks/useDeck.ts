@@ -108,3 +108,8 @@ export function useDeckInfo<Only extends keyof Deck = keyof Deck>(stationId: str
 
   return info;
 }
+
+export function useDeckMetaData(stationId: string | undefined, index: DeckIndex)  {
+  const { trackPlay } = useDeckInfo(stationId, index, 'trackPlay');
+  return trackPlay?.track?.extra?.tags;
+}
