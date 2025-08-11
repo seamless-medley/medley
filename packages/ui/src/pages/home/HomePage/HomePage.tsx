@@ -139,7 +139,7 @@ const StationList = () => {
   )
 }
 
-export const Home = () => {
+export const HomePage = () => {
   const { surrogate: $global } = useSurrogate('global', '$');
   const instanceName = useRemotableProp($global, 'instanceName');
 
