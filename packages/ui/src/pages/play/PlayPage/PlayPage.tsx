@@ -68,7 +68,7 @@ const Control = styled.div`
   }
 `;
 
-export const Play: React.FC = () => {
+export const PlayPage: React.FC = () => {
   const { station: stationId } = Route.useParams();
 
   const { station } = useStation(stationId);
