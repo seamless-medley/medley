@@ -12,16 +12,23 @@ import {
   Badge,
   Center,
   ThemeIcon,
-  AppShell
+  AppShell,
+  Box
 } from '@mantine/core';
 
 import { IconMusic, IconRadio, IconHeadphones } from '@tabler/icons-react';
 
 import { useSurrogate } from "@ui/hooks/surrogate";
 import { useRemotableProp } from "@ui/hooks/remotable";
+import { useStation } from "@ui/hooks/useStation";
 import { PlayRoute } from "@ui/pages/play/PlayPage/route";
+import { LyricsBar } from "@ui/components/LyricsBar";
+import { PlayHeadText } from "@ui/components/PlayHeadText";
 
 import { NavBar } from "./components/NavBar";
+import { useDeckMetaData } from "@ui/hooks/useDeck";
+import { TransitionText } from "@ui/components/TransitionText";
+import { formatTags } from "@seamless-medley/utils";
 
 const Hero: React.FC<{ instanceName?: string }> = ({ instanceName = 'Medley' }) => {
   return (
@@ -47,6 +54,71 @@ const Hero: React.FC<{ instanceName?: string }> = ({ instanceName = 'Medley' }) 
     </Center>
   )
 }
+
+const StationCard: React.FC<{ stationId: string }> = ({ stationId }) => {
+  const { station } = useStation(stationId);
+  const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
+  const tags = useDeckMetaData(stationId, activeDeck);
+
+  return (
+    <Link to={PlayRoute.fullPath} params={{ station: stationId }}>
+      <Card
+        shadow="md"
+        radius="lg"
+        withBorder
+        style={{
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          textDecoration: 'none',
+        }}
+      >
+        <Stack gap="sm">
+          <Group justify="space-between" align="center">
+            <Group align="center" gap="sm">
+              <ThemeIcon
+                size="md"
+                radius="md"
+                variant="gradient"
+                gradient={{ from: 'green', to: 'teal', deg: 45 }}
+              >
+                {/* <IconPlay size={16} /> */}
+              </ThemeIcon>
+              <Title order={4} fw={600}>
+                {station?.name() || stationId}
+              </Title>
+            </Group>
+            <Group align="center" gap="xs">
+              <PlayHeadText
+                stationId={stationId}
+                deckIndex={activeDeck}
+                size="xs"
+                c="dimmed"
+              />
+            </Group>
+          </Group>
+
+          <Stack gap="xs">
+            <Box style={{ minHeight: '1.2em' }}>
+              <Text size="sm" c="dimmed">
+                {station?.description?.() ?? ''}
+              </Text>
+            </Box>
+
+             <Box style={{ minHeight: '1.5em', marginTop: '0.25rem' }}>
+              <TransitionText>
+                {tags ? formatTags(tags) : undefined}
+              </TransitionText>
+            </Box>
+
+            <Box style={{ minHeight: '1.5em', marginTop: '0.25rem' }}>
+              <LyricsBar stationId={stationId} />
+            </Box>
+          </Stack>
+        </Stack>
+      </Card>
+    </Link>
+  );
+};
 
 const StationList = () => {
   const { surrogate: $global } = useSurrogate('global', '$');
@@ -74,47 +146,7 @@ const StationList = () => {
         <Grid>
           {stations.map((stationId) => (
             <Grid.Col key={stationId} span={{ base: 12, sm: 6, lg: 4 }}>
-              <Link to={PlayRoute.fullPath} params={{ station: stationId }}>
-                <Card
-                  shadow="md"
-                  radius="lg"
-                  withBorder
-                  style={{
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    textDecoration: 'none',
-                  }}
-                >
-                  <Stack gap="md">
-                    <Group justify="space-between" align="flex-start">
-                      <ThemeIcon
-                        size="lg"
-                        radius="md"
-                        variant="gradient"
-                        gradient={{ from: 'green', to: 'teal', deg: 45 }}
-                      >
-                        {/* <IconPlay size={20} /> */}
-                      </ThemeIcon>
-                      <Badge
-                        variant="dot"
-                        color="green"
-                        size="sm"
-                      >
-                        LIVE
-                      </Badge>
-                    </Group>
-
-                    <div>
-                      <Title order={4} fw={600} mb={4}>
-                        {stationId}
-                      </Title>
-                      <Text size="sm" c="dimmed">
-                        Click to listen now
-                      </Text>
-                    </div>
-                  </Stack>
-                </Card>
-              </Link>
+              <StationCard stationId={stationId} />
             </Grid.Col>
           ))}
         </Grid>
