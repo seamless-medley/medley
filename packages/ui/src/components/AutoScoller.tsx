@@ -29,11 +29,26 @@ const Scroller = styled.div`
 
 export type AutoScrollerProps = PropsWithChildren<{
   title?: string;
+
+  /**
+   * Animation speed multiplier (default: 0.2)
+   */
   speed?: number;
+
+  /**
+   * Pause duration at edges (default: 2000ms)
+   */
   pauseAtEndEdgeDurationMs?: number;
+
+  /**
+   * Start delay (default: 1000ms)
+   */
   startAnimationOnMountDelayMs?: number;
 }>;
 
+/**
+ * Automatically scrolls overflowing content horizontally with smooth bidirectional animation and gradient fade effects.
+ */
 export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
   const {
     speed = 0.2,
