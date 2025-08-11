@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Box } from "@mantine/core";
 import { useForceUpdate } from "@mantine/hooks";
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { useDeck } from "@ui/hooks/useDeck";
@@ -57,7 +56,7 @@ export const LyricsBar: React.FC<{ stationId: string}> = ({ stationId }) => {
   })();
 
   return (
-    <Box pl={12}>
+    <>
       <TransitionText
         size="1.2em"
         display="flex"
@@ -66,6 +65,6 @@ export const LyricsBar: React.FC<{ stationId: string}> = ({ stationId }) => {
       >
         {lyricText}
       </TransitionText>
-    </Box>
+    </>
   )
 }
