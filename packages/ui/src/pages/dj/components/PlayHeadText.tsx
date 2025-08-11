@@ -37,9 +37,10 @@ const Container = styled(Box)`
 type PlayHeadTextProps = TextProps & {
   stationId: string;
   deckIndex: DeckIndex;
+  showDuration?: boolean;
 }
 
-export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId, deckIndex, ...textProps }) => {
+export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId, deckIndex, showDuration = true, ...textProps }) => {
   const { deck } = useDeck(stationId, deckIndex);
 
   const [time, setTime] = useState(0);
@@ -74,11 +75,8 @@ export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId
     ? (isRemaining ? duration - time : time)
     : 0;
 
-  const mm = Math.trunc(tick / 60).toString();
-  const ss = Math.trunc(tick % 60).toString();
-
-  const mm2 = Math.trunc(duration / 60).toString();
-  const ss2 = Math.trunc(duration % 60).toString();
+  const [time_mm, time_ss] = [(tick / 60) % 99, tick % 60].map(v => Math.trunc(v).toString())
+  const [duration_mm, duration_ss] = showDuration ? [(duration / 60) % 99, duration % 60].map(v => Math.trunc(v).toString()) : [];
 
   return (
     <Container onClick={() => setShowRemaining(prev => !prev)}>
@@ -90,7 +88,7 @@ export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId
       }
 
       <PlayHeadChar {...textProps}>
-        {mm.padStart(2, '0')}
+        {time_mm.padStart(2, '0')}
       </PlayHeadChar>
 
       <PlayHeadChar
@@ -101,27 +99,32 @@ export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId
       </PlayHeadChar>
 
       <PlayHeadChar {...textProps}>
-        {ss.padStart(2, '0')}
+        {time_ss.padStart(2, '0')}
       </PlayHeadChar>
 
-      <PlayHeadChar {...textProps}>
-        /
-      </PlayHeadChar>
+      {duration_mm && duration_ss ? (
+        <>
+          <PlayHeadChar {...textProps}>
+            /
+          </PlayHeadChar>
 
-      <PlayHeadChar {...textProps}>
-        {mm2.padStart(2, '0')}
-      </PlayHeadChar>
+          <PlayHeadChar {...textProps}>
+            {duration_mm.padStart(2, '0')}
+          </PlayHeadChar>
 
-      <PlayHeadChar
-        {...textProps}
-        className={colon}
-      >
-        :
-      </PlayHeadChar>
+          <PlayHeadChar
+            {...textProps}
+            className={colon}
+          >
+            :
+          </PlayHeadChar>
 
-      <PlayHeadChar {...textProps}>
-        {ss2.padStart(2, '0')}
-      </PlayHeadChar>
+          <PlayHeadChar {...textProps}>
+            {duration_ss.padStart(2, '0')}
+          </PlayHeadChar>
+        </>)
+        : undefined
+      }
 
     </Container>
   )
