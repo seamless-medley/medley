@@ -40,89 +40,89 @@ type PlayHeadTextProps = TextProps & {
 }
 
 export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId, deckIndex, ...textProps }) => {
-    const { deck } = useDeck(stationId, deckIndex);
+  const { deck } = useDeck(stationId, deckIndex);
 
-    const [time, setTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [isRemaining, setShowRemaining] = useState(false);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isRemaining, setShowRemaining] = useState(false);
 
-    const handlePosChange = useCallback((pos: number) => {
-      setTime(Math.trunc(pos));
-    }, [deck]);
+  const handlePosChange = useCallback((pos: number) => {
+    setTime(Math.trunc(pos));
+  }, [deck]);
 
-    const handleDurationChange = useCallback((duration?: number) => {
-        setDuration(duration ?? 0);
-      }, [deck]);
+  const handleDurationChange = useCallback((duration?: number) => {
+    setDuration(duration ?? 0);
+  }, [deck]);
 
-    useEffect(() => {
-      if (!deck) {
-        return;
+  useEffect(() => {
+    if (!deck) {
+      return;
+    }
+
+    setTime(Math.trunc(deck.cp()));
+    setDuration(deck.duration?.() ?? 0);
+
+    const cleanupHandlers = [
+      deck.addPropertyChangeListener('cp', handlePosChange),
+      deck.addPropertyChangeListener('duration', handleDurationChange),
+    ];
+
+    return () => void cleanupHandlers.map(fn => void fn());
+  }, [deck]);
+
+  const tick = duration > 0
+    ? (isRemaining ? duration - time : time)
+    : 0;
+
+  const mm = Math.trunc(tick / 60).toString();
+  const ss = Math.trunc(tick % 60).toString();
+
+  const mm2 = Math.trunc(duration / 60).toString();
+  const ss2 = Math.trunc(duration % 60).toString();
+
+  return (
+    <Container onClick={() => setShowRemaining(prev => !prev)}>
+      {isRemaining ?
+        (<PlayHeadChar {...textProps} className={punc}>
+          -
+        </PlayHeadChar>)
+        : undefined
       }
 
-      setTime(Math.trunc(deck.cp()));
-      setDuration(deck.duration?.() ?? 0);
+      <PlayHeadChar {...textProps}>
+        {mm.padStart(2, '0')}
+      </PlayHeadChar>
 
-      const cleanupHandlers = [
-        deck.addPropertyChangeListener('cp', handlePosChange),
-        deck.addPropertyChangeListener('duration', handleDurationChange),
-      ];
+      <PlayHeadChar
+        {...textProps}
+        className={colon}
+      >
+        :
+      </PlayHeadChar>
 
-      return () => void cleanupHandlers.map(fn => void fn());
-    }, [deck]);
+      <PlayHeadChar {...textProps}>
+        {ss.padStart(2, '0')}
+      </PlayHeadChar>
 
-    const tick = duration > 0
-        ? (isRemaining ? duration - time : time)
-        : 0;
+      <PlayHeadChar {...textProps}>
+        /
+      </PlayHeadChar>
 
-    const mm = Math.trunc(tick / 60).toString();
-    const ss = Math.trunc(tick % 60).toString();
+      <PlayHeadChar {...textProps}>
+        {mm2.padStart(2, '0')}
+      </PlayHeadChar>
 
-    const mm2 = Math.trunc(duration / 60).toString();
-    const ss2 = Math.trunc(duration % 60).toString();
+      <PlayHeadChar
+        {...textProps}
+        className={colon}
+      >
+        :
+      </PlayHeadChar>
 
-    return (
-      <Container onClick={() => setShowRemaining(prev => !prev)}>
-        {isRemaining ?
-          (<PlayHeadChar {...textProps } className={punc}>
-            -
-          </PlayHeadChar>)
-          : undefined
-        }
+      <PlayHeadChar {...textProps}>
+        {ss2.padStart(2, '0')}
+      </PlayHeadChar>
 
-        <PlayHeadChar {...textProps}>
-          {mm.padStart(2, '0')}
-        </PlayHeadChar>
-
-        <PlayHeadChar
-          {...textProps}
-          className={colon}
-        >
-          :
-        </PlayHeadChar>
-
-        <PlayHeadChar {...textProps}>
-          {ss.padStart(2, '0')}
-        </PlayHeadChar>
-
-        <PlayHeadChar {...textProps}>
-          /
-        </PlayHeadChar>
-
-        <PlayHeadChar {...textProps}>
-          {mm2.padStart(2, '0')}
-        </PlayHeadChar>
-
-        <PlayHeadChar
-          {...textProps}
-          className={colon}
-        >
-          :
-        </PlayHeadChar>
-
-        <PlayHeadChar {...textProps}>
-          {ss2.padStart(2, '0')}
-        </PlayHeadChar>
-
-      </Container>
-    )
-  });
+    </Container>
+  )
+});
