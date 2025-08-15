@@ -1,21 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { TextProps } from "@mantine/core";
 import { useForceUpdate } from "@mantine/hooks";
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { useDeck } from "@ui/hooks/useDeck";
 import { useStation } from "@ui/hooks/useStation";
+import { TransitionText } from "@ui/components/TransitionText";
 import { client } from "@ui/init";
 import { EnhancedLine, findLyricLine } from "@seamless-medley/utils";
-import { TransitionText } from "./TransitionText";
 
-export const LyricsBar: React.FC<{ stationId: string}> = ({ stationId }) => {
+type LyricsBarProps = Omit<TextProps, 'style'> & {
+  stationId: string;
+  inline?: boolean;
+  nowrap?: boolean;
+  autoscroll?: boolean;
+}
+
+export const LyricsBar: React.FC<LyricsBarProps> = ({ stationId, inline, nowrap, autoscroll, ...textProps }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
   const { deck } = useDeck(stationId, activeDeck);
 
   const line = useRef(-1);
   const update = useForceUpdate();
-
-  const [style] = useState({ alignItems: 'center' });
 
   const lyrics = deck?.trackPlay?.()?.track?.extra?.coverAndLyrics?.lyrics;
 
@@ -58,10 +64,11 @@ export const LyricsBar: React.FC<{ stationId: string}> = ({ stationId }) => {
   return (
     <>
       <TransitionText
-        size="1.2em"
-        display="flex"
-        truncate="end"
-        style={style}
+        style={{ alignItems: 'center' }}
+        inline={inline}
+        nowrap={nowrap}
+        autoscroll={autoscroll}
+        {...textProps}
       >
         {lyricText}
       </TransitionText>

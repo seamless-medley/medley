@@ -4,7 +4,7 @@ import { useElementSize, useId, useMove } from "@mantine/hooks";
 import { IconPlayerPause, IconPlayerPlayFilled, IconPlayerTrackNext, IconVolume, IconVolumeOff } from "@tabler/icons-react";
 import { adjustHue, hsl, linearGradient, setLightness, transparentize } from "polished";
 import { AnimatePresence, motion } from "framer-motion";
-import { presets } from 'react-text-transition';
+import { config as springConfig } from '@react-spring/web';
 
 import { random, take, zip } from "lodash";
 
@@ -295,7 +295,6 @@ const TrackInfo: React.FC<StationIdProps> = ({ stationId }) => {
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
   const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
 
-  const [nowrapStyle] = useState<any>({ textWrap: 'nowrap' });
   const title = trackPlay?.track?.extra?.tags?.title;
   const artist = trackPlay?.track?.extra?.tags?.artist;
 
@@ -306,9 +305,9 @@ const TrackInfo: React.FC<StationIdProps> = ({ stationId }) => {
         h="1.5em"
         truncate="end"
         fw={600}
-        style={nowrapStyle}
         delay={400}
-        springConfig={presets.wobbly}
+        springConfig={springConfig.wobbly}
+        nowrap
       >
         {title}
       </TransitionText>
@@ -317,9 +316,9 @@ const TrackInfo: React.FC<StationIdProps> = ({ stationId }) => {
         size="1.4em"
         h="1.4em"
         truncate="end"
-        style={nowrapStyle}
         delay={500}
-        springConfig={presets.wobbly}
+        springConfig={springConfig.wobbly}
+        nowrap
       >
         {artist}
       </TransitionText>
@@ -408,7 +407,7 @@ export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
 
         <Flex direction="row" align="center" gap="md">
           <TransportControl stationId={stationId} />
-          <LyricsBar stationId={stationId} />
+          <LyricsBar stationId={stationId} inline />
         </Flex>
       </Flex>
     </Flex>
