@@ -167,6 +167,15 @@ export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
 
   useEffect(() => {
     stopAnimation();
+
+    if (startAnimationOnMountDelayMs > 0) {
+      const overflowSize = calcOverflowSize();
+
+      if (overflowSize > 0) {
+        setGradient('right');
+      }
+    }
+
     timer.current = setTimeout(startAnimation, startAnimationOnMountDelayMs) as unknown as number;
   }, [scrollerRef.current, props.children, startAnimation, startAnimationOnMountDelayMs]);
 
