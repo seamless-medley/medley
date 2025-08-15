@@ -194,8 +194,6 @@ const Cover: React.FC<StationIdProps> = React.memo(({ stationId }) => {
   const cover = useDeckCover(stationId, activeDeck);
   const uid = useId();
 
-  console.log('Cover', uid);
-
   return (
     <Box component={motion.div}
       style={{ aspectRatio: 1, zIndex: 10, overflow: 'visible' }}
