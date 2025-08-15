@@ -51,9 +51,9 @@ export type AutoScrollerProps = PropsWithChildren<{
  */
 export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
   const {
-    speed = 0.2,
+    speed = 0.4,
     pauseAtEndEdgeDurationMs = 2000,
-    startAnimationOnMountDelayMs = 1000,
+    startAnimationOnMountDelayMs = 1500,
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
