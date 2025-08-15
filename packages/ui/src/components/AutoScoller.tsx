@@ -1,5 +1,5 @@
-import { styled } from "@linaria/react";
 import React, { PropsWithChildren, useCallback, useEffect, useRef } from "react";
+import { styled } from "@linaria/react";
 
 const Container = styled.div`
   overflow: hidden;
@@ -189,11 +189,9 @@ export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
 
   return (
     <Container ref={containerRef} title={props.title}>
-      <div ref={clipperRef} style={{ overflow: 'hidden' }}>
-        <Scroller ref={scrollerRef}>
-          {props.children}
-        </Scroller>
-      </div>
+      <Scroller ref={scrollerRef}>
+        {props.children}
+      </Scroller>
     </Container>
   )
 }
