@@ -3,7 +3,7 @@ import { client } from "@ui/init";
 
 
 export function usePlayingStationId() {
-  const [id, setId] = useState<string>();
+  const [id, setId] = useState(client.playingStationId);
 
   const handler = useCallback(setId, []);
 
