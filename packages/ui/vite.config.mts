@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import mkcert from 'vite-plugin-mkcert';
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from 'vite-tsconfig-paths'
+import topLevelAwait from "vite-plugin-top-level-await";
 import { tanstackRouter  } from '@tanstack/router-plugin/vite'
 import wyw from '@wyw-in-js/vite';
 
@@ -9,6 +10,7 @@ export default defineConfig({
   root: './src',
   plugins: [
     tsconfigPaths(),
+    topLevelAwait(),
     mkcert(),
     {
       name: "configure-response-headers",

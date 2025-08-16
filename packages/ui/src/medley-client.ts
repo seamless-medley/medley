@@ -15,6 +15,9 @@ import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
 
 import { Client } from "./client";
 import { KaraokeFx } from './audio/fx/karaoke';
+import { getLogger } from '@logtape/logtape';
+
+const logger = getLogger(['client', 'medley']);
 
 type MedleyClientEvents = {
   audioTransport(transport: IAudioTransport): void;
@@ -97,7 +100,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
 
       if (device.loaded) {
         this.#transportCreators.push(createNamedFunc('create_webrtc', async () => {
-          console.log('Using WebRTCAudioTransport');
+          logger.info('Using WebRTCAudioTransport');
           return new WebRTCAudioTransport(this.#transponder!, device, this.#audioContext, (await this.#karaokeFx).input);
         }));
       }
@@ -110,7 +113,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
           return;
         }
 
-        console.log('Using WebSocketAudioTransport');
+        logger.info('Using WebSocketAudioTransport');
         return new WebSocketAudioTransport(this.socket.id, this.#audioContext, (await this.#karaokeFx).input);
       }));
     }
@@ -118,7 +121,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     const transport = await this.#nextTransport();
 
     if (!transport) {
-      console.error('No audio transport');
+      logger.error('No audio transport');
       return;
     }
 
@@ -129,14 +132,14 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     }
   }
 
-  protected override async startSession() {
-    if (!this.authData) {
-      console.log('[test] Login as admin');
-      // this.authenticate('admin', 'admin'); // FIXME: this should be called on login action
-    }
+  // protected override async startSession() {
+  //   if (!this.authData) {
+  //     // console.log('[test] Login as admin');
+  //     // this.authenticate('admin', 'admin'); // FIXME: this should be called on login action
+  //   }
 
-    await super.startSession();
-  }
+  //   await super.startSession();
+  // }
 
   async #nextTransport() {
     while (this.#transportCreators.length) {

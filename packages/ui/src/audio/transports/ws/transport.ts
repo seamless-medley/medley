@@ -6,6 +6,9 @@ import type { AudioClientIntf, OutputMessage } from "./client";
 import { AudioTransportExtraPayloadWithTimestamp, RingBufferWithExtra } from "./ringbuffer";
 import type { MedleyStreamProcessorNodeOptions } from "./worklets/stream-consumer";
 import type { AudioTransportEvents, AudioTransportState, IAudioTransport } from "../../transport";
+import { getLogger } from "@logtape/logtape";
+
+const logger = getLogger(['transport', 'ws']);
 
 /**
  * WebSocketAudioTransport carries audio data via Websocket which does not require additional TCP/UDP ports and network setup,
@@ -149,7 +152,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
       WebSocketAudioTransport.#hasWorklet = true;
     }
     catch (e) {
-      console.error('Error adding AudioWorklet module', e);
+      logger.fatal('Error adding AudioWorklet module', { e });
       return;
     }
 
@@ -178,7 +181,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
   }
 
   #handleProcessorError = (e: Event) => {
-    console.error('Processor error', e);
+    logger.fatal('Processor error', { e });
   }
 
   #audioLatency = 0;

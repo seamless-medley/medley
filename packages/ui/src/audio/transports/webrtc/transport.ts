@@ -4,6 +4,7 @@ import { stubFalse } from 'lodash';
 import { Device as MediaSoupDevice, type types } from 'mediasoup-client';
 import type { RTCTransponder, Remotable, AudioTransportExtra, AudioTransportExtraPayload } from '@seamless-medley/remote';
 import type { AudioTransportEvents, AudioTransportPlayResult, AudioTransportState, IAudioTransport } from "@ui/audio/transport";
+import { getLogger } from '@logtape/logtape';
 
 type AudioLatencyEvent = {
   type: 'audio-latency';
@@ -15,6 +16,8 @@ type TransportEvent = AudioLatencyEvent;
 export type PlayOptions = {
   timeout?: number;
 }
+
+const logger = getLogger(['transport', 'rtc']);
 
 /**
  * This transport uses Mediasoup for its WebRTC functionalities,
@@ -138,6 +141,10 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
       return;
     }
 
+    this.#transport.on('connectionstatechange', (state) => {
+      logger.debug('transport connectionstatechange {state}', { state });
+    });
+
     const rtcState = await waitForTransportState(transport, ['connected', 'failed'], 1000);
     this.#setState(rtcState === 'connected' ? 'ready' : 'failed');
   }
@@ -171,6 +178,13 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
     this.#consumer?.close();
     this.#consumer = await this.#transport.consume(consumerInfo.rtp);
+    this.#consumer.on('transportclose', () => {
+      logger.debug('consumer transportclose event')
+    });
+
+    this.#consumer.on('@close', () => {
+      logger.debug('consumer @close event')
+    });
 
     const stream = new MediaStream();
     stream.addTrack(this.#consumer.track);

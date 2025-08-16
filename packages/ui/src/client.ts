@@ -21,6 +21,7 @@ import type {
 
 import { type AudioTransportEvents } from "./audio/transport";
 import { getRemoteTimeout, Stubs } from "./stubs";
+import { getLogger } from "@logtape/logtape";
 
 type Callable = (...args: any[]) => any;
 
@@ -128,6 +129,8 @@ function rejectAfter({ timeout, reject, reason = 'Timeout' }: RejectAfterOptions
 
 const $AnyProp: unique symbol = Symbol.for('$AnyProp');
 
+const logger = getLogger('client');
+
 export class Client<Types extends { [key: string]: any }, E extends {}> extends EventEmitter<E | ClientEvents> {
   protected socket!: Socket<ServerEvents, SocketClientEvents>;
 
@@ -152,9 +155,9 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
     this.socket = io({
       transports: ['websocket'],
       parser: msgpackParser,
-      auth: callback => {
-        console.log('Sending auth', this.authData);
-        callback(this.authData ?? {})
+      auth: (callback) => {
+        logger.debug('Sending auth: {data}', { data: this.authData });
+        callback(this.authData ?? {});
       }
     });
 
@@ -180,7 +183,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
   }
 
   private handleSessionResponse: ServerEvents['c:s'] = async (sessionData) => {
-    console.log('AUTH RESP', { sessionData });
+    logger.debug('AUTH RESP {*}', { sessionData });
     this.sessionData = sessionData;
     this.startSession();
   }
@@ -230,7 +233,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
   }
 
   private handleSocketReconnect = (attempt: number) => {
-    console.log('RE-CONNECT');
+    logger.debug('RE-CONNECT');
 
     for (const [key, events] of this.delegates) {
       const [kind, id] = this.extractId(key);
@@ -268,7 +271,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
       })
       .filter(p => pred(...p))
       .map(([kind, id, store]) => new Promise<void>((resolve) => {
-        console.log('Restoring', kind, id);
+        logger.debug('Restoring {*}', { kind, id });
 
         this.socket.emit('r:ob', kind, id, store.options, async (response) => {
           if (response.status === undefined) {

@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["DOM", "ES2022"],
-    "module": "commonjs",
+    "lib": ["DOM", "ES2023"],
+    "module": "esnext",
     "jsx": "react-jsx",
     "allowJs": true,
     "strict": true,

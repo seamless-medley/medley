@@ -36,6 +36,7 @@ import { Lyrics, defaultColors as defaultLyricsColors } from "./components/Lyric
 import { PlayHead } from "./components/PlayHead";
 
 import { Route } from "./route";
+import { getLogger } from "@logtape/logtape";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -68,6 +69,8 @@ const Control = styled.div`
   }
 `;
 
+const logger = getLogger(['ui', 'page', 'play']);
+
 export const PlayPage: React.FC = () => {
   const { station: stationId } = Route.useParams();
 
@@ -91,7 +94,7 @@ export const PlayPage: React.FC = () => {
 
   useEffect(() => {
     if (!cover) {
-      console.log('No cover');
+      logger.debug('No cover');
 
       const main = hsl(random(360), random(0.5, 0.9, true), random(0.6, 0.8, true));
       const deg = random(15, 20);
@@ -106,8 +109,6 @@ export const PlayPage: React.FC = () => {
       return;
     }
 
-    console.log('Prominent colors');
-
     prominent(cover, { format: 'hex', amount: 6 }).then(out => {
       setCoverProps({
         colors: sortColors(out as string[]),
@@ -121,7 +122,7 @@ export const PlayPage: React.FC = () => {
   useEffect(() => {
     let gradient;
 
-    console.log('Colors', coverProps.colors);
+    logger.debug('Colors {colors}', { colors: coverProps.colors });
 
     const extent = ['farthest-side at', sample(['left', 'right']), sample(['top', 'bottom'])].join(' ');
 
@@ -155,15 +156,13 @@ export const PlayPage: React.FC = () => {
     } else {
       const colorStops = defaultCoverColors.concat([...defaultCoverColors].reverse());
 
-      console.log('colorStops', colorStops);
+      logger.info('colorStops {colorStops}', { colorStops });
 
       gradient = linearGradient({
         colorStops,
         toDirection: 'to right bottom'
       }).backgroundImage;
     }
-
-    console.log({ gradient })
 
     setTitleBg(gradient.toString() ?? '');
   }, [cover]);

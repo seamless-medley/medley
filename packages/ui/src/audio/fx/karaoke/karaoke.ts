@@ -1,6 +1,9 @@
+import { getLogger } from "@logtape/logtape";
 import worklet from "./worklets/karaoke-module.js?worker&url";
 
 type ParamNames = 'mix' | 'bg';
+
+const logger = getLogger(['audio', 'fx', 'karaoke']);
 
 export class KaraokeFx {
   #context: AudioContext;
@@ -117,7 +120,7 @@ export class KaraokeFx {
       this.#prepared = true;
     }
     catch (e) {
-      console.error('Error loading medley-karaoke audio worklet', e);
+      logger.error('Error loading medley-karaoke audio worklet', { e });
     }
   }
 }
