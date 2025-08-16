@@ -1,39 +1,56 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { MantineProvider } from '@mantine/core';
+import { OverlayScrollbars } from "overlayscrollbars";
+import { getLogger } from "@logtape/logtape";
 
 import { routeTree } from "./pages/routeTree.gen";
 
-import { initRoot } from './init';
-// import { router } from "./pages/router";
+import { initLogging, initRoot } from './init';
 import { theme } from "./theme/theme";
-import { OverlayScrollbars } from "overlayscrollbars";
 
-OverlayScrollbars(
-  {
-    target: document.body
-  },
-  {
-    overflow: {
-      x: 'hidden'
+const main = async () => {
+  await initLogging();
+
+  const logger = getLogger('main');
+
+  logger.info('Main start');
+
+  OverlayScrollbars(
+    {
+      target: document.body
     },
-    scrollbars: {
-      autoHide: 'move'
+    {
+      overflow: {
+        x: 'hidden'
+      },
+      scrollbars: {
+        autoHide: 'move'
+      },
+      update: {
+        debounce: 800
+      }
     }
-  }
-);
+  );
 
-export const router = createRouter({ routeTree });
+  const router = createRouter({ routeTree });
+
+  initRoot().render(
+    // <React.StrictMode>
+      <MantineProvider theme={theme} forceColorScheme="dark" classNamesPrefix="medley">
+        <RouterProvider router={router} />
+      </MantineProvider>
+    // </React.StrictMode>
+  );
+
+  return router;
+}
+
+main();
 
 declare module '@tanstack/react-router' {
   interface Register {
-    router: typeof router
+    router: Awaited<ReturnType<typeof main>>
   }
 }
 
-initRoot().render(
-  // <React.StrictMode>
-    <MantineProvider theme={theme} forceColorScheme="dark" classNamesPrefix="medley">
-      <RouterProvider router={router} />
-    </MantineProvider>
-  // </React.StrictMode>
-);
+
