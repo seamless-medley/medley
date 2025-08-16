@@ -1,11 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import {
-  Container,
   Title,
   Text,
-  Grid,
   Card,
   Group,
   Stack,
@@ -14,13 +12,12 @@ import {
   AppShell,
   Box,
   Button,
-  alpha
+  alpha,
+  StyleProp
 } from '@mantine/core';
 
-import { Carousel, CarouselProps } from "@mantine/carousel";
-
 import { css } from "@linaria/core";
-import { IconMusic, IconRadio, IconHeadphones } from '@tabler/icons-react';
+import { IconRadio, IconHeadphones } from '@tabler/icons-react';
 import { darken, getLuminance, lighten, linearGradient } from "polished";
 import { prominent } from "color.js";
 import { AnimatePresence, motion } from "framer-motion";
@@ -42,32 +39,6 @@ import { client } from "@ui/init";
 
 import { NavBar } from "./components/NavBar";
 import { Route } from "./route";
-import { DragHandlerOptionType } from "embla-carousel/components/DragHandler";
-
-const Hero: React.FC<{ instanceName?: string }> = ({ instanceName = 'Medley' }) => {
-  return (
-    <Center mb={80}>
-      <Stack align="center" gap="xl">
-        <Group align="center" gap="lg">
-          <ThemeIcon
-            size={80}
-            radius="xl"
-            variant="gradient"
-            gradient={{ from: 'pink', to: 'violet', deg: 45 }}
-          >
-            <IconMusic size={40} />
-          </ThemeIcon>
-          <Title
-            size={60}
-            fw={900}
-          >
-            {instanceName}
-          </Title>
-        </Group>
-      </Stack>
-    </Center>
-  )
-}
 
 const coverCss = css`
   background-size: cover;
@@ -241,7 +212,8 @@ const StationCard: React.FC<{ stationId: string }> = ({ stationId }) => {
       withBorder
       shadow="md"
       radius="lg"
-      h={600}
+      h='100%'
+      w='100%'
       className={cardCss}
     >
       <CoverBackdrop cover={cover} />
@@ -281,17 +253,6 @@ const NoStations = () => {
   )
 }
 
-const carouselCss = css`
-  [data-inactive] {
-    opacity: 0;
-    cursor: default;
-
-    &:hover {
-      opacity: 0;
-    }
-  }
-`;
-
 const StationList = () => {
   const [stations, setStations] = useState<string[]>([]);
   const { surrogate: $global } = useSurrogate('global', '$');
@@ -301,24 +262,11 @@ const StationList = () => {
       return;
     }
 
-    $global.getStations().then(setStations);
+    $global.getStations().then(s => setStations([s[0], s[1], s[0], s[1], s[0], s[1]]));
   }, [$global]);
 
-  const currentStationId = usePlayingStationId();
-
-  const startIndex = useMemo(() => {
-    if (!currentStationId) {
-      return undefined;
-    }
-
-    const index = stations.findIndex(s => s === currentStationId);
-    return (index !== -1) ? index : undefined;
-  }, [currentStationId, stations])
-
-  const watchDrag = useCallback<Exclude<DragHandlerOptionType, boolean>>((embla, e) => e instanceof TouchEvent, []);
-
   return (
-    <Stack gap="xl" mb={80}>
+    <Stack gap="xl" my={80}>
       <Group justify="center" align="center" gap="md">
         <IconRadio size={32} color="var(--mantine-color-green-6)" />
         <Title order={2} size="h1" fw={700}>
@@ -328,23 +276,17 @@ const StationList = () => {
 
       {stations.length > 0
         ? (
-          <Carousel
-            className={carouselCss}
-            slideSize={{ base: '100%', sm: '50%', md: `${100/clamp(stations.length, 1, 3)}%` }}
-            slideGap={{ base: 0, sm: 'md' }}
-            emblaOptions={{
-              loop: true,
-              align: 'center',
-              startIndex,
-              watchDrag
-            }}
-          >
+          <Group justify="center">
             {stations.map((stationId, i) => (
-              <Carousel.Slide key={i}>
-                <StationCard stationId={stationId} />
-              </Carousel.Slide>
+              <Group
+                key={i}
+                w={{ base: '100%', sm: '75%', md: '50%', lg: '40%', xl: '33%' }}
+                h={{ base: '33em', md: '40em', lg: '45em' }}
+              >
+                <StationCard key={i} stationId={stationId} />
+              </Group>
             ))}
-          </Carousel>
+          </Group>
         )
         : <NoStations />
       }
@@ -353,17 +295,11 @@ const StationList = () => {
 }
 
 export const HomePage = () => {
-  const { surrogate: $global } = useSurrogate('global', '$');
-  const instanceName = useRemotableProp($global, 'instanceName');
-
   return (
     <AppShell header={{ height: 60 }}>
       <NavBar onDJModeClick={() => undefined} />
-      <AppShell.Main>
-        <Container size="xl" py={60}>
-          <Hero instanceName={instanceName} />
-          <StationList />
-        </Container>
+      <AppShell.Main p="md">
+        <StationList />
       </AppShell.Main>
     </AppShell>
   );
