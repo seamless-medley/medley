@@ -1,8 +1,29 @@
 import { createRoot, type Root } from "react-dom/client";
+import * as LogTape from "@logtape/logtape";
 import { MedleyClient } from "./medley-client";
 
 let root: Root;
 let _client: MedleyClient | undefined;
+
+export async function initLogging() {
+  const sinks = ['console'];
+
+  await LogTape.configure({
+    sinks: {
+      console: LogTape.getConsoleSink({
+        nonBlocking: true
+      })
+    },
+    loggers: [
+      { category: ['logtape', 'meta'], lowestLevel: 'error', sinks },
+      { category: 'main', sinks },
+      { category: 'client', sinks },
+      { category: 'transport', sinks },
+      { category: 'audio', sinks },
+      { category: 'ui', sinks },
+    ]
+  });
+}
 
 export function initClient() {
   // @ts-ignore
@@ -24,8 +45,6 @@ export function initClient() {
       window.$client = _client;
     }
   }
-
-  console.groupEnd();
 
   return _client;
 }
