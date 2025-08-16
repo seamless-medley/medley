@@ -13,6 +13,7 @@
     "@fontsource/gowun-dodum": "^5.0.12",
     "@linaria/core": "^6.3.0",
     "@linaria/react": "^6.3.0",
+    "@logtape/logtape": "^1.0.4",
     "@mantine/carousel": "^8.2.4",
     "@mantine/core": "8.2.4",
     "@mantine/hooks": "8.2.4",
@@ -69,6 +70,7 @@
     "typescript": "5.5.4",
     "vite": "7.1.0",
     "vite-plugin-mkcert": "^1.17.1",
+    "vite-plugin-top-level-await": "^1.6.0",
     "vite-tsconfig-paths": "^5.1.4"
   }
 }
