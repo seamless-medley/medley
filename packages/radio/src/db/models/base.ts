@@ -1,6 +1,6 @@
-import { WithId } from '../persistent/base';
+import { WithId } from '../schema/base';
 
-export const $ActualObject = Symbol.for('ActualObject');
+export const $ActualObject = Symbol.for('$ActualObject');
 
 type WithActualObject<T> = {
   [$ActualObject]: T;

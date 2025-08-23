@@ -13,10 +13,7 @@ import type { Exposable, ClientEvents, RemoteCallback, RemoteResponse, ServerEve
 import { Socket, ClientData } from './types';
 
 import { createLogger } from "../../logging";
-import { SettingsDb } from '../../db/types';
 import { getDependents, hasObjectGuardAccess } from './decorator';
-import { PlainUser } from '../../db/persistent/user';
-import { $ActualObject } from '../../db/models/base';
 
 const logger = createLogger({ name: 'socket-server' });
 
@@ -92,7 +89,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
 
   #sendSession(socket: Socket) {
     socket.emit('c:s', {
-      user: socket.data.user?.toPlain()
+      user: socket.data.user?.username
     });
   }
 

@@ -2,8 +2,8 @@ import { noop } from "lodash";
 
 import { createLogger } from "../logging";
 
-import { SettingsDb } from '../db/types';
-import { MongoMusicDb } from "../db/musicdb/mongo";
+import { UserDb } from '../db/types';
+import { DatabaseClient } from "../db";
 //
 import type { Config } from "../config";
 //
@@ -41,9 +41,7 @@ export type MedleyServerOptions = {
 }
 
 export class MedleyServer extends SocketServerController<RemoteObjects> {
-  #musicDb!: MusicDb;
-
-  #settingsDb!: SettingsDb;
+  #dbClient!: DatabaseClient;
 
   #audioServer: AudioWebSocketServer;
 
@@ -222,7 +220,7 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
   }
 
   async #connectMongoDB() {
-    const musicDb = new MongoMusicDb();
+    const dbClient = new DatabaseClient();
 
     await retryable(async ({ attempts }) => {
       if (attempts) {
@@ -231,7 +229,7 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
 
       const dbConfig = this.#configs.db;
 
-      return musicDb.init({
+      return dbClient.init({
         url: dbConfig.url,
         database: dbConfig.database,
         connectionOptions: dbConfig.connectionOptions,
@@ -251,17 +249,16 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
       }
     });
 
-    this.#musicDb = musicDb;
-    this.#settingsDb = musicDb.settings;
+    this.#dbClient = dbClient;
   }
 
   protected override async authenticateSocket(socket: Socket, username: string, password: string) {
-    const user = await this.#settingsDb?.verifyLogin(username, password);
+    const user = await this.#dbClient.user?.verifyLogin(username, password);
     return user ? new UserModel(user) : undefined;
   }
 
-  get musicDb() {
-    return this.#musicDb;
+  get musicDb(): MusicDb {
+    return this.#dbClient;
   }
 
   get streamers() {
@@ -270,7 +267,7 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
 
   terminate() {
     this.io.close();
-    this.#musicDb?.dispose();
+    this.#dbClient?.dispose();
   }
 
   registerStation(station: Station) {

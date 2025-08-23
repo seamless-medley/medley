@@ -1,12 +1,11 @@
 import { noop } from "lodash";
 import { Db, MongoClient, type MongoClientOptions } from "mongodb";
-import type { PlainUser } from "@seamless-medley/remote";
 
-import { createLogger, type Logger } from "../../../logging";
+import { createLogger, type Logger } from "../logging";
 
-import { SettingsDb } from "../../types";
-import { FindByCommentOptions, MusicDb, MusicDbTrack, SearchHistory, TrackHistory, WorkerPoolAdapter } from "../../../core";
-import { User } from "../../persistent/user";
+import { UserDb } from "./types";
+import { FindByCommentOptions, MusicDb, MusicDbTrack, SearchHistory, TrackHistory, WorkerPoolAdapter } from "../core";
+import { User } from "./schema/user";
 
 export type Options = {
   url: string;
@@ -21,7 +20,7 @@ export type Options = {
    */
    ttls?: [min: number, max: number];
 
-   seed?: true;
+   seed?: boolean;
 }
 
 type PrefixRemap<Prefix extends string, T> = {
@@ -31,9 +30,9 @@ type PrefixRemap<Prefix extends string, T> = {
 type WorkerMethods = MusicDb &
   PrefixRemap<'search_', SearchHistory> &
   PrefixRemap<'track_', TrackHistory> &
-  PrefixRemap<'settings_', SettingsDb>
+  PrefixRemap<'settings_', UserDb>
 
-export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
+export class DatabaseClient extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
   #logger: Logger;
 
   #options: Options | undefined;
@@ -42,10 +41,10 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
   #localClientRefCount = 0;
 
   constructor() {
-    super(__dirname + '/worker.js', {});
+    super(__dirname + '/db-worker.js', {});
 
     this.#logger = createLogger({
-      name: 'musicdb:mongo',
+      name: 'db',
       id: `main`
     });
 
@@ -54,16 +53,21 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
   }
 
   async init(options: Options): Promise<this> {
-
     if (!this.#options) {
       const pool = (this.pool as any);
 
       this.#logger.debug('Configure workers');
 
-      await Promise.all(
-        (pool.workers as any[])
-          .map((worker, index) => worker.exec('configure', [{ ...options, seed: index === 0 }]))
-      );
+      try {
+        await Promise.all(
+          (pool.workers as any[])
+            .map((worker, index) => worker.exec('configure', [{ ...options, seed: index === 0 }]))
+        )
+      }
+      catch (e) {
+        this.#logger.error(e, 'Error configuring database');
+        throw e;
+      }
 
       this.#options = options;
     }
@@ -202,15 +206,9 @@ export class MongoMusicDb extends WorkerPoolAdapter<WorkerMethods> implements Mu
     return this.#trackHistory;
   }
 
-  readonly settings: SettingsDb = {
+  readonly user: UserDb = {
     verifyLogin: async (username, password) => {
-      const user = await this.exec('settings_verifyLogin', username, password);
-
-      if (!user) {
-        return;
-      }
-
-      return User.parse(user as unknown as PlainUser);
+      return this.exec('settings_verifyLogin', username, password);
     }
   }
 

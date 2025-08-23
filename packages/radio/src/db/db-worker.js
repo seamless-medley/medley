@@ -5,18 +5,19 @@ const workerpool = require('workerpool');
 const { threadId } = require('node:worker_threads');
 const { MongoClient, Db, Collection, AggregationCursor } = require('mongodb');
 const { random, omitBy, capitalize } = require('lodash');
-const { createLogger } = require('../../../logging');
+const { createLogger } = require('../logging');
+const { User } = require('./schema/user')
 
-/** @typedef {import('../../../core').MusicDb} MusicDb */
-/** @typedef {import('../../../core').MusicDbTrack} MusicDbTrack */
-/** @typedef {import('../../../core').SearchHistory} SearchHistory */
-/** @typedef {import('../../../core').SearchQuery} SearchQuery */
-/** @typedef {import('../../../core').TrackHistory} TrackHistory */
-/** @typedef {import('../../../core').RecentSearchRecord} RecentSearchRecord */
-/** @typedef {import('../../../core').SearchRecord} SearchRecord */
-/** @typedef {import('../../../core').TimestampedTrackRecord} TimestampedTrackRecord */
-/** @typedef {import('../../../core').FindByCommentOptions} FindByCommentOptions */
-/** @typedef {import('./mongo').Options} Options */
+/** @typedef {import('../core').MusicDb} MusicDb */
+/** @typedef {import('../core').MusicDbTrack} MusicDbTrack */
+/** @typedef {import('../core').SearchHistory} SearchHistory */
+/** @typedef {import('../core').SearchQuery} SearchQuery */
+/** @typedef {import('../core').TrackHistory} TrackHistory */
+/** @typedef {import('../core').RecentSearchRecord} RecentSearchRecord */
+/** @typedef {import('../core').SearchRecord} SearchRecord */
+/** @typedef {import('../core').TimestampedTrackRecord} TimestampedTrackRecord */
+/** @typedef {import('../core').FindByCommentOptions} FindByCommentOptions */
+/** @typedef {import('./db-client').Options} Options */
 
 /** @type {MongoClient} */
 let client;
@@ -40,8 +41,8 @@ let ttls = [
 ];
 
 const logger = createLogger({
-  name: 'musicdb:mongo',
-  id: `${threadId}`
+  name: 'db',
+  id: `thread-${threadId.toString().padStart(2, '0')}`
 });
 
 /**
@@ -114,7 +115,7 @@ async function configure(options) {
         users.createIndexes([
           { key: { username: 1 } }
         ]);
-        users.insertOne({ username: 'admin', password, flags: (1n<<22n).toString() });
+        users.insertOne({ username: 'admin', password });
       });
     }
   }
@@ -508,27 +509,28 @@ const search_unmatchedItems = async(stationId) => {
     });
 
 
-/* SettingsDb */
-
-/** @typedef {typeof import('../../persistent/user').PlainUser} RawUser*/
+/* UserDb */
 
 /**
  *
  * @param {string} username
  * @param {string} password
  */
-async function settings_verifyLogin(username, password) {
+async function user_verifyLogin(username, password) {
   if (!db) {
     throw new Error('Not initialized');
   }
 
   const row = await db.collection('users')
-    .findOne({ username })
+    .findOne({ username });
+
+  const entity = await Promise.resolve(row)
+    .then(User.safeParse)
     .catch(() => undefined)
     ?? undefined;
 
-  if (row && await argon2.verify(row.password, password)) {
-    const { password: ignored, _id, ...user }  = row;
+  if (entity?.success && await argon2.verify(entity.data.password, password)) {
+    const { password: ignored, _id, ...user }  = entity.data;
     return {
       ...user,
       _id: _id.toHexString()
@@ -549,6 +551,6 @@ workerpool.worker({
   search_unmatchedItems,
   track_add,
   track_getAll,
-  // SettingsDb
-  settings_verifyLogin
+  // UserDb
+  settings_verifyLogin: user_verifyLogin
 })

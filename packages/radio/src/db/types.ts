@@ -1,5 +1,5 @@
-import { type User } from "./persistent/user";
+import type { User } from "./schema/user";
 
-export interface SettingsDb {
+export interface UserDb {
   verifyLogin(username: string, password: string): Promise<User | undefined>;
 }
