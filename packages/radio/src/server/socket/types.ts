@@ -1,5 +1,6 @@
 import EventEmitter from "node:events";
 import type TypedEventEmitter from "typed-emitter";
+import type { Request } from 'express';
 import { Socket as IOSocket } from "socket.io";
 import type { ClientEvents, ServerEvents, PickEvent } from "@seamless-medley/remote";
 import { UserModel } from "../../db/models/user";
@@ -25,3 +26,5 @@ export type Socket = IOSocket<ClientEvents, ServerEvents, never, ClientData>;
  * Return `true` if allowed
  */
 export type GuardPredicate = (socket: Socket, instance: object) => boolean | Promise<boolean>;
+
+export const getSocketSession = (socket: Socket) => (socket.request as Request).session;

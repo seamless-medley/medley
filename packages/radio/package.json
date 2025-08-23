@@ -38,6 +38,7 @@
     "discord-api-types": "0.38.18",
     "discord.js": "^14.18.0",
     "express": "5.1.0",
+    "express-session": "^1.18.2",
     "fast-glob": "^3.3.1",
     "fastest-levenshtein": "^1.0.16",
     "ffmpeg-static": "5.2.0",
@@ -68,6 +69,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
+    "@types/express-session": "^1.18.2",
     "@types/fs-extra": "^11.0.3",
     "@types/lodash": "^4.14.200",
     "@types/mime-types": "^3.0.1",

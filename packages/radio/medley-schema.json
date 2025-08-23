@@ -23,6 +23,11 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 256
+        },
+        "secret": {
+          "type": "string",
+          "description": "Secret used to sign session",
+          "minLength": 16
         }
       },
       "required": [],

@@ -2,11 +2,16 @@
 
 export * from '../core';
 
+import { isString } from 'lodash';
+import { extname, resolve as resolvePath } from 'node:path';
 import { createServer } from 'node:net';
 import http from 'node:http';
 import express from 'express';
+import session from "express-session";
 import { ZodError } from "zod";
 import { Command } from '@commander-js/extra-typings';
+import { Medley } from '@seamless-medley/medley';
+import { AuthData } from '@seamless-medley/remote';
 import { createLogger } from '../logging';
 import { SocketServer as SocketIOServer } from './socket';
 import { MedleyServer } from './medley-server';
@@ -14,8 +19,13 @@ import { AudioWebSocketServer } from './audio/ws/server';
 import { Config, loadConfig } from '../config';
 import { RTCTransponder } from './audio/rtc/transponder';
 import { getVersionLine, showVersionBanner } from '../helper';
-import { extname, resolve as resolvePath } from 'node:path';
-import { Medley } from '@seamless-medley/medley';
+import { StreamingAdapter } from '../streaming/types';
+
+declare module "express-session" {
+  interface SessionData {
+    auth: AuthData
+  }
+}
 
 const logger = createLogger({ name: 'main' });
 
@@ -43,9 +53,6 @@ function isPortAvailable(port: number, address?: string) {
 
 async function startServer(configs: Config) {
   return new Promise<[MedleyServer, http.Server]>(async (resolve, reject) => {
-    const expressApp = express();
-    const httpServer = http.createServer(expressApp);
-
     const listeningPort = +(process.env.PORT || configs.server?.port || 3001);
     const listeningAddr = (process.env.BIND || configs.server?.address)?.toString();
 
@@ -54,7 +61,26 @@ async function startServer(configs: Config) {
       return;
     }
 
-    expressApp.use((_, res, next) => {
+    const expressApp = express();
+    const httpServer = http.createServer(expressApp);
+
+    expressApp.set('trust proxy', 1);
+
+    const sessionMiddleware = session({
+      name: 'medley.sid',
+      cookie: {
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      },
+      secret: configs.server.secret || 'H0xfTK80tSXDKqWkkAXcCMgPzBz24izI',
+      rolling: true,
+      resave: true,
+      saveUninitialized: true
+    });
+
+    expressApp.use(sessionMiddleware);
+
+    expressApp.use((req, res, next) => {
       res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
       res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
       next();
@@ -83,6 +109,8 @@ async function startServer(configs: Config) {
     });
 
     const io = new SocketIOServer(httpServer, '/socket.io');
+    io.engine.use(sessionMiddleware);
+
     const audioServer = new AudioWebSocketServer(httpServer, configs.server.audioBitrate * 1000);
     const rtcTransponder = (configs.webrtc)
       ? await new RTCTransponder()
@@ -101,9 +129,7 @@ async function startServer(configs: Config) {
     });
 
     server.once('ready', () => {
-      const listenErrorHandler = (e: Error) => {
-        reject(e);
-      }
+      const listenErrorHandler = (e: Error) => reject(e);
 
       httpServer
         .once('error', listenErrorHandler)
@@ -159,6 +185,7 @@ export function runStream(router: express.Router, streamer: StreamingAdapter<any
 
   streamer.start();
 }
+
 async function main() {
   const program = new Command()
     .name('medley')

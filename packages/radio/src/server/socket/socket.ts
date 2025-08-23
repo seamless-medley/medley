@@ -1,16 +1,16 @@
+import { capitalize, isEqual, isFunction, isObject, mapValues, mean, noop, omit, pickBy, random, stubFalse } from "lodash";
 import { Readable, Stream, Writable } from 'node:stream';
 import EventEmitter from "node:events";
 import http from "node:http";
-import { capitalize, isEqual, isFunction, isObject, mapValues, mean, noop, omit, pickBy, random } from "lodash";
 import { Server as IOServer } from "socket.io";
 import msgpackParser from 'socket.io-msgpack-parser';
 import { ConditionalKeys } from "type-fest";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { isProperty, isPublicPropertyName, propertyDescriptorOf } from '@seamless-medley/utils';
 
-import type { Exposable, ClientEvents, RemoteCallback, RemoteResponse, ServerEvents, AuthData, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents  } from "@seamless-medley/remote";
+import type { Exposable, ClientEvents, RemoteCallback, RemoteResponse, ServerEvents, AuthData, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents, ClientAuthResult  } from "@seamless-medley/remote";
 
-import { Socket, ClientData } from './types';
+import { Socket, ClientData, getSocketSession } from './types';
 
 import { createLogger } from "../../logging";
 import { getDependents, hasObjectGuardAccess } from './decorator';
@@ -96,6 +96,12 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
   protected async addSocket(socket: Socket) {
     logger.debug({ socket: socket.id }, 'Adding socket');
 
+    const session = getSocketSession(socket);
+
+    // The express-session middleware saves the session when a request ends
+    // but WebSocket connections persist beyond the request lifecycle, so the session must be saved explicitly
+    session.save();
+
     socket.data = {
       latencyBacklog: []
     };
@@ -111,9 +117,8 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
 
     socket.on('disconnect', () => this.#removeSocket(socket));
 
-    if (isAuthData(socket.handshake.auth)) {
-      const { auth: { nn, up } } = socket.handshake;
-      await this.#handleAuth(socket, nn, up[0], up[1]);
+    if (isAuthData(session.auth)) {
+      await this.#handleAuth(socket, session.auth);
     }
 
     this.#sendSession(socket);
@@ -337,20 +342,39 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
   }
 
+  // to be overriden
   protected async authenticateSocket(socket: Socket, username: string, password: string): Promise<ClientData['user']> {
     return undefined;
   }
 
-  async #handleAuth(socket: Socket, nn: number[], u: number[], p: number[]) {
-    const up = [u, p].map((e, ki) => Buffer.from(e.map((a,i) => 0xbe^a^nn[ki]^i)).toString());
-    const user = await this.authenticateSocket(socket, up[0], up[1]);
+  async #handleAuth(socket: Socket, auth: AuthData) {
+    const { nn, up } = auth;
+
+    const down = up.map((e, ki) => Buffer.from(e.map((a,i) => 0xa5^a^nn[ki]^i)).toString());
+    const user = await this.authenticateSocket(socket, down[0], down[1]);
     socket.data.user = user;
+
+    if (user) {
+      const session = getSocketSession(socket);
+      session.auth = auth;
+      session.save();
+    }
+
+    return user;
   }
 
   #handlers: Handlers = {
-    'c:a': async (socket, nn, u, p) => {
-      await this.#handleAuth(socket, nn, u, p);
+    'c:a': async (socket, nn, u, p, callback) => {
+      const user = await this.#handleAuth(socket, { nn, up: [u, p] }).catch(stubFalse);
       this.#sendSession(socket);
+      callback((
+        user === false
+        ? -100
+        : user === undefined
+          ? -1
+          : 0
+        ) as ClientAuthResult
+      );
     },
 
     'r:pg': async (socket, kind, id, prop, callback) => {
