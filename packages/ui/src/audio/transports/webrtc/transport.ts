@@ -82,6 +82,10 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
       return;
     }
 
+    await this.#renewTransport();
+  }
+
+  async #renewTransport() {
     this.#transport?.close();
     await this.#createTransport();
 
