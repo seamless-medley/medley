@@ -4,8 +4,16 @@ import '@mantine/carousel/styles.css';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { fontFamily } from './fonts';
 
+const primaryColor = 'pink';
+
 export const themeOverride = createTheme({
-  fontFamily
+  fontFamily,
+  primaryColor,
+  defaultGradient: {
+    deg: 90,
+    from: primaryColor,
+    to: 'violet'
+  }
 });
 
 export const theme = mergeMantineTheme(DEFAULT_THEME, themeOverride);
