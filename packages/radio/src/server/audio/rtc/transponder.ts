@@ -33,6 +33,8 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
   #worker!: types.Worker;
   #webrtcServer!: types.WebRtcServer;
   #router!: types.Router;
+
+  // The null data producer is used to perform RTC connectivity checking
   #nullDirectTransport!: types.DirectTransport;
   #nullDataProducer!: types.DataProducer;
 
@@ -89,7 +91,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
           mimeType: 'audio/opus',
           clockRate: 48000,
           channels: 2,
-          preferredPayloadType: 109,
+          preferredPayloadType: 109, // Opus payload type
           parameters: {
             usedtx: 1
           }

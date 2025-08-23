@@ -3,7 +3,6 @@
     "target": "ES2022",
     "lib": ["DOM", "ES2022"],
     "module": "commonjs",
-    "jsx": "react-jsx",
     "allowJs": true,
     "strict": true,
     "experimentalDecorators": true,

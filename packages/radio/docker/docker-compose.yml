@@ -1,3 +1,4 @@
+name: medley-radio
 services:
   mongo:
     image: mongo
