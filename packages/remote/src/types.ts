@@ -21,11 +21,6 @@ export type AuthData = {
   up: [number[], number[]];
 }
 
-export type PlainUser = {
-  username: string;
-  flags: string;
-}
-
-export type SessionData = {
-  user?: PlainUser;
+export type ClientSessionData = {
+  user?: string;
 }

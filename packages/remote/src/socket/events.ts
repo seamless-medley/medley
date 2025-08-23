@@ -1,4 +1,4 @@
-import type { SessionData } from "../types";
+import type { ClientSessionData } from "../types";
 import type { ObservedPropertyChange } from "../type-utils";
 
 export type ServerEvents = {
@@ -7,7 +7,7 @@ export type ServerEvents = {
   // Client Latency, latency between server and client
   'c:l': (latencyMs: number) => void;
   // Client session
-  'c:s': (session: SessionData) => void;
+  'c:s': (session: ClientSessionData) => void;
   // Remote Event, when a remote object emit an event
   'r:e': (kind: string, id: string, event: string, ...args: any[]) => void;
   // Remote Update, when a remote object has changed its properties
@@ -72,8 +72,17 @@ export type RemoteObserveOptions = {
   ignoreOldValue?: boolean;
 }
 
+type BrandedClientAuthResult<T extends number, D extends string | number> = T & {
+  ['$ClientAuthResult']: D;
+}
+
+export type ClientAuthResult =
+  BrandedClientAuthResult<-100, 'unrecoverable error'> |
+  BrandedClientAuthResult<-1, 'authentication failed'> |
+  BrandedClientAuthResult<0, 'success'>;
+
 export type ClientEvents = {
-  'c:a': (x: number[], username: number[], password: number[]) => void;
+  'c:a': (x: number[], username: number[], password: number[], callback: (result: ClientAuthResult) => any) => void;
   // property
   'r:pg': (kind: string, id: string, prop: string, callback: RemoteCallback) => void;
   'r:ps': (kind: string, id: string, prop: string, value: any, callback: RemoteCallback) => void;
