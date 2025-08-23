@@ -32,7 +32,7 @@ export function NavBar({ onDJModeClick }: NavBarProps) {
                 fw={700}
                 variant="gradient"
               >
-                {$globalProps?.instanceName || 'Medley'}
+                Medley
               </Title>
             </Group>
           </Link>
