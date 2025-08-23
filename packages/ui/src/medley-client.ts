@@ -1,6 +1,7 @@
 import { createNamedFunc } from '@seamless-medley/utils';
 import { Device as MediaSoupDevice } from 'mediasoup-client';
 import { clamp } from 'lodash';
+import { getLogger } from '@logtape/logtape';
 
 import type {
   RemoteObjects,
@@ -15,7 +16,6 @@ import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
 
 import { Client } from "./client";
 import { KaraokeFx } from './audio/fx/karaoke';
-import { getLogger } from '@logtape/logtape';
 
 const logger = getLogger(['client', 'medley']);
 
@@ -99,7 +99,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
       await device.load({ routerRtpCapabilities: this.#transponder.caps() });
 
       if (device.loaded) {
-        this.#transportCreators.push(createNamedFunc('create_webrtc', async () => {
+        this.#transportCreators.push(createNamedFunc('create_webrtc_transport', async () => {
           logger.info('Using WebRTCAudioTransport');
           return new WebRTCAudioTransport(this.#transponder!, device, this.#audioContext, (await this.#karaokeFx).input);
         }));
@@ -108,7 +108,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
 
     // See: https://developer.mozilla.org/en-US/docs/Web/API/Window/crossOriginIsolated
     if (window.crossOriginIsolated) {
-      this.#transportCreators.push(createNamedFunc('create_ws', async () => {
+      this.#transportCreators.push(createNamedFunc('create_ws_transport', async () => {
         if (!this.socket.id) {
           return;
         }
@@ -131,15 +131,6 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
       this.playAudio(this.#playingStationId);
     }
   }
-
-  // protected override async startSession() {
-  //   if (!this.authData) {
-  //     // console.log('[test] Login as admin');
-  //     // this.authenticate('admin', 'admin'); // FIXME: this should be called on login action
-  //   }
-
-  //   await super.startSession();
-  // }
 
   async #nextTransport() {
     while (this.#transportCreators.length) {

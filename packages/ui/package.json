@@ -22,6 +22,7 @@
     "@seamless-medley/remote": "../remote",
     "@seamless-medley/utils": "../utils",
     "@tabler/icons-react": "^3.31.0",
+    "@tanstack/react-form": "^1.19.2",
     "@tanstack/react-router": "^1.114.29",
     "@tanstack/react-router-devtools": "^1.131.2",
     "@tanstack/virtual-file-routes": "^1.131.2",

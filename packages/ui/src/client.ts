@@ -16,7 +16,8 @@ import type {
   PickMethod,
   PickProp,
   Remotable,
-  SessionData
+  ClientSessionData,
+  ClientAuthResult
 } from "@seamless-medley/remote";
 
 import { type AudioTransportEvents } from "./audio/transport";
@@ -99,6 +100,7 @@ type ClientEvents = AudioTransportEvents & {
   disconnect(reason?: DisconnectReason): void;
   //
   start(): void;
+  authResult(result: ClientAuthResult): void;
 }
 
 export enum DisconnectReason {
@@ -142,7 +144,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
 
   protected authData?: AuthData;
 
-  protected sessionData?: SessionData;
+  protected sessionData?: ClientSessionData;
 
   /**
    * Latency in seconds
@@ -154,11 +156,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
 
     this.socket = io({
       transports: ['websocket'],
-      parser: msgpackParser,
-      auth: (callback) => {
-        logger.debug('Sending auth: {data}', { data: this.authData });
-        callback(this.authData ?? {});
-      }
+      parser: msgpackParser
     });
 
     this.socket.on('s:p', this.handleServerPing);
@@ -168,10 +166,10 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
     this.socket.on('r:u', this.handleRemoteUpdate);
     this.socket.on('r:sd', this.handleRemoteStreamData);
     this.socket.on('r:sc', this.handleRemoteStreamClose);
-    this.socket.io.on('reconnect', this.handleSocketReconnect);
 
     this.socket.on('connect', () => this.handleSocketConnect());
     this.socket.on('disconnect', this.handleSocketDisconnect);
+    this.socket.io.on('reconnect', this.handleSocketReconnect);
   }
 
   private handleServerPing: ServerEvents['s:p'] = async (serverTime, callback) => {
@@ -183,7 +181,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
   }
 
   private handleSessionResponse: ServerEvents['c:s'] = async (sessionData) => {
-    logger.debug('AUTH RESP {*}', { sessionData });
+    logger.debug('SESSION RESP {*}', { sessionData });
     this.sessionData = sessionData;
     this.startSession();
   }
@@ -388,13 +386,17 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
   authenticate(username: string, password: string) {
     const e = new TextEncoder();
 
-    this.authData = (({ nn, f }) => ({ up: [f(username, nn[0]), f(password, nn[1])], nn: nn.map(n => 0xbe^n) }))(
+    this.authData = (({ nn, f }) => ({ up: [f(username, nn[0]), f(password, nn[1])], nn: nn.map(n => 0xa5^n) }))(
       { nn: Array(2).fill(undefined).map(() => random(1, 255)), f: (s:string,n: number) => Array.from(e.encode(s).map((s, i) => s^i^n)) }
     );
 
     const { nn, up: [u, p] } = this.authData;
 
-    this.socket.emit('c:a', nn, u, p);
+    this.socket.emit('c:a', nn, u, p, this.handleAuthResult);
+  }
+
+  private handleAuthResult = (result: ClientAuthResult) => {
+    this.emit('authResult', result);
   }
 
   private getDelegateEvents(ns: string, id: string) {
