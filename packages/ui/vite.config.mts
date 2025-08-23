@@ -69,10 +69,34 @@ export default defineConfig({
       output: {
         manualChunks: {
           lodash: ['lodash'],
-          ui: [
-            'react', 'react-dom', '@tanstack/react-router',
-            '@mantine/core', '@mantine/hooks',
+          react: [
+            'react', 'react-dom',
             'polished', 'framer-motion'
+          ],
+          react_misc: [
+            'overlayscrollbars',
+            'overlayscrollbars-react',
+            'react-resizable-panels',
+            '@react-spring/web'
+          ],
+          tanstack: [
+            '@tanstack/react-router',
+            '@tanstack/react-form',
+            '@tanstack/react-router-devtools',
+            '@tanstack/virtual-file-routes'
+          ],
+          mantine: [
+            '@mantine/core', '@mantine/hooks', '@mantine/carousel', '@mantine/hooks',
+            'embla-carousel', 'embla-carousel-react'
+          ],
+          rtc: [
+            'mediasoup-client',
+            'notepack.io',
+            'opus-decoder'
+          ],
+          socket: [
+            'socket.io-client',
+            'socket.io-msgpack-parser'
           ]
         },
         assetFileNames: 'assets/[ext]/[name]-[hash][extname]'
