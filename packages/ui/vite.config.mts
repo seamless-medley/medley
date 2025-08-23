@@ -57,7 +57,8 @@ export default defineConfig({
       '/socket.audio': {
         target: 'ws://localhost:3001',
         ws: true
-      }
+      },
+      '/streams': 'http://localhost:3001'
     }
   },
   build: {
