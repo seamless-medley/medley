@@ -234,7 +234,15 @@ export class GuildState {
         return;
       }
 
+      const removeListeners = () => {
+        connector.off(VoiceConnectorStatus.Ready, setDesignatedVC);
+        connector.off(VoiceConnectorStatus.Disconnected, removeListeners);
+        connector.off(VoiceConnectorStatus.Destroyed, removeListeners);
+      }
+
       connector.once(VoiceConnectorStatus.Ready, setDesignatedVC);
+      connector.once(VoiceConnectorStatus.Disconnected, removeListeners);
+      connector.once(VoiceConnectorStatus.Destroyed, removeListeners);
     });
   }
 
