@@ -155,7 +155,7 @@ async function main() {
     return;
   }
 
-  const configs = await loadConfig(configFile, false);
+  const configs = await loadConfig(configFile);
 
   if (configs instanceof Error) {
     logger.fatal('Error loading configurations:');
