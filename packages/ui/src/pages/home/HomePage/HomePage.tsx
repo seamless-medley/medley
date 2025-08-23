@@ -12,8 +12,7 @@ import {
   AppShell,
   Box,
   Button,
-  alpha,
-  StyleProp
+  alpha
 } from '@mantine/core';
 
 import { css } from "@linaria/core";
@@ -22,7 +21,6 @@ import { darken, getLuminance, lighten, linearGradient } from "polished";
 import { prominent } from "color.js";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatTags } from "@seamless-medley/utils";
-import { clamp } from "lodash";
 
 import { useSurrogate } from "@ui/hooks/surrogate";
 import { useRemotableProp } from "@ui/hooks/remotable";
@@ -262,7 +260,7 @@ const StationList = () => {
       return;
     }
 
-    $global.getStations().then(s => setStations([s[0], s[1], s[0], s[1], s[0], s[1]]));
+    $global.getStations().then(setStations);
   }, [$global]);
 
   return (
@@ -297,7 +295,7 @@ const StationList = () => {
 export const HomePage = () => {
   return (
     <AppShell header={{ height: 60 }}>
-      <NavBar onDJModeClick={() => undefined} />
+      <NavBar />
       <AppShell.Main p="md">
         <StationList />
       </AppShell.Main>
