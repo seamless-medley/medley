@@ -9,7 +9,18 @@ export abstract class WorkerPoolAdapter<Methods extends { [name: string]: any }>
   protected pool!: WorkerPool;
 
   constructor(script: string, options: WorkerPoolOptions) {
-    this.pool = this.#patchPool(workerpool.pool(script, options));
+    const { workerThreadOpts = {}, ...restOptions } = options;
+
+    if (process.env.NODE_ENV === 'development') {
+      if (!(workerThreadOpts.execArgv?.length ?? 0)) {
+        workerThreadOpts.execArgv = (workerThreadOpts.execArgv ?? []).concat(['--require', 'ts-node/register'])
+      }
+    }
+
+    this.pool = this.#patchPool(workerpool.pool(script, {
+      ...restOptions,
+      workerThreadOpts
+    }));
   }
 
   protected exec<M extends keyof Methods>(m: M, ...args: Parameters<Methods[M]>) {
