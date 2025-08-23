@@ -708,7 +708,7 @@
             },
             "mountpoint": {
               "type": "string",
-              "pattern": "/.*"
+              "pattern": "^/[^/\\s]+$"
             },
             "username": {
               "type": "string",
@@ -853,7 +853,7 @@
         },
         "mountpoint": {
           "type": "string",
-          "pattern": "/.*"
+          "pattern": "^/[^/\\s]+$"
         },
         "format": {
           "type": "object",

@@ -40,6 +40,6 @@ const IcyFormat = z.discriminatedUnion('codec', [
 export const IcyConfig = StreamingConfigTrait.extend({
   type: z.literal('icy'),
   format: IcyFormat,
-  mountpoint: z.string().startsWith('/'),
+  mountpoint: z.string().regex(/^\/[^\/\s]+$/, { error: issue => `Invalid mountpoint '${issue.input}': must be in '/path' format` }),
   metadataInterval: z.number().int().optional()
 })

@@ -10,7 +10,7 @@ import {
 
 import { RequestHandler, Router } from "express";
 import { OutgoingHttpHeaders } from "node:http";
-import { noop, isUndefined, omitBy, } from "lodash";
+import { noop, isUndefined, omitBy, trimStart, } from "lodash";
 import { PassThrough, Transform, pipeline } from "node:stream";
 import { IcyMetadata, MetadataMux } from "./mux";
 import { FFmpegChildProcess, FFMpegLine, InfoLine, ProgressValue } from "../ffmpeg";
@@ -244,7 +244,7 @@ export class IcyAdapter extends FFMpegAdapter {
   override get httpRouter() {
     if (!this.#router) {
       this.#router = Router();
-      this.#router.route(`/icy${this.#options.mountpoint}`).get(this.#handler);
+      this.#router.route(`/${trimStart(this.#options.mountpoint, '/')}`).get(this.#handler);
     }
 
     return this.#router;
