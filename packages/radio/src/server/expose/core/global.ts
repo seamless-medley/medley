@@ -21,8 +21,4 @@ export class ExposedGlobal extends MixinEventEmitterOf<RemoteGlobal>() implement
   getStations() {
     return Array.from(this.#medley.stations.keys());
   }
-
-  get instanceName() {
-    return this.#medley.instanceName;
-  }
 }

@@ -41,8 +41,6 @@ export type MedleyServerOptions = {
 }
 
 export class MedleyServer extends SocketServerController<RemoteObjects> {
-  #instanceName = 'Medley';
-
   #musicDb!: MusicDb;
 
   #settingsDb!: SettingsDb;
@@ -75,9 +73,6 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
     if (this.#rtcTransponder) {
       this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
     }
-
-    this.#instanceName = this.#configs.instanceName ?? 'Medley';
-    logger.info(`Medley server name: "${this.#instanceName}"`);
 
     this.#stations = await this.#createStations();
     this.#automatons = await this.#createAutomatons();
@@ -127,10 +122,6 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
 
   get stations() {
     return this.#stations;
-  }
-
-  get instanceName() {
-    return this.#instanceName;
   }
 
   async createAutomaton(id: string, config: AutomatonConfig) {
