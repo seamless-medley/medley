@@ -4,6 +4,7 @@ ignoreWorkspaceCycles: true
 onlyBuiltDependencies:
   - "@discordjs/opus"
   - "@parcel/watcher"
+  - "@swc/core"
   - bufferutil
   - esbuild
   - mediasoup

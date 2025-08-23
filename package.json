@@ -45,7 +45,16 @@
     "overrides": {
       "typescript": "5.5.4",
       "micromatch": ">=4.0.8"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@discordjs/opus",
+      "@parcel/watcher",
+      "@swc/core",
+      "bufferutil",
+      "esbuild",
+      "ffmpeg-static",
+      "mediasoup"
+    ]
   },
   "commitlint": {
     "rules": {
