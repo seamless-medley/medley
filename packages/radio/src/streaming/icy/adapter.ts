@@ -17,6 +17,7 @@ import { FFmpegChildProcess, FFMpegLine, InfoLine, ProgressValue } from "../ffmp
 import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
 import { getVersion } from "../../helper";
 import type { RequestAudioStreamResult } from "@seamless-medley/medley";
+import { createLogger, Logger } from "../../logging";
 
 const mimeTypes = {
   mp3: 'audio/mpeg',
@@ -34,6 +35,8 @@ export type IcyAdapterOptions = AdapterOptions<OutputFormats> & {
 }
 
 export class IcyAdapter extends FFMpegAdapter {
+  #logger: Logger;
+
   #lastInfo?: InfoLine;
 
   #error?: Error;
@@ -55,6 +58,8 @@ export class IcyAdapter extends FFMpegAdapter {
 
     const { metadataInterval = 16_000, mountpoint, fx, ...restOptions } = options;
 
+    this.#logger = createLogger({ name: 'icy', id: `${mountpoint}` });
+
     this.#options = {
       sampleFormat: 'FloatLE',
       sampleRate: 44100,
@@ -65,6 +70,11 @@ export class IcyAdapter extends FFMpegAdapter {
       fx,
       ...restOptions
     }
+
+    this.#logger.debug({
+      ...this.#options,
+      station: station.name
+    })
 
     this.#karaokeEnabled = fx?.karaoke?.enabled === true;
 
@@ -77,6 +87,8 @@ export class IcyAdapter extends FFMpegAdapter {
     this.#lastInfo = undefined;
 
     try {
+      this.#logger.info('Initializing');
+
       await super.init();
       this.#initialized = true;
     }
@@ -277,11 +289,13 @@ export class IcyAdapter extends FFMpegAdapter {
   protected override log(line: FFMpegLine) {
     if (line.type === 'info') {
       this.#lastInfo = line;
+      this.#logger.debug(line.text);
       return;
     }
 
     if (line.type === 'error') {
       this.#error = new Error(line.text);
+      this.#logger.error(line.text);
       return;
     }
 
