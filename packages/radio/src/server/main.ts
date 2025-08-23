@@ -60,13 +60,7 @@ async function startServer(configs: Config) {
       next();
     });
 
-    const streamingRouter = express.Router();
-
-    expressApp.use(
-      '/streams',
-      streamingRouter,
-      (_, res) => void res.status(503).end('Unknown stream')
-    );
+    const streamingRouter = registerStreamsRoute(expressApp);
 
     const staticPath = resolvePath(__dirname,
       process.env.NODE_ENV === 'development'
@@ -119,21 +113,7 @@ async function startServer(configs: Config) {
           logger.info(`Listening on port ${listeningPort}`);
           logger.info(`Serving UI at: ${staticPath}`);
 
-          const { streamers } = server;
-
-          for (const streamer of streamers) {
-            if (!streamer.initialized) {
-              continue;
-            }
-
-            const { httpRouter } = streamer;
-
-            if (httpRouter) {
-              streamingRouter.use(httpRouter);
-            }
-
-            streamer.start();
-          }
+          server.streamers.map(streamer => runStream(streamingRouter, streamer));
 
           resolve([server, httpServer]);
         });
@@ -141,6 +121,44 @@ async function startServer(configs: Config) {
   });
 }
 
+export function registerStreamsRoute(app: express.Express, path: string = '/streams') {
+  const router = express.Router();
+
+  app.use(
+    path, router,
+    (_, res) => void res.status(503).end('Unknown stream')
+  );
+
+  return router;
+}
+
+export function runStream(router: express.Router, streamer: StreamingAdapter<any>) {
+  if (!streamer.initialized) {
+    return;
+  }
+
+  const { httpRouter: streamRouter } = streamer;
+
+  if (streamRouter) {
+    const streamPath = streamRouter.stack?.[0]?.route?.path;
+
+    if (streamPath) {
+      const registeredRoutes = new Set(router.stack
+        .flatMap(layer => (layer.handle as any)?.stack?.[0]?.route?.path)
+        .filter(isString)
+      );
+
+      if (registeredRoutes.has(streamPath)) {
+        logger.warn(`streaming mountpoint ${streamPath} was already registered`);
+        return;
+      }
+
+      router.use(streamRouter);
+    }
+  }
+
+  streamer.start();
+}
 async function main() {
   const program = new Command()
     .name('medley')
