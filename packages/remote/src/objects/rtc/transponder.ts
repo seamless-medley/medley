@@ -23,9 +23,9 @@ export type ClientTransportInfo = {
 }
 
 export interface RTCTransponder {
-  readonly caps: types.RtpCapabilities;
+  readonly rtcCaps: Array<[rtcid: string, caps: types.RtpCapabilities]>;
 
-  newClientTransport(sctpCaps: types.SctpCapabilities): Promise<ClientTransportInfo>;
+  newClientTransport(rtcId: string, sctpCaps: types.SctpCapabilities): Promise<ClientTransportInfo>;
 
   closeClientTransport(transportId: string): Promise<void>;
 
@@ -35,5 +35,5 @@ export interface RTCTransponder {
 
   stopClientConsumer(transportId: string): Promise<void>;
 
-  ϟrenew(): void;
+  ϟrenew(rtcId: string): void;
 }
