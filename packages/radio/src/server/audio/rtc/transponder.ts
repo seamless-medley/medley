@@ -1,15 +1,18 @@
+import { cpus } from 'node:os';
+import { randomUUID } from 'node:crypto';
+import { chain, partition, times } from 'lodash';
 import { type types, createWorker } from 'mediasoup';
 import { TypedEmitter } from 'tiny-typed-emitter';
-import { Socket } from 'socket.io';
+import type { ClientConsumerInfo, ClientTransportInfo } from '@seamless-medley/remote';
 import { RTCExciter } from './exciter';
 import { AudioDispatcher } from '../../../audio/exciter';
-import { type WebRtcConfig } from '../../../config/webrtc';
-import { createLogger } from "../../../logging";
+import type { ListenInfo, WebRtcConfig } from '../../../config/webrtc';
+import { createLogger, Logger } from "../../../logging";
 import { AudienceType, makeAudienceGroupId, Station } from '../../../core';
-import type { ClientConsumerInfo, ClientTransportInfo } from '@seamless-medley/remote';
+import { type Socket } from '../../socket';
 
 export type ClientTransportData = {
-  socket: Socket<{}>;
+  socket: Socket;
   disconnectHandler: () => void;
   closeHandler: () => void;
   routerCloseHandler: () => void;
@@ -23,11 +26,15 @@ export type ClientConsumerData = {
   stationId: string;
 }
 
-interface RTCTransponderEvents {
-  renew: () => void;
+interface RTCWorkerEvents {
+  restart: (rtcWorker: RTCWorker) => void;
 }
 
-export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
+interface RTCTransponderEvents extends RTCWorkerEvents {
+
+}
+
+export class RTCWorker extends TypedEmitter<RTCWorkerEvents> {
   #dispatcher = new AudioDispatcher();
 
   #worker!: types.Worker;
@@ -43,20 +50,28 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
   #transports = new Map<types.Transport['id'], types.WebRtcTransport<ClientTransportData>>();
 
   #bitrate = 256_000;
-  #listens: WebRtcConfig['listens'] = [];
+  #listens: ListenInfo[] = [];
 
-  #logger = createLogger({ name: 'rtc-transponder' });
+  #logger: Logger;
 
-  async initialize(config: WebRtcConfig): Promise<this> {
-    this.#bitrate = config.bitrate * 1000;
-    this.#listens = config.listens;
+  constructor(readonly id: string) {
+    super();
+    this.#logger = createLogger({ name: 'rtc-worker', id });
+  }
+
+  async initialize(bitrate: number, listens: ListenInfo[]): Promise<this> {
+    this.#bitrate = bitrate;
+    this.#listens = listens;
+
+    this.#logger.debug(listens, 'Listens')
 
     await this.#internalInitialize();
-
     return this;
   }
 
   async #internalInitialize() {
+    this.#logger.info('Initializing');
+
     this.#worker = await createWorker({
       logLevel: 'warn',
       logTags: ['rtp', 'ice']
@@ -75,7 +90,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
 
       await Promise.all(Array.from(this.#published.keys()).map(station => this.publish(station)));
 
-      this.emit('renew');
+      this.emit('restart', this);
     }
 
     this.#worker.on('died', fatalHandler);
@@ -121,19 +136,21 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
   }
 
   unpublish(station: Station) {
-    if (this.#published.has(station)) {
-      const player = this.#published.get(station)!
-      player.stop();
-
-      this.#published.delete(station);
+    if (!this.#published.has(station)) {
+      return;
     }
+
+    const player = this.#published.get(station)!
+    player.stop();
+
+    this.#published.delete(station);
   }
 
   getCaps() {
     return this.#router.rtpCapabilities;
   }
 
-  async newClientTransport(sctpCaps: types.SctpCapabilities, socket: Socket<{}>): Promise<ClientTransportInfo> {
+  async newClientTransport(sctpCaps: types.SctpCapabilities, socket: Socket): Promise<ClientTransportInfo> {
     const transport = await this.#router.createWebRtcTransport<ClientTransportData>({
       webRtcServer: this.#webrtcServer,
       enableTcp: true,
@@ -233,7 +250,11 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
     }
   }
 
-  async closeClientTransport(transportId: string) {
+  #stationFromId(stationId: Station['id']) {
+    return [...this.#published.keys()].find(s => s.id === stationId);
+  }
+
+  async closeClientTransport(transportId: string, _: Socket) {
     const transport = this.#transports.get(transportId);
     if (!transport) {
       return;
@@ -246,11 +267,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
     transport.close();
   }
 
-  #stationFromId(stationId: Station['id']) {
-    return [...this.#published.keys()].find(s => s.id === stationId);
-  }
-
-  async initiateClientConsumer(transportId: string, clientCaps: types.RtpCapabilities, stationId: Station['id']): Promise<ClientConsumerInfo | undefined> {
+  async initiateClientConsumer(transportId: string, clientCaps: types.RtpCapabilities, stationId: Station['id'], socket: Socket): Promise<ClientConsumerInfo | undefined> {
     const station = this.#stationFromId(stationId);
     if (!station) {
       return;
@@ -340,7 +357,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
     }
   }
 
-  async startClientConsumer(transportId: string, dtlsParameters: types.DtlsParameters) {
+  async startClientConsumer(transportId: string, dtlsParameters: types.DtlsParameters, socket: Socket) {
     const transport = this.#transports.get(transportId);
     if (!transport) {
       return;
@@ -349,7 +366,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
     await transport.connect({ dtlsParameters });
   }
 
-  async stopClientConsumer(transportId: string) {
+  async stopClientConsumer(transportId: string, socket: Socket) {
     const transport = this.#transports.get(transportId);
     if (!transport) {
       return;
@@ -362,4 +379,172 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
 
     consumer.close();
   }
+}
+
+export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
+  #workers = new Map<string, RTCWorker>();
+
+  #workerIndex = 0;
+
+  async initialize(config: WebRtcConfig): Promise<this> {
+    const listens = distributeListenInfo(config.listens, cpus().length);
+
+    const bitrate = config.bitrate * 1000;
+
+    class WorkerInitializationError extends Error {
+      constructor(cause: Error, readonly rtcId: string, readonly infos: WebRtcConfig['listens']) {
+        super(cause.message);
+      }
+    }
+
+    const settledWorkers = await Promise.allSettled(
+      listens.map((infos, index) => new Promise<RTCWorker>((resolve, reject) => {
+        const id = `${index+1}`;
+        const worker = new RTCWorker(id);
+
+        worker.initialize(bitrate, infos)
+          .then(resolve)
+          .catch(e => reject(new WorkerInitializationError(e, id, infos)))
+      }))
+    );
+
+    const [succeededWorkers, failedWorkers] = partition(settledWorkers, worker => worker.status === 'fulfilled');
+
+    const logger = createLogger({ name: 'rtc-transponder' });;
+
+    for (const worker of failedWorkers) {
+      logger.error(worker.reason);
+    }
+
+    const workers = succeededWorkers.map(w => w.value);
+
+    if (!workers.length) {
+      throw new Error('No workers have been started');
+    }
+
+    for (const worker of workers) {
+      worker.on('restart', this.#handleWorkerRestart);
+    }
+
+    this.#workers = new Map(workers.map<[string, RTCWorker]>(w => [w.id, w]));
+
+    return this;
+  }
+
+  #handleWorkerRestart = (worker: RTCWorker) => {
+    this.emit('restart', worker);
+  }
+
+  async publish(station: Station) {
+    for (const worker of this.#workers.values()) {
+      worker.publish(station);
+    }
+  }
+
+  unpublish(station: Station) {
+    for (const worker of this.#workers.values()) {
+      worker.unpublish(station);
+    }
+  }
+
+  getCaps(): Array<[string, types.RtpCapabilities]> {
+    const entries = [...this.#workers.entries()];
+
+    const result = entries.map((_, i) => {
+      const [rtcId, worker] = entries[(this.#workerIndex + i) % entries.length];
+      return [rtcId, worker.getCaps()] as [string, types.RtpCapabilities];
+    });
+
+    this.#workerIndex = (this.#workerIndex + 1) % entries.length;
+
+    return result;
+  }
+
+  async newClientTransport(workerId: string, sctpCaps: types.SctpCapabilities, socket: Socket): Promise<ClientTransportInfo> {
+    const worker = this.#workers.get(workerId);
+
+    if (!worker) {
+      throw new Error(`Unknown worker ${workerId}`);
+    }
+
+    socket.data.rtcWorker = worker;
+
+    return worker.newClientTransport(sctpCaps, socket);
+  }
+
+  async closeClientTransport(transportId: string, socket: Socket) {
+    const { rtcWorker } = socket.data;
+
+    if (!rtcWorker) {
+      return;
+    }
+
+    return rtcWorker.closeClientTransport(transportId, socket);
+  }
+
+  async initiateClientConsumer(transportId: string, clientCaps: types.RtpCapabilities, stationId: Station['id'], socket: Socket): Promise<ClientConsumerInfo | undefined> {
+    const { rtcWorker } = socket.data;
+
+    if (!rtcWorker) {
+      return;
+    }
+
+    return rtcWorker.initiateClientConsumer(transportId, clientCaps, stationId, socket);
+  }
+
+  async startClientConsumer(transportId: string, dtlsParameters: types.DtlsParameters, socket: Socket) {
+    const { rtcWorker } = socket.data;
+
+    if (!rtcWorker) {
+      return;
+    }
+
+    return rtcWorker.startClientConsumer(transportId, dtlsParameters, socket);
+  }
+
+  async stopClientConsumer(transportId: string, socket: Socket) {
+    const { rtcWorker } = socket.data;
+
+    if (!rtcWorker) {
+      return;
+    }
+
+    return rtcWorker.stopClientConsumer(transportId, socket);
+  }
+}
+
+function ipToLong(ip: string) {
+  const octets = ip.split('.').map(o => +o.trim());
+  return (octets[0] << 24) + (octets[1] << 16) + (octets[2] << 8) + octets[3];
+}
+
+function isSameIp(a: string, b: string) {
+  const [l, r] = [a, b].map(ipToLong);
+
+  return l === r || l === 0 || r === 0;
+}
+
+function distributeListenInfo(infos: ListenInfo[], numGroups: number): Array<ListenInfo[]> {
+  if (!infos.length || numGroups <= 0) {
+    return [];
+  }
+
+  return chain(infos)
+    .sortBy(({ ip }) => ipToLong(ip))
+    .uniqWith((a, b) => {
+      if (a.protocol !== b.protocol) {
+        return false;
+      }
+
+      if (!isSameIp(a.ip, b.ip)) {
+        return false;
+      }
+
+      return a.port === b.port;
+    })
+    .groupBy(({ ip, port }) => `${ip}:${port}`)
+    .toPairs()
+    .reduce((acc, [_, portGroup], index) => (acc[index % numGroups].push(...portGroup), acc), times<ListenInfo[]>(numGroups, () => []))
+    .filter(group => group.length > 0)
+    .value();
 }

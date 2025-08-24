@@ -10,7 +10,7 @@ import { isProperty, isPublicPropertyName, propertyDescriptorOf } from '@seamles
 
 import type { Exposable, ClientEvents, RemoteCallback, RemoteResponse, ServerEvents, AuthData, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents, ClientAuthResult  } from "@seamless-medley/remote";
 
-import { Socket, ClientData, getSocketSession } from './types';
+import { Socket, ClientSocketData, getSocketSession } from './types';
 
 import { createLogger } from "../../logging";
 import { getDependents, hasObjectGuardAccess } from './decorator';
@@ -38,7 +38,7 @@ function isReadableStream(o: any): o is Readable {
 }
 
 
-export class SocketServer extends IOServer<ClientEvents, ServerEvents, never, ClientData> {
+export class SocketServer extends IOServer<ClientEvents, ServerEvents, never, ClientSocketData> {
   constructor(httpServer: http.Server, path: string) {
     super(httpServer, {
       path,
@@ -343,7 +343,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
   }
 
   // to be overriden
-  protected async authenticateSocket(socket: Socket, username: string, password: string): Promise<ClientData['user']> {
+  protected async authenticateSocket(socket: Socket, username: string, password: string): Promise<ClientSocketData['user']> {
     return undefined;
   }
 

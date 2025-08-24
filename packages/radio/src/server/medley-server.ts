@@ -36,7 +36,6 @@ type Unpacked<T> = T extends (infer U)[] ? U : T;
 export type MedleyServerOptions = {
   io: SocketServer;
   audioServer: AudioWebSocketServer;
-  rtcTransponder?: RTCTransponder;
   configs: Config;
 }
 
@@ -59,7 +58,6 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
     super(options.io);
     //
     this.#audioServer = options.audioServer;
-    this.#rtcTransponder = options.rtcTransponder;
     this.#configs = options.configs;
     //
     this.#connectMongoDB().then(this.#initialize);
@@ -67,6 +65,15 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
 
   #initialize = async () => {
     this.register('global', '$', new ExposedGlobal(this));
+
+    this.#rtcTransponder = (this.#configs.webrtc)
+      ? await new RTCTransponder()
+        .initialize(this.#configs.webrtc)
+        .catch((error) => {
+          logger.error(error);
+          return undefined;
+        })
+      : undefined;
 
     if (this.#rtcTransponder) {
       this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));

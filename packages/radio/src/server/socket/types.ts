@@ -4,6 +4,7 @@ import type { Request } from 'express';
 import { Socket as IOSocket } from "socket.io";
 import type { ClientEvents, ServerEvents, PickEvent } from "@seamless-medley/remote";
 import { UserModel } from "../../db/models/user";
+import type { RTCWorker } from "../audio/rtc/transponder";
 
 export type TypedEventEmitterOf<T> = TypedEventEmitter<
   // @ts-ignore
@@ -14,13 +15,14 @@ export function MixinEventEmitterOf<T>() {
   return EventEmitter as unknown as new (...args: any[]) => TypedEventEmitterOf<T>;
 }
 
-export type ClientData = {
+export type ClientSocketData = {
   user?: UserModel;
   lastPing?: number;
   latencyBacklog: number[];
+  rtcWorker?: RTCWorker;
 }
 
-export type Socket = IOSocket<ClientEvents, ServerEvents, never, ClientData>;
+export type Socket = IOSocket<ClientEvents, ServerEvents, never, ClientSocketData>;
 
 /**
  * Return `true` if allowed

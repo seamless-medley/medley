@@ -112,19 +112,10 @@ async function startServer(configs: Config) {
     io.engine.use(sessionMiddleware);
 
     const audioServer = new AudioWebSocketServer(httpServer, configs.server.audioBitrate * 1000);
-    const rtcTransponder = (configs.webrtc)
-      ? await new RTCTransponder()
-        .initialize(configs.webrtc)
-        .catch((error) => {
-          reject(error);
-          return undefined;
-        })
-      : undefined;
 
     const server = new MedleyServer({
       io,
       audioServer,
-      rtcTransponder,
       configs
     });
 
