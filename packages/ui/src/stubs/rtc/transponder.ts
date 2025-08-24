@@ -3,7 +3,7 @@ import { StubOf } from "@ui/stubs";
 import type { RTCTransponder } from "@seamless-medley/remote";
 
 class StubbingRTCTransponder {
-  caps = undefined as any;
+  rtcCaps = undefined as any;
 
   newClientTransport = noop as any;
 

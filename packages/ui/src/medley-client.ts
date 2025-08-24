@@ -95,13 +95,16 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     this.#transponder = await this.surrogateOf('transponder', '~').catch(() => undefined);
 
     if (this.#transponder) {
-      const device = new MediaSoupDevice();
-      await device.load({ routerRtpCapabilities: this.#transponder.caps() });
+      const rtcCaps = this.#transponder.rtcCaps();
 
-      if (device.loaded) {
-        this.#transportCreators.push(createNamedFunc('create_webrtc_transport', async () => {
-          logger.info('Using WebRTCAudioTransport');
-          return new WebRTCAudioTransport(this.#transponder!, device, this.#audioContext, (await this.#karaokeFx).input);
+      for (const [rtcId, caps] of rtcCaps) {
+        this.#transportCreators.push(createNamedFunc(`create_webrtc_transport_${rtcId}`, async () => {
+          logger.info('Using WebRTCAudioTransport {*}', { rtcId });
+
+          const device = new MediaSoupDevice();
+          await device.load({ routerRtpCapabilities: caps });
+
+          return new WebRTCAudioTransport(rtcId, this.#transponder!, device, this.#audioContext, (await this.#karaokeFx).input);
         }));
       }
     }

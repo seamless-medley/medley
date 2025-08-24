@@ -4,7 +4,7 @@ import { stubFalse } from 'lodash';
 import { Device as MediaSoupDevice, type types } from 'mediasoup-client';
 import type { RTCTransponder, Remotable, AudioTransportExtra, AudioTransportExtraPayload } from '@seamless-medley/remote';
 import type { AudioTransportEvents, AudioTransportPlayResult, AudioTransportState, IAudioTransport } from "@ui/audio/transport";
-import { getLogger } from '@logtape/logtape';
+import { getLogger, Logger } from '@logtape/logtape';
 
 type AudioLatencyEvent = {
   type: 'audio-latency';
@@ -17,8 +17,6 @@ export type PlayOptions = {
   timeout?: number;
 }
 
-const logger = getLogger(['transport', 'rtc']);
-
 /**
  * This transport uses Mediasoup for its WebRTC functionalities,
  * and is the first transport to be used at client-side where possible.
@@ -28,6 +26,10 @@ const logger = getLogger(['transport', 'rtc']);
  * Fallback to WebSocketAudioTransport if the WebRTC negotiation failed
  */
 export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> implements IAudioTransport {
+  #logger: Logger;
+
+  readonly #rtcId: string;
+
   readonly #transponder: Remotable<RTCTransponder>;
 
   readonly #ctx: AudioContext;
@@ -56,9 +58,12 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   #audioLatency = 0;
 
-  constructor(transponder: Remotable<RTCTransponder>, device: MediaSoupDevice, context: AudioContext, output: AudioNode) {
+  constructor(rtcId: string, transponder: Remotable<RTCTransponder>, device: MediaSoupDevice, context: AudioContext, output: AudioNode) {
     super();
 
+    this.#logger = getLogger(['transport', 'rtc', rtcId]);
+
+    this.#rtcId = rtcId;
     this.#transponder = transponder;
     this.#device = device;
     this.#ctx = context;
@@ -77,7 +82,11 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     this.#transmissionLatency = seconds;
   }
 
-  #handleTransponderRenewal = async () => {
+  #handleTransponderRenewal = async (rtcId: string) => {
+    if (rtcId !== this.#rtcId) {
+      return;
+    }
+
     if (this.#state !== 'ready') {
       return;
     }
@@ -86,6 +95,8 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
   }
 
   async #renewTransport() {
+    this.#logger.info('renewing transport due to server restart');
+
     this.#transport?.close();
     await this.#createTransport();
 
@@ -111,7 +122,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
   }
 
   async #createTransport() {
-    const transportInfo = await this.#transponder.newClientTransport(this.#device.sctpCapabilities).catch(stubFalse);
+    const transportInfo = await this.#transponder.newClientTransport(this.#rtcId, this.#device.sctpCapabilities).catch(stubFalse);
     if (!transportInfo) {
       return;
     }
@@ -146,7 +157,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     }
 
     this.#transport.on('connectionstatechange', (state) => {
-      logger.debug('transport connectionstatechange {state}', { state });
+      this.#logger.debug('transport connectionstatechange {state}', { state });
     });
 
     const rtcState = await waitForTransportState(transport, ['connected', 'failed'], 1000);
@@ -183,11 +194,11 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     this.#consumer?.close();
     this.#consumer = await this.#transport.consume(consumerInfo.rtp);
     this.#consumer.on('transportclose', () => {
-      logger.debug('consumer transportclose event')
+      this.#logger.debug('consumer transportclose event')
     });
 
     this.#consumer.on('@close', () => {
-      logger.debug('consumer @close event')
+      this.#logger.debug('consumer @close event')
     });
 
     const stream = new MediaStream();
