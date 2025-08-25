@@ -13,7 +13,7 @@ export abstract class WorkerPoolAdapter<Methods extends { [name: string]: any }>
 
     if (process.env.NODE_ENV === 'development') {
       if (!(workerThreadOpts.execArgv?.length ?? 0)) {
-        workerThreadOpts.execArgv = (workerThreadOpts.execArgv ?? []).concat(['--require', 'ts-node/register'])
+        workerThreadOpts.execArgv = (workerThreadOpts.execArgv ?? []).concat(['--require', '@swc-node/register'])
       }
     }
 
