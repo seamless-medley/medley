@@ -17,7 +17,6 @@ import { SocketServer as SocketIOServer } from './socket';
 import { MedleyServer } from './medley-server';
 import { AudioWebSocketServer } from './audio/ws/server';
 import { Config, loadConfig } from '../config';
-import { RTCTransponder } from './audio/rtc/transponder';
 import { getVersionLine, showVersionBanner } from '../helper';
 import { StreamingAdapter } from '../streaming/types';
 
@@ -88,30 +87,18 @@ async function startServer(configs: Config) {
 
     const streamingRouter = registerStreamsRoute(expressApp);
 
+    const io = new SocketIOServer(httpServer, '/socket.io');
+    io.engine.use(sessionMiddleware);
+
+    const audioServer = new AudioWebSocketServer(httpServer, configs.server.audioBitrate * 1000);
+
     const staticPath = resolvePath(__dirname,
       process.env.NODE_ENV === 'development'
         ? '../../../ui/dist'
         : '../../ui'
     );
 
-    expressApp.use('/', express.static(staticPath), (req, res, next) => {
-      const ext = extname(req.path);
-
-      if (!ext) {
-        res.sendFile('index.html', {
-          root: staticPath,
-          dotfiles: 'deny'
-        });
-        return;
-      }
-
-      next();
-    });
-
-    const io = new SocketIOServer(httpServer, '/socket.io');
-    io.engine.use(sessionMiddleware);
-
-    const audioServer = new AudioWebSocketServer(httpServer, configs.server.audioBitrate * 1000);
+    registerStaticHandler(expressApp, staticPath);
 
     const server = new MedleyServer({
       io,
@@ -138,7 +125,26 @@ async function startServer(configs: Config) {
   });
 }
 
-export function registerStreamsRoute(app: express.Express, path: string = '/streams') {
+function registerStaticHandler(app: express.Express, root: string) {
+  app.use('/', express.static(root), (req, res, next) => {
+    const ext = extname(req.path);
+
+    if (!ext) {
+      res.sendFile('index.html', { root, dotfiles: 'deny' }, (error) => {
+        if (error) {
+          logger.error(error.message);
+          res.status(404).end();
+        }
+      });
+
+      return;
+    }
+
+    next();
+  });
+}
+
+function registerStreamsRoute(app: express.Express, path: string = '/streams') {
   const router = express.Router();
 
   app.use(
@@ -149,7 +155,7 @@ export function registerStreamsRoute(app: express.Express, path: string = '/stre
   return router;
 }
 
-export function runStream(router: express.Router, streamer: StreamingAdapter<any>) {
+function runStream(router: express.Router, streamer: StreamingAdapter<any>) {
   if (!streamer.initialized) {
     return;
   }
