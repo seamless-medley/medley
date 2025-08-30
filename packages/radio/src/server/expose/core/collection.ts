@@ -35,7 +35,7 @@ import type {
 
 export const pickId = <T extends { id: any }>({ id }: T): IdOnly<T> => ({ id });
 
-export const toTrack = async (
+export const toRemoteTrack = async (
   track: BoomBoxTrack,
   noCover?: boolean
 ): Promise<Track> => {
@@ -50,9 +50,9 @@ export const toTrack = async (
     cueInPosition,
     cueOutPosition,
     disableNextLeadIn,
-    extra: actualExtra ? await toTrackExtra(actualExtra, noCover) : undefined,
-    sequencing: sequencing ? toTrackSequencing(sequencing): undefined,
-    collection: toTrackCollection(collection)
+    extra: actualExtra ? await toRemoteTrackExtra(actualExtra, noCover) : undefined,
+    sequencing: sequencing ? toRemoteTrackSequencing(sequencing): undefined,
+    collection: toRemoteTrackCollection(collection)
   }
 }
 
@@ -60,7 +60,7 @@ const trackKinds = ['normal', 'request', 'insert'] as const;
 
 export const trackKindToString = (k: CoreTrackKind): TrackKind => trackKinds[k.valueOf()];
 
-export const toTrackExtra = async (
+export const toRemoteTrackExtra = async (
   { kind, source, tags, maybeCoverAndLyrics }: BoomBoxTrackExtra,
   noCover?: boolean
 ): Promise<TrackExtra> => {
@@ -78,30 +78,30 @@ export const toTrackExtra = async (
   }
 }
 
-export const toTrackCollection = (collection: BoomBoxTrack['collection']): TrackCollection => {
+export const toRemoteTrackCollection = (collection: BoomBoxTrack['collection']): TrackCollection => {
   return {
     id: collection.id,
     description: collection.extra?.description
   }
 }
 
-export const toTrackSequencing = ({ playOrder, crate, latch }: Sequencing): TrackSequencing => ({
+export const toRemoteTrackSequencing = ({ playOrder, crate, latch }: Sequencing): TrackSequencing => ({
   playOrder,
   crate: pickId(crate),
-  latch: latch ? toTrackSequencingLatch(latch) : undefined
+  latch: latch ? toRemoteTrackSequencingLatch(latch) : undefined
 });
 
-export const toTrackSequencingLatch = (
+export const toRemoteTrackSequencingLatch = (
   {
     order,
     session
   }: SequencingLatch
 ): TrackSequencingLatch => ({
   order,
-  session: toLatchSession(session)
+  session: toRemoteLatchSession(session)
 });
 
-export const toLatchSession = (
+export const toRemoteLatchSession = (
   {
     uuid,
     count,
@@ -112,13 +112,13 @@ export const toLatchSession = (
   uuid,
   count,
   max: max,
-  collection: toTrackCollection(collection)
+  collection: toRemoteTrackCollection(collection)
 })
 
-export const toTrackPlay = async ({ uuid, track, duration }: BoomBoxTrackPlay): Promise<TrackPlay> => ({
+export const toRemoteTrackPlay = async ({ uuid, track, duration }: BoomBoxTrackPlay): Promise<TrackPlay> => ({
   uuid,
   duration,
-  track: await toTrack(track),
+  track: await toRemoteTrack(track),
 });
 
 export class ExposedCollection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
@@ -154,22 +154,22 @@ export class ExposedCollection extends MixinEventEmitterOf<Collection>() impleme
   }
 
   #onTracksShift: MusicTrackCollectionEvents<Station>['trackShift'] = async (track) => {
-    this.emit('trackShift', await toTrack(track, true));
+    this.emit('trackShift', await toRemoteTrack(track, true));
   }
 
   #onTracksPush: MusicTrackCollectionEvents<Station>['trackPush'] = async (track) => {
-    this.emit('trackPush', await toTrack(track, true));
+    this.emit('trackPush', await toRemoteTrack(track, true));
   }
 
   #onTracksAdd: MusicTrackCollectionEvents<Station>['tracksAdd'] = async (tracks) => {
     this.emit('tracksAdd',
-      await Promise.all(tracks.map(t => toTrack(t, true)))
+      await Promise.all(tracks.map(t => toRemoteTrack(t, true)))
     );
   }
 
   #onTracksRemove: MusicTrackCollectionEvents<Station>['tracksRemove'] = async (tracks) => {
     this.emit('tracksRemove',
-      await Promise.all(tracks.map(t => toTrack(t, true)))
+      await Promise.all(tracks.map(t => toRemoteTrack(t, true)))
     );
   }
 
@@ -203,7 +203,7 @@ export class ExposedCollection extends MixinEventEmitterOf<Collection>() impleme
   }
 
   async all() {
-    return Promise.all(this.#collection.all().map(t => toTrack(t, true)));
+    return Promise.all(this.#collection.all().map(t => toRemoteTrack(t, true)));
   }
 
   createView(numItems: number, topIndex?: number): Exposable<CollectionView> {
@@ -267,10 +267,10 @@ export class ExposedCollectionView extends MixinEventEmitterOf<CollectionView>()
 
   async at(index: number) {
     const track = this.#view.at(index);
-    return track ? toTrack(track) : undefined;
+    return track ? toRemoteTrack(track) : undefined;
   }
 
   async items() {
-    return Promise.all(this.#view.items().map(item => toTrack(item)));
+    return Promise.all(this.#view.items().map(item => toRemoteTrack(item)));
   }
 }

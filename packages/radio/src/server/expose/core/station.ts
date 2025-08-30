@@ -1,8 +1,8 @@
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
-import { MixinEventEmitterOf } from "../../socket";
+import { MixinEventEmitterOf, PureExpose } from "../../socket";
 import type { DeckInfoWithPositions, Station as RemoteStation, Exposable } from "@seamless-medley/remote";
 import { Station, type StationEvents, type PlayState } from "../../../core";
-import { fromDeckInfoWithPositions } from "./deck";
+import { toRemoteDeckInfoWithPositions } from "./deck";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
   $Exposing: Station;
@@ -69,10 +69,11 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   #onCollectionChange: StationEvents['collectionChange'] = (prevCollection, newCollection, fromRequestTrack) => {
     // setter
     this.currentCollection = newCollection.id;
+
     this.emit(
       'collectionChange',
-      prevCollection ? this.#prefixWithStationId(prevCollection.id) : undefined,
-      this.#prefixWithStationId(newCollection.id),
+      prevCollection?.id,
+      newCollection.id,
       fromRequestTrack
     );
   }
@@ -103,6 +104,22 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   set description(v) {
     this.#station.description = v;
+  }
+
+  get url() {
+    return this.#station.url;
+  }
+
+  set url(v) {
+    this.#station.url = v;
+  }
+
+  get iconURL() {
+    return this.#station.iconURL;
+  }
+
+  set iconURL(v) {
+    this.#station.iconURL = v;
   }
 
   get playing() {
@@ -147,7 +164,7 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   }
 
   getDeckInfo(deckIndex: DeckIndex): Promise<DeckInfoWithPositions> {
-    return fromDeckInfoWithPositions(
+    return toRemoteDeckInfoWithPositions(
       this.#station.getDeckInfo(deckIndex)
     )
   }

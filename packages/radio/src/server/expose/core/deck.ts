@@ -10,16 +10,16 @@ import {
   type DeckInfoWithPositions as CoreDeckInfoWithPositions
 } from "../../../core";
 
-import { toTrackPlay } from "./collection";
+import { toRemoteTrackPlay } from "./collection";
 
-export const fromDeckInfo = async ({ trackPlay, active, playing }: CoreDeckInfo): Promise<DeckInfo> => ({
-  trackPlay: trackPlay ? await toTrackPlay(trackPlay) : undefined,
+export const toRemoteDeckInfo = async ({ trackPlay, active, playing }: CoreDeckInfo): Promise<DeckInfo> => ({
+  trackPlay: trackPlay ? await toRemoteTrackPlay(trackPlay) : undefined,
   active,
   playing
 });
 
-export const fromDeckInfoWithPositions = async (p: CoreDeckInfoWithPositions): Promise<DeckInfoWithPositions> => ({
-  ...await fromDeckInfo(p),
+export const toRemoteDeckInfoWithPositions = async (p: CoreDeckInfoWithPositions): Promise<DeckInfoWithPositions> => ({
+  ...await toRemoteDeckInfo(p),
   positions: p.positions
 })
 
@@ -169,7 +169,7 @@ export class ExposedDeck implements Exposable<Deck> {
   }
 
   getDeckInfo(): Promise<DeckInfoWithPositions> {
-    return fromDeckInfoWithPositions(
+    return toRemoteDeckInfoWithPositions(
       this.#station.getDeckInfo(this.#deckIndex)
     )
   }
