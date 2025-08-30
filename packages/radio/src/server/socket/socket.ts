@@ -13,7 +13,7 @@ import type { Exposable, ClientEvents, RemoteCallback, RemoteResponse, ServerEve
 import { Socket, ClientSocketData, getSocketSession } from './types';
 
 import { createLogger } from "../../logging";
-import { getDependents, hasObjectGuardAccess } from './decorator';
+import { getDependents, getPureExpose, hasObjectGuardAccess } from './decorator';
 
 const logger = createLogger({ name: 'socket-server' });
 
@@ -672,6 +672,16 @@ function bindDescInstance(instance: object, name: string, desc: TypedPropertyDes
   }
 }
 
+function isReservedProp(desc: TypedPropertyDescriptorOf) {
+  if (desc.instance instanceof EventEmitter) {
+    if (['domain'].includes(desc.name)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export class ObjectObserver<T extends object> {
   readonly #methods: Partial<Record<string, TypedPropertyDescriptorOf>>;
 
@@ -698,67 +708,73 @@ export class ObjectObserver<T extends object> {
       : undefined;
 
     this.#methods = pickBy(declared, desc => isFunction(desc.value));
-    this.#exposingProps = pickBy(exposing, desc => (desc.name in declared) && !(desc.name in this.#methods) && isPublicPropertyName(desc.name));
-    this.#declaredProps = pickBy(declared, desc => {
-      if (desc.instance instanceof EventEmitter) {
-        if (['domain'].includes(desc.name)) {
-          return false;
-        }
+    this.#exposingProps = pickBy(exposing, desc => (desc.name in declared) && !(desc.name in this.#methods) && !isReservedProp(desc) && isPublicPropertyName(desc.name));
+    this.#declaredProps = pickBy(declared, desc => !isReservedProp(desc) && isProperty(desc) && isPublicPropertyName(desc.name));
+
+    // Properties that are only decalred at the exposed level but not at the exposing level
+    const pureExpose = getPureExpose(instance);
+    const wrappedProps = pickBy(this.#declaredProps, desc => desc?.set && (pureExpose.includes(desc.name) || !(desc.name in this.#exposingProps)));
+
+    for (const [prop, desc] of Object.entries(wrappedProps)) {
+      if (!desc) {
+        continue;
       }
 
-      return isProperty(desc) && isPublicPropertyName(desc.name)
-    });
+      this.#observeProperty(desc, (_, changes) => this.notify(instance, changes));
+    }
 
     for (const [prop, desc] of Object.entries(this.#exposingProps)) {
       if (!desc) {
         continue;
       }
 
-      Object.defineProperty(desc.instance, prop, {
-        get: () => {
-          return desc.get ? desc.get.call(desc.instance) : desc.value;
-        },
+      this.#observeProperty(desc, (_, changes) => this.notify(instance, changes));
+    }
+  }
 
-        set: (v) => {
-          const changes: ObservedPropertyChange[] = [];
+  #observeProperty(desc: TypedPropertyDescriptorOf, notify: (instance: object, changes: ObservedPropertyChange[]) => Promise<any>) {
+    Object.defineProperty(desc.instance, desc.name, {
+      get: () => desc.get ? desc.get.call(desc.instance) : desc.value,
 
-          const dependents = getDependents(instance, prop)
-            .map(d => {
-              const dep = this.#exposingProps[d];
-              if (!dep) {
-                return undefined;
-              }
+      set: (v) => {
+        const changes: ObservedPropertyChange[] = [];
 
-              const oldValue = dep.get ? dep.get.call(dep.instance) : dep.value;
-
-              return [dep, oldValue];
-            })
-            .filter((d): d is [dep: TypedPropertyDescriptorOf, oldValue: any] => d !== undefined);
-
-          const old = desc.get?.call(desc.instance) ?? desc.value;
-
-          if (desc.set) {
-            desc.set.call(desc.instance, v);
-          } else {
-            desc.value = v;
-          }
-
-          if (typeof prop === 'string' && this.isPublishedProperty(prop) && !isEqual(old, v)) {
-            changes.push({ p: prop, o: old, n: v });
-
-            for (const [dep, oldValue] of dependents) {
-              changes.push({
-                p: dep.name,
-                o: oldValue,
-                n: dep.get ? dep.get.call(dep.instance) : dep.value
-              })
+        const dependents = getDependents(desc.instance, desc.name)
+          .map(d => {
+            const dep = this.#exposingProps[d];
+            if (!dep) {
+              return undefined;
             }
 
-            this.notify(instance, changes);
-          }
+            const oldValue = dep.get ? dep.get.call(dep.instance) : dep.value;
+
+            return [dep, oldValue];
+          })
+          .filter((d): d is [dep: TypedPropertyDescriptorOf, oldValue: any] => d !== undefined);
+
+        const old = desc.get?.call(desc.instance) ?? desc.value;
+
+        if (desc.set) {
+          desc.set.call(desc.instance, v);
+        } else {
+          desc.value = v;
         }
-      })
-    }
+
+        if (typeof desc.name === 'string' && this.isPublishedProperty(desc.name) && !isEqual(old, v)) {
+          changes.push({ p: desc.name, o: old, n: v });
+
+          for (const [dep, oldValue] of dependents) {
+            changes.push({
+              p: dep.name,
+              o: oldValue,
+              n: dep.get ? dep.get.call(dep.instance) : dep.value
+            })
+          }
+
+          notify(desc.instance, changes);
+        }
+      }
+    })
   }
 
   #getExposing() {
@@ -793,7 +809,7 @@ export class ObjectObserver<T extends object> {
   }
 
   isPublishedProperty(name: string) {
-    return name in this.#exposingProps;
+    return (name in this.#declaredProps) || (name in this.#exposingProps);
   }
 
   isPublishedMethod(name: string) {
