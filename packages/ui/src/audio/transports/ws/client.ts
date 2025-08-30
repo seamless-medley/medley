@@ -6,10 +6,16 @@
  */
 
 import { decode, encode } from "notepack.io";
-import type { AudioSocketCommand, AudioSocketCommandMap, AudioTransportExtraPayload } from "@seamless-medley/remote";
+import type { AudioSocketCommand, AudioTransportExtraPayload } from "@seamless-medley/remote";
 import Decoder from "./decoder?worker";
 import type { Decoder as DecoderIntf } from "./decoder";
 import { RingBufferWithExtra } from "./ringbuffer";
+
+export type AudioSocketCommandMap = {
+  [0 /* AudioSocketCommand_Identify */]: (socketId: string) => void;
+  [1 /* AudioSocketCommand_Tune */]: (stationId: string) => void;
+  [2 /* AudioSocketCommand_Detune */]: () => void;
+}
 
 export type InitMessage = {
   type: 'init';
