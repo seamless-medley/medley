@@ -45,7 +45,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     interaction,
     onGoing,
     ttl: 90_000,
-    data: station.temporalCollection ?? station.currentSequenceCollection,
+    data: station.temporalCollection ?? station.currentCollection,
 
     makeCaption: async () => [],
     async makeComponents(trackingCollection) {
@@ -60,7 +60,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
       const currentCollection = trackingCollection ?? (
         isRequestTrack(currentTrack)
           ? currentTrack.collection
-          : station.currentSequenceCollection
+          : station.currentCollection
       );
 
       const selectedCollection = currentCollection && collections.find(c => c.id === currentCollection?.id)

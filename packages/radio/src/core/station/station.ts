@@ -426,7 +426,7 @@ export class Station extends TypedEmitter<StationEvents> {
       }
     }
 
-    const oldCollection = this.currentSequenceCollection;
+    const oldCollection = this.currentCollection;
 
     if (followCollectionAfterRequestTrack && !track.collection.options.noFollowOnRequest && !this.isLatchActive) {
       this.#boombox.forcefullySelectCollection(track.collection);
@@ -605,6 +605,10 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#library.all();
   }
 
+  get currentCollection() {
+    return this.#boombox.currentSequenceCollection;
+  }
+
   /**
    * Get all collections currently known by the current profile
    */
@@ -626,10 +630,6 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#boombox.forcefullySelectCollection(collection)
       ? true
       : 'Invalid collection';
-  }
-
-  get currentSequenceCollection() {
-    return this.#boombox.currentSequenceCollection;
   }
 
   get currentSequenceCrate() {
@@ -1008,7 +1008,7 @@ export type StationTrackSorters = [
 
 export function getStationTrackSorters(station: Station): StationTrackSorters {
   const withCurrentCollection = (track: StationTrack) => (
-    station.currentSequenceCollection?.id && track.collection.id === station.currentSequenceCollection?.id
+    station.currentCollection?.id && track.collection.id === station.currentCollection?.id
       ? 0
       : 1
   );
