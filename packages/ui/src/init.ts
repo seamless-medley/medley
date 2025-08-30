@@ -76,7 +76,7 @@ function consoleFormatter(record: LogTape.LogRecord) {
     date.getHours(), date.getMinutes(), date.getSeconds()
   ].map(v => v.toString().padStart(2, '0'));
 
-  const ms = date.getMilliseconds();
+  const ms = date.getMilliseconds().toString().padStart(3, '0');
 
   const time = `${dd}/${MM}/${yyyy} ${hh}:${mm}:${ss}.${ms}`;
 
