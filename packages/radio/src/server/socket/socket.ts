@@ -652,7 +652,9 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       const key = `${kind}:${id}` as `${string}:${string}`;
       const handler = observation.get(key);
 
-      handler?.(instance, filteredChanges).catch(noop);
+      handler?.(instance, filteredChanges).catch((e) => {
+        logger.error({ err: e, kind, id, key }, `Error notifying socket for property changes`);
+      });
     }
   }
 }
