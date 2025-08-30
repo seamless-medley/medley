@@ -15,6 +15,8 @@ class StubbingStation {
   activeDeck = undefined as any;
   audienceCount = undefined as any;
 
+  currentCollection = undefined as any;
+
   start = noop as any;
   pause = noop as any;
   skip = noop as any;
@@ -22,7 +24,6 @@ class StubbingStation {
   getDeckPositions = noop as any;
   getDeckInfo = noop as any;
 
-  getCurrentCollection = noop as any;
   getCollections = noop as any;
 }
 
