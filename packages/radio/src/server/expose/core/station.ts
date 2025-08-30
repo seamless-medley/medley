@@ -8,9 +8,13 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   $Exposing: Station;
   $Kind = 'station';
 
+  #currentCollectionId?: string;
+
   constructor(station: Station) {
     super();
     this.$Exposing = station;
+
+    this.#currentCollectionId = station.currentCollection?.id;
 
     this.#station.on('deckLoaded', this.#onDeckLoaded);
     this.#station.on('deckUnloaded', this.#onDeckUnloaded);
@@ -63,6 +67,8 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   }
 
   #onCollectionChange: StationEvents['collectionChange'] = (prevCollection, newCollection, fromRequestTrack) => {
+    // setter
+    this.currentCollection = newCollection.id;
     this.emit(
       'collectionChange',
       prevCollection ? this.#prefixWithStationId(prevCollection.id) : undefined,
@@ -113,6 +119,15 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   get activeDeck() {
     return this.#station.activeDeck;
+  }
+
+  get currentCollection() {
+    return this.#currentCollectionId;
+  }
+
+  @PureExpose
+  private set currentCollection(value) {
+    this.#currentCollectionId = value;
   }
 
   async start() {
