@@ -17,6 +17,8 @@ export interface Station {
   readonly activeDeck: DeckIndex | undefined;
   readonly audienceCount: number;
 
+  readonly currentCollection: string | undefined;
+
   start(): void;
   pause(): void;
   skip(): Promise<boolean>;
