@@ -19,6 +19,31 @@ export function getDependents(target: any, prop: string): string[] {
   return Reflect.getMetadata($Dependents, target.constructor, prop) ?? [];
 }
 
+const $PureExpose = Symbol.for("$PureExpose");
+
+export function PureExpose(target: object, propertyKey: string | symbol) {
+  Reflect.defineMetadata($PureExpose, true, target.constructor, propertyKey);
+}
+
+export function getPureExpose(target: object): (string | symbol)[] {
+  const result: (string | symbol)[] = [];
+
+  const constructor = target.constructor;
+  let prototype = constructor.prototype;
+  while (prototype && prototype !== Object.prototype) {
+    result.push(...
+      [
+        ...Object.getOwnPropertyNames(prototype),
+        ...Object.getOwnPropertySymbols(prototype)
+      ].filter(prop => Reflect.getMetadata($PureExpose, constructor, prop))
+    );
+
+    prototype = Object.getPrototypeOf(prototype);
+  }
+
+  return result;
+}
+
 const $Guard = Symbol.for("$Guard");
 
 export const Guarded = (predicate: GuardPredicate) => (target: any, prop?: string) => {
