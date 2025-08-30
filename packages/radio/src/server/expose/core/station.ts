@@ -152,11 +152,6 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     )
   }
 
-  getCurrentCollection() {
-    const id = this.#station.trackPlay?.track?.collection?.id
-    return id ? this.#prefixWithStationId(id) : undefined;
-  }
-
   getCollections() {
     return this.#station.collections.map(c => ({
       id: c.id,
