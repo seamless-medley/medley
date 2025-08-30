@@ -26,7 +26,6 @@ export interface Station {
   getDeckPositions(deckIndec: DeckIndex): DeckPositions;
   getDeckInfo(deckIndex: DeckIndex): Promise<DeckInfoWithPositions>;
 
-  getCurrentCollection(): string | undefined;
   getCollections(): TrackCollection[];
 
   ϟdeckLoaded(deckIndex: number, info: DeckInfoWithPositions): void;
