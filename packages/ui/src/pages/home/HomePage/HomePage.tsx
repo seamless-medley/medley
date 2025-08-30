@@ -87,15 +87,17 @@ const CoverBackdrop: React.FC<{ cover?: string }> = ({ cover }) => {
 
 const StationIdent: React.FC<{ stationId: string }> = ({ stationId }) => {
    const { station } = useStation(stationId);
+   const name = useRemotableProp(station, 'name');
+   const description = useRemotableProp(station, 'description');
 
   return (
     <Group p={0} align="flex-start" justify="space-between">
       <Stack gap={2} style={{ flex: 1 }} h={50}>
         <Title order={4} fw={600}>
-          {station?.name()}
+          {name}
         </Title>
         <Text size="xs" c="gray.5">
-          {station?.description?.()}
+          {description}
         </Text>
       </Stack>
       <ThemeIcon
