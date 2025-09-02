@@ -95,6 +95,5 @@ export type ClientEvents = {
   'r:ob': (kind: string, id: string, options: RemoteObserveOptions | undefined, callback: RemoteCallback<{ [prop: string]: any }>) => void;
   'r:ub': (kind: string, id: string, callback: RemoteCallback) => void;
   // object handling
-  // TODO: Implement this, the client send this event to inform that the socket scoped exposed object should be disposed at the server end
   'o:dis': (kind: string, id: string) => void;
 }
