@@ -145,10 +145,16 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
   }
 
   #removeSocket(socket: Socket) {
-    this.#objectSocketObservers.delete(socket);
+    const registered = this.#registeredExposable.get(socket);
 
-    this.#registeredExposed.get(socket)?.forEach(o => o.dispose());
-    this.#registeredExposed.delete(socket);
+    if (registered) {
+      for (const [id, exposable] of registered) {
+        this.deregister(exposable.$Kind as any, id, socket);
+        exposable.dispose();
+      }
+
+      this.#registeredExposable.delete(socket);
+    }
 
     const subscriptions = this.#socketSubscriptions.get(socket);
 
@@ -238,16 +244,18 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     return [id, id ^ 0x1eafc0b7];
   }
 
-  #registeredExposed = new Map<Socket, Map<number, Exposable<unknown>>>();
+  #registeredExposable = new Map<Socket, Map<string, Exposable<unknown>>>();
 
-  #registerExposed(socket: Socket, exposed: Exposable<unknown>): [number, number] {
-    if (!this.#registeredExposed.has(socket)) {
-      this.#registeredExposed.set(socket, new Map());
+  #registerExposable(socket: Socket, exposed: Exposable<unknown>): [number, number] {
+    if (!this.#registeredExposable.has(socket)) {
+      this.#registeredExposable.set(socket, new Map());
     }
 
-    const id = this.#makeEphemeralId(newId => objects.has(newId));
-    const objects = this.#registeredExposed.get(socket)!;
-    objects.set(id, exposed);
+    const objects = this.#registeredExposable.get(socket)!;
+    const id = this.#makeEphemeralId(newId => objects.has(`${exposed.$Kind}:${newId}`));
+    objects.set(`${exposed.$Kind}:${id}`, exposed);
+
+    this.register(exposed.$Kind as any, `${id}`, exposed as any, socket);
 
     return [id, id ^ 0x1eafc0b7];
   }
@@ -263,7 +271,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     execute: (object: any, value: any, observer: ObjectObserver<any> | undefined) => Promise<any>,
     callback: RemoteCallback<any>
   ) {
-    const observers = this.#objectSocketObservers.get(socket)?.get(kind) ?? this.#objectGlobalObservers.get(kind);
+    const observers = this.#objectSocketObservers.get(socket)?.get(kind) ?? this.#objectGlobalObservers.get(kind)
     const object = observers?.get(id) as any;
     const observed = object instanceof ObjectObserver ? object : undefined;
     const instance = observed?.instance ?? object;
@@ -325,7 +333,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
           resp = {
             status: 'exposed',
             kind,
-            result: this.#registerExposed(socket, result)
+            result: this.#registerExposable(socket, result)
           }
         }
       }
@@ -543,16 +551,26 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
      * Client requests to dispose a remote object created by them
      */
     'o:dis': async (socket, kind, id) => {
-      // TODO: Handle this
+      this.#registeredExposable.get(socket)?.get(`${kind}:${id}`)?.dispose();
     }
   }
 
-  protected register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: WithoutEvents<Remote[Kind]>, scopedWith?: Socket) {
+  register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: Exposable<Remote[Kind]>, scopedWith?: Socket) {
     if (typeof o !== 'object') {
       return;
     }
 
-    const objectObservers = (scopedWith ? this.#objectSocketObservers.get(scopedWith) : undefined) ?? this.#objectGlobalObservers;
+    const objectObservers = (() => {
+      if (scopedWith) {
+        if (!this.#objectSocketObservers.has(scopedWith)) {
+          this.#objectSocketObservers.set(scopedWith, new Map());
+        }
+
+        return this.#objectSocketObservers.get(scopedWith)!;
+      }
+
+      return this.#objectGlobalObservers;
+    })();
 
     if (!objectObservers.has(kind)) {
       objectObservers.set(kind, new Map());
@@ -621,7 +639,6 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
         this.#socketObservations.delete(socket);
       }
     }
-
 
     observers.delete(id);
 
