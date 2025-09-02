@@ -557,7 +557,11 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
           const [exposedId, id2] = response.result;
 
           if ((exposedId ^ id2) === 0x1eafc0b7) {
-            const result = await this.surrogateOf(response.kind as any, `${exposedId}`).catch(() => undefined);
+            const kind = response.kind as any;
+
+            const result = await this.surrogateOf(kind, `${exposedId}`).catch(error => {
+              logger.error('Error calling `surrogateOf` on {*}', { kind, id, exposedId, error });
+            });
 
             if (result) {
               result.addDisposeListener(async () => this.socket.emit('o:dis', kind, `${exposedId}`));
@@ -573,7 +577,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
 
           response = {
             status: 'exception',
-            message: 'The exposed returned by the remote invocation is invalid'
+            message: 'The exposed object returned by the remote invocation is invalid'
           }
         }
 
