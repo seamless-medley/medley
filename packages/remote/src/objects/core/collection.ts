@@ -1,6 +1,6 @@
 import type { Track } from "./track";
-import type { Exposable } from "../../expose";
 import type { TrackCollectionBasicOptions } from "@seamless-medley/radio";
+import { Remotable } from "../../type-utils";
 
 /**
  * Although this is named as Collection, but in fact it should be used with WatchTrackCollection
@@ -28,7 +28,7 @@ export interface Collection {
 
   all(): Promise<Track[]>;
 
-  createView(numItems: number, topIndex?: number): Exposable<CollectionView>;
+  createView(numItems: number, topIndex?: number): Remotable<CollectionView>;
 
   ϟrefresh(): void;
   ϟtrackShift(track: Track): void;
