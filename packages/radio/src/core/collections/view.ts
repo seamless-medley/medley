@@ -177,6 +177,15 @@ export class TrackCollectionView<
   }
 
   /**
+   * Return a record with absolute indexes as keys and items as values
+   */
+  itemsWithIndexes() {
+    const [from, to] = this.ranges;
+    return range(from, to + 1)
+      .map<[index: number, item: T]>(i => [i, this.#collection.at(i)!])
+  }
+
+  /**
    * Convert the local index of the view to the absolute index of the underlying collection
    * Return -1 if the local index is not in the view
    */
