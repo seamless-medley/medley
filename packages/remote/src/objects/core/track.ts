@@ -23,6 +23,14 @@ export type Track = Simplify<Writable<
   }
 >>;
 
+export type MetadataOnlyTrack = [
+  id: Track['id'],
+  kind: TrackKind,
+  artist?: string,
+  title?: string,
+  album?: string
+];
+
 export type TrackKind = 'normal' | 'request' | 'insert';
 
 export type TrackExtra = Simplify<Writable<
