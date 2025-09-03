@@ -59,4 +59,5 @@ export interface CollectionView {
   items(): Promise<Track[]>;
 
   ϟupdate(indexes: number[]): any;
+  itemsWithIndexes(): Array<[index: number, track: MetadataOnlyTrack]>;
 }
