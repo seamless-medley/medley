@@ -187,7 +187,7 @@ export class TrackCollectionView<
 
   /**
    * Convert the local index of the view to the absolute index of the underlying collection
-   * Return -1 if the local index is not in the view
+   * Returns -1 if the local index is not in the view
    */
   absolute(localIndex: number) {
     const abs = this.topIndex + localIndex;
@@ -195,7 +195,7 @@ export class TrackCollectionView<
   }
 
   /**
-   * Accessing item from the underlying collection with local index relative to the view
+   * Access item from the underlying collection with local index relative to the view
    */
   at(index: number) {
     return this.#collection.at(this.absolute(index));
