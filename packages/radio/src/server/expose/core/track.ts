@@ -8,7 +8,6 @@ import type {
 } from "../../../core";
 
 import {
-  getArtistStrings,
   isRequestTrack,
 } from "../../../core";
 
@@ -54,12 +53,11 @@ export const trackKindToString = (k: CoreTrackKind): TrackKind => trackKinds[k.v
 
 export const toRemoteMetadataOnlyTrack = (track: BoomBoxTrack): MetadataOnlyTrack => {
   const { id, extra, path } = track;
-
   const tags = extra?.tags;
   return [
     id,
     extra?.kind ? trackKindToString(extra.kind) : 'normal',
-    , tags?.title ?? path, tags?.album
+    tags?.artist, tags?.title ?? path, tags?.album
   ]
 }
 
