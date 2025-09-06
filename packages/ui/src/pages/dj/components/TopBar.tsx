@@ -94,8 +94,6 @@ const StationBanner: React.FC<StationIdProps & { colors: string[] }> = React.mem
 
   const elementSize = useElementSize();
 
-  const [textAlignmentStyle] = useState<any>({ textAlign: 'center' });
-
   const toggleListen = useCallback(() => {
     if (!station) {
       return;
@@ -123,7 +121,7 @@ const StationBanner: React.FC<StationIdProps & { colors: string[] }> = React.mem
             fw={900}
             variant="gradient"
             gradient={{ from: colors[0] ?? '#FFF638', to: colors[1] ?? '#38FFF6', deg: -45 }}
-            style={textAlignmentStyle}
+            style={{ textAlign: 'center' }}
             truncate="end"
           >
             {name}
@@ -134,7 +132,7 @@ const StationBanner: React.FC<StationIdProps & { colors: string[] }> = React.mem
             h="1.2em"
             size="1.2em"
             px={16}
-            style={textAlignmentStyle}
+            style={{ textAlign: 'center' }}
             truncate="end"
           >
             {description}
