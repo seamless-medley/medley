@@ -3,6 +3,7 @@ import { styled } from "@linaria/react";
 import { times } from "lodash";
 import { PlayDeck } from "@ui/pages/dj/components/PlayDeck";
 import { Route } from "./route"
+import { useParams } from "@tanstack/react-router";
 
 const Container = styled.div`
   display: flex;
@@ -25,7 +26,7 @@ const DeckBox = styled.div`
 `
 
 export const DJConsolePage = () => {
-  const { station: stationId } = Route.useParams();
+  const { station: stationId } = useParams({ strict: false });
 
   return (
     <Flex justify="center">
