@@ -1,7 +1,64 @@
-import { AppShell, Box, Burger, Group, NavLink } from '@mantine/core'
-import { createFileRoute, Outlet, useParams, useRouter } from '@tanstack/react-router'
+import { useEffect, useState } from 'react';
+import { AppShell, Box, NavLink } from '@mantine/core'
+import { createFileRoute, Link, Outlet, useMatchRoute, useParams } from '@tanstack/react-router'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
 import { TopBar } from './components/TopBar';
+import { DJConsoleRoute } from './DJConsolePage/route';
+import { useStation } from '@ui/hooks/useStation';
+import { TrackCollection } from '@seamless-medley/remote';
+import { useRemotableProp } from '@ui/hooks/remotable';
+import { CollectionRoute } from './CollectionPage/route';
+
+const Sidebar = () => {
+  const params = useParams({ strict: false });
+
+  const { station } = useStation(params.station!);
+  const currentCollection = useRemotableProp(station, 'currentCollection');
+
+  const [collections, setCollections] = useState<TrackCollection[]>([]);
+
+  useEffect(() => {
+    if (!station) {
+      setCollections([]);
+      return;
+    }
+
+    station.getCollections().then(setCollections);
+  }, [station?.id]);
+
+  const matchRoute = useMatchRoute();
+
+  const match = matchRoute({ to: CollectionRoute.fullPath });
+  const atCollection = match && match.collectionId !== undefined;
+
+  return (
+    <OverlayScrollbarsComponent>
+      <NavLink
+        activeOptions={{ exact: true }}
+        component={Link}
+        from={DJConsoleRoute.fullPath}
+        to={DJConsoleRoute.to}
+        label="Station"
+      />
+
+      <NavLink label="Collections" defaultOpened={atCollection}>
+        {collections.map(({ id, description }) => (
+            <NavLink
+              key={id}
+              component={Link}
+              label={description}
+              c={currentCollection === id ? 'green.5' : undefined}
+              fw={currentCollection === id ? 'bold' : undefined}
+              style={{ transition: 'all 1s ease' }}
+              from={DJConsoleRoute.fullPath}
+              to={CollectionRoute.fullPath}
+              params={{ collectionId: id } as any}
+            />
+        ))}
+      </NavLink>
+    </OverlayScrollbarsComponent>
+  )
+}
 
 const Layout = () => {
   const params = useParams({ strict: false });
@@ -23,33 +80,7 @@ const Layout = () => {
       </AppShell.Header>
 
       <AppShell.Navbar p="sm" style={{ overflow: 'hidden', textWrap: 'wrap', wordBreak: 'break-word' }}>
-        <OverlayScrollbarsComponent>
-          Sidebar
-          {/* <NavLink
-            active={matchRoute({ to: stationIndexRoute.to }) !== false}
-            component={Link}
-            to={stationIndexRoute.to}
-            label="Station"
-          /> */}
-
-          {/* <NavLink label="Collections" defaultOpened={collectionId !== undefined}> */}
-            {/* TODO: Elipsis, nowrap */}
-            {/* {collections.map(({ id, description }) => (
-                <NavLink
-                  key={id}
-                  component={Link}
-                  label={description}
-                  c={currentCollection === id ? 'green.5' : undefined}
-                  fw={currentCollection === id ? 'bold' : undefined}
-                  style={{ transition: 'all 1s ease' }}
-                  active={collectionId === id}
-                  from={stationRoute.id}
-                  to={collectionRoute.to}
-                  params={{ collectionId: id } as any}
-                />
-            ))}
-          </NavLink> */}
-        </OverlayScrollbarsComponent>
+        <Sidebar />
       </AppShell.Navbar>
 
       <AppShell.Main>

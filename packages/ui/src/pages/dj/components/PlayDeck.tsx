@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { styled } from "@linaria/react";
 import { cx } from "@linaria/core";
-import { Anchor, Box, Card, Flex, Image, Text } from "@mantine/core";
+import { Box, Card, Flex, Image, Text } from "@mantine/core";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { transparentize } from "polished";
 import { AnimatePresence, motion, MotionNodeOptions } from "framer-motion";
@@ -12,7 +12,8 @@ import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
 import { theme } from "@ui/theme/theme";
 import { AutoScroller } from "@ui/components/AutoScoller";
 import { PlayHeadText } from "@ui/components/PlayHeadText";
-// import { collectionRoute, stationRoute } from "../pages/dj/route";
+import { DJConsoleRoute } from "../DJConsolePage/route";
+import { CollectionRoute } from "../CollectionPage/route";
 
 export type PlayDeckProps = {
   stationId: string | undefined;
@@ -285,20 +286,21 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
                 </AutoScroller>
               </div>
             </Flex>
-            <Flex justify="space-between">
-              <Anchor
-                component={Link}
-                // from={stationRoute.id}
-                // to={collectionRoute.to}
-                params={{ collectionId: trackPlay?.track.collection?.id } as any}
-                style={{
-                  fontSize: '0.7em',
-                  height: '1.55em',
-                  transform: 'translateY(-2px)',
-                  textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
-              >
-                  {trackPlay?.track.collection?.description}
-              </Anchor>
+            <Flex justify="space-between" h="1em">
+              {trackPlay?.track.collection?.id &&
+                <Link
+                  from={DJConsoleRoute.fullPath}
+                  to={CollectionRoute.fullPath}
+                  params={{ collectionId: trackPlay?.track.collection?.id }}
+                  style={{
+                    fontSize: '0.7em',
+                    height: '1.55em',
+                    transform: 'translateY(-2px)',
+                    textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
+                >
+                    {trackPlay?.track.collection?.description}
+                </Link>
+              }
             </Flex>
           </Flex>
         </Flex>
