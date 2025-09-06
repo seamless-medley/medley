@@ -6,17 +6,18 @@ import { useParams } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AutoScroller } from "@ui/components/AutoScoller";
 import { useCollection } from "@ui/hooks/useCollection";
-import type { CollectionView, MetadataOnlyTrack, Remotable } from "@seamless-medley/remote";
+import type { Collection, CollectionView, MetadataOnlyTrack, Remotable, TrackKind } from "@seamless-medley/remote";
 
 import { range } from "lodash";
 import { extractArtists, selectConsistentValue } from "@seamless-medley/utils";
+import { useRemotableProp } from "@ui/hooks/remotable";
 
 type TrackRowData = {
-  id: MetadataOnlyTrack[0];
-  kind: MetadataOnlyTrack[1];
-  artist: MetadataOnlyTrack[2];
-  title: MetadataOnlyTrack[3];
-  album: MetadataOnlyTrack[4];
+  id: string;
+  kind?: TrackKind;
+  artist?: string;
+  title?: string;
+  album?: string;
 }
 
 const PageContainer = styled(Box)`
@@ -53,7 +54,6 @@ type TrackItemProps = {
   data?: TrackRowData;
 }
 
-// TODO: Could this be added to theme object?
 const colors = range(1, 10)
   .flatMap(shade => ['red', 'pink', 'grape', 'violet', 'indigo', 'blue', 'cyan', 'green', 'lime', 'yellow', 'orange', 'teal'].map(name => `${name}.${shade}`));
 
@@ -108,10 +108,8 @@ const TrackItem = (props: TrackItemProps) => {
 
 const trackToRowData = ([id, kind, artist, title, album]: MetadataOnlyTrack): TrackRowData => ({ id, kind, artist, title, album });
 
-export const CollectionPage = () => {
-  const { station, collectionId } = useParams({ strict: false });
-  const { collection } = useCollection(station, collectionId);
-
+function TrackList(props: { collection: Remotable<Collection> | undefined}) {
+  const { collection } = props;
   const tableRef = useRef(null);
 
   // virtual table
@@ -172,7 +170,7 @@ export const CollectionPage = () => {
       view?.off('viewChange', fetchView);
       view?.dispose();
     }
-  }, [view])
+  }, [view]);
 
   // The actual tracks list, the setter is equiped with debouncer
   const [tracks, setTracks] = useDebouncedState<Array<TrackRowData>>([], 1000 / 120);
@@ -187,37 +185,48 @@ export const CollectionPage = () => {
     view.updateView(topIndex, virtualItems.length).then(fetchView);
   }, [view, topIndex, virtualItems.length]);
 
+  return (
+    <TrackListContainer ref={tableRef}>
+      <Table>
+        <Table.Thead pos="sticky" bg="dark.8">
+          <Table.Tr display="flex" fw='bold'>
+            <Table.Td w="50%">
+              Artist
+            </Table.Td>
+            <Table.Td w="50%">
+              Title
+            </Table.Td>
+          </Table.Tr>
+        </Table.Thead>
+
+        <TrackListBody h={virt.getTotalSize()}>
+          {virtualItems.map(vrow => <TrackItem
+            key={tracks[vrow.index]?.id ?? vrow.index}
+            size={vrow.size}
+            start={vrow.start}
+            data={tracks[vrow.index]}
+          />)}
+        </TrackListBody>
+      </Table>
+    </TrackListContainer>
+  )
+}
+
+export const CollectionPage = () => {
+  const { station, collectionId } = useParams({ strict: false });
+  const { collection } = useCollection(station, collectionId);
+  const description = useRemotableProp(collection, 'description') ?? collectionId;
+  const length = useRemotableProp(collection, 'length', 0);
+
   // Render
   return (
     <PageContainer>
       <CollectionHeader mx='md' justify="space-between">
-        <h2>{collection?.description() ?? collectionId} - {collection?.length() ?? 0} tracks</h2>
+        <h2>{description} - {length} tracks</h2>
         <span>TODO: Buttons here</span>
       </CollectionHeader>
 
-      <TrackListContainer ref={tableRef}>
-        <Table>
-          <Table.Thead pos="sticky" bg="dark.8">
-            <Table.Tr display="flex" fw='bold'>
-              <Table.Td w="50%">
-                Artist
-              </Table.Td>
-              <Table.Td w="50%">
-                Title
-              </Table.Td>
-            </Table.Tr>
-          </Table.Thead>
-
-          <TrackListBody h={virt.getTotalSize()}>
-            {virtualItems.map(vrow => <TrackItem
-              key={tracks[vrow.index]?.id ?? vrow.index}
-              size={vrow.size}
-              start={vrow.start}
-              data={tracks[vrow.index]}
-            />)}
-          </TrackListBody>
-        </Table>
-      </TrackListContainer>
+      <TrackList collection={collection} />
     </PageContainer>
   )
 }
