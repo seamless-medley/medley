@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActionIcon, Box, Center, Flex, Image, Stack, Text, Tooltip, rem } from "@mantine/core";
-import { useElementSize, useId, useMove } from "@mantine/hooks";
+import { useElementSize, useMove } from "@mantine/hooks";
 import { IconPlayerPause, IconPlayerPlayFilled, IconPlayerTrackNext, IconVolume, IconVolumeOff } from "@tabler/icons-react";
 import { adjustHue, hsl, linearGradient, setLightness, transparentize } from "polished";
 import { AnimatePresence, motion } from "framer-motion";
@@ -80,14 +80,6 @@ const StationBanner: React.FC<StationIdProps & { colors: string[] }> = React.mem
   const { station } = useStation(stationId);
   const name = useRemotableProp(station, 'name');
   const description = useRemotableProp(station, 'description');
-
-  const prevAudienceCount = useRef(0);
-
-  useEffect(() => {
-    return station?.addPropertyChangeListener('audienceCount', (n, o) => {
-      prevAudienceCount.current = o;
-    });
-  }, [station]);
   const audienceCount = useRemotableProp(station, 'audienceCount', 0);
 
   const playingStationId = usePlayingStationId();
@@ -140,17 +132,13 @@ const StationBanner: React.FC<StationIdProps & { colors: string[] }> = React.mem
 
           <Box>
             {audienceCount.toString().split('').map((c, index) => (
-              <TransitionText key={index}
-                inline span
-                direction={audienceCount > prevAudienceCount.current ? 'up' : 'down'}
-                translateValue="50%"
-                fw="bold"
-                w="1ch"
-                display="inline-block"
-                style={textAlignmentStyle}
-              >
+              <Text key={index}
+                span
+                fw='bold'
+                w={5}
+                style={{ textAlign: 'center' }}>
                 {c}
-              </TransitionText>
+              </Text>
             ))}
 
             <Text span ml={4}>Listeners</Text>
@@ -190,7 +178,6 @@ const Cover: React.FC<StationIdProps> = React.memo(({ stationId }) => {
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
   const info = useDeckInfo(stationId, activeDeck, 'trackPlay');
   const cover = useDeckCover(stationId, activeDeck);
-  const uid = useId();
 
   return (
     <Box component={motion.div}
