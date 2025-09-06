@@ -15,7 +15,7 @@ async function parseYAML(s: string) {
 }
 
 const Config = z.object({
-  server: ServerConfig,
+  server: ServerConfig.optional(),
   db: DbConfig,
   webrtc: WebRtcConfig.optional(),
   stations: z.record(z.string(), StationConfig, { error: () => 'No stations' }),

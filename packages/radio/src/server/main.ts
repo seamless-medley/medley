@@ -71,7 +71,7 @@ async function startServer(configs: Config) {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000
       },
-      secret: configs.server.secret || 'H0xfTK80tSXDKqWkkAXcCMgPzBz24izI',
+      secret: configs.server?.secret || 'H0xfTK80tSXDKqWkkAXcCMgPzBz24izI',
       rolling: true,
       resave: true,
       saveUninitialized: true
@@ -90,7 +90,7 @@ async function startServer(configs: Config) {
     const io = new SocketIOServer(httpServer, '/socket.io');
     io.engine.use(sessionMiddleware);
 
-    const audioServer = new AudioWebSocketServer(httpServer, configs.server.audioBitrate * 1000);
+    const audioServer = new AudioWebSocketServer(httpServer, (configs.server?.audioBitrate || 48_000) * 1000);
 
     const staticPath = resolvePath(__dirname,
       process.env.NODE_ENV === 'development'
