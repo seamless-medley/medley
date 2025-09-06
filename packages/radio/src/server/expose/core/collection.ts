@@ -104,8 +104,9 @@ export class ExposedCollection extends MixinEventEmitterOf<Collection>() impleme
     return Promise.all(this.#collection.all().map(t => toRemoteTrack(t, true)));
   }
 
-  createView(numItems: number, topIndex?: number): Exposable<CollectionView> {
-    return new ExposedCollectionView(this.#collection.createView(numItems, topIndex));
+  createView(numItems: number, topIndex?: number) {
+    // This casting is required because the type presented to the client must be `Remotable` instead of `Exposable`
+    return new ExposedCollectionView(this.#collection.createView(numItems, topIndex)) as unknown as Remotable<CollectionView>;
   }
 }
 
@@ -113,10 +114,22 @@ export class ExposedCollectionView extends MixinEventEmitterOf<CollectionView>()
   $Exposing: TrackCollectionView<MusicTrack<Station>>;
   $Kind = 'collection_view';
 
-  constructor(collection: TrackCollectionView<MusicTrack<Station>>) {
+  constructor(view: TrackCollectionView<MusicTrack<Station>>) {
     super();
 
-    this.$Exposing = collection;
+    this.$Exposing = view;
+
+    view.on('viewChange',  this.#onViewChange);
+  }
+
+  dispose(): void {
+    this.#view.off('viewChange',  this.#onViewChange)
+    this.#view.dispose();
+  }
+
+  #onViewChange = () => {
+
+    this.emit('viewChange');
   }
 
   get #view() {
@@ -147,10 +160,6 @@ export class ExposedCollectionView extends MixinEventEmitterOf<CollectionView>()
     return this.#view.ranges;
   }
 
-  dispose(): void {
-    this.#view.dispose();
-  }
-
   updateView(topIndex: number, length: number): void {
     this.#view.updateView(topIndex, length);
   }
@@ -170,5 +179,9 @@ export class ExposedCollectionView extends MixinEventEmitterOf<CollectionView>()
 
   async items() {
     return Promise.all(this.#view.items().map(item => toRemoteTrack(item)));
+  }
+
+  itemsWithIndexes() {
+    return this.#view.itemsWithIndexes().map(([index, track]) => [index, toRemoteMetadataOnlyTrack(track)] as [index: number, track: MetadataOnlyTrack]);
   }
 }

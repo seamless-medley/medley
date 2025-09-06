@@ -4,7 +4,7 @@ import type { Track, TrackExtra, TrackExtraOf } from "../track";
 import type { TrackCollection, TrackCollectionEvents } from "./base";
 
 export type TrackCollectionViewEvents = {
-  update: (indexes: number[]) => any;
+  viewChange: () => any;
 }
 
 export class TrackCollectionView<
@@ -15,6 +15,9 @@ export class TrackCollectionView<
   #numItems: number = 0;
   #topIndex: number = 0;
 
+  /**
+   * Current track id in the view
+   */
   #trackIds: string[] = [];
 
   constructor(collection: TrackCollection<T, TE>, numItems: number, topIndex: number = 0) {
@@ -59,48 +62,48 @@ export class TrackCollectionView<
     this.#invalidate();
   }
 
-  #handleTrackUpdate: TrackCollectionEvents<T>['tracksUpdate'] = ({ tracks }) => {
-    const changedIndexes: number[] = [];
-
-    const currentIds = new Map(this.#trackIds.map((id, index) => [id, index]));
-
-    for (const track of tracks) {
-      const index = currentIds.get(track.id);
-      if (index) {
-        changedIndexes.push(index);
-      }
-    }
-
-    if (changedIndexes.length) {
-      this.emit('update', changedIndexes);
-    }
+  #handleTrackUpdate: TrackCollectionEvents<T>['tracksUpdate'] = () => {
+    this.emit('viewChange');
   }
 
   #handleRefresh: TrackCollectionEvents<T>['refresh'] = () => {
-    this.#invalidate();
+    this.#invalidate({ force: true });
   }
 
-  #invalidate(newIds?: string[]): boolean {
-    if (newIds === undefined) {
-      const [start, end] = this.ranges;
-
-      newIds = range(start, end + 1)
-        .map(index => this.#collection.at(index)?.id)
-        .filter((id): id is string => id !== undefined);
+  #getValidTopIndex(desiredTopIndex: number): number {
+    if (this.#collection.length === 0) {
+      return 0;
     }
 
-    if (isEqual(this.#trackIds, newIds)) {
-      return false;
+    let validTopIndex = clamp(desiredTopIndex, 0, this.#collection.length - 1);
+
+    const maxTopIndex = Math.max(0, this.#collection.length - this.#numItems);
+
+    if (validTopIndex > maxTopIndex) {
+      validTopIndex = maxTopIndex;
+    }
+
+    return validTopIndex;
+  }
+
+  #invalidate(options: { force?: boolean, noEmit?: boolean } = {}): boolean {
+    const [start, end] = this.ranges;
+    const newIds = range(start, end + 1)
+      .map(index => this.#collection.at(index)?.id)
+      .filter((id): id is string => id !== undefined);
+
+    if (!options.force) {
+      const oldIds = this.#trackIds;
+
+      if (isEqual(oldIds, newIds)) {
+        return false;
+      }
     }
 
     this.#trackIds = newIds;
 
-    const changedIndexes = newIds
-      .map((id, index) => id !== this.#trackIds[index] ? index : undefined)
-      .filter((index): index is number => index !== undefined);
-
-    if (changedIndexes.length) {
-      this.emit('update', changedIndexes);
+    if (!options.noEmit) {
+      this.emit('viewChange');
     }
 
     return true;
@@ -111,7 +114,7 @@ export class TrackCollectionView<
   }
 
   get length() {
-    return Math.min(this.#topIndex + this.#numItems, this.#collection.length) - this.#topIndex;
+    return Math.min(this.#numItems, this.#collection.length);
   }
 
   set length(val) {
@@ -120,8 +123,7 @@ export class TrackCollectionView<
     }
 
     this.#numItems = val;
-    this.#numItems = this.length;
-    this.#invalidate();
+    this.#invalidate({ noEmit: true });
   }
 
   /**
@@ -132,19 +134,20 @@ export class TrackCollectionView<
   }
 
   set topIndex(val) {
-    const newIndex = clamp(val, 0, this.#collection.length - 1);
+    const newIndex = this.#getValidTopIndex(val);
     if (newIndex === this.#topIndex) {
       return;
     }
 
-    this.#invalidate();
+    this.#topIndex = newIndex;
+    this.#invalidate({ noEmit: true });
   }
 
   /**
    * The last absolute item index in the view
    */
   get bottomIndex() {
-    return this.#topIndex + this.length - 1;
+    return Math.min(this.#topIndex + this.length - 1, this.#collection.length - 1);
   }
 
   /**
@@ -155,16 +158,15 @@ export class TrackCollectionView<
   }
 
   updateView(topIndex: number, length: number) {
-    this.#topIndex = topIndex;
     this.length = length;
-    this.#invalidate();
+    this.#topIndex = this.#getValidTopIndex(topIndex);
+    this.#invalidate({ noEmit: true });
   }
 
   *[Symbol.iterator](): Iterator<T, any, undefined> {
     const [from, to] = this.ranges;
 
     for (let i = from; i <= to; i++) {
-      if (i >= this.#collection.length) break;
       yield this.#collection.at(i)!;
     }
   }
