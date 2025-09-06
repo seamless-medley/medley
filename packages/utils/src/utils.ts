@@ -52,3 +52,39 @@ export function hashString(s: string) {
 
   return hash;
 }
+
+/**
+ * Selects a value from an array based on a string input, ensuring the same string
+ * always returns the same value. Uses string hashing for deterministic selection.
+ *
+ * Useful for:
+ * - Assigning consistent colors to tags, categories, or user names
+ * - Mapping strings to icons, themes, or other visual elements
+ *
+ * @param s - The input string to hash and use for selection
+ * @param values - Array of values to select from
+ * @param cache - Optional cache to store results for faster subsequent lookups
+ *
+ * @example
+ * ```typescript
+ * const colors = ['red', 'blue', 'green', 'yellow'];
+ * const cache = new Map();
+ *
+ * selectConsistentValue('user1', colors, cache); // Always returns same color for 'user1'
+ * selectConsistentValue('tag-important', colors); // Always returns same color for this tag
+ * ```
+ */
+export function selectConsistentValue<T>(s: string, values: T[], cache?: Map<string, T>) {
+  if (cache?.has(s)) {
+    return cache.get(s);
+  }
+
+  const hash = hashString(s.toString());
+  const value = values[Math.abs(hash) % values.length];
+
+  if (cache) {
+    cache.set(s, value);
+  }
+
+  return value;
+}
