@@ -10,7 +10,7 @@ import {
   type DeckInfoWithPositions as CoreDeckInfoWithPositions
 } from "../../../core";
 
-import { toRemoteTrackPlay } from "./collection";
+import { toRemoteTrackPlay } from "./track";
 
 export const toRemoteDeckInfo = async ({ trackPlay, active, playing }: CoreDeckInfo): Promise<DeckInfo> => ({
   trackPlay: trackPlay ? await toRemoteTrackPlay(trackPlay) : undefined,

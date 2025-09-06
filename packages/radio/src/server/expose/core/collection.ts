@@ -1,17 +1,11 @@
 import { isFunction, isObject, omitBy } from "lodash";
-import { parseLyrics } from "@seamless-medley/utils";
 
-import {
-  type BoomBoxTrack,
-  type MusicTrack,
-  type MusicTrackCollection,
-  type MusicTrackCollectionEvents,
-  type Station,
-  type TrackCollectionView,
-  type TrackKind as CoreTrackKind,
-  isRequestTrack,
-  BoomBoxTrackExtra,
-  BoomBoxTrackPlay
+import type {
+  MusicTrack,
+  MusicTrackCollection,
+  MusicTrackCollectionEvents,
+  Station,
+  TrackCollectionView,
 } from "../../../core";
 
 import { MixinEventEmitterOf } from "../../socket";
@@ -19,107 +13,11 @@ import { MixinEventEmitterOf } from "../../socket";
 import type {
   Collection,
   CollectionView,
-  IdOnly,
-  LatchSession,
-  Sequencing,
-  SequencingLatch,
-  Track,
-  TrackCollection,
-  TrackExtra,
-  TrackKind,
-  TrackPlay,
-  TrackSequencing,
-  TrackSequencingLatch,
-  Exposable
+  Exposable,
+  MetadataOnlyTrack,
+  Remotable
 } from "@seamless-medley/remote";
-
-export const pickId = <T extends { id: any }>({ id }: T): IdOnly<T> => ({ id });
-
-export const toRemoteTrack = async (
-  track: BoomBoxTrack,
-  noCover?: boolean
-): Promise<Track> => {
-  const { id, path, musicId, cueInPosition, cueOutPosition, disableNextLeadIn, extra, sequencing, collection } = track;
-
-  const actualExtra = isRequestTrack(track) ? track.original.extra : extra;
-
-  return {
-    id,
-    path,
-    musicId,
-    cueInPosition,
-    cueOutPosition,
-    disableNextLeadIn,
-    extra: actualExtra ? await toRemoteTrackExtra(actualExtra, noCover) : undefined,
-    sequencing: sequencing ? toRemoteTrackSequencing(sequencing): undefined,
-    collection: toRemoteTrackCollection(collection)
-  }
-}
-
-const trackKinds = ['normal', 'request', 'insert'] as const;
-
-export const trackKindToString = (k: CoreTrackKind): TrackKind => trackKinds[k.valueOf()];
-
-export const toRemoteTrackExtra = async (
-  { kind, source, tags, maybeCoverAndLyrics }: BoomBoxTrackExtra,
-  noCover?: boolean
-): Promise<TrackExtra> => {
-  const coverAndLyrics = !noCover ? await maybeCoverAndLyrics : undefined;
-  const lyrics = coverAndLyrics ? parseLyrics(coverAndLyrics?.lyrics, { bpm: tags?.bpm }) : undefined;
-
-  return {
-    kind: trackKindToString(kind),
-    source,
-    tags,
-    coverAndLyrics: coverAndLyrics ? {
-      ...coverAndLyrics,
-      lyrics: lyrics!
-    } : undefined
-  }
-}
-
-export const toRemoteTrackCollection = (collection: BoomBoxTrack['collection']): TrackCollection => {
-  return {
-    id: collection.id,
-    description: collection.extra?.description
-  }
-}
-
-export const toRemoteTrackSequencing = ({ playOrder, crate, latch }: Sequencing): TrackSequencing => ({
-  playOrder,
-  crate: pickId(crate),
-  latch: latch ? toRemoteTrackSequencingLatch(latch) : undefined
-});
-
-export const toRemoteTrackSequencingLatch = (
-  {
-    order,
-    session
-  }: SequencingLatch
-): TrackSequencingLatch => ({
-  order,
-  session: toRemoteLatchSession(session)
-});
-
-export const toRemoteLatchSession = (
-  {
-    uuid,
-    count,
-    max: max,
-    collection
-  } : NonNullable<SequencingLatch['session']>
-): LatchSession => ({
-  uuid,
-  count,
-  max: max,
-  collection: toRemoteTrackCollection(collection)
-})
-
-export const toRemoteTrackPlay = async ({ uuid, track, duration }: BoomBoxTrackPlay): Promise<TrackPlay> => ({
-  uuid,
-  duration,
-  track: await toRemoteTrack(track),
-});
+import { toRemoteMetadataOnlyTrack, toRemoteTrack } from "./track";
 
 export class ExposedCollection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
   $Exposing: MusicTrackCollection<Station>;
