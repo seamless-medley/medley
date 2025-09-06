@@ -25,6 +25,7 @@
     "@tanstack/react-form": "^1.19.2",
     "@tanstack/react-router": "^1.114.29",
     "@tanstack/react-router-devtools": "^1.131.2",
+    "@tanstack/react-virtual": "^3.13.12",
     "@tanstack/virtual-file-routes": "^1.131.2",
     "@wyw-in-js/babel-preset": "^0.7.0",
     "classnames": "^2.3.2",
