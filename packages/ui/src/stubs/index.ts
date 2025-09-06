@@ -1,5 +1,5 @@
 import { Stub } from "./stub";
-import { StubCollection } from "./core/collection";
+import { StubCollection, StubCollectionView } from "./core/collection";
 import { StubDeck } from "./core/deck";
 import { StubGlobal } from "./core/global";
 import { StubStation } from "./core/station";
@@ -12,5 +12,6 @@ export const Stubs: Record<string, Stub<unknown>> = {
   station: StubStation,
   deck: StubDeck,
   collection: StubCollection,
+  collection_view: StubCollectionView,
   transponder: StubRTCTransponder
 }
