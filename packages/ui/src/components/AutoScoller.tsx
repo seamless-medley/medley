@@ -141,6 +141,7 @@ export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
       } else {
         setGradient(undefined);
         scrollerRef.current?.style.setProperty("--trans-x", '0px');
+        scrollAmount = 0;
       }
 
       lastRafTimestamp = time;
