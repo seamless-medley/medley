@@ -44,6 +44,8 @@ export type AutoScrollerProps = PropsWithChildren<{
    * Start delay (default: 1000ms)
    */
   startAnimationOnMountDelayMs?: number;
+
+  stableId?: string;
 }>;
 
 /**
@@ -178,7 +180,7 @@ export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
     }
 
     timer.current = setTimeout(startAnimation, startAnimationOnMountDelayMs) as unknown as number;
-  }, [scrollerRef.current, props.children, startAnimation, startAnimationOnMountDelayMs]);
+  }, [scrollerRef.current, props.stableId ?? props.children, startAnimation, startAnimationOnMountDelayMs]);
 
   // Handle unmount
   useEffect(() => {
