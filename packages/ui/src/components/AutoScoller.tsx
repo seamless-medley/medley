@@ -79,9 +79,13 @@ export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
       none:   [false,   false,  false]
     })[mode ?? 'none'];
 
-    containerRef.current?.classList.toggle('gradient-left', l);
-    containerRef.current?.classList.toggle('gradient-right', r);
-    containerRef.current?.classList.toggle('gradient', b);
+    const classList = containerRef.current?.classList;
+
+    if (classList) {
+      classList.toggle('gradient-left', l);
+      classList.toggle('gradient-right', r);
+      classList.toggle('gradient', b);
+    }
   }, []);
 
   const startAnimation = useCallback(() => {
@@ -183,12 +187,7 @@ export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
   }, [scrollerRef.current, props.stableId ?? props.children, startAnimation, startAnimationOnMountDelayMs]);
 
   // Handle unmount
-  useEffect(() => {
-    return function unmount() {
-      stopAnimation();
-      // updateTranslation();
-    }
-  }, []);
+  useEffect(() => stopAnimation, []);
 
   return (
     <Container ref={containerRef} title={props.title}>
