@@ -45,7 +45,7 @@ const TitleBox = styled.div`
 const TitleText = styled.div`
   background-size: 300cqw 25cqw;
 
-  animation: bg 8s infinite alternate linear;
+  animation: bg 18s infinite alternate linear;
 
   background-clip: text;
   -webkit-background-clip: text;
