@@ -1,14 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { chain, random, sortBy } from "lodash";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { styled } from "@linaria/react";
 import { Button } from "@mantine/core";
 import { useSetState } from "@mantine/hooks";
-
-import { formatTags } from "@seamless-medley/utils";
-
-import { prominent } from 'color.js'
-
-import { chain, random, sample, sortBy } from "lodash";
 
 import { getLuminance,
   darken,
@@ -24,6 +19,12 @@ import { getLuminance,
   hsl
 } from 'polished';
 
+import { prominent } from 'color.js'
+
+import { formatTags } from "@seamless-medley/utils";
+
+import { getLogger } from "@logtape/logtape";
+
 import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
 import { useStation } from "@ui/hooks/useStation";
 import { useRemotableProp } from "@ui/hooks/remotable";
@@ -36,7 +37,6 @@ import { Lyrics, defaultColors as defaultLyricsColors } from "./components/Lyric
 import { PlayHead } from "./components/PlayHead";
 
 import { Route } from "./route";
-import { getLogger } from "@logtape/logtape";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -92,39 +92,24 @@ export const PlayPage: React.FC = () => {
 
   const sortColors = (colors: string[]) => sortBy(colors, c => parseToHsl(c).hue);
 
-  useEffect(() => {
-    if (!cover) {
-      logger.debug('No cover');
+  const createColors = useCallback(async () => sortColors(cover
+    ? (await prominent(cover, { format: 'hex', amount: 6 })) as string[]
+    : chain(6).times().map(i => adjustHue((i - 3) * random(15, 20), hsl(random(360), random(0.5, 0.9, true), random(0.6, 0.8, true)))).value()
+  ), [cover]);
 
-      const main = hsl(random(360), random(0.5, 0.9, true), random(0.6, 0.8, true));
-      const deg = random(15, 20);
-
-      setCoverProps({
-        colors: sortColors(chain(6).times().map(i => adjustHue((i - 3) * deg, main)).value()),
-        url: cover,
-        center: (lyrics ? lyrics.timeline.length : 2) < 2,
-        uuid: trackPlay?.uuid ?? ''
-      });
-
-      return;
-    }
-
-    prominent(cover, { format: 'hex', amount: 6 }).then(out => {
-      setCoverProps({
-        colors: sortColors(out as string[]),
-        url: cover,
-        center: (lyrics?.timeline?.length ?? 0) < 2,
-        uuid: trackPlay?.uuid ?? ''
-      });
+  useEffect(() => void createColors().then((colors) => {
+    setCoverProps({
+      colors,
+      url: cover,
+      center: (lyrics ? lyrics.timeline.length : 2) < 2,
+      uuid: trackPlay?.uuid ?? ''
     });
-  }, [cover]);
+  }), [cover]);
 
   useEffect(() => {
     let gradient;
 
     logger.debug('Colors {colors}', { colors: coverProps.colors });
-
-    const extent = ['farthest-side at', sample(['left', 'right']), sample(['top', 'bottom'])].join(' ');
 
     if (coverProps.colors.length) {
       const titleColor = chain(coverProps.colors)
@@ -165,7 +150,7 @@ export const PlayPage: React.FC = () => {
     }
 
     setTitleBg(gradient.toString() ?? '');
-  }, [cover]);
+  }, [coverProps.colors]);
 
   useEffect(() => {
     const tags = trackPlay?.track?.extra?.tags;
@@ -240,7 +225,6 @@ export const PlayPage: React.FC = () => {
         lines={8}
         colors={colors}
       />
-      {/* TODO: Use ref to change bg */}
       <Title text={titleText} bg={titleBg} center={simple} />
       <PlayHead
         stationId={stationId}
