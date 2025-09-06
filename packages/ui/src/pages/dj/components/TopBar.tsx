@@ -390,7 +390,7 @@ export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
 
         <Flex direction="row" align="center" gap="md">
           <TransportControl stationId={stationId} />
-          <LyricsBar stationId={stationId} inline />
+          <LyricsBar stationId={stationId} size="lg" inline />
         </Flex>
       </Flex>
     </Flex>
