@@ -42,8 +42,8 @@ export const TransitionText: React.FC<TransitionTextProps> = React.memo((props) 
       opacity: 0,
       transform: `translateY(${leaveTransform})`,
       position: 'absolute',
-      width: 'calc(100% - 2em)',
-      overflow: 'hidden'
+      width: autoscroll ? 'calc(100% - 2em)' : undefined,
+      overflow: autoscroll ? 'hidden' : undefined
     },
     config: springConfig,
     immediate: initialRun.current,
@@ -87,7 +87,7 @@ export const TransitionText: React.FC<TransitionTextProps> = React.memo((props) 
       </animated.div>
     );
 
-    const shouldScroll = state.phase !== 'leave' && autoscroll;
+    const shouldScroll = !inline && state.phase !== 'leave' && autoscroll;
 
     return shouldScroll
       ? <AutoScroller>{element}</AutoScroller>
