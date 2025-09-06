@@ -1,6 +1,7 @@
 import { createRoot, type Root } from "react-dom/client";
 import * as LogTape from "@logtape/logtape";
 import { MedleyClient } from "./medley-client";
+import { selectConsistentValue } from "@seamless-medley/utils";
 
 let root: Root;
 let _client: MedleyClient | undefined;
@@ -25,17 +26,6 @@ const logLevelStyles: Record<LogTape.LogLevel, string> = {
 
 const colorsMap = new Map<string, string>();
 
-function hashString(s: string) {
-  let hash = 0;
-
-  for (let i = 0; i < s.length; i++) {
-    hash = ((hash << 5) - hash) + s.charCodeAt(i);
-    hash |= 0;
-  }
-
-  return hash;
-}
-
 const categoryColors = [
   'fuchsia', 'magenta', 'red', 'tomato',
   'green', 'lime', 'chartreuse', 'greenyellow', 'lawngreen', 'springgreen',
@@ -43,18 +33,6 @@ const categoryColors = [
   'blue', 'aqua', 'cyan', 'blueviolet', 'cornflowerblue', 'deepskyblue', 'dodgerblue',
   'burlywood', 'palegoldenrod', 'pink', 'plum',
 ];
-
-function getCategoryColor(category: string) {
-  let color = colorsMap.get(category);
-  if (color === undefined) {
-    const hash = hashString(category.toString());
-
-    color = categoryColors[Math.abs(hash) % categoryColors.length];
-    colorsMap.set(category, color);
-  }
-
-  return color;
-}
 
 function consoleFormatter(record: LogTape.LogRecord) {
   let msg = "";
@@ -90,7 +68,7 @@ function consoleFormatter(record: LogTape.LogRecord) {
     logLevelStyles[record.level],
     "background-color: default;",
 
-    ...record.category.map(c => `color: ${getCategoryColor(c)}`),
+    ...record.category.map(c => `color: ${selectConsistentValue(c, categoryColors, colorsMap)}`),
 
     "color: default;",
     ...values,
