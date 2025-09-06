@@ -4,11 +4,29 @@ import type { PickProp, Remotable } from "@seamless-medley/remote";
 const $AnyProp: unique symbol = Symbol.for('$AnyProp');
 
 export function useRemotableProp<
-  T extends { [key: string]: any },
+  T extends Record<string, any>,
   P extends keyof PickProp<T>
 >(
   r: Remotable<T> | undefined,
   prop: P
+): T[P] | undefined;
+
+export function useRemotableProp<
+  T extends Record<string, any>,
+  P extends keyof PickProp<T>
+>(
+  r: Remotable<T> | undefined,
+  prop: P,
+  defVal: T[P]
+): T[P];
+
+export function useRemotableProp<
+  T extends Record<string, any>,
+  P extends keyof PickProp<T>
+>(
+  r: Remotable<T> | undefined,
+  prop: P,
+  defVal?: T[P]
 ): T[P] | undefined {
   const [value, set] = useState<T[P]>();
 
@@ -20,7 +38,7 @@ export function useRemotableProp<
     return r?.addPropertyChangeListener(prop, update);
   }, [r]);
 
-  return value;
+  return value ?? defVal;
 }
 
 export function useRemotableProps<T extends { [key: string]: any }>(r: Remotable<T> | undefined) {
