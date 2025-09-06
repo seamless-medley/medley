@@ -118,7 +118,7 @@ type Colors = {
 
 const ButtonsBar: React.FC<{ stationId: string, colors: Colors }> = ({ stationId, colors }) => {
   const { station } = useStation(stationId);
-  const audienceCount = useRemotableProp(station, 'audienceCount') ?? 0;
+  const audienceCount = useRemotableProp(station, 'audienceCount', 0);
   const playingStation = usePlayingStationId();
   const navigate = useNavigate({ from: Route.fullPath });
 

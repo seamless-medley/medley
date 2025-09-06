@@ -81,7 +81,6 @@ const StationBanner: React.FC<StationIdProps & { colors: string[] }> = React.mem
   const name = useRemotableProp(station, 'name');
   const description = useRemotableProp(station, 'description');
 
-  const audienceCount = 0 + (useRemotableProp(station, 'audienceCount') ?? 0);
   const prevAudienceCount = useRef(0);
 
   useEffect(() => {
@@ -89,6 +88,7 @@ const StationBanner: React.FC<StationIdProps & { colors: string[] }> = React.mem
       prevAudienceCount.current = o;
     });
   }, [station]);
+  const audienceCount = useRemotableProp(station, 'audienceCount', 0);
 
   const playingStationId = usePlayingStationId();
 
