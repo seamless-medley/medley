@@ -9,8 +9,8 @@ export interface UDPConnectionEvents {
 }
 
 export type SocketConfig = {
-	ip: string;
-	port: number;
+  ip: string;
+  port: number;
 }
 
 const MAX_COUNTER_VALUE = 2 ** 32 - 1;
@@ -61,15 +61,15 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
   }
 
   #keepAlive() {
-		this.#keepAliveBuffer.writeUInt32LE(this.#keepAliveCounter, 4);
-		this.send(this.#keepAliveBuffer);
+    this.#keepAliveBuffer.writeUInt32LE(this.#keepAliveCounter, 4);
+    this.send(this.#keepAliveBuffer);
 
-		this.#keepAliveCounter++;
+    this.#keepAliveCounter++;
 
-		if (this.#keepAliveCounter > MAX_COUNTER_VALUE) {
-			this.#keepAliveCounter = 0;
-		}
-	}
+    if (this.#keepAliveCounter > MAX_COUNTER_VALUE) {
+      this.#keepAliveCounter = 0;
+    }
+  }
 
   send(buffer: Buffer) {
     this.#socket.send(buffer, this.config.port, this.config.ip);
@@ -109,14 +109,14 @@ export class UDPConnection extends TypedEmitter<UDPConnectionEvents> {
 
 function extractIPDiscovery(message: Buffer): SocketConfig {
   const null_pos = message.indexOf(0, 8);
-	const ip = message.subarray(8, null_pos).toString('utf8');
+  const ip = message.subarray(8, null_pos).toString('utf8');
 
-	if (!isIPv4(ip)) {
-		throw new Error('Malformed IP address');
-	}
+  if (!isIPv4(ip)) {
+    throw new Error('Malformed IP address');
+  }
 
-	const port = message.readUInt16BE(message.length - 2);
+  const port = message.readUInt16BE(message.length - 2);
 
-	return { ip, port };
+  return { ip, port };
 }
 

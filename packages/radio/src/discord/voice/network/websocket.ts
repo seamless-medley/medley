@@ -5,9 +5,9 @@ import { VoiceOpcodes } from 'discord-api-types/voice/v8';
 import { VoiceClientPayload, VoiceServerPayload, HeartbeatAckVoicePayload, HeartbeatVoicePayload, ResumeVoicePayload } from "./payload";
 
 export interface BinaryWebSocketMessage {
-	op: VoiceOpcodes;
-	payload: Buffer;
-	seq: number;
+  op: VoiceOpcodes;
+  payload: Buffer;
+  seq: number;
 }
 
 export interface WebSocketConnectionEvents {
@@ -71,9 +71,9 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
   #onMessage: WebSocket['onmessage'] = (e) => {
     if (e.data instanceof Buffer || e.data instanceof ArrayBuffer) {
       const buffer = e.data instanceof ArrayBuffer ? Buffer.from(e.data) : e.data;
-			const seq = buffer.readUInt16BE(0);
-			const op = buffer.readUInt8(2);
-			const payload = buffer.subarray(3);
+      const seq = buffer.readUInt16BE(0);
+      const op = buffer.readUInt8(2);
+      const payload = buffer.subarray(3);
 
       this.#seq = seq;
 
@@ -87,10 +87,10 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
     }
 
     try {
-			this.#handlePayload(JSON.parse(e.data) as VoiceServerPayload);
-		} catch (error) {
-			this.emit('error', error as Error);
-		}
+      this.#handlePayload(JSON.parse(e.data) as VoiceServerPayload);
+    } catch (error) {
+      this.emit('error', error as Error);
+    }
   }
 
   #handlePayload(payload: VoiceServerPayload) {
@@ -135,12 +135,12 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
   }
 
   sendBinaryMessage(opcode: VoiceOpcodes, payload: Buffer) {
-		try {
-			const message = Buffer.concat([new Uint8Array([opcode]), payload]);
-			this.#ws.send(message);
-		} catch (error) {
-			this.emit('error', error as Error);
-		}
+    try {
+      const message = Buffer.concat([new Uint8Array([opcode]), payload]);
+      this.#ws.send(message);
+    } catch (error) {
+      this.emit('error', error as Error);
+    }
   }
 
   set heartbeatInterval(ms: number) {

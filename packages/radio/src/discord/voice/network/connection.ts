@@ -13,18 +13,18 @@ import { randomNBit } from "@seamless-medley/utils";
 import { DaveSession, DaveSessionEvents } from "./dave";
 
 export enum ConnectionStateCode {
-	Opening,
-	Identifying,
-	UdpHandshaking,
-	SelectingProtocol,
-	Ready,
-	Resuming,
-	Closed,
+  Opening,
+  Identifying,
+  UdpHandshaking,
+  SelectingProtocol,
+  Ready,
+  Resuming,
+  Closed,
 }
 
 interface BaseState {
-	connectionOptions: ConnectionOptions;
-	ws: WebSocketConnection;
+  connectionOptions: ConnectionOptions;
+  ws: WebSocketConnection;
   lastSeqReceived?: number;
 }
 
@@ -83,21 +83,21 @@ type ConnectionState =
 
 export type ConnectionOptions = {
   channelId: string;
-	endpoint: string;
-	guildId: string;
-	sessionId: string;
-	token: string;
-	userId: string;
+  endpoint: string;
+  guildId: string;
+  sessionId: string;
+  token: string;
+  userId: string;
 }
 
 export interface ConnectionData extends RTPData {
   connectedClients: Set<string>;
-	encryptionMode: EncryptionMode;
-	nonce: number;
-	nonceBuffer: Buffer;
-	packetsPlayed: number;
-	secretKey: Uint8Array;
-	speaking: boolean;
+  encryptionMode: EncryptionMode;
+  nonce: number;
+  nonceBuffer: Buffer;
+  packetsPlayed: number;
+  secretKey: Uint8Array;
+  speaking: boolean;
 }
 
 export interface VoiceConnectionEvents {
@@ -123,9 +123,9 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
     }
   }
 
-	public destroy() {
-		this.state = { code: ConnectionStateCode.Closed };
-	}
+  public destroy() {
+    this.state = { code: ConnectionStateCode.Closed };
+  }
 
   get state() {
     return this.#state;
@@ -150,15 +150,15 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
         .destroy()
     }
 
-		const oldUdp = Reflect.get(oldState, 'udp') as UDPConnection | undefined;
-		const newUdp = Reflect.get(newState, 'udp') as UDPConnection | undefined;
+    const oldUdp = Reflect.get(oldState, 'udp') as UDPConnection | undefined;
+    const newUdp = Reflect.get(newState, 'udp') as UDPConnection | undefined;
 
     if (oldUdp && oldUdp !== newUdp) {
-			oldUdp.on('error', noop);
-			oldUdp.off('error', this.#onError);
-			oldUdp.off('close', this.#onUdpClose);
-			oldUdp.destroy();
-		}
+      oldUdp.on('error', noop);
+      oldUdp.off('error', this.#onError);
+      oldUdp.off('close', this.#onUdpClose);
+      oldUdp.destroy();
+    }
 
     const oldDave = Reflect.get(oldState, 'dave') as DaveSession | undefined;
     const newDave = Reflect.get(newState, 'dave') as DaveSession | undefined;
@@ -218,9 +218,9 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       });
 
       this.state = {
-				...this.#state,
-				code: ConnectionStateCode.Identifying,
-			};
+        ...this.#state,
+        code: ConnectionStateCode.Identifying,
+      };
 
       return;
     }
@@ -248,10 +248,10 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
     if (canResume && this.#state.code === ConnectionStateCode.Ready) {
       this.state = {
-				...this.#state,
-				code: ConnectionStateCode.Resuming,
-				ws: this.#createWebSocket(this.#state.connectionOptions.endpoint),
-			};
+        ...this.#state,
+        code: ConnectionStateCode.Resuming,
+        ws: this.#createWebSocket(this.#state.connectionOptions.endpoint),
+      };
 
       return;
     }
@@ -282,15 +282,15 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
           this.emit('error', error);
         });
 
-			this.state = {
-				...this.#state,
+      this.state = {
+        ...this.#state,
         code: ConnectionStateCode.UdpHandshaking,
         udp,
         connectionData: {
           ssrc: payload.d.ssrc,
           connectedClients: new Set()
         },
-			};
+      };
 
       return;
     }
@@ -299,21 +299,21 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       const { mode: encryptionMode, secret_key: secretKey, dave_protocol_version: daveProtocolVersion } = payload.d;
 
       this.state = {
-				...this.#state,
-				code: ConnectionStateCode.Ready,
+        ...this.#state,
+        code: ConnectionStateCode.Ready,
         dave: this.#createDaveSession(daveProtocolVersion),
-				connectionData: {
-					...this.#state.connectionData,
-					encryptionMode,
-					secretKey: new Uint8Array(secretKey),
-					sequence: randomNBit(16),
-					timestamp: randomNBit(32),
-					nonce: 0,
-					nonceBuffer: Buffer.alloc(encryptionMode === 'aead_aes256_gcm_rtpsize' ? 12 : 24),
-					speaking: false,
-					packetsPlayed: 0,
-				},
-			};
+        connectionData: {
+          ...this.#state.connectionData,
+          encryptionMode,
+          secretKey: new Uint8Array(secretKey),
+          sequence: randomNBit(16),
+          timestamp: randomNBit(32),
+          nonce: 0,
+          nonceBuffer: Buffer.alloc(encryptionMode === 'aead_aes256_gcm_rtpsize' ? 12 : 24),
+          speaking: false,
+          packetsPlayed: 0,
+        },
+      };
 
       return;
     }
@@ -331,12 +331,12 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       });
 
       this.state = {
-				...this.#state,
+        ...this.#state,
         udp,
-				code: ConnectionStateCode.Ready,
-			};
+        code: ConnectionStateCode.Ready,
+      };
 
-			this.state.connectionData.speaking = false;
+      this.state.connectionData.speaking = false;
 
       return;
     }
@@ -400,7 +400,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
     if (message.op === VoiceOpcodes.DaveMlsProposals) {
       const payload = this.#state.dave.processProposals(message.payload, this.#state.connectionData.connectedClients);
-			if (payload) {
+      if (payload) {
         this.#state.ws.sendBinaryMessage(VoiceOpcodes.DaveMlsCommitWelcome, payload);
       }
 
@@ -443,17 +443,17 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
   }
 
   #onDaveKeyPackage: DaveSessionEvents['keyPackage'] = (keyPackage) => {
-		if (this.#state.code === ConnectionStateCode.SelectingProtocol || this.#state.code === ConnectionStateCode.Ready) {
-			this.#state.ws.sendBinaryMessage(VoiceOpcodes.DaveMlsKeyPackage, keyPackage);
+    if (this.#state.code === ConnectionStateCode.SelectingProtocol || this.#state.code === ConnectionStateCode.Ready) {
+      this.#state.ws.sendBinaryMessage(VoiceOpcodes.DaveMlsKeyPackage, keyPackage);
     }
   }
 
   #onDaveInvalidateTransition: DaveSessionEvents['invalidateTransition'] = (transitionId) => {
-		if (this.#state.code === ConnectionStateCode.SelectingProtocol || this.#state.code === ConnectionStateCode.Ready) {
-			this.#state.ws.sendPayload({
-				op: VoiceOpcodes.DaveMlsInvalidCommitWelcome,
-				d: { transition_id: transitionId },
-			});
+    if (this.#state.code === ConnectionStateCode.SelectingProtocol || this.#state.code === ConnectionStateCode.Ready) {
+      this.#state.ws.sendPayload({
+        op: VoiceOpcodes.DaveMlsInvalidCommitWelcome,
+        d: { transition_id: transitionId },
+      });
     }
   }
 
@@ -461,12 +461,12 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
     if (this.#state.code === ConnectionStateCode.Ready) {
       this.#state.ws.off('close', this.#onWsClose);
 
-			this.state = {
-				...this.#state,
-				code: ConnectionStateCode.Resuming,
-				ws: this.#createWebSocket(this.#state.connectionOptions.endpoint),
-			};
-		}
+      this.state = {
+        ...this.#state,
+        code: ConnectionStateCode.Resuming,
+        ws: this.#createWebSocket(this.#state.connectionOptions.endpoint),
+      };
+    }
   }
 
   #createWebSocket(endpoint: string) {
@@ -532,72 +532,72 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
     ))
   }
 
-	prepareAudioPacket(opusPacket: Buffer): Buffer | undefined {
-		if (this.#state.code !== ConnectionStateCode.Ready) {
+  prepareAudioPacket(opusPacket: Buffer): Buffer | undefined {
+    if (this.#state.code !== ConnectionStateCode.Ready) {
       return;
     }
 
-		this.#state.preparedPacket = this.#createAudioPacket(opusPacket, this.#state.connectionData, this.#state.dave);
-		return this.#state.preparedPacket;
-	}
+    this.#state.preparedPacket = this.#createAudioPacket(opusPacket, this.#state.connectionData, this.#state.dave);
+    return this.#state.preparedPacket;
+  }
 
-	dispatchAudio() {
-		if (this.#state.code !== ConnectionStateCode.Ready) {
+  dispatchAudio() {
+    if (this.#state.code !== ConnectionStateCode.Ready) {
       return false;
     }
 
-		if (this.#state.preparedPacket !== undefined) {
-			this.#sendAudioPacket(this.#state.preparedPacket);
-			this.#state.preparedPacket = undefined;
-			return true;
-		}
+    if (this.#state.preparedPacket !== undefined) {
+      this.#sendAudioPacket(this.#state.preparedPacket);
+      this.#state.preparedPacket = undefined;
+      return true;
+    }
 
-		return false;
-	}
+    return false;
+  }
 
-	#sendAudioPacket(audioPacket: Buffer) {
-		if (this.#state.code !== ConnectionStateCode.Ready) {
+  #sendAudioPacket(audioPacket: Buffer) {
+    if (this.#state.code !== ConnectionStateCode.Ready) {
       return;
     }
 
-		const { connectionData } = this.#state;
-		connectionData.packetsPlayed++;
+    const { connectionData } = this.#state;
+    connectionData.packetsPlayed++;
 
-		incRTPData(connectionData);
+    incRTPData(connectionData);
 
-		this.setSpeaking(true);
-		this.#state.udp.send(audioPacket);
-	}
+    this.setSpeaking(true);
+    this.#state.udp.send(audioPacket);
+  }
 
   setSpeaking(speaking: boolean) {
-		if (this.#state.code !== ConnectionStateCode.Ready) {
+    if (this.#state.code !== ConnectionStateCode.Ready) {
       return;
     }
 
-		if (this.#state.connectionData.speaking === speaking) {
+    if (this.#state.connectionData.speaking === speaking) {
       return;
     }
 
-		this.#state.connectionData.speaking = speaking;
-		this.#state.ws.sendPayload({
-			op: VoiceOpcodes.Speaking,
-			d: {
-				speaking: speaking ? 1 : 0,
-				delay: 0,
-				ssrc: this.#state.connectionData.ssrc,
-			},
-		});
-	}
+    this.#state.connectionData.speaking = speaking;
+    this.#state.ws.sendPayload({
+      op: VoiceOpcodes.Speaking,
+      d: {
+        speaking: speaking ? 1 : 0,
+        delay: 0,
+        ssrc: this.#state.connectionData.ssrc,
+      },
+    });
+  }
 }
 
 function chooseEncryptionMode(serverModes: EncryptionMode[]) {
-	const mode = serverModes.find(mode => ENCRYPTION_MODES.includes(mode));
+  const mode = serverModes.find(mode => ENCRYPTION_MODES.includes(mode));
 
-	if (!mode) {
-		throw new Error(`No compatible encryption modes. Available include: ${serverModes.join(', ')}`);
-	}
+  if (!mode) {
+    throw new Error(`No compatible encryption modes. Available include: ${serverModes.join(', ')}`);
+  }
 
-	return mode;
+  return mode;
 }
 
 function packVoiceData(opusPacket: Buffer, header: Buffer, connectionData: ConnectionData, daveSession?: DaveSession) {
