@@ -131,13 +131,13 @@ export interface ResumedVoicePayload extends VoicePayload {
   op: VoiceOpcodes.Resumed;
 }
 
-export interface eClientsConnectData {
+export interface ClientsConnectData {
   user_ids: Snowflake[];
 }
 
 // 11
 
-export interface ClientsConnectPayload extends VoicePayload<eClientsConnectData> {
+export interface ClientsConnectPayload extends VoicePayload<ClientsConnectData> {
   op: VoiceOpcodes.ClientsConnect;
 }
 
