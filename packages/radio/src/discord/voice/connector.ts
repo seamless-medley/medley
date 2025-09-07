@@ -255,9 +255,10 @@ export class VoiceConnector extends TypedEmitter<VoiceConnectorEvents> implement
     }
 
     const { endpoint, token, guild_id: guildId } = voiceServer;
-    const { session_id: sessionId, user_id: userId } = voiceState;
+    const { session_id: sessionId, channel_id: channelId, user_id: userId } = voiceState;
 
     const connection = new VoiceConnection({
+      channelId: channelId!,
       endpoint,
       guildId,
       token,

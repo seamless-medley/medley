@@ -1,14 +1,16 @@
 // Analog to djs Networking
 
-import { VoiceOpcodes } from "discord-api-types/voice/v4";
+import { VoiceOpcodes } from "discord-api-types/voice/v8";
 import { noop } from "lodash";
 import { TypedEmitter } from "tiny-typed-emitter";
+import { DAVE_PROTOCOL_VERSION } from "@snazzah/davey";
 import { EncryptionMode, ENCRYPTION_MODES, ReadyVoicePayload } from "./payload";
 import { SocketConfig, UDPConnection } from "./udp";
 import { WebSocketConnection, WebSocketConnectionEvents } from "./websocket";
 import * as secretbox from '../secretbox';
 import { RTPData, createRTPHeader, incRTPData } from "../../../audio/network/rtp";
 import { randomNBit } from "@seamless-medley/utils";
+import { DaveSession, DaveSessionEvents } from "./dave";
 
 export enum ConnectionStateCode {
 	Opening,
@@ -38,20 +40,21 @@ interface UdpHandshakingState extends BaseState {
   code: ConnectionStateCode.UdpHandshaking;
   //
   udp: UDPConnection;
-  connectionData: Pick<ConnectionData, 'ssrc'>;
+  connectionData: Pick<ConnectionData, 'connectedClients' | 'ssrc'>;
 }
 
 interface SelectingProtocolState extends BaseState {
   code: ConnectionStateCode.SelectingProtocol;
   //
   udp: UDPConnection;
-  connectionData: Pick<ConnectionData, 'ssrc'>;
+  connectionData: Pick<ConnectionData, 'connectedClients' | 'ssrc'>;
 }
 
 interface ReadyState extends BaseState {
   code: ConnectionStateCode.Ready;
   //
   udp: UDPConnection;
+  dave?: DaveSession;
   connectionData: ConnectionData;
   preparedPacket?: Buffer;
 }
@@ -60,6 +63,7 @@ interface ResumingState extends BaseState {
   code: ConnectionStateCode.Resuming;
   //
   udp: UDPConnection;
+  dave?: DaveSession;
   connectionData: ConnectionData;
   preparedPacket?: Buffer;
 }
@@ -78,6 +82,7 @@ type ConnectionState =
   ClosedState;
 
 export type ConnectionOptions = {
+  channelId: string;
 	endpoint: string;
 	guildId: string;
 	sessionId: string;
@@ -86,6 +91,7 @@ export type ConnectionOptions = {
 }
 
 export interface ConnectionData extends RTPData {
+  connectedClients: Set<string>;
 	encryptionMode: EncryptionMode;
 	nonce: number;
 	nonceBuffer: Buffer;
@@ -99,6 +105,7 @@ export interface VoiceConnectionEvents {
   close(code: number): void;
   error(error: Error): void;
   ping(): void;
+  transitioned(transitionId: number): void;
 }
 
 export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
@@ -132,13 +139,15 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
     if (oldWs && oldWs !== newWs) {
       // The old WebSocket is being freed - remove all handlers from it
-      oldWs.on('error', noop);
-      oldWs.off('error', this.#onError);
-      oldWs.off('open', this.#onWsOpen);
-      oldWs.off('payload', this.#onWsPayload);
-      oldWs.off('close', this.#onWsClose);
-      oldWs.off('ping', this.#onPing);
-      oldWs.destroy();
+      oldWs
+        .on('error', noop)
+        .off('error', this.#onError)
+        .off('open', this.#onWsOpen)
+        .off('payload', this.#onWsPayload)
+        .off('binary', this.#onWsBinary)
+        .off('close', this.#onWsClose)
+        .off('ping', this.#onPing)
+        .destroy()
     }
 
 		const oldUdp = Reflect.get(oldState, 'udp') as UDPConnection | undefined;
@@ -151,6 +160,15 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 			oldUdp.destroy();
 		}
 
+    const oldDave = Reflect.get(oldState, 'dave') as DaveSession | undefined;
+    const newDave = Reflect.get(newState, 'dave') as DaveSession | undefined;
+
+    if (oldDave && oldDave !== newDave) {
+      oldDave
+        .off('keyPackage', this.#onDaveKeyPackage)
+        .off('invalidateTransition', this.#onDaveInvalidateTransition)
+        .destroy()
+    }
 
     this.#state = newState;
 
@@ -165,6 +183,25 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
     this.emit('ping');
   }
 
+  #createDaveSession(protocolVersion: number) {
+    if (this.#state.code !== ConnectionStateCode.SelectingProtocol && this.#state.code !== ConnectionStateCode.Ready && this.#state.code !== ConnectionStateCode.Resuming)  {
+      return;
+    }
+
+    const session = new DaveSession(
+      protocolVersion,
+      this.#state.connectionOptions.userId,
+      this.#state.connectionOptions.channelId
+    );
+
+    session
+      .on('keyPackage', this.#onDaveKeyPackage)
+      .on('invalidateTransition', this.#onDaveInvalidateTransition)
+      .reinit();
+
+    return session;
+  }
+
   #onWsOpen: WebSocketConnectionEvents['open'] = () => {
     if (this.#state.code === ConnectionStateCode.Opening) {
       const { guildId: server_id, userId: user_id, sessionId: session_id, token } = this.#state.connectionOptions;
@@ -175,7 +212,8 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
           server_id,
           user_id,
           session_id,
-          token
+          token,
+          max_dave_protocol_version: DAVE_PROTOCOL_VERSION
         }
       });
 
@@ -246,20 +284,24 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
 			this.state = {
 				...this.#state,
-				code: ConnectionStateCode.UdpHandshaking,
-				udp,
-				connectionData: { ssrc: payload.d.ssrc },
+        code: ConnectionStateCode.UdpHandshaking,
+        udp,
+        connectionData: {
+          ssrc: payload.d.ssrc,
+          connectedClients: new Set()
+        },
 			};
 
       return;
     }
 
     if (payload.op === VoiceOpcodes.SessionDescription && this.#state.code === ConnectionStateCode.SelectingProtocol) {
-      const { mode: encryptionMode, secret_key: secretKey } = payload.d;
+      const { mode: encryptionMode, secret_key: secretKey, dave_protocol_version: daveProtocolVersion } = payload.d;
 
       this.state = {
 				...this.#state,
 				code: ConnectionStateCode.Ready,
+        dave: this.#createDaveSession(daveProtocolVersion),
 				connectionData: {
 					...this.#state.connectionData,
 					encryptionMode,
@@ -298,6 +340,121 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
       return;
     }
+
+    if ((payload.op === VoiceOpcodes.ClientsConnect || payload.op === VoiceOpcodes.ClientDisconnect) &&
+        (this.#state.code === ConnectionStateCode.Ready || this.#state.code === ConnectionStateCode.UdpHandshaking || this.#state.code === ConnectionStateCode.SelectingProtocol || this.#state.code === ConnectionStateCode.Resuming))
+    {
+      const { connectionData } = this.#state;
+
+      if (payload.op === VoiceOpcodes.ClientsConnect)
+        for (const id of payload.d.user_ids) {
+          connectionData.connectedClients.add(id);
+        }
+      else {
+        connectionData.connectedClients.delete(payload.d.user_id);
+      }
+
+      return;
+    }
+
+    if ((this.#state.code === ConnectionStateCode.Ready || this.#state.code === ConnectionStateCode.Resuming) && this.#state.dave) {
+
+      if (payload.op === VoiceOpcodes.DavePrepareTransition) {
+        // Downgrade, someone else does not support the protocol we're currently using
+
+        const sendReady = this.#state.dave.prepareTransition(payload.d);
+
+        if (sendReady) {
+          this.#state.ws.sendPayload({
+            op: VoiceOpcodes.DaveTransitionReady,
+            d: { transition_id: payload.d.transition_id },
+          });
+        }
+
+        if (payload.d.transition_id === 0) {
+          this.emit('transitioned', 0);
+
+        }
+      } else if (payload.op === VoiceOpcodes.DaveExecuteTransition) {
+        const transitioned = this.#state.dave.executeTransition(payload.d.transition_id);
+
+        if (transitioned) {
+          this.emit('transitioned', payload.d.transition_id);
+        }
+
+      } else if (payload.op === VoiceOpcodes.DavePrepareEpoch) {
+        this.#state.dave?.prepareEpoch(payload.d);
+      }
+    }
+  }
+
+  #onWsBinary: WebSocketConnectionEvents['binary'] = (message) => {
+    if (this.#state.code !== ConnectionStateCode.Ready || !this.#state.dave) {
+      return;
+    }
+
+    if (message.op === VoiceOpcodes.DaveMlsExternalSender) {
+      this.#state.dave.setExternalSender(message.payload);
+      return;
+    }
+
+    if (message.op === VoiceOpcodes.DaveMlsProposals) {
+      const payload = this.#state.dave.processProposals(message.payload, this.#state.connectionData.connectedClients);
+			if (payload) {
+        this.#state.ws.sendBinaryMessage(VoiceOpcodes.DaveMlsCommitWelcome, payload);
+      }
+
+      return;
+    }
+
+    if (message.op === VoiceOpcodes.DaveMlsAnnounceCommitTransition) {
+      const { transitionId, success } = this.#state.dave.processCommit(message.payload);
+
+      if (success) {
+        if (transitionId === 0) {
+          this.emit('transitioned', transitionId);
+        } else {
+          this.#state.ws.sendPayload({
+            op: VoiceOpcodes.DaveTransitionReady,
+            d: { transition_id: transitionId },
+          });
+        }
+      }
+
+      return;
+    }
+
+    if (message.op === VoiceOpcodes.DaveMlsWelcome) {
+      const { transitionId, success } = this.#state.dave.processWelcome(message.payload);
+
+      if (success) {
+        if (transitionId === 0) {
+          this.emit('transitioned', transitionId);
+        } else {
+          this.#state.ws.sendPayload({
+            op: VoiceOpcodes.DaveTransitionReady,
+            d: { transition_id: transitionId },
+          });
+        }
+      }
+
+      return;
+    }
+  }
+
+  #onDaveKeyPackage: DaveSessionEvents['keyPackage'] = (keyPackage) => {
+		if (this.#state.code === ConnectionStateCode.SelectingProtocol || this.#state.code === ConnectionStateCode.Ready) {
+			this.#state.ws.sendBinaryMessage(VoiceOpcodes.DaveMlsKeyPackage, keyPackage);
+    }
+  }
+
+  #onDaveInvalidateTransition: DaveSessionEvents['invalidateTransition'] = (transitionId) => {
+		if (this.#state.code === ConnectionStateCode.SelectingProtocol || this.#state.code === ConnectionStateCode.Ready) {
+			this.#state.ws.sendPayload({
+				op: VoiceOpcodes.DaveMlsInvalidCommitWelcome,
+				d: { transition_id: transitionId },
+			});
+    }
   }
 
   #onUdpClose = () => {
@@ -318,6 +475,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       .once('close', this.#onWsClose)
       .on('error',this.#onError)
       .on('payload', this.#onWsPayload)
+      .on('binary', this.#onWsBinary)
       .on('ping', this.#onPing)
   }
 
@@ -356,7 +514,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
     }
   }
 
-  #createAudioPacket(opusPacket: Buffer, connectionData: ConnectionData) {
+  #createAudioPacket(opusPacket: Buffer, connectionData: ConnectionData, daveSession?: DaveSession) {
     const header = createRTPHeader({
       ssrc: connectionData.ssrc,
       sequence: connectionData.sequence,
@@ -370,7 +528,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       opusPacket,
       header,
       connectionData,
-      this.#nonceBuffer
+      daveSession
     ))
   }
 
@@ -379,7 +537,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
       return;
     }
 
-		this.#state.preparedPacket = this.#createAudioPacket(opusPacket, this.#state.connectionData);
+		this.#state.preparedPacket = this.#createAudioPacket(opusPacket, this.#state.connectionData, this.#state.dave);
 		return this.#state.preparedPacket;
 	}
 
@@ -442,8 +600,10 @@ function chooseEncryptionMode(serverModes: EncryptionMode[]) {
 	return mode;
 }
 
-function packVoiceData(opusPacket: Buffer, header: Buffer, connectionData: ConnectionData, nonce: Buffer) {
+function packVoiceData(opusPacket: Buffer, header: Buffer, connectionData: ConnectionData, daveSession?: DaveSession) {
   const { secretKey, encryptionMode } = connectionData;
+
+  const packet = daveSession?.encrypt(opusPacket) ?? opusPacket;
 
   connectionData.nonce++;
 
@@ -461,7 +621,7 @@ function packVoiceData(opusPacket: Buffer, header: Buffer, connectionData: Conne
     case 'aead_xchacha20_poly1305_rtpsize': {
       return [
         header,
-        secretbox.aeadClose(opusPacket, header, connectionData.nonceBuffer, secretKeyBuffer),
+        secretbox.aeadClose(packet, header, connectionData.nonceBuffer, secretKeyBuffer),
         noncePadding
       ];
     }
@@ -469,7 +629,7 @@ function packVoiceData(opusPacket: Buffer, header: Buffer, connectionData: Conne
     case 'aead_aes256_gcm_rtpsize': {
       return [
         header,
-        secretbox.gcmClose(opusPacket, header, connectionData.nonceBuffer, secretKeyBuffer),
+        secretbox.gcmClose(packet, header, connectionData.nonceBuffer, secretKeyBuffer),
         noncePadding
       ]
     }

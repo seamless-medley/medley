@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
-import { GatewayOpcodes, GatewayVoiceStateUpdateData } from "discord-api-types/v10";
-import { VoiceOpcodes } from "discord-api-types/voice/v4";
+import { GatewayOpcodes } from "discord-api-types/v10";
+import type { GatewayVoiceStateUpdateData, Snowflake } from "discord-api-types/v10";
+import type { VoiceOpcodes } from "discord-api-types/voice/v8";
 
 export interface Payload<OP, D> {
   op: OP;
@@ -38,6 +39,7 @@ type IdentifyData = {
   user_id: string;
   session_id: string;
   token: string;
+  max_dave_protocol_version?: number;
 }
 
 // 0
@@ -88,6 +90,7 @@ export interface HeartbeatVoicePayload extends VoicePayload<HeartbeatVoiceData> 
 type SessionDescriptionData = {
   mode: EncryptionMode;
   secret_key: number[];
+  dave_protocol_version: number;
 }
 
 // 4
@@ -128,9 +131,72 @@ export interface ResumedVoicePayload extends VoicePayload {
   op: VoiceOpcodes.Resumed;
 }
 
+export interface eClientsConnectData {
+  user_ids: Snowflake[];
+}
+
+// 11
+
+export interface ClientsConnectPayload extends VoicePayload<eClientsConnectData> {
+  op: VoiceOpcodes.ClientsConnect;
+}
+
+export interface ClientDisconnectData {
+  user_id: Snowflake;
+}
+
 // 13
-export interface ClientDisconnectVoicePayload extends VoicePayload {
+export interface ClientDisconnectVoicePayload extends VoicePayload<ClientDisconnectData> {
   op: VoiceOpcodes.ClientDisconnect;
+}
+
+export interface DavePrepareTransitionData {
+  protocol_version: number;
+  transition_id: number;
+}
+
+// 21
+export interface DavePrepareTransitionPayload extends VoicePayload<DavePrepareTransitionData> {
+  op: VoiceOpcodes.DavePrepareTransition;
+}
+export interface DaveExecuteTransitionData {
+  transition_id: number;
+}
+
+// 22
+
+export interface VoiceDaveExecuteTransitionPayload extends VoicePayload<DaveExecuteTransitionData> {
+  op: VoiceOpcodes.DaveExecuteTransition;
+}
+
+export interface DaveTransitionReadyData {
+  transition_id: number;
+}
+
+// 23
+
+export interface DaveTransitionReadyPayload extends VoicePayload<DaveTransitionReadyData> {
+  op: VoiceOpcodes.DaveTransitionReady;
+}
+
+export interface DavePrepareEpochData {
+  protocol_version: number;
+  epoch: number;
+}
+
+// 24
+export interface DavePrepareEpochPayload extends VoicePayload<DavePrepareEpochData> {
+  op: VoiceOpcodes.DavePrepareEpoch;
+}
+
+export interface DaveMlsInvalidCommitWelcomeData {
+  transition_id: number;
+}
+
+// 31
+
+export interface DaveMlsInvalidCommitWelcomePayload extends VoicePayload<DaveMlsInvalidCommitWelcomeData> {
+  op: VoiceOpcodes.DaveMlsInvalidCommitWelcome;
 }
 
 export type VoiceClientPayload =
@@ -138,7 +204,10 @@ export type VoiceClientPayload =
   SelectProtocolVoicePayload |
   HeartbeatVoicePayload |
   SpeakingVoicePayload |
-  ResumeVoicePayload;
+  ResumeVoicePayload |
+  DaveMlsInvalidCommitWelcomePayload |
+  DaveTransitionReadyPayload
+  ;
 
 export type VoiceServerPayload =
   ReadyVoicePayload |
@@ -147,9 +216,16 @@ export type VoiceServerPayload =
   HeartbeatAckVoicePayload |
   HelloVoicePayload |
   ResumedVoicePayload |
-  ClientDisconnectVoicePayload;
+  ClientsConnectPayload |
+  ClientDisconnectVoicePayload |
+  DavePrepareTransitionPayload |
+  VoiceDaveExecuteTransitionPayload |
+  DavePrepareEpochPayload
+  ;
 
 export const makeVoiceStateUpdatePayload = (data: GatewayVoiceStateUpdateData): GatewayVoiceStateUpdatePayload => ({
   op: GatewayOpcodes.VoiceStateUpdate,
   d: data
-})
+});
+
+export const SILENCE_FRAME = Buffer.from([0xf8, 0xff, 0xfe]);

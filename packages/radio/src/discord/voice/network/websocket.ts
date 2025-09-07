@@ -1,14 +1,21 @@
 import { isString } from "lodash";
 import { TypedEmitter } from "tiny-typed-emitter";
 import WebSocket from 'ws';
-import { VoiceOpcodes } from 'discord-api-types/voice/v4';
+import { VoiceOpcodes } from 'discord-api-types/voice/v8';
 import { VoiceClientPayload, VoiceServerPayload, HeartbeatAckVoicePayload, HeartbeatVoicePayload, ResumeVoicePayload } from "./payload";
+
+export interface BinaryWebSocketMessage {
+	op: VoiceOpcodes;
+	payload: Buffer;
+	seq: number;
+}
 
 export interface WebSocketConnectionEvents {
   open(event: WebSocket.Event): void;
   close(event: WebSocket.CloseEvent): void;
   error(error: Error): void;
   payload(payload: VoiceServerPayload): void;
+  binary(message: BinaryWebSocketMessage): void;
   ping(latency: number): void;
 }
 
@@ -62,6 +69,19 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
   }
 
   #onMessage: WebSocket['onmessage'] = (e) => {
+    if (e.data instanceof Buffer || e.data instanceof ArrayBuffer) {
+      const buffer = e.data instanceof ArrayBuffer ? Buffer.from(e.data) : e.data;
+			const seq = buffer.readUInt16BE(0);
+			const op = buffer.readUInt8(2);
+			const payload = buffer.subarray(3);
+
+      this.#seq = seq;
+
+      this.emit('binary', { op, seq, payload });
+
+      return;
+    }
+
     if (!isString(e.data)) {
       return;
     }
@@ -112,6 +132,15 @@ export class WebSocketConnection extends TypedEmitter<WebSocketConnectionEvents>
     } catch (error) {
       this.emit('error', error as Error);
     }
+  }
+
+  sendBinaryMessage(opcode: VoiceOpcodes, payload: Buffer) {
+		try {
+			const message = Buffer.concat([new Uint8Array([opcode]), payload]);
+			this.#ws.send(message);
+		} catch (error) {
+			this.emit('error', error as Error);
+		}
   }
 
   set heartbeatInterval(ms: number) {

@@ -31,6 +31,7 @@
     "@seamless-medley/medley": "0.5.3",
     "@seamless-medley/remote": "../remote",
     "@seamless-medley/utils": "../utils",
+    "@snazzah/davey": "^0.1.6",
     "axios": "^1.8.4",
     "bufferutil": "^4.0.8",
     "cfonts": "^3.2.0",
