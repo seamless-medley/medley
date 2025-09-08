@@ -19,7 +19,6 @@ const Sidebar = () => {
 
   useEffect(() => {
     if (!station) {
-      setCollections([]);
       return;
     }
 
