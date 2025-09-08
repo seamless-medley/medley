@@ -109,6 +109,9 @@ importers:
       '@seamless-medley/utils':
         specifier: ../utils
         version: link:../utils
+      '@snazzah/davey':
+        specifier: ^0.1.6
+        version: 0.1.6
       axios:
         specifier: ^1.8.4
         version: 1.11.0(debug@4.4.1)
@@ -1600,6 +1603,93 @@ packages:
   '@sindresorhus/merge-streams@2.3.0':
     resolution: {integrity: sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg==}
     engines: {node: '>=18'}
+
+  '@snazzah/davey-android-arm-eabi@0.1.6':
+    resolution: {integrity: sha512-6Fso+kxvvIcmUdTgU4etHjvEZUwGwvIk+SUYxKTRZKz/S62pZvcFeZfbofpQC5ZIlt/rdp7l+4IM62J7PUduxQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [android]
+
+  '@snazzah/davey-android-arm64@0.1.6':
+    resolution: {integrity: sha512-5ZGLumjewJAmGAcHqSHb2+KZSSufdNY++/GouzqdQXfhs2bSNBPuHpNn94u6//5UK0o73udJ6B1H/uLOLfEBLQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [android]
+
+  '@snazzah/davey-darwin-arm64@0.1.6':
+    resolution: {integrity: sha512-0k6gOm29bcznz4ND1gfJVKeCxfyFw/EtfhPQvQ2PPJToSIaSvVqfYIlj/v9ogWW/lzuPI4EbLP0b6hnZkKidbQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@snazzah/davey-darwin-x64@0.1.6':
+    resolution: {integrity: sha512-y9UuymB5JTi9LSwjsCZDf/mjI6nAum1+uYX2h4xdO+VUxXQSAR4B2mr3lCI7l9KwYqW7JVDN5wETithAkXcTYA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@snazzah/davey-freebsd-x64@0.1.6':
+    resolution: {integrity: sha512-G0XzHi+pZqTZ5Zr7Z66J6oGOG07+Obw7f0CwD9nAJcSFlKnd8wYzTjL+krHfQxmLHnuA5w/9df+M9oDJDcGcJw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@snazzah/davey-linux-arm-gnueabihf@0.1.6':
+    resolution: {integrity: sha512-RaxTzO8iJfDvj4a8OcXRwcP+2WfaCcno28ZWFMTI0pHEviG3MfLH5COAIvtMQvg0XfC+HgFC4YA1d29S8Dhvbg==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@snazzah/davey-linux-arm64-gnu@0.1.6':
+    resolution: {integrity: sha512-2BIJSWs4rHq4U9A7B6WtF1LzwYJrbFUz5SQVmwqwQXKJ8cm81iizqclDGWr3zFGiVPTXLZ/+G3wnQNDB54oABQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@snazzah/davey-linux-arm64-musl@0.1.6':
+    resolution: {integrity: sha512-N1egO+HT8cvSdIGCzJNRVH3ZhxCIYKVYxEkfzVZaBx26snN8NF737YTVRldl84w//3tdgohyl27yrn+dMkWS2Q==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@snazzah/davey-linux-x64-gnu@0.1.6':
+    resolution: {integrity: sha512-RAC96Y//HHoMP+1MUf4rOkBq5Nx6GCiOGeGsNXt7r02lbIthoFEPYFQdbfc9jYA79k67gpzmCa0N5ws7ZLVU5A==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@snazzah/davey-linux-x64-musl@0.1.6':
+    resolution: {integrity: sha512-nBvxJTKlQFP9UsQ7ah78L+rGdcwLWKDR8z/knut/M+UZLe37vaponJAbY3F5ZqGAcfqJbwUi/CXR77t9E+TDmw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@snazzah/davey-wasm32-wasi@0.1.6':
+    resolution: {integrity: sha512-hvpZH6a4mYZiXv6vdZaFwjPProgFtb3k4BoMvEEJZDXsEPuIDgp+d2BX5Q9nVazdnJa/6JR/XCuObzugPWp0Ew==}
+    engines: {node: '>=14.0.0'}
+    cpu: [wasm32]
+
+  '@snazzah/davey-win32-arm64-msvc@0.1.6':
+    resolution: {integrity: sha512-iuxYXXa0Z8eAEZotAlMYUc5DCy3VonRXQMm8/w2EvM/ZzGBI7SMap0GhPf6HjArEW32ETarTLh1s/Yi/jhFPDQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@snazzah/davey-win32-ia32-msvc@0.1.6':
+    resolution: {integrity: sha512-QEubcCIBR+ZZoQzRzJuOuKcH2IaF2pFXU+t48ITHG1o2WL4NAnvc3IpfVQGhbkr+DlydZ6fKNMMEemd1pRZzRA==}
+    engines: {node: '>= 10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@snazzah/davey-win32-x64-msvc@0.1.6':
+    resolution: {integrity: sha512-8tR3o+amQOHJL8QzSwuSCCave+jm3SC1m1OKSh9Coy4wN/XoJN0XQUxqzA7ineSClAMW3yIO0ShFmMlMIXsC0A==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@snazzah/davey@0.1.6':
+    resolution: {integrity: sha512-wKJDQ7iobl3rvuQDXLC2yZdpuVxPvMnbyjyPpkcETqPfqNVrdyX9zSdV74dnkpx7aLpINEmKh8ZEIlCIJA2h1w==}
+    engines: {node: '>= 10'}
 
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
@@ -5892,6 +5982,67 @@ snapshots:
       node-gyp-build: 4.8.4
 
   '@sindresorhus/merge-streams@2.3.0': {}
+
+  '@snazzah/davey-android-arm-eabi@0.1.6':
+    optional: true
+
+  '@snazzah/davey-android-arm64@0.1.6':
+    optional: true
+
+  '@snazzah/davey-darwin-arm64@0.1.6':
+    optional: true
+
+  '@snazzah/davey-darwin-x64@0.1.6':
+    optional: true
+
+  '@snazzah/davey-freebsd-x64@0.1.6':
+    optional: true
+
+  '@snazzah/davey-linux-arm-gnueabihf@0.1.6':
+    optional: true
+
+  '@snazzah/davey-linux-arm64-gnu@0.1.6':
+    optional: true
+
+  '@snazzah/davey-linux-arm64-musl@0.1.6':
+    optional: true
+
+  '@snazzah/davey-linux-x64-gnu@0.1.6':
+    optional: true
+
+  '@snazzah/davey-linux-x64-musl@0.1.6':
+    optional: true
+
+  '@snazzah/davey-wasm32-wasi@0.1.6':
+    dependencies:
+      '@napi-rs/wasm-runtime': 0.2.12
+    optional: true
+
+  '@snazzah/davey-win32-arm64-msvc@0.1.6':
+    optional: true
+
+  '@snazzah/davey-win32-ia32-msvc@0.1.6':
+    optional: true
+
+  '@snazzah/davey-win32-x64-msvc@0.1.6':
+    optional: true
+
+  '@snazzah/davey@0.1.6':
+    optionalDependencies:
+      '@snazzah/davey-android-arm-eabi': 0.1.6
+      '@snazzah/davey-android-arm64': 0.1.6
+      '@snazzah/davey-darwin-arm64': 0.1.6
+      '@snazzah/davey-darwin-x64': 0.1.6
+      '@snazzah/davey-freebsd-x64': 0.1.6
+      '@snazzah/davey-linux-arm-gnueabihf': 0.1.6
+      '@snazzah/davey-linux-arm64-gnu': 0.1.6
+      '@snazzah/davey-linux-arm64-musl': 0.1.6
+      '@snazzah/davey-linux-x64-gnu': 0.1.6
+      '@snazzah/davey-linux-x64-musl': 0.1.6
+      '@snazzah/davey-wasm32-wasi': 0.1.6
+      '@snazzah/davey-win32-arm64-msvc': 0.1.6
+      '@snazzah/davey-win32-ia32-msvc': 0.1.6
+      '@snazzah/davey-win32-x64-msvc': 0.1.6
 
   '@socket.io/component-emitter@3.1.2': {}
 
