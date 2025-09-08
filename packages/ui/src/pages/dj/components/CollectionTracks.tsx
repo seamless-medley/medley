@@ -8,6 +8,7 @@ import type { Collection, CollectionView, MetadataOnlyTrack, Remotable, TrackKin
 
 import { range } from "lodash";
 import { extractArtists, selectConsistentValue } from "@seamless-medley/utils";
+import { useRemotableProp } from "@ui/hooks/remotable";
 
 type TrackRowData = {
   id: string;
@@ -97,11 +98,13 @@ const trackToRowData = ([id, kind, artist, title, album]: MetadataOnlyTrack): Tr
 
 export function CollectionTracks(props: { collection: Remotable<Collection> | undefined}) {
   const { collection } = props;
+  const count = useRemotableProp(collection, 'length', 0);
+
   const tableRef = useRef(null);
 
   // virtual table
   const virt = useVirtualizer({
-    count: collection?.length() ?? 0,
+    count,
     getScrollElement: () => tableRef.current,
     estimateSize: () => +px('2.25em'),
     overscan: 20
