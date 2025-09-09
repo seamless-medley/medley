@@ -19,7 +19,7 @@
     "@types/node": "^20.14.8",
     "husky": "^9.1.4",
     "turbo": "^2.4.4",
-    "typescript": "5.5.4"
+    "typescript": "5.9.2"
   },
   "packageManager": "pnpm@10.14.0",
   "pnpm": {
@@ -43,7 +43,7 @@
       "node-domexception": "*"
     },
     "overrides": {
-      "typescript": "5.5.4",
+      "typescript": "5.9.2",
       "micromatch": ">=4.0.8"
     },
     "onlyBuiltDependencies": [
