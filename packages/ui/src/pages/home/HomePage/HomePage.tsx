@@ -19,7 +19,7 @@ import { css } from "@linaria/core";
 import { IconRadio, IconHeadphones } from '@tabler/icons-react';
 import { darken, getLuminance, lighten, linearGradient } from "polished";
 import { prominent } from "color.js";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { formatTags } from "@seamless-medley/utils";
 
 import { useSurrogate } from "@ui/hooks/surrogate";

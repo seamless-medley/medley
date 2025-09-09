@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { Box, Flex, FlexProps, MantineStyleProps } from "@mantine/core";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { parseToRgb, rgbToColorString, transparentize } from "polished";
-import { easeOut } from "framer-motion";
+import { easeOut } from "motion/react";
 
 import { UseAudioLevelsData, useAudioLevels } from "@ui/hooks/useAudioLevels";
 import { theme } from "@ui/theme/theme";

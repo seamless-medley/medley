@@ -3,7 +3,7 @@ import { ActionIcon, Box, Center, Flex, Image, Stack, Text, Tooltip, rem } from 
 import { useElementSize, useMove } from "@mantine/hooks";
 import { IconPlayerPause, IconPlayerPlayFilled, IconPlayerTrackNext, IconVolume, IconVolumeOff } from "@tabler/icons-react";
 import { adjustHue, hsl, linearGradient, setLightness, transparentize } from "polished";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { config as springConfig } from '@react-spring/web';
 
 import { random, take, zip } from "lodash";

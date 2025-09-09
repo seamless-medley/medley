@@ -71,7 +71,7 @@ export default defineConfig({
           lodash: ['lodash'],
           react: [
             'react', 'react-dom',
-            'polished', 'framer-motion'
+            'polished', 'motion'
           ],
           react_misc: [
             'overlayscrollbars',

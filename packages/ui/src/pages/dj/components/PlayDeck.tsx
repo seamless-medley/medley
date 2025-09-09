@@ -5,7 +5,7 @@ import { cx } from "@linaria/core";
 import { Box, Card, Flex, Image, Text } from "@mantine/core";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { transparentize } from "polished";
-import { AnimatePresence, motion, MotionNodeOptions } from "framer-motion";
+import { AnimatePresence, motion, MotionNodeOptions } from "motion/react";
 
 import type { DeckIndex } from "@seamless-medley/medley";
 import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
