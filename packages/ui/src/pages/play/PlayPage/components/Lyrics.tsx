@@ -1,5 +1,5 @@
 import React, { RefObject, CSSProperties, PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import classNames from 'classnames';
+import clsx from 'clsx';
 import { linearGradient, rgba, setSaturation, parseToHsl } from 'polished';
 import { styled } from '@linaria/react';
 import { clamp, findIndex, findLastIndex } from 'lodash';
@@ -125,7 +125,7 @@ const TickerScroller = attrs(props => {
   const { position } = props;
 
   return ({
-    className: classNames({ smooth: position! > 0}),
+    className: clsx({ smooth: position! > 0}),
     style: {
       transform: `translate3d(0px, ${-position!}px, 0px)`,
     }
@@ -173,7 +173,7 @@ const LineText = attrs(props => {
 
   return ({
     style,
-    className: classNames({ zoom: zoom || active, dim })
+    className: clsx({ zoom: zoom || active, dim })
   });
 
 }, styled.div<LineTextProps>`
@@ -214,7 +214,7 @@ const KaraokeTextOverlay = attrs(props => {
   const { active } = props;
 
   return ({
-    className: classNames({ active })
+    className: clsx({ active })
   });
 
 }, styled.div<KaraokeTextOverlayProps>`

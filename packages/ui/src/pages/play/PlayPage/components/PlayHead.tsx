@@ -1,5 +1,5 @@
 import React, { PropsWithChildren, useCallback, useEffect, useRef, useState } from "react";
-import classNames from "classnames";
+import clsx from 'clsx';
 import { styled } from '@linaria/react';
 import { setLightness, transparentize } from 'polished';
 
@@ -259,7 +259,7 @@ export const PlayHead: React.FC<PropsWithChildren<Props>> = (props) => {
 
   return (
     <>
-      <Container ref={containerEl} className={classNames({ withNext: showNext })}>
+      <Container ref={containerEl} className={clsx({ withNext: showNext })}>
         <Box>
           <ProgressText
             backgroundColor={backgroundColor}
@@ -275,7 +275,7 @@ export const PlayHead: React.FC<PropsWithChildren<Props>> = (props) => {
       <Next
         style={{ minWidth: `calc(${containerEl.current?.clientWidth ?? 0}px - 0.4em * 2)` }}
         color={props.activeColor}
-        className={classNames({ show: showNext })}
+        className={clsx({ show: showNext })}
       >
         <span>{nextTrack && 'Next: '}{nextTrack}</span>
       </Next>
