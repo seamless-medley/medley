@@ -353,9 +353,9 @@ importers:
       '@wyw-in-js/babel-preset':
         specifier: ^0.7.0
         version: 0.7.0(typescript@5.5.4)
-      classnames:
-        specifier: ^2.3.2
-        version: 2.5.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       color.js:
         specifier: ^1.2.0
         version: 1.2.0
@@ -2411,9 +2411,6 @@ packages:
 
   ci-parallel-vars@1.0.1:
     resolution: {integrity: sha512-uvzpYrpmidaoxvIQHM+rKSrigjOe9feHYbw4uOI2gdfe1C3xIlxO+kVXq83WQWNniTf8bAxVpy+cQeFQsMERKg==}
-
-  classnames@2.5.1:
-    resolution: {integrity: sha512-saHYOzhIQs6wy2sVxTM6bUDsQO4F50V9RQ22qBpEdCW+I+/Wmke2HOl6lS6dTpdxVhb88/I6+Hs+438c3lfUow==}
 
   clean-stack@2.2.0:
     resolution: {integrity: sha512-4diC9HaTE+KRAMWhDhrGOECgWZxoevMc5TlkObMqNSsVU62PYzXZ/SMTjzyGAFF1YusgxGcSWTEXBhp0CPwQ1A==}
@@ -6906,8 +6903,6 @@ snapshots:
   ci-info@4.3.0: {}
 
   ci-parallel-vars@1.0.1: {}
-
-  classnames@2.5.1: {}
 
   clean-stack@2.2.0: {}
 
