@@ -197,7 +197,7 @@ export const PlayHead: React.FC<PropsWithChildren<Props>> = (props) => {
   const [nextTrack, setNextTrack] = useState<string | undefined>();
   const [showNext, setShowNext] = useState(false);
 
-  const hideNextTimer = useRef<number>();
+  const hideNextTimer = useRef<number>(undefined);
 
   const [text, setText] = useState('');
 

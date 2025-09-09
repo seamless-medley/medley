@@ -20,7 +20,7 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
   const elementRef = useMergedRef(elementSize.ref, canvasRef);
   const ctxRef = useRef<CanvasRenderingContext2D | undefined>(undefined);
   const gradientRef = useRef<CanvasGradient | undefined>(undefined);
-  const audRef = useRef<UseAudioLevelsData>();
+  const audRef = useRef<UseAudioLevelsData>(undefined);
   const raf = useRef(0);
 
   useEffect(() => {
