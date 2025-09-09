@@ -2,7 +2,6 @@ import { Flex } from "@mantine/core";
 import { styled } from "@linaria/react";
 import { times } from "lodash";
 import { PlayDeck } from "@ui/pages/dj/components/PlayDeck";
-import { Route } from "./route"
 import { useParams } from "@tanstack/react-router";
 
 const Container = styled.div`
