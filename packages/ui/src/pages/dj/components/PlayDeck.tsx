@@ -9,7 +9,7 @@ import { AnimatePresence, motion, MotionNodeOptions } from "motion/react";
 
 import type { DeckIndex } from "@seamless-medley/medley";
 import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
-import { theme } from "@ui/theme/theme";
+import { theme } from "@ui/theme";
 import { AutoScroller } from "@ui/components/AutoScoller";
 import { PlayHeadText } from "@ui/components/PlayHeadText";
 import { DJConsoleRoute } from "../DJConsolePage/route";

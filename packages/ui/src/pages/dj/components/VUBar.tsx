@@ -5,7 +5,7 @@ import { parseToRgb, rgbToColorString, transparentize } from "polished";
 import { easeOut } from "motion/react";
 
 import { UseAudioLevelsData, useAudioLevels } from "@ui/hooks/useAudioLevels";
-import { theme } from "@ui/theme/theme";
+import { theme } from "@ui/theme";
 import { colorInterpolate, isSameRgb } from "@ui/utils";
 
 export type VUMeterProps = {
