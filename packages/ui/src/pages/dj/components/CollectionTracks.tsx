@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Box, Group, Table, px } from "@mantine/core";
 import { useDebouncedState } from "@mantine/hooks";
 import { styled } from "@linaria/react";
@@ -9,6 +9,9 @@ import type { Collection, CollectionView, MetadataOnlyTrack, Remotable, TrackKin
 import { range } from "lodash";
 import { extractArtists, selectConsistentValue } from "@seamless-medley/utils";
 import { useRemotableProp } from "@ui/hooks/remotable";
+import { useContextMenu } from "mantine-contextmenu";
+import { IconArrowsShuffle } from "@tabler/icons-react";
+import { contextMenuClassNames } from "@ui/theme";
 
 type TrackRowData = {
   id: string;
@@ -40,13 +43,14 @@ export type TrackItemProps = {
   size: number;
   start: number;
   data?: TrackRowData;
+  onContextMenu?: React.MouseEventHandler<HTMLTableRowElement>;
 }
 
 const colors = range(1, 10)
   .flatMap(shade => ['red', 'pink', 'grape', 'violet', 'indigo', 'blue', 'cyan', 'green', 'lime', 'yellow', 'orange', 'teal'].map(name => `${name}.${shade}`));
 
 export const TrackItem = (props: TrackItemProps) => {
-  const { start, size, data } = props;
+  const { start, size, data, onContextMenu } = props;
 
   const artists = data ? extractArtists(data.artist ?? '') : [];
 
@@ -88,7 +92,7 @@ export const TrackItem = (props: TrackItemProps) => {
     )
 
   return (
-    <TrackRow h={size} style={{ transform: `translateY(${start}px)` }}>
+    <TrackRow h={size} style={{ transform: `translateY(${start}px)` }} onContextMenu={onContextMenu}>
       {children}
     </TrackRow>
   )
@@ -175,6 +179,8 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
     view.updateView(topIndex, virtualItems.length).then(fetchView);
   }, [view, topIndex, virtualItems.length]);
 
+  const { showContextMenu } = useContextMenu();
+
   return (
     <TrackListContainer ref={tableRef}>
       <Table>
@@ -195,6 +201,20 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
             size={vrow.size}
             start={vrow.start}
             data={tracks[vrow.index]}
+            onContextMenu={showContextMenu(
+              [
+                {
+                  key: 'shuffle',
+                  title: 'Shuffle',
+                  icon: <IconArrowsShuffle stroke={1} />,
+                  // disabled: collection?.options()?.auxiliary,
+                  onClick: () => collection?.shuffle()
+                }
+              ],
+              {
+                className: contextMenuClassNames.root
+              }
+            )}
           />)}
         </TrackListBody>
       </Table>
