@@ -1,6 +1,7 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { MantineProvider } from '@mantine/core';
 import { OverlayScrollbars } from "overlayscrollbars";
+import { ContextMenuProvider } from "mantine-contextmenu";
 import { getLogger } from "@logtape/logtape";
 
 import { routeTree } from "./pages/routeTree.gen";
@@ -37,7 +38,9 @@ const main = async () => {
   initRoot().render(
     // <React.StrictMode>
       <MantineProvider theme={theme} forceColorScheme="dark" classNamesPrefix="medley">
-        <RouterProvider router={router} />
+        <ContextMenuProvider shadow="sm" borderRadius="md" repositionOnRepeat>
+          <RouterProvider router={router} />
+        </ContextMenuProvider>
       </MantineProvider>
     // </React.StrictMode>
   );

@@ -33,6 +33,7 @@
     "embla-carousel-react": "^8.6.0",
     "eventemitter3": "^5.0.1",
     "lodash": "4.17.21",
+    "mantine-contextmenu": "^8.2.0",
     "mediasoup-client": "^3.9.5",
     "motion": "^12.23.12",
     "notepack.io": "^3.0.1",
