@@ -17,7 +17,6 @@
     "@mantine/carousel": "^8.3.0",
     "@mantine/core": "8.3.0",
     "@mantine/hooks": "8.3.0",
-    "@react-spring/web": "^10.0.1",
     "@seamless-medley/medley": "0.5.3",
     "@seamless-medley/remote": "../remote",
     "@seamless-medley/utils": "../utils",

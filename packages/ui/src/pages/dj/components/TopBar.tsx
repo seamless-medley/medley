@@ -4,7 +4,6 @@ import { useElementSize, useMove } from "@mantine/hooks";
 import { IconPlayerPause, IconPlayerPlayFilled, IconPlayerTrackNext, IconVolume, IconVolumeOff } from "@tabler/icons-react";
 import { adjustHue, hsl, linearGradient, setLightness, transparentize } from "polished";
 import { AnimatePresence, motion } from "motion/react";
-import { config as springConfig } from '@react-spring/web';
 
 import { random, take, zip } from "lodash";
 
@@ -140,7 +139,6 @@ const StationBanner: React.FC<StationIdProps & { colors: string[] }> = React.mem
                 {c}
               </Text>
             ))}
-
             <Text span ml={4}>Listeners</Text>
           </Box>
         </Stack>
@@ -288,8 +286,7 @@ const TrackInfo: React.FC<StationIdProps> = ({ stationId }) => {
         h="1.5em"
         truncate="end"
         fw={600}
-        delay={400}
-        springConfig={springConfig.wobbly}
+        transition={{ delay: 0.4 }}
         nowrap
       >
         {title}
@@ -299,8 +296,7 @@ const TrackInfo: React.FC<StationIdProps> = ({ stationId }) => {
         size="1.4em"
         h="1.4em"
         truncate="end"
-        delay={500}
-        springConfig={springConfig.wobbly}
+        transition={{ delay: 0.5 }}
         nowrap
       >
         {artist}
