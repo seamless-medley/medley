@@ -5,7 +5,6 @@ import { useCollection } from "@ui/hooks/useCollection";
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { CollectionTracks } from "../components/CollectionTracks";
 
-
 const Container = styled(Box)`
   display: flex;
   flex-direction: column;
@@ -27,7 +26,6 @@ export const CollectionPage = () => {
     <Container>
       <Header mx='md'>
         <h2>{description} - {length} tracks</h2>
-        <span>TODO: Buttons here</span>
       </Header>
 
       <CollectionTracks collection={collection} />
