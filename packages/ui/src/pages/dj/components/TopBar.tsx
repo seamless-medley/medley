@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActionIcon, Box, Center, Flex, Image, Stack, Text, Tooltip, rem } from "@mantine/core";
 import { useElementSize, useMove } from "@mantine/hooks";
 import { IconPlayerPause, IconPlayerPlayFilled, IconPlayerTrackNext, IconVolume, IconVolumeOff } from "@tabler/icons-react";
@@ -323,11 +323,7 @@ export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
 
   const [stationColors, setStationColors] = useState(['#FFF638', '#38FFF6']);
-
-  const elRef = useRef<HTMLDivElement>(null);
-  const altElRef = useRef<HTMLDivElement>(null);
-
-  const alt = useRef(false);
+  const [backgroundImage, setBackgroundImage] = useState<string>('linear-gradient(45deg, #FA8BFF 0%, #2BD2FF 52%, #2BFF88 90%)');
 
   useEffect(() => {
     async function changeBg() {
@@ -338,9 +334,7 @@ export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
         toDirection: '45deg'
       }).backgroundImage as string
 
-      (alt.current ? altElRef : elRef).current!.style.backgroundImage = bg;
-      altElRef.current!.style.opacity = alt.current ? '1' : '0';
-      alt.current = !alt.current;
+      setBackgroundImage(bg);
 
       setStationColors([
         setLightness(0.36, adjustHue(120, colors[0])),
@@ -348,26 +342,19 @@ export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
       ]);
     }
 
-    if (elRef.current && altElRef.current) {
-      changeBg();
-    }
-
-  }, [activeDeck, elRef.current, altElRef.current]);
+    changeBg();
+  }, [activeDeck]);
 
   return (
-    <Flex ref={elRef}
+    <Flex
+      component={motion.div}
       pos="relative"
       h="100%"
       c="dark.7"
-      bg="linear-gradient(45deg, #FA8BFF 0%, #2BD2FF 52%, #2BFF88 90%)"
+      transition={{ duration: 2, type: 'tween' }}
+      initial={{ backgroundImage }}
+      animate={{ backgroundImage }}
     >
-      <Box ref={altElRef}
-        w="100%"
-        h="100%"
-        pos="absolute"
-        style={{ transition: 'opacity 2s ease', opacity: 0 }}
-      />
-
       <StationBanner stationId={stationId} colors={stationColors} />
       <VUBar orientation="vertical" size={12} />
       <ActiveDeck stationId={stationId} />
