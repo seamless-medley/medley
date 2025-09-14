@@ -5,9 +5,13 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 import topLevelAwait from "vite-plugin-top-level-await";
 import { tanstackRouter  } from '@tanstack/router-plugin/vite'
 import wyw from '@wyw-in-js/vite';
+import pkg from './package.json';
 
 export default defineConfig({
   root: './src',
+  define: {
+    __UI_VERSION__: `${JSON.stringify(pkg.version)}`
+  },
   plugins: [
     tsconfigPaths(),
     topLevelAwait(),

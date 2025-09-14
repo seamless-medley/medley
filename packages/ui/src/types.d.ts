@@ -8,4 +8,6 @@ declare global {
     $root: Root,
     $client: MedleyClient | undefined;
   }
+
+  const __UI_VERSION__: string;
 }

@@ -14,7 +14,7 @@ const main = async () => {
 
   const logger = getLogger('main');
 
-  logger.info('Main start');
+  logger.info(`Main start, version ${__UI_VERSION__}`);
 
   OverlayScrollbars(
     {
