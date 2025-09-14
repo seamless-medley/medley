@@ -12,6 +12,7 @@ import { useElementSize } from '@mantine/hooks';
 import { attrs } from '@ui/utils/attrs';
 import { useDeck, useDeckInfo } from '@ui/hooks/useDeck';
 import { client } from '@ui/init';
+import { createCssStrokeFx } from '@ui/utils';
 
 export type BackgroundProp = {
   background: string;
@@ -238,12 +239,7 @@ const KaraokeTextOverlay = attrs(props => {
   perspective: 1000px;
 
   color: ${props => props.color};
-  text-shadow:
-    -0.025em -0.025em ${props => props.strokeColor},
-    0.025em 0.025em ${props => props.strokeColor},
-    -0.025em 0.025em ${props => props.strokeColor},
-    0.025em -0.025em ${props => props.strokeColor}
-    ;
+  text-shadow: ${props => createCssStrokeFx(0.025, props.strokeColor, { precision: 0.1, unit: 'em' })};
 
   font-size: 1em;
 

@@ -17,4 +17,17 @@ export function colorInterpolate(a: RgbColor, b: RgbColor, p: number): RgbColor 
   }
 }
 
+export function createCssStrokeFx(size: number, color: string, options: { precision: number, unit: string }) {
+  const { precision = 1, unit = 'px' } = options;
+  const shadow = [];
+  let from = -size;
+  for (let i = from; i <= size; i += size * precision) {
+    for (let j = from; j <= size; j += size * precision) {
+      shadow.push(`${i}${unit} ${j}${unit} 0 ${color}`)
+    }
+  }
+
+  return shadow.join(', ')
+}
+
 export const getNextDeck = (index: DeckIndex): DeckIndex => [1, 2, 0][index];
