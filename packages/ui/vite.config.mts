@@ -80,8 +80,7 @@ export default defineConfig({
           react_misc: [
             'overlayscrollbars',
             'overlayscrollbars-react',
-            'react-resizable-panels',
-            '@react-spring/web'
+            'react-resizable-panels'
           ],
           tanstack: [
             '@tanstack/react-router',
