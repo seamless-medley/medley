@@ -1,6 +1,6 @@
 import React, { RefObject, CSSProperties, PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { linearGradient, rgba, setSaturation, parseToHsl } from 'polished';
+import { linearGradient, rgba, setSaturation, parseToHsl, mix } from 'polished';
 import { styled } from '@linaria/react';
 import { clamp, findIndex, findLastIndex } from 'lodash';
 
@@ -164,9 +164,15 @@ const LineText = attrs(props => {
 
   const style: CSSProperties = {};
 
+
+  const createKaraokeTextFx = () => createCssStrokeFx(0.025, mix(0.7, colors.glow, colors.shadow), { precision: 0.1, unit: 'em' });
+
   if (active) {
     style.color = !karaoke ? colors.active : colors.text;
-    style.textShadow = `0px 0px 0.3em ${colors.glow}, 0.025em 0.025em 0.013em ${colors.shadow}`;
+    style.textShadow = !karaoke
+      ? `0px 0px 0.3em ${colors.glow}, 0.025em 0.025em 0.013em ${colors.shadow}`
+      : createKaraokeTextFx();
+
   } else {
     style.textShadow = '';
     style.color = dim ? colors.dim : colors.text
