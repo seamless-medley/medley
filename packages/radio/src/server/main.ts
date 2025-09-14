@@ -17,7 +17,7 @@ import { SocketServer as SocketIOServer } from './socket';
 import { MedleyServer } from './medley-server';
 import { AudioWebSocketServer } from './audio/ws/server';
 import { Config, loadConfig } from '../config';
-import { getVersionLine, showVersionBanner } from '../helper';
+import { loadBuildInfo, getVersionLine, showVersionBanner } from '../helper';
 import { StreamingAdapter } from '../streaming/types';
 
 declare module "express-session" {
@@ -215,7 +215,7 @@ async function main() {
     return;
   }
 
-  await showVersionBanner('banner.txt');
+  await loadBuildInfo('build-info.json').then(showVersionBanner);
 
   const info = Medley.getInfo();
 

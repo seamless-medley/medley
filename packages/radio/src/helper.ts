@@ -1,7 +1,9 @@
 import { readFile } from 'node:fs/promises';
-import { join } from "node:path";
+import { exists } from 'fs-extra';
 
 import { isString, partition } from "lodash";
+
+import { version } from './version';
 
 import {
   BoomBoxTrack,
@@ -20,12 +22,13 @@ import {
   scanDir
 } from "./core";
 
-import {
-  type StationConfig,
-  type SequenceConfig,
-  type StationProfile as StationProfileConfig
+import type {
+  StationConfig,
+  SequenceConfig,
+  StationProfile as StationProfileConfig
 } from './config/station';
-import { AutomatonConfig } from "./config/automaton";
+
+import type { AutomatonConfig } from "./config/automaton";
 import { MedleyAutomaton } from "./discord/automaton";
 
 function createCrateFromSequence(id: string, station: Station, sequence: SequenceConfig) {
@@ -205,37 +208,42 @@ export async function createAutomaton(cfg: AutomatonConfig & { id: string; creat
   });
 }
 
-let version: string;
+type VersionInfo = {
+  version: string;
+  buildDate?: Date;
+}
+
+let buildInfo: VersionInfo = {
+  version: 'dev',
+  buildDate: new Date()
+}
+
+export async function loadBuildInfo(file: string): Promise<VersionInfo> {
+  if (await exists(file)) {
+    const data = await readFile(file, 'utf-8').then(JSON.parse);
+
+    buildInfo = {
+      version,
+      buildDate: data?.buildDate ? new Date(data.buildDate) : undefined
+    }
+  }
+
+  return buildInfo;
+}
 
 export function getVersion() {
-  if (version) {
-    return;
-  }
-
-  if (process.env.npm_package_version) {
-    return version = process.env.npm_package_version;
-  }
-
-  try {
-    return version = require(join(process.cwd(), 'package.json')).version;
-  }
-  catch {
-
-  }
-
-  return version = 'unknown';
+  return buildInfo.version;
 }
 
 export function getVersionLine() {
-  const appVersion = getVersion();
   const electronVersion = process.versions['electron'];
   const runtime = electronVersion ? 'Electron' : 'NodeJS';
   const runtimeVersion = electronVersion ? `v${electronVersion}` : process.version;
 
-  return `Medley v${appVersion} running on ${runtime} ${runtimeVersion}; abi=${process.versions.modules}; uv=${process.versions.uv}; v8=${process.versions.v8}`;
+  return `Medley version ${getVersion()} running on ${runtime} ${runtimeVersion}; abi=${process.versions.modules}; uv=${process.versions.uv}; v8=${process.versions.v8}`;
 }
 
-export async function showVersionBanner(file: string) {
+export async function showVersionBanner() {
   const gradient = ['#961cb9', '#07d569', '#1c92f6'];
 
   require('cfonts').say('Medley', {
@@ -244,17 +252,10 @@ export async function showVersionBanner(file: string) {
     transitionGradient: true
   });
 
-  const info = await readFile(file)
-    .then(s => s.toString().split(/\r?\n/).map(l => l.trim()).filter(l => l !== ''))
-    .catch(() => [
-        'Medley (Discord)',
-        `Version: ${process.env.DEBUG ? 'Dev' : 'Unknown' }`
-      ]
-    );
-
-  if (!info) {
-    return;
-  }
+  const info = [
+    `Medley ${buildInfo.version}`,
+    ...(buildInfo?.buildDate ? [`Build Date: ${buildInfo.buildDate}`] : [])
+  ];
 
   function centered(s: string) {
     const pad = ' '.repeat(48 - (s.length / 2));

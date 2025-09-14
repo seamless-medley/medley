@@ -65,11 +65,9 @@ async function packageApp() {
 
   await outputJson(join(packagePath, 'package.json'), result, { spaces: 2 });
 
-  await outputFile(join(packagePath, 'banner.txt'), [
-    'Medley',
-    `Version: ${result.version}`,
-    `Build date: ${Date()}`
-  ].join('\n'));
+  await outputJson(join(packagePath, 'build-info.json'), {
+    buildDate: Date.now()
+  }, { spaces: 2 });
 
   await outputFile(join(packagePath, 'README.md'), [
     '```sh',
