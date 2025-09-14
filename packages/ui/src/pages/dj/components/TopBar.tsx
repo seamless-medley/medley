@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ActionIcon, Box, Center, Flex, Image, Stack, Text, Tooltip, rem } from "@mantine/core";
+import { ActionIcon, Box, Center, Flex, Group, Image, Stack, Text, Tooltip, rem } from "@mantine/core";
 import { useElementSize, useMove } from "@mantine/hooks";
 import { IconPlayerPause, IconPlayerPlayFilled, IconPlayerTrackNext, IconVolume, IconVolumeOff } from "@tabler/icons-react";
 import { adjustHue, hsl, linearGradient, setLightness, transparentize } from "polished";
@@ -359,7 +359,11 @@ export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
       <VUBar orientation="vertical" size={12} />
       <ActiveDeck stationId={stationId} />
 
-      <Flex direction="column" justify="space-evenly" pl={10}>
+      <Flex
+        direction="column"
+        justify="space-evenly"
+        pl={10}
+      >
         <TrackInfo stationId={stationId} />
         <Box >
           <PlayHeadText
@@ -371,9 +375,18 @@ export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
           />
         </Box>
 
-        <Flex direction="row" align="center" gap="md">
+        <Flex
+          direction="row"
+          align="center"
+          gap="md"
+        >
           <TransportControl stationId={stationId} />
-          <LyricsBar stationId={stationId} size="lg" inline />
+          <Box
+            maw='calc(100vw - 200px - 300px - (12px * 2) - 24px - 200px - (44px * 3) - 54px)'
+            mih='1lh'
+          >
+            <LyricsBar stationId={stationId} size="lg" autoscroll />
+          </Box>
         </Flex>
       </Flex>
     </Flex>
