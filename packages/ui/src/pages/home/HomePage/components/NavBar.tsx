@@ -1,10 +1,11 @@
-import { AppShell, Group, Title, Button, ThemeIcon, Popover, Box, TextInput, PasswordInput, Stack, Avatar } from '@mantine/core';
-import { IconMusic, IconVinyl } from '@tabler/icons-react';
+import { useCallback, useState } from 'react';
+import { AppShell, Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image } from '@mantine/core';
+import { IconVinyl } from '@tabler/icons-react';
 import { useForm } from '@tanstack/react-form';
 import { Link } from '@tanstack/react-router';
 import { useSession } from '@ui/hooks/useClient';
 import { client } from '@ui/init';
-import { useCallback, useState } from 'react';
+import logo from '@ui/logo.png';
 
 const LoginButton = () => {
   const [opened, setOpened] = useState(false);
@@ -80,18 +81,10 @@ export function NavBar() {
   return (
     <AppShell.Header>
       <Group h="100%" px="md" justify="space-between">
-        {/* Brand */}
         <Group align="center" gap="sm">
           <Link to="/" style={{ textDecoration: 'none' }}>
-            <Group align="center" gap="sm">
-              <ThemeIcon
-                size="lg"
-                radius="md"
-                variant="gradient"
-                gradient={{ from: 'pink', to: 'violet', deg: 45 }}
-              >
-                <IconMusic size={20} />
-              </ThemeIcon>
+            <Group align="center" gap="xs">
+              <Image src={logo} h={40} w="auto" fit="contain" />
               <Title
                 size="h3"
                 fw={700}

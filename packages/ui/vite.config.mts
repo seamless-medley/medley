@@ -9,6 +9,7 @@ import pkg from './package.json';
 
 export default defineConfig({
   root: './src',
+  publicDir: '../public',
   define: {
     __UI_VERSION__: `${JSON.stringify(pkg.version)}`
   },
