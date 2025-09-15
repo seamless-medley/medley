@@ -60,6 +60,8 @@ export class KaraokeFx {
 
     this.#input = new GainNode(context);
     this.#output = new GainNode(context);
+
+    this.set('mix', 0);
     this.bypass = true;
   }
 
