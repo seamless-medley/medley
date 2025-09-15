@@ -231,7 +231,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
       fx.bypass = false;
     }
 
-    fx.set('mix', this.#karaokeEnabled ? 0.8 : 0, 0.5);
+    fx.set('mix', this.#karaokeEnabled ? 0.70 : 0, 0.5);
   }
 
   get karaokeEnabled() {
