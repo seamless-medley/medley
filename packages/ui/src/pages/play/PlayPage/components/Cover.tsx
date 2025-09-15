@@ -4,15 +4,18 @@ import { rgba, transparentize } from "polished";
 import { styled } from '@linaria/react';
 
 const CoverContainer = styled.div`
+  --size: min(22cqh, 22cqw);
+
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 8em;
-  height: 8em;
+  width: var(--size);
+  height: var(--size);
   z-index: 30;
-  opacity: 1;
+  opacity: 0.88;
+  margin: 0.2em;
 
-  transform: scale(1.4) rotateZ(360deg) rotate(-135deg);
+  transform: scale(1.4) rotateZ(360deg) rotate(-180deg);
 
   transition:
     opacity 1s linear,
@@ -23,20 +26,23 @@ const CoverContainer = styled.div`
     height 1s ease-in-out;
   ;
 
-  transform-origin: -4%;
+  transform-origin: -12%;
 
   will-change: opacity, transform, bottom, left, width, height;
 
   &.visible {
-    opacity: 0.9;
     transform: scale(1) rotateZ(360deg) rotate(0deg);
   }
 
   &.center {
-    bottom: calc((100% - 25em) / 2);
-    left: calc((100% - 25em) / 2);
-    width: 25em;
-    height: 25em;
+    --centered-size: calc(var(--size) * 1.6);
+
+    bottom: calc((100% - var(--centered-size)) / 2);
+    left: calc((100% - var(--centered-size)) / 2);
+    width: var(--centered-size);
+    height: var(--centered-size);
+
+    transform-origin: -38%;
   }
 `;
 
@@ -309,7 +315,7 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid }) => {
     containerEl.current?.classList.add('visible');
   }, [url]);
 
-  const animationTimer = useRef<number>();
+  const animationTimer = useRef<number>(null);
 
   const revealThenCenter = () => {
     hide();
@@ -339,7 +345,11 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid }) => {
 
   useEffect(() => {
     const isCentered = containerEl.current?.classList.contains('center') ?? false;
-    const animate =  (isCentered && !center) ? centerThenReveal : revealThenCenter;
+
+    const animate = url
+      ? ((isCentered && !center) ? centerThenReveal : revealThenCenter)
+      : hide;
+
     animate();
   }, [center, url, colors, uuid]);
 
