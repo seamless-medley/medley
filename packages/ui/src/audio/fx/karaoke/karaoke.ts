@@ -12,7 +12,7 @@ export class KaraokeFx {
   #output: AudioNode;
 
   #splitter: ChannelSplitterNode;
-  #monoAttenuator: GainNode;
+  #monoAttenuated: GainNode;
 
   #lowpass: BiquadFilterNode;
   #highpass: BiquadFilterNode;
@@ -26,14 +26,19 @@ export class KaraokeFx {
   constructor(context: AudioContext) {
     this.#context = context;
 
+    // Split L/R and mix-down to mono
     this.#splitter = new ChannelSplitterNode(context, { numberOfOutputs: 2 });
-    this.#monoAttenuator = new GainNode(context, { gain: 0.25, channelCount: 1 });
+    this.#monoAttenuated = new GainNode(context, { gain: (1 / 4) * 0.8, channelCount: 1 });
+
+    this.#splitter.connect(this.#monoAttenuated, 0);
+    this.#splitter.connect(this.#monoAttenuated, 1);
 
     this.#lowpass = new BiquadFilterNode(context, {
       type: 'lowpass',
-      Q: 3.5,
-      frequency: 125
+      Q: 2.0,
+      frequency: 180
     });
+
 
     this.#highpass = new BiquadFilterNode(context, {
       type: 'highpass',
@@ -47,9 +52,9 @@ export class KaraokeFx {
       outputChannelCount: [2],
     });
 
-    this.#splitter.connect(this.#monoAttenuator, 0);
-    this.#splitter.connect(this.#monoAttenuator, 1);
-    this.#monoAttenuator.connect(this.#lowpass).connect(this.#highpass).connect(this.#processor, 0, 1);
+    // Preserve low and high frequency component and feed to the processor as bg component
+    this.#monoAttenuated.connect(this.#processor, 0, 1);
+    this.#monoAttenuated.connect(this.#lowpass).connect(this.#processor, 0, 1);
 
     this.#params = (this.#processor.parameters as unknown as Map<string, AudioParam>);
 

@@ -23,7 +23,7 @@ export class MedleyKaraoke extends AudioWorkletProcessor {
       const mix = mixParam.length > 1 ? mixParam[i] : mixParam[0];
       const bgLevel = bgParam.length > 1 ? bgParam[i] : bgParam[0];
 
-      const bg = bg_mono[i] * 1.25 * bgLevel;
+      const bg = bg_mono[i] * bgLevel;
       const bgMix = bg * mix;
 
       out_left[i] = l - (r * mix) + bgMix;
