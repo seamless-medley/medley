@@ -2,8 +2,8 @@ import { chain, random, sortBy } from "lodash";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { styled } from "@linaria/react";
-import { Button } from "@mantine/core";
-import { useSetState } from "@mantine/hooks";
+import { Box, Button, Flex, Stack } from "@mantine/core";
+import { useFullscreen, useSetState } from "@mantine/hooks";
 
 import { getLuminance,
   darken,
@@ -71,9 +71,14 @@ const Control = styled.div`
 
 const logger = getLogger(['ui', 'page', 'play']);
 
-export const PlayPage: React.FC = () => {
-  const { station: stationId } = Route.useParams();
+type StationLyricsProps = {
+  stationId: string;
+  showTitle?: boolean;
+  showCover?: boolean;
+  showPlayhead?: boolean;
+}
 
+const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, showCover, showPlayhead }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
 
@@ -207,7 +212,7 @@ export const PlayPage: React.FC = () => {
   const simple = !!titleText && !cover && !lyrics?.timeline?.length;
 
   return (
-    <div style={{ height: '100vh', overflow: 'hidden' }}>
+    <Box pos='relative' w='100%' h='100%' style={{ containerType: 'inline-size', overflow: 'hidden' }}>
       <Control>
         <Button onClick={() => client.playAudio(stationId) }>
           Listen
@@ -216,7 +221,8 @@ export const PlayPage: React.FC = () => {
           Karaoke
         </Button>
       </Control>
-      <Cover { ...coverProps } />
+
+      <Cover { ...coverProps } visible={showCover} />
 
       <Lyrics
         stationId={stationId}
@@ -225,15 +231,51 @@ export const PlayPage: React.FC = () => {
         lines={8}
         colors={colors}
       />
-      <Title text={titleText} bg={titleBg} center={simple} />
-      <PlayHead
-        stationId={stationId}
-        deckIndex={activeDeck}
 
-        backgroundColor={colors?.background ?? defaultLyricsColors.background}
-        textColor={colors?.line?.text ?? defaultLyricsColors.line.text}
-        activeColor={colors?.line?.active ?? defaultLyricsColors.line.active}
-      />
-    </div>
+      <Title text={titleText} bg={titleBg} center={simple} visible={showTitle} />
+
+      { showPlayhead &&
+        <PlayHead
+          stationId={stationId}
+          deckIndex={activeDeck}
+
+          backgroundColor={colors?.background ?? defaultLyricsColors.background}
+          textColor={colors?.line?.text ?? defaultLyricsColors.line.text}
+          activeColor={colors?.line?.active ?? defaultLyricsColors.line.active}
+        />
+      }
+    </Box>
+  )
+}
+
+export const PlayPage: React.FC = () => {
+  const { station: stationId } = Route.useParams();
+
+  const { toggle, fullscreen, ref } = useFullscreen();
+
+  return (
+    <Stack
+      pos='fixed'
+      gap='xs'
+      style={{
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        height: '50vh',
+        width: '50vw',
+        overflow: 'hidden',
+      }}
+    >
+      <Box ref={ref} bdrs='0.4em' style={{ width: '100%', height: '90%', overflow: 'hidden' }}>
+        <StationLyrics
+          stationId={stationId}
+          showTitle={fullscreen}
+          showPlayhead={fullscreen}
+          showCover={fullscreen}
+        />
+      </Box>
+
+      <Button onClick={toggle}>Fullscreen</Button>
+    </Stack>
   )
 }

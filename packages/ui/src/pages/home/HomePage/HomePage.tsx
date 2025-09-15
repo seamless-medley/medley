@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import {
@@ -294,13 +294,6 @@ const StationList = () => {
   )
 }
 
-export const HomePage = () => {
-  return (
-    <AppShell header={{ height: 60 }}>
-      <NavBar />
-      <AppShell.Main p="md">
-        <StationList />
-      </AppShell.Main>
-    </AppShell>
-  );
-}
+export const HomePage = () => (
+  <StationList />
+);

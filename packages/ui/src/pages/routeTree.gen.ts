@@ -11,43 +11,37 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './root'
-import { Route as homeHomePageRouteRouteImport } from './home/HomePage/route'
-import { Route as playLayoutRouteImport } from './play/layout'
+import { Route as layoutRouteImport } from './layout'
 import { Route as djLayoutRouteImport } from './dj/layout'
+import { Route as homeHomePageRouteRouteImport } from './home/HomePage/route'
 import { Route as playPlayPageRouteRouteImport } from './play/PlayPage/route'
 import { Route as djDJConsolePageRouteRouteImport } from './dj/DJConsolePage/route'
 import { Route as djCollectionPageRouteRouteImport } from './dj/CollectionPage/route'
 
-const PlayRouteImport = createFileRoute('/play')()
 const DjRouteImport = createFileRoute('/dj')()
 
-const PlayRoute = PlayRouteImport.update({
-  id: '/play',
-  path: '/play',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DjRoute = DjRouteImport.update({
   id: '/dj',
   path: '/dj',
   getParentRoute: () => rootRouteImport,
 } as any)
-const homeHomePageRouteRoute = homeHomePageRouteRouteImport.update({
-  id: '/',
-  path: '/',
+const layoutRoute = layoutRouteImport.update({
+  id: '/_normal-layout',
   getParentRoute: () => rootRouteImport,
-} as any)
-const playLayoutRoute = playLayoutRouteImport.update({
-  id: '/_play-layout',
-  getParentRoute: () => PlayRoute,
 } as any)
 const djLayoutRoute = djLayoutRouteImport.update({
   id: '/_dj-layout',
   getParentRoute: () => DjRoute,
 } as any)
+const homeHomePageRouteRoute = homeHomePageRouteRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => layoutRoute,
+} as any)
 const playPlayPageRouteRoute = playPlayPageRouteRouteImport.update({
-  id: '/$station',
-  path: '/$station',
-  getParentRoute: () => playLayoutRoute,
+  id: '/play/$station',
+  path: '/play/$station',
+  getParentRoute: () => layoutRoute,
 } as any)
 const djDJConsolePageRouteRoute = djDJConsolePageRouteRouteImport.update({
   id: '/$station/',
@@ -63,7 +57,6 @@ const djCollectionPageRouteRoute = djCollectionPageRouteRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof homeHomePageRouteRoute
   '/dj': typeof djLayoutRouteWithChildren
-  '/play': typeof playLayoutRouteWithChildren
   '/play/$station': typeof playPlayPageRouteRoute
   '/dj/$station': typeof djDJConsolePageRouteRoute
   '/dj/$station/collection/$collectionId': typeof djCollectionPageRouteRoute
@@ -71,19 +64,17 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof homeHomePageRouteRoute
   '/dj': typeof djLayoutRouteWithChildren
-  '/play': typeof playLayoutRouteWithChildren
   '/play/$station': typeof playPlayPageRouteRoute
   '/dj/$station': typeof djDJConsolePageRouteRoute
   '/dj/$station/collection/$collectionId': typeof djCollectionPageRouteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof homeHomePageRouteRoute
+  '/_normal-layout': typeof layoutRouteWithChildren
+  '/_normal-layout/': typeof homeHomePageRouteRoute
   '/dj': typeof DjRouteWithChildren
   '/dj/_dj-layout': typeof djLayoutRouteWithChildren
-  '/play': typeof PlayRouteWithChildren
-  '/play/_play-layout': typeof playLayoutRouteWithChildren
-  '/play/_play-layout/$station': typeof playPlayPageRouteRoute
+  '/_normal-layout/play/$station': typeof playPlayPageRouteRoute
   '/dj/_dj-layout/$station/': typeof djDJConsolePageRouteRoute
   '/dj/_dj-layout/$station/collection/$collectionId': typeof djCollectionPageRouteRoute
 }
@@ -92,7 +83,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dj'
-    | '/play'
     | '/play/$station'
     | '/dj/$station'
     | '/dj/$station/collection/$collectionId'
@@ -100,37 +90,27 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/dj'
-    | '/play'
     | '/play/$station'
     | '/dj/$station'
     | '/dj/$station/collection/$collectionId'
   id:
     | '__root__'
-    | '/'
+    | '/_normal-layout'
+    | '/_normal-layout/'
     | '/dj'
     | '/dj/_dj-layout'
-    | '/play'
-    | '/play/_play-layout'
-    | '/play/_play-layout/$station'
+    | '/_normal-layout/play/$station'
     | '/dj/_dj-layout/$station/'
     | '/dj/_dj-layout/$station/collection/$collectionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  homeHomePageRouteRoute: typeof homeHomePageRouteRoute
+  layoutRoute: typeof layoutRouteWithChildren
   DjRoute: typeof DjRouteWithChildren
-  PlayRoute: typeof PlayRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/play': {
-      id: '/play'
-      path: '/play'
-      fullPath: '/play'
-      preLoaderRoute: typeof PlayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/dj': {
       id: '/dj'
       path: '/dj'
@@ -138,19 +118,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DjRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof homeHomePageRouteRouteImport
+    '/_normal-layout': {
+      id: '/_normal-layout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof layoutRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/play/_play-layout': {
-      id: '/play/_play-layout'
-      path: '/play'
-      fullPath: '/play'
-      preLoaderRoute: typeof playLayoutRouteImport
-      parentRoute: typeof PlayRoute
     }
     '/dj/_dj-layout': {
       id: '/dj/_dj-layout'
@@ -159,12 +132,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof djLayoutRouteImport
       parentRoute: typeof DjRoute
     }
-    '/play/_play-layout/$station': {
-      id: '/play/_play-layout/$station'
-      path: '/$station'
+    '/_normal-layout/': {
+      id: '/_normal-layout/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof homeHomePageRouteRouteImport
+      parentRoute: typeof layoutRoute
+    }
+    '/_normal-layout/play/$station': {
+      id: '/_normal-layout/play/$station'
+      path: '/play/$station'
       fullPath: '/play/$station'
       preLoaderRoute: typeof playPlayPageRouteRouteImport
-      parentRoute: typeof playLayoutRoute
+      parentRoute: typeof layoutRoute
     }
     '/dj/_dj-layout/$station/': {
       id: '/dj/_dj-layout/$station/'
@@ -182,6 +162,19 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface layoutRouteChildren {
+  homeHomePageRouteRoute: typeof homeHomePageRouteRoute
+  playPlayPageRouteRoute: typeof playPlayPageRouteRoute
+}
+
+const layoutRouteChildren: layoutRouteChildren = {
+  homeHomePageRouteRoute: homeHomePageRouteRoute,
+  playPlayPageRouteRoute: playPlayPageRouteRoute,
+}
+
+const layoutRouteWithChildren =
+  layoutRoute._addFileChildren(layoutRouteChildren)
 
 interface djLayoutRouteChildren {
   djDJConsolePageRouteRoute: typeof djDJConsolePageRouteRoute
@@ -207,32 +200,9 @@ const DjRouteChildren: DjRouteChildren = {
 
 const DjRouteWithChildren = DjRoute._addFileChildren(DjRouteChildren)
 
-interface playLayoutRouteChildren {
-  playPlayPageRouteRoute: typeof playPlayPageRouteRoute
-}
-
-const playLayoutRouteChildren: playLayoutRouteChildren = {
-  playPlayPageRouteRoute: playPlayPageRouteRoute,
-}
-
-const playLayoutRouteWithChildren = playLayoutRoute._addFileChildren(
-  playLayoutRouteChildren,
-)
-
-interface PlayRouteChildren {
-  playLayoutRoute: typeof playLayoutRouteWithChildren
-}
-
-const PlayRouteChildren: PlayRouteChildren = {
-  playLayoutRoute: playLayoutRouteWithChildren,
-}
-
-const PlayRouteWithChildren = PlayRoute._addFileChildren(PlayRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
-  homeHomePageRouteRoute: homeHomePageRouteRoute,
+  layoutRoute: layoutRouteWithChildren,
   DjRoute: DjRouteWithChildren,
-  PlayRoute: PlayRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
