@@ -16,7 +16,7 @@ const TitleContainer = styled.div`
     opacity 0.6s ease,
     top 0.6s ease 0.6s,
     left 0.6s ease 0s,
-    transform 0.6s ease 0s,
+    transform 0.6s ease 0s
     ;
 
   &.visible {
@@ -32,7 +32,7 @@ const TitleContainer = styled.div`
       opacity 0.6s ease,
       top 0.6s ease 0s,
       left 0.6s ease 0.6s,
-      transform 0.6s ease 0.6s,
+      transform 0.6s ease 0.6s
     ;
   }
 `;
