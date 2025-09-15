@@ -2,6 +2,7 @@ import React, { forwardRef, PropsWithChildren, useCallback, useEffect, useRef, u
 import { chain, first } from 'lodash';
 import { rgba, transparentize } from "polished";
 import { styled } from '@linaria/react';
+import clsx from 'clsx';
 
 const CoverContainer = styled.div`
   --size: min(22cqh, 22cqw);
@@ -12,13 +13,13 @@ const CoverContainer = styled.div`
   width: var(--size);
   height: var(--size);
   z-index: 30;
-  opacity: 0.88;
+  opacity: 0;
   margin: 0.2em;
 
   transform: scale(1.4) rotateZ(360deg) rotate(-180deg);
 
   transition:
-    opacity 1s linear,
+    opacity 0.5s ease,
     transform 1s cubic-bezier(.5,-0.72,.41,1.56),
     bottom 1s ease-in-out,
     left 1s ease-in-out,
@@ -31,6 +32,10 @@ const CoverContainer = styled.div`
   will-change: opacity, transform, bottom, left, width, height;
 
   &.visible {
+    opacity: 0.88;
+  }
+
+  &.revealed {
     transform: scale(1) rotateZ(360deg) rotate(0deg);
   }
 
@@ -280,9 +285,10 @@ export type CoverProps = {
   colors: string[];
   center: boolean;
   uuid: string;
+  visible?: boolean;
 }
 
-export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid }) => {
+export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid, visible }) => {
   const containerEl = useRef<HTMLDivElement>(null);
   const imageEl = useRef<HTMLImageElement>(null);
 
@@ -299,20 +305,20 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid }) => {
   }
 
   const hide = () => {
-    containerEl.current?.classList.remove('visible');
+    containerEl.current?.classList.remove('revealed');
   }
 
   const reveal = useCallback(() => {
     setDiscColors(colors);
 
     if (imageEl.current) {
-      imageEl.current.classList.remove('visible');
+      imageEl.current.classList.remove('revealed');
       imageEl.current.src = url || '';
 
-      imageEl.current.classList.add('visible');
+      imageEl.current.classList.add('revealed');
     }
 
-    containerEl.current?.classList.add('visible');
+    containerEl.current?.classList.add('revealed');
   }, [url]);
 
   const animationTimer = useRef<number>(null);
@@ -355,7 +361,7 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid }) => {
 
   return (
     <>
-      <CoverContainer ref={containerEl} className='visible'>
+      <CoverContainer ref={containerEl} className={clsx('revealed', visible && 'visible')}>
         <CoverDisc colors={discColors}>
           <CoverImage ref={imageEl} style={{ opacity: url ? 0.77 : 0 }} />
           <CoverDecorator />
