@@ -1,20 +1,27 @@
 import { styled } from "@linaria/react";
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import _, { debounce } from 'lodash';
+import clsx from "clsx";
 
 const TitleContainer = styled.div`
   position: absolute;
   top: 0;
   left: 0;
   transform: translate(0, 0);
+  opacity: 0;
 
   z-index: 30;
 
   transition:
-      transform 0.6s ease 0s,
-      left 0.6s ease 0s,
-      top 0.6s ease 0.6s
-      ;
+    opacity 0.6s ease,
+    top 0.6s ease 0.6s,
+    left 0.6s ease 0s,
+    transform 0.6s ease 0s,
+    ;
+
+  &.visible {
+    opacity: 1;
+  }
 
   &.center {
     top: calc(50% - 1.6em);
@@ -22,9 +29,10 @@ const TitleContainer = styled.div`
     transform: translate(-50%, 0);
 
     transition:
+      opacity 0.6s ease,
       top 0.6s ease 0s,
+      left 0.6s ease 0.6s,
       transform 0.6s ease 0.6s,
-      left 0.6s ease 0.6s
     ;
   }
 `;
@@ -70,6 +78,7 @@ export type TitleProps = {
   text: string;
   bg: string;
   center?: boolean;
+  visible?: boolean;
 }
 
 export const Title: React.FC<TitleProps> = (props) => {
@@ -137,8 +146,8 @@ export const Title: React.FC<TitleProps> = (props) => {
   }, [props.text]);
 
   return (
-    <TitleContainer className={ props.center ? 'center' : undefined }>
-      <TitleBox ref={boxEl} className={ props.center ? 'center' : undefined }>
+    <TitleContainer className={clsx(props.center && 'center', props.visible && 'visible')}>
+      <TitleBox ref={boxEl} className={clsx(props.center && 'center')}>
         <canvas ref={canvasEl} style={{ display: 'none' }} width={500} height={500} />
         <TitleText ref={textEl} />
       </TitleBox>
