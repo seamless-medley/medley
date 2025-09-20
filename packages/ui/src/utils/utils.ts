@@ -30,4 +30,4 @@ export function createCssStrokeFx(size: number, color: string, options: { precis
   return shadow.join(', ')
 }
 
-export const getNextDeck = (index: DeckIndex): DeckIndex => [1, 2, 0][index];
+export const getNextDeck = (index: DeckIndex | undefined): DeckIndex | undefined => index !== undefined ? [1, 2, 0][index] : undefined;

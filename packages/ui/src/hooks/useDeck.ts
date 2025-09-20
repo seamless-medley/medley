@@ -12,7 +12,7 @@ export function useDeck(stationId: string | undefined, index: DeckIndex | undefi
   }
 }
 
-export function useDeckCover(stationId: string | undefined, index: DeckIndex) {
+export function useDeckCover(stationId: string | undefined, index: DeckIndex | undefined) {
   const { deck } = useDeck(stationId, index);
   const [cover, setCover] = useState<string | undefined>();
 
@@ -65,7 +65,7 @@ export type UseDeckInfoResult<K extends keyof Deck> = {
 
 const $AnyProp: unique symbol = Symbol.for('$AnyProp');
 
-export function useDeckInfo<Only extends keyof Deck = keyof Deck>(stationId: string | undefined, index: DeckIndex, ...onlyProps: Only[]): UseDeckInfoResult<Only> {
+export function useDeckInfo<Only extends keyof Deck = keyof Deck>(stationId: string | undefined, index: DeckIndex | undefined, ...onlyProps: Only[]): UseDeckInfoResult<Only> {
   type PV = Deck[keyof Deck];
 
   const { deck } = useDeck(stationId, index);

@@ -170,7 +170,7 @@ const Next = styled.div<{ color: string }>`
 
 interface Props {
   stationId?: string;
-  deckIndex: DeckIndex;
+  deckIndex: DeckIndex | undefined;
 
   backgroundColor: string;
   textColor: string;

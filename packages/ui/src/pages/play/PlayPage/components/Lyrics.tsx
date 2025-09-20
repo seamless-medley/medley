@@ -438,7 +438,7 @@ const findNextLine = (timeline: Timeline<string | EnhancedLine>, fromLine: numbe
 
 export type LyricsProps = {
   stationId?: string;
-  deckIndex: DeckIndex;
+  deckIndex: DeckIndex | undefined;
   lines: number;
   lineHeight: number;
   colors: Colors | undefined;
