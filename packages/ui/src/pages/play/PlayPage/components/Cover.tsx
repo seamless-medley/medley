@@ -40,13 +40,14 @@ const CoverContainer = styled.div`
   }
 
   &.center {
-    --centered-size: calc(var(--size) * 1.6);
+    --centered-size: calc(var(--size) * 3.5);
 
     bottom: calc((100% - var(--centered-size)) / 2);
     left: calc((100% - var(--centered-size)) / 2);
     width: var(--centered-size);
     height: var(--centered-size);
 
+    transform: rotateZ(360deg) rotate(0deg);
     transform-origin: -38%;
   }
 `;
@@ -314,12 +315,11 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid, visible
     if (imageEl.current) {
       imageEl.current.classList.remove('revealed');
       imageEl.current.src = url || '';
-
       imageEl.current.classList.add('revealed');
     }
 
     containerEl.current?.classList.add('revealed');
-  }, [url]);
+  }, [url, imageEl.current]);
 
   const animationTimer = useRef<number>(null);
 
@@ -352,12 +352,12 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid, visible
   useEffect(() => {
     const isCentered = containerEl.current?.classList.contains('center') ?? false;
 
-    const animate = url
+    const animate = visible && url
       ? ((isCentered && !center) ? centerThenReveal : revealThenCenter)
       : hide;
 
     animate();
-  }, [center, url, colors, uuid]);
+  }, [center, url, colors, uuid, visible]);
 
   return (
     <>
