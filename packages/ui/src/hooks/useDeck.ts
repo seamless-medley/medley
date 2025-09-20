@@ -5,7 +5,7 @@ import type { Deck, TrackPlay } from "@seamless-medley/remote";
 import { useSurrogate } from "./surrogate";
 
 export function useDeck(stationId: string | undefined, index: DeckIndex | undefined) {
-  const { surrogate: deck, error } = useSurrogate('deck', stationId ? `${stationId}/${index}` : undefined);
+  const { surrogate: deck, error } = useSurrogate('deck', stationId && index !== undefined ? `${stationId}/${index}` : undefined);
   return {
     deck,
     error
