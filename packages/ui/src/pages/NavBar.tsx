@@ -79,28 +79,26 @@ export function NavBar() {
   const { user } = useSession();
 
   return (
-    <AppShell.Header>
-      <Group h="100%" px="md" justify="space-between">
-        <Group align="center" gap="sm">
-          <Link to="/" style={{ textDecoration: 'none' }}>
-            <Group align="center" gap="xs">
-              <Image src={logo} h={40} w="auto" fit="contain" />
-              <Title
-                size="h3"
-                fw={700}
-                variant="gradient"
-              >
-                Medley
-              </Title>
-            </Group>
-          </Link>
-        </Group>
-
-        { user
-          ? <Avatar name={user} color='initials' />
-          : <LoginButton />
-        }
+    <Group h="100%" px="md" justify="space-between">
+      <Group align="center" gap="sm">
+        <Link to="/" style={{ textDecoration: 'none' }}>
+          <Group align="center" gap="xs">
+            <Image src={logo} h={40} w="auto" fit="contain" />
+            <Title
+              size="h3"
+              fw={700}
+              variant="gradient"
+            >
+              Medley
+            </Title>
+          </Group>
+        </Link>
       </Group>
-    </AppShell.Header>
+
+      { user
+        ? <Avatar name={user} color='initials' />
+        : <LoginButton />
+      }
+    </Group>
   );
 }

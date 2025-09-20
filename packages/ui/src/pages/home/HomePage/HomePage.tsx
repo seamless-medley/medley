@@ -35,7 +35,6 @@ import { TransitionText } from "@ui/components/TransitionText";
 import { PlayRoute } from "@ui/pages/play/PlayPage/route";
 import { client } from "@ui/init";
 
-import { NavBar } from "../../NavBar";
 import { Route } from "./route";
 
 const coverCss = css`

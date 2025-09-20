@@ -2,7 +2,7 @@ import { chain, random, sortBy } from "lodash";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { styled } from "@linaria/react";
-import { Box, Button, Flex, Stack } from "@mantine/core";
+import { Box, Button, Container, Flex, Group, Image, Stack } from "@mantine/core";
 import { useFullscreen, useSetState } from "@mantine/hooks";
 
 import { getLuminance,
@@ -37,6 +37,7 @@ import { Lyrics, defaultColors as defaultLyricsColors } from "./components/Lyric
 import { PlayHead } from "./components/PlayHead";
 
 import { Route } from "./route";
+import { AnimatePresence, motion } from "motion/react";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -80,7 +81,7 @@ type StationLyricsProps = {
 
 const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, showCover, showPlayhead }) => {
   const { station } = useStation(stationId);
-  const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
+  const activeDeck = useRemotableProp(station, 'activeDeck');
 
   const cover = useDeckCover(stationId, activeDeck);
   const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
@@ -212,7 +213,7 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
   const simple = !!titleText && !cover && !lyrics?.timeline?.length;
 
   return (
-    <Box pos='relative' w='100%' h='100%' style={{ containerType: 'inline-size', overflow: 'hidden' }}>
+    <Box pos='relative' w='100%' h='100%' style={{ overflow: 'hidden' }}>
       <Control>
         <Button onClick={() => client.playAudio(stationId) }>
           Listen
@@ -238,7 +239,6 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
         <PlayHead
           stationId={stationId}
           deckIndex={activeDeck}
-
           backgroundColor={colors?.background ?? defaultLyricsColors.background}
           textColor={colors?.line?.text ?? defaultLyricsColors.line.text}
           activeColor={colors?.line?.active ?? defaultLyricsColors.line.active}
@@ -251,31 +251,55 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
 export const PlayPage: React.FC = () => {
   const { station: stationId } = Route.useParams();
 
+  const { station } = useStation(stationId);
+  const activeDeck = useRemotableProp(station, 'activeDeck');
+  const cover = useDeckCover(stationId, activeDeck);
+
   const { toggle, fullscreen, ref } = useFullscreen();
 
   return (
-    <Stack
-      pos='fixed'
-      gap='xs'
-      style={{
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        height: '50vh',
-        width: '50vw',
-        overflow: 'hidden',
-      }}
-    >
-      <Box ref={ref} bdrs='0.4em' style={{ width: '100%', height: '90%', overflow: 'hidden' }}>
-        <StationLyrics
-          stationId={stationId}
-          showTitle={fullscreen}
-          showPlayhead={fullscreen}
-          showCover={fullscreen}
-        />
-      </Box>
+      <Stack
+        pos='fixed'
+        gap='sm'
+        style={{
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          height: '50%',
+          width: '50%',
+          // outline: '1px solid yellow'
+          overflow: 'hidden',
+        }}
+      >
+        <Group
+          style={{ width: '100%', height: '100%', overflow: 'hidden' }}
+          wrap="nowrap"
+          bdrs='lg'
+          gap={0}
+          onDoubleClick={toggle}
+        >
+          <Box w='50%' h='100%'>
+            <Image component={motion.img}
+              key={cover}
 
-      <Button onClick={toggle}>Fullscreen</Button>
-    </Stack>
+              src={cover}
+              initial={{ opacity: 0 }}
+              exit={{ opacity: 0 }}
+              animate={{ opacity: 1}}
+              transition={{ duration: 0.6, ease: 'easeInOut' }}
+            />
+          </Box>
+          <Box ref={ref} pos='relative' w='50%' h='100%'>
+            <StationLyrics
+              stationId={stationId}
+              showTitle={fullscreen}
+              showPlayhead={fullscreen}
+              showCover={fullscreen}
+            />
+          </Box>
+        </Group>
+
+        <Button bdrs={'lg'} onClick={toggle}>Fullscreen</Button>
+      </Stack>
   )
 }

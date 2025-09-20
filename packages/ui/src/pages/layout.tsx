@@ -5,7 +5,9 @@ import { NavBar } from './NavBar'
 const Layout = () => {
   return (
     <AppShell header={{ height: 60 }}>
-      <NavBar />
+      <AppShell.Header>
+        <NavBar />
+      </AppShell.Header>
       <AppShell.Main p="md">
         <Outlet />
       </AppShell.Main>
