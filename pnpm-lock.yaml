@@ -239,6 +239,9 @@ importers:
       '@types/normalize-path':
         specifier: ^3.0.1
         version: 3.0.2
+      '@types/semver':
+        specifier: ^7.7.0
+        version: 7.7.0
       '@types/sodium-native':
         specifier: ^2.3.8
         version: 2.3.9
@@ -254,6 +257,9 @@ importers:
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
+      semver:
+        specifier: ^7.7.2
+        version: 7.7.2
       simple-git:
         specifier: ^3.21.0
         version: 3.28.0
