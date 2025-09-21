@@ -52,7 +52,7 @@ async function packageApp() {
       }
 
       return o;
-    }, {})
+    }, {} as PackageJson['dependencies'])
     .value();
 
   const result = chain(mainPackage)
