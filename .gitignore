@@ -2,7 +2,9 @@ node_modules/
 bundle/
 build/
 dist/
-.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
 .vs/
 
 package-lock.json
