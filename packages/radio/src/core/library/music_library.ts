@@ -120,10 +120,14 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
     const infos = tracks.map<IndexInfo<O>>(track => ({ track, succeeded: false }));
 
+    const tag = totalChunks > 1 ? `[${chunkIndex + 1}/${totalChunks}] ` : '';
+
+    this.#logger.debug(`${tag}Indexing ${infos.length} track(s) from collection '${collection.extra.description}'`);
+
     this.#tryIndexTracks(infos, () => {
       const [succeeded, failures] = partition(infos, info => info.succeeded);
 
-      this.#logger.info(`${totalChunks > 1 ? `[${chunkIndex + 1}/${totalChunks}] ` : ''}${succeeded.length} tracks(s) from collection '${collection.extra.description}' have been indexed`);
+      this.#logger.info(`${tag}${succeeded.length} tracks(s) from collection '${collection.extra.description}' have been indexed`);
 
       if (failures.length) {
         this.#logger.warn(
@@ -217,7 +221,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
   async #indexTracks(infos: Array<IndexInfo<O>>, done: (failures: Array<IndexInfo<O>>) => void) {
     const failures: Array<IndexInfo<O>> = [];
 
-    await Promise.all(infos.map(info => this.#indexTrack(info)
+    const doIndex = (info: IndexInfo<O>) => this.#indexTrack(info)
       .then(() => {
         info.succeeded = true;
 
@@ -237,8 +241,15 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
         if (info.errors.length <= 3) {
           failures.push(info);
         }
-      })
-    ));
+      });
+
+    const [mandatoryTracks, auxiliaryTracks] = partition(infos, info => !info.track.collection.options.auxiliary);
+
+    await Promise.all(mandatoryTracks.map(doIndex));
+
+    for (const track of auxiliaryTracks) {
+      await doIndex(track);
+    }
 
     done(failures);
   }
