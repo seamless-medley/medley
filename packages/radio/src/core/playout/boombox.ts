@@ -556,8 +556,10 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
       const collectionChange = currentCollection?.id !== nextCollection.id;
 
       if (nextProfile && nextProfile !== currentProfile) {
-        this.emit('profileChange', currentProfile, nextProfile as P)
-        this.#logger.debug('Play profile changed to: %s', nextProfile.id);
+        if (!isRequestTrack(currentTrack) && !isRequestTrack(nextTrack)) {
+          this.emit('profileChange', currentProfile, nextProfile as P)
+          this.#logger.debug('Play profile changed to: %s', nextProfile.id);
+        }
       }
 
       // Always trigger collection change event
