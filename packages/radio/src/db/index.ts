@@ -1,1 +1,1 @@
-export * from './db-client';
+export * from './music/client';

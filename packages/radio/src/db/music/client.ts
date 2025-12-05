@@ -1,11 +1,7 @@
 import { noop } from "lodash";
 import { Db, MongoClient, type MongoClientOptions } from "mongodb";
-
-import { createLogger, type Logger } from "../logging";
-
-import { UserDb } from "./types";
-import { FindByCommentOptions, MusicDb, MusicDbTrack, SearchHistory, TrackHistory, WorkerPoolAdapter } from "../core";
-import { User } from "./schema/user";
+import { createLogger, type Logger } from "../../logging";
+import { FindByCommentOptions, MusicDb, MusicDbTrack, SearchHistory, TrackHistory, WorkerPoolAdapter } from "../../core";
 
 export type Options = {
   url: string;
@@ -19,8 +15,6 @@ export type Options = {
    * @default [86400,129600]  (24,36 hours)
    */
    ttls?: [min: number, max: number];
-
-   seed?: boolean;
 }
 
 type PrefixRemap<Prefix extends string, T> = {
@@ -29,10 +23,9 @@ type PrefixRemap<Prefix extends string, T> = {
 
 type WorkerMethods = MusicDb &
   PrefixRemap<'search_', SearchHistory> &
-  PrefixRemap<'track_', TrackHistory> &
-  PrefixRemap<'settings_', UserDb>
+  PrefixRemap<'track_', TrackHistory>;
 
-export class DatabaseClient extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
+export class MusicDbClient extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
   #logger: Logger;
 
   #options: Options | undefined;
@@ -41,10 +34,10 @@ export class DatabaseClient extends WorkerPoolAdapter<WorkerMethods> implements 
   #localClientRefCount = 0;
 
   constructor() {
-    super(__dirname + '/db-worker.js', {});
+    super(__dirname + '/worker.js', {});
 
     this.#logger = createLogger({
-      name: 'db',
+      name: 'music-db',
       id: `main`
     });
 
@@ -122,9 +115,11 @@ export class DatabaseClient extends WorkerPoolAdapter<WorkerMethods> implements 
     }
   }
 
+  /**
+   * Validate the track by calling the `predicate` function
+   * The invalid tracks will be removed from the db collection
+   */
   async validateTracks(predicate: (trackId: string) => Promise<boolean>): ReturnType<MusicDb['validateTracks']> {
-    // This could not be done using worker, simply connect to the mongodb instance directly
-
     type ResultType = Awaited<ReturnType<MusicDb['validateTracks']>>;
 
     if (!this.#options) {
@@ -204,12 +199,6 @@ export class DatabaseClient extends WorkerPoolAdapter<WorkerMethods> implements 
 
   get trackHistory() {
     return this.#trackHistory;
-  }
-
-  readonly user: UserDb = {
-    verifyLogin: async (username, password) => {
-      return this.exec('settings_verifyLogin', username, password);
-    }
   }
 
   dispose() {

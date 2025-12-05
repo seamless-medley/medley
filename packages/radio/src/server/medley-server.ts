@@ -2,8 +2,7 @@ import { noop } from "lodash";
 
 import { createLogger } from "../logging";
 
-import { UserDb } from '../db/types';
-import { DatabaseClient } from "../db";
+import { MusicDbClient } from "../db";
 //
 import type { Config } from "../config";
 //
@@ -25,9 +24,10 @@ import { StreamingAdapter } from "../streaming/types";
 import { ShoutAdapter } from "../streaming";
 import { IcyAdapter } from "../streaming";
 import { UserModel } from '../db/models/user';
-import { retryable } from "@seamless-medley/utils";
+import { retryable, RetryOptions } from "@seamless-medley/utils";
 import { ExposedGlobal } from "./expose/core/global";
 import { MusicDb, Station, StationEvents } from "../core";
+import { Db } from "../db/db";
 
 const logger = createLogger({ name: 'medley-server' });
 
@@ -40,7 +40,9 @@ export type MedleyServerOptions = {
 }
 
 export class MedleyServer extends SocketServerController<RemoteObjects> {
-  #dbClient!: DatabaseClient;
+  #musicDb!: MusicDbClient;
+
+  #db!: Db;
 
   #audioServer: AudioWebSocketServer;
 
@@ -227,7 +229,18 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
   }
 
   async #connectMongoDB() {
-    const dbClient = new DatabaseClient();
+    const musicDb = new MusicDbClient();
+    const db = new Db();
+
+    const retryOptions: RetryOptions = {
+      wait: 3_000,
+      maxWait: 30_000,
+      onError: (e) => {
+        if (e.msg) {
+          logger.error(e.msg);
+        }
+      }
+    }
 
     await retryable(async ({ attempts }) => {
       if (attempts) {
@@ -236,37 +249,35 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
 
       const dbConfig = this.#configs.db;
 
-      return dbClient.init({
+      await musicDb.init({
         url: dbConfig.url,
         database: dbConfig.database,
         connectionOptions: dbConfig.connectionOptions,
         ttls: [
           dbConfig.metadataTTL?.min ?? 60 * 60 * 24 * 7,
           dbConfig.metadataTTL?.max ?? 60 * 60 * 24 * 12,
-        ],
+        ]
+      });
+
+      await db.init({
+        url: dbConfig.url,
+        database: dbConfig.database,
+        connectionOptions: dbConfig.connectionOptions,
         seed: process.env.NODE_ENV === 'development'
       });
-    },
-    {
-      wait: 3_000,
-      maxWait: 30_000,
-      onError: (e) => {
-        if (e.msg) {
-          logger.error(e.msg);
-        }
-      }
-    });
+    }, retryOptions);
 
-    this.#dbClient = dbClient;
+    this.#musicDb = musicDb;
+    this.#db = db;
   }
 
   protected override async authenticateSocket(socket: Socket, username: string, password: string) {
-    const user = await this.#dbClient.user?.verifyLogin(username, password);
+    const user = await this.#db.verifyLogin(username, password);
     return user ? new UserModel(user) : undefined;
   }
 
   get musicDb(): MusicDb {
-    return this.#dbClient;
+    return this.#musicDb;
   }
 
   get streamers() {
@@ -275,7 +286,7 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
 
   terminate() {
     this.io.close();
-    this.#dbClient?.dispose();
+    this.#musicDb?.dispose();
   }
 
   registerStation(station: Station) {

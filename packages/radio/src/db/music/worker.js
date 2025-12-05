@@ -1,23 +1,22 @@
 // @ts-check
 
-const argon2 = require('@node-rs/argon2');
+
 const workerpool = require('workerpool');
 const { threadId } = require('node:worker_threads');
 const { MongoClient, Db, Collection, AggregationCursor } = require('mongodb');
 const { random, omitBy, capitalize } = require('lodash');
-const { createLogger } = require('../logging');
-const { User } = require('./schema/user')
+const { createLogger } = require('../../logging');
 
-/** @typedef {import('../core').MusicDb} MusicDb */
-/** @typedef {import('../core').MusicDbTrack} MusicDbTrack */
-/** @typedef {import('../core').SearchHistory} SearchHistory */
-/** @typedef {import('../core').SearchQuery} SearchQuery */
-/** @typedef {import('../core').TrackHistory} TrackHistory */
-/** @typedef {import('../core').RecentSearchRecord} RecentSearchRecord */
-/** @typedef {import('../core').SearchRecord} SearchRecord */
-/** @typedef {import('../core').TimestampedTrackRecord} TimestampedTrackRecord */
-/** @typedef {import('../core').FindByCommentOptions} FindByCommentOptions */
-/** @typedef {import('./db-client').Options} Options */
+/** @typedef {import('../../core').MusicDb} MusicDb */
+/** @typedef {import('../../core').MusicDbTrack} MusicDbTrack */
+/** @typedef {import('../../core').SearchHistory} SearchHistory */
+/** @typedef {import('../../core').SearchQuery} SearchQuery */
+/** @typedef {import('../../core').TrackHistory} TrackHistory */
+/** @typedef {import('../../core').RecentSearchRecord} RecentSearchRecord */
+/** @typedef {import('../../core').SearchRecord} SearchRecord */
+/** @typedef {import('../../core').TimestampedTrackRecord} TimestampedTrackRecord */
+/** @typedef {import('../../core').FindByCommentOptions} FindByCommentOptions */
+/** @typedef {import('./client').Options} Options */
 
 /** @type {MongoClient} */
 let client;
@@ -34,14 +33,14 @@ let searchHistory;
 /** @type {Collection<TimestampedTrackRecord & { stationId: string }>} */
 let trackHistory;
 
-/** @type {[min: number, max: number]} */
+/** @type {[min: number, max: number]?} */
 let ttls = [
   60 * 60 * 24 * 1,
   60 * 60 * 24 * 1.5
 ];
 
 const logger = createLogger({
-  name: 'db',
+  name: 'music-db',
   id: `thread-${threadId.toString().padStart(2, '0')}`
 });
 
@@ -105,20 +104,6 @@ async function configure(options) {
   await client.connect();
 
   db = client.db(options.database);
-
-  if (options.seed) {
-    const hasUsers = await db.listCollections().toArray().then(all => all.find(c => c.name === 'users') !== undefined);
-
-    if (!hasUsers) {
-      argon2.hash('admin').then((password) => {
-        const users = db.collection('users');
-        users.createIndexes([
-          { key: { username: 1 } }
-        ]);
-        users.insertOne({ username: 'admin', password });
-      });
-    }
-  }
 
   musics = db.collection('musics');
   await musics.createIndexes([
@@ -281,7 +266,7 @@ const update = async (trackId, fields) => {
     {
       $set: {
         ...track,
-        expires: Date.now() + random(...ttls) * 1000
+        expires: ttls ? Date.now() + random(...ttls) * 1000 : undefined
       }
     },
     { upsert: true }
@@ -508,36 +493,6 @@ const search_unmatchedItems = async(stationId) => {
       return [];
     });
 
-
-/* UserDb */
-
-/**
- *
- * @param {string} username
- * @param {string} password
- */
-async function user_verifyLogin(username, password) {
-  if (!db) {
-    throw new Error('Not initialized');
-  }
-
-  const row = await db.collection('users')
-    .findOne({ username });
-
-  const entity = await Promise.resolve(row)
-    .then(User.safeParse)
-    .catch(() => undefined)
-    ?? undefined;
-
-  if (entity?.success && await argon2.verify(entity.data.password, password)) {
-    const { password: ignored, _id, ...user }  = entity.data;
-    return {
-      ...user,
-      _id: _id.toHexString()
-    };
-  }
-}
-
 workerpool.worker({
   configure,
   findById,
@@ -550,7 +505,5 @@ workerpool.worker({
   search_recentItems,
   search_unmatchedItems,
   track_add,
-  track_getAll,
-  // UserDb
-  settings_verifyLogin: user_verifyLogin
+  track_getAll
 })
