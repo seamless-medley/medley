@@ -217,7 +217,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
       this.#startVCMonitors();
     });
 
-    this.#client.on('ready', this.#handleClientReady);
+    this.#client.on('clientReady', this.#handleClientReady);
 
     this.#client.on('guildCreate', this.#handleGuildCreate);
     this.#client.on('guildDelete', this.#handleGuildDelete);
