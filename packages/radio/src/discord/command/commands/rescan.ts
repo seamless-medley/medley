@@ -1,4 +1,4 @@
-import { CommandInteraction, MessageFlags, blockQuote, inlineCode, unorderedList } from "discord.js";
+import { AttachmentBuilder, CommandInteraction, MessageFlags, quote, unorderedList } from "discord.js";
 import { CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deferReply, deny, guildStationGuard, joinStrings, reply } from "../utils";
 import { once } from "lodash";
@@ -33,12 +33,24 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
   type Stat = Omit<LibraryRescanStats<Station>, 'collection'>;
 
   const formatter = new Intl.NumberFormat();
-  const formatNumber = (n: number) => inlineCode(formatter.format(n));
-  const formatStat = (s: Stat) => `${formatNumber(s.scanned)} track(s) scanned in ${inlineCode(s.elapsedTime.toFixed(2))} seconds, ${formatNumber(s.added)} added, ${formatNumber(s.removed)} removed, ${formatNumber(s.updated)} updated`;
 
-  const lines = stats.map((s) => {
-    return `${s.collection.extra.description}: ${formatStat(s)}`;
-  });
+  const formatStat = (s: Stat) => {
+    let line = `${ formatter.format(s.scanned)} track(s) scanned (${s.elapsedTime.toFixed(2)}s)`
+
+    if (s.added > 0) {
+      line += `, ${ formatter.format(s.added)} added`;
+    }
+
+    if (s.removed > 0) {
+      line += `, ${ formatter.format(s.removed)} removed`;
+    }
+
+    if (s.updated > 0) {
+      line += `, ${ formatter.format(s.updated)} updated`;
+    }
+
+    return line;
+  }
 
   const summary = stats.reduce((a, s) => {
     a.scanned += s.scanned;
@@ -49,13 +61,30 @@ const createCommandHandler: InteractionHandlerFactory<CommandInteraction> = (aut
     return a;
   }, { scanned: 0, added: 0, removed: 0, updated: 0, elapsedTime: 0 } as Stat)
 
+  const summaryLine = quote(`Summary: ${formatStat(summary)}`);
+
+  const lines: string[] = [];
+  let totalLength = 2/*crlf*/ + summaryLine.length;
+  for (const s of stats) {
+    const line = `${s.collection.extra.description}: ${formatStat(s)}`;
+    const lineLength = 2/*unordered list*/ + line.length + 2/*crlf*/;
+
+    if (totalLength + lineLength >= 2000)
+      break;
+
+    lines.push(line);
+  }
+
   await reply(interaction, {
     flags: MessageFlags.Ephemeral,
-    content: blockQuote(joinStrings([
-      unorderedList(lines),
-      '',
-      `Summary: ${formatStat(summary)}`
-    ]))
+    content: 'Scanned',
+    files: [
+      new AttachmentBuilder(Buffer.from(joinStrings([
+        unorderedList(lines),
+        '',
+        summaryLine
+      ])), { name: 'rescan-result.md' })
+    ]
   });
 }
 
