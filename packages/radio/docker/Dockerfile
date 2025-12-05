@@ -1,4 +1,4 @@
-FROM node:20.18.0 AS builder
+FROM node:20.19.5 AS builder
 
 RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@10.14.0
 
@@ -26,7 +26,7 @@ WORKDIR /app
 RUN pnpm install
 
 # ----------------------------------------------------------------------------------------------------
-FROM node:20.18.0-slim AS application
+FROM node:20.19.5-slim AS application
 
 ARG ARCH=amd64
 
