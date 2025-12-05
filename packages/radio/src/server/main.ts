@@ -7,8 +7,8 @@ import { extname, resolve as resolvePath } from 'node:path';
 import { createServer } from 'node:net';
 import http from 'node:http';
 import express from 'express';
-import session from "express-session";
-import { ZodError } from "zod";
+import session from 'express-session';
+import { ZodError } from 'zod';
 import { Command } from '@commander-js/extra-typings';
 import { Medley } from '@seamless-medley/medley';
 import { AuthData } from '@seamless-medley/remote';
@@ -22,7 +22,7 @@ import { StreamingAdapter } from '../streaming/types';
 
 declare module "express-session" {
   interface SessionData {
-    auth: AuthData
+    auth: AuthData;
   }
 }
 
@@ -42,10 +42,7 @@ function isPortAvailable(port: number, address?: string) {
   return new Promise<boolean>((resolve) => {
     const probe = createServer()
       .once('error', () => resolve(false))
-      .once('listening', () => {
-        probe.close()
-          .once('close', () => resolve(true))
-      })
+      .once('listening', () => probe.close().once('close', () => resolve(true)))
       .listen(port, address);
   });
 }
@@ -55,7 +52,7 @@ async function startServer(configs: Config) {
     const listeningPort = +(process.env.PORT || configs.server?.port || 3001);
     const listeningAddr = (process.env.BIND || configs.server?.address)?.toString();
 
-    if (!await isPortAvailable(listeningPort)) {
+    if (!(await isPortAvailable(listeningPort))) {
       reject(new Error('Address is already in used'));
       return;
     }
@@ -147,10 +144,7 @@ function registerStaticHandler(app: express.Express, root: string) {
 function registerStreamsRoute(app: express.Express, path: string = '/streams') {
   const router = express.Router();
 
-  app.use(
-    path, router,
-    (_, res) => void res.status(503).end('Unknown stream')
-  );
+  app.use(path, router, (_, res) => void res.status(503).end('Unknown stream'));
 
   return router;
 }
@@ -205,7 +199,7 @@ async function main() {
     if (configs instanceof ZodError) {
       for (const issue of configs.issues) {
         const path = issue.path.join('.') || 'root';
-        logger.fatal(`Issue: ${path} - ${issue.message}`)
+        logger.fatal(`Issue: ${path} - ${issue.message}`);
       }
     } else {
       logger.fatal(configs.message);

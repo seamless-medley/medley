@@ -1,4 +1,4 @@
-import {
+import type {
   APIApplicationCommandOption as DiscordCommandOption,
   RESTPostAPIApplicationCommandsJSONBody
 } from "discord-api-types/v10";

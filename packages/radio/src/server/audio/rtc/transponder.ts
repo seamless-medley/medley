@@ -1,5 +1,4 @@
 import { cpus } from 'node:os';
-import { randomUUID } from 'node:crypto';
 import { chain, partition, times } from 'lodash';
 import { type types, createWorker } from 'mediasoup';
 import { TypedEmitter } from 'tiny-typed-emitter';
