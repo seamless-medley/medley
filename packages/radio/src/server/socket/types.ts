@@ -1,12 +1,12 @@
 import EventEmitter from "node:events";
-import type TypedEventEmitter from "typed-emitter";
+import type { TypedEmitter } from "tiny-typed-emitter";
 import type { Request } from 'express';
 import { Socket as IOSocket } from "socket.io";
 import type { ClientEvents, ServerEvents, PickEvent } from "@seamless-medley/remote";
 import { UserModel } from "../../db/models/user";
 import type { RTCWorker } from "../audio/rtc/transponder";
 
-export type TypedEventEmitterOf<T> = TypedEventEmitter<
+export type TypedEventEmitterOf<T> = TypedEmitter<
   // @ts-ignore
   PickEvent<T>
 >;
