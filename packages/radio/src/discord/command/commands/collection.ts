@@ -1,7 +1,7 @@
+import { chain, clamp, startCase } from "lodash";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageActionRowComponentBuilder, SelectMenuComponentOptionData, StringSelectMenuBuilder } from "discord.js";
 import { AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory, OptionType, SubCommandLikeOption } from "../type";
 import { deny, guildStationGuard, joinStrings, makeAnsiCodeBlock, warn } from "../utils";
-import { chain, startCase } from "lodash";
 import { interact } from "../interactor";
 import { ansi } from "../../format/ansi";
 import { AutomatonAccess } from "../../automaton";
@@ -14,6 +14,10 @@ const declaration: SubCommandLikeOption = {
 }
 
 const onGoing = new Set<string>();
+
+type State = {
+  page: number;
+}
 
 const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteraction> = (automaton) => async (interaction) => {
   const { station } = guildStationGuard(automaton, interaction);
@@ -29,15 +33,46 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     return;
   }
 
-  const getCollections = () => chain(station.crates)
-    .flatMap(c => c.sources)
-    .uniqBy(c => c.id)
-    .value();
+  const getCollections = (pinned?: TrackCollection<any>) => {
+    station.crates.flatMap(c => c.sources)
 
-  if (getCollections().length <= 1) {
+    return [
+      ...(pinned ? [pinned] : []),
+      ...chain(station.crates)
+          .flatMap(c => c.sources)
+          .uniqBy(c => c.id)
+          .reject(c => pinned !== undefined && pinned.id === c.id)
+          .value()
+    ]
+  }
+
+  const collections = getCollections();
+
+  if (collections.length <= 1) {
     warn(interaction, `No collections to change`);
     return;
   }
+
+  const collectionsPerPage = 25; // Discord limit
+  const totalPages = Math.ceil(collections.length / collectionsPerPage);
+
+  const state: State = {
+    page: 0
+  }
+
+  const cancelButtonBuilder = new ButtonBuilder()
+    .setCustomId('cancel_collection')
+    .setLabel('Cancel')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('❌');
+
+  const prevPageButtonBuilder = new ButtonBuilder()
+    .setCustomId('collection_prevPage')
+    .setStyle(ButtonStyle.Secondary)
+
+  const nextPageButtonBuilder = new ButtonBuilder()
+    .setCustomId('collection_nextPage')
+    .setStyle(ButtonStyle.Secondary);
 
   await interact<TrackCollection<any>>({
     commandName: declaration.name,
@@ -47,13 +82,15 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
     ttl: 90_000,
     data: station.temporalCollection ?? station.currentCollection,
 
-    makeCaption: async () => [],
+    makeCaption: async () => totalPages > 1 ? [`Page ${state.page + 1}/${totalPages}:`] : [],
     async makeComponents(trackingCollection) {
-      const collections = getCollections();
+      const listing = getCollections(trackingCollection);
 
-      if (getCollections().length <= 1) {
+      if (listing.length <= 1) {
         return [];
       }
+
+      const { page } = state;
 
       const currentTrack = station.trackPlay?.track;
 
@@ -63,16 +100,19 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
           : station.currentCollection
       );
 
-      const selectedCollection = currentCollection && collections.find(c => c.id === currentCollection?.id)
+      const selectedCollection = currentCollection && listing.find(c => c.id === currentCollection?.id)
         ? currentCollection
         : undefined;
 
-      const listing = collections.map<SelectMenuComponentOptionData>(c => ({
-        label: c.extra.description ?? startCase(c.id),
-        description: `${c.length} track(s)`,
-        value: c.id,
-        default: c.id === selectedCollection?.id
-      }));
+      const components: MessageActionRowComponentBuilder[] = [cancelButtonBuilder];
+
+      if (page > 0) {
+        components.push(prevPageButtonBuilder.setLabel(`⏮ Page ${page}`));
+      }
+
+      if (page < totalPages - 1) {
+        components.push(nextPageButtonBuilder.setLabel(`Page ${page + 2} ⏭`));
+      }
 
       return [
         new ActionRowBuilder<MessageActionRowComponentBuilder>()
@@ -80,23 +120,45 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
             new StringSelectMenuBuilder()
               .setCustomId('collection')
               .setPlaceholder('Select a collection')
-              .addOptions(listing)
+              .addOptions(
+                listing
+                  .slice(page * collectionsPerPage, (page + 1) * collectionsPerPage)
+                  .map<SelectMenuComponentOptionData>(c => ({
+                    label: c.extra.description ?? startCase(c.id),
+                    description: `${c.length} track(s)`,
+                    value: c.id,
+                    default: c.id === selectedCollection?.id
+                  }))
+              )
           ),
         new ActionRowBuilder<MessageActionRowComponentBuilder>()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('cancel_collection')
-              .setLabel('Cancel')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('❌')
-          )
+          .addComponents(components)
       ];
     },
-    async onCollect({ collected, done }) {
+    async onCollect({ collected, buildMessage, resetTimer, done }) {
       const { customId } = collected;
 
       if (customId === 'cancel_collection') {
         await done();
+        return;
+      }
+
+      resetTimer();
+
+      // Paginate
+      const paginationNavigation: Partial<Record<string, number>> = {
+        'collection_back': 0,
+        'collection_prevPage': -1,
+        'collection_nextPage': 1
+      };
+
+      if (customId in paginationNavigation) {
+        const increment = paginationNavigation[customId] ?? 0;
+
+        state.page = clamp(state.page + increment, 0, totalPages - 1);
+
+        collected.update(await buildMessage());
+
         return;
       }
 
