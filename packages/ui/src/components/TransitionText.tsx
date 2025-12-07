@@ -11,6 +11,7 @@ type TransitionTextProps = PropsWithChildren<Omit<TextProps, 'style'>> & {
   nowrap?: boolean;
   style?: CSSProperties;
   autoscroll?: boolean;
+  stableId?: string;
 }
 
 export const TransitionText: React.FC<TransitionTextProps> = React.memo((props) => {
@@ -31,7 +32,7 @@ export const TransitionText: React.FC<TransitionTextProps> = React.memo((props) 
   const fromTransform = direction === 'down' ? `-${tv}` : tv;
   const leaveTransform = direction === 'down' ? tv : `-${tv}`;
 
-  const key = children?.toString();
+  const key = props.stableId ?? children?.toString();
 
   const text = (
     <Text {...textProps}>

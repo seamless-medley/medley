@@ -68,6 +68,7 @@ export const LyricsBar: React.FC<LyricsBarProps> = ({ stationId, inline, nowrap,
         inline={inline}
         nowrap={nowrap}
         autoscroll={autoscroll}
+        stableId={`${line.current}`}
         {...textProps}
       >
         {lyricText}
