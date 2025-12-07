@@ -62,7 +62,7 @@ export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
   const clipperRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
-  const timer = useRef<number>();
+  const timer = useRef<number>(undefined);
   const animationFrame = useRef(0);
 
   const calcOverflowSize = React.useCallback(() => {
