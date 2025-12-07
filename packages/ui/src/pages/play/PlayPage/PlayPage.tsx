@@ -1,8 +1,8 @@
 import { chain, random, sortBy } from "lodash";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Ref, RefObject, useCallback, useEffect, useMemo, useState } from "react";
 
 import { styled } from "@linaria/react";
-import { Box, Button, Container, Flex, Group, Image, Stack } from "@mantine/core";
+import { Box, BoxComponentProps, Button, Center, Container, Flex, Group, Image, MantineBreakpoint, Stack, StyleProp, Text, Title as TextTitle } from "@mantine/core";
 import { useFullscreen, useSetState } from "@mantine/hooks";
 
 import { getLuminance,
@@ -37,7 +37,11 @@ import { Lyrics, defaultColors as defaultLyricsColors } from "./components/Lyric
 import { PlayHead } from "./components/PlayHead";
 
 import { Route } from "./route";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, MotionNodeOptions } from "motion/react";
+import { TransitionText } from "@ui/components/TransitionText";
+import { AutoScroller } from "@ui/components/AutoScoller";
+import { IconHeadphones, IconPlayerPlay } from "@tabler/icons-react";
+import { usePlayingStationId } from "@ui/hooks/useClient";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -72,8 +76,88 @@ const Control = styled.div`
 
 const logger = getLogger(['ui', 'page', 'play']);
 
-type StationLyricsProps = {
+type StationProps = {
   stationId: string;
+}
+
+const StationName: React.FC<StationProps> = ({ stationId }) => {
+  const { station } = useStation(stationId);
+  const name = useRemotableProp(station, 'name');
+
+  return (
+    <AutoScroller>
+      <TextTitle textWrap='nowrap' order={2}>{name}</TextTitle>
+    </AutoScroller>
+  );
+}
+
+const StationDescription: React.FC<StationProps> = ({ stationId }) => {
+  const { station } = useStation(stationId);
+  const description = useRemotableProp(station, 'description');
+
+  return (
+    <AutoScroller>
+      <TextTitle textWrap='nowrap' order={5}>{description}</TextTitle>
+    </AutoScroller>
+  );
+}
+
+const StationTrack: React.FC<StationProps> = ({ stationId }) => {
+  const { station } = useStation(stationId);
+  const activeDeck = useRemotableProp(station, 'activeDeck');
+  const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
+  const tags = trackPlay?.track?.extra?.tags;
+
+  return (
+    <AutoScroller>
+      <TextTitle textWrap='nowrap' order={4}>{tags ? formatTags(tags) : undefined}</TextTitle>
+    </AutoScroller>
+  );
+}
+
+const animatePresenceProps: Pick<MotionNodeOptions, 'initial' | 'exit' | 'animate' | 'transition'> = {
+  initial: { opacity: 0 },
+  exit: { opacity: 0 },
+  animate: { opacity: 1 },
+  transition: { duration: 0.6, ease: 'easeInOut' }
+}
+
+const StationCover: React.FC<{ cover?: string }> = ({ cover }) => {
+  return (
+    <AnimatePresence>
+      {cover
+        ? <Box component={motion.div}
+          key={cover}
+          pos='absolute' left={0} top={0} right={0} bottom={0}
+          style={{
+            backgroundImage: `url(${cover})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+          {...animatePresenceProps}
+        />
+        :
+          <Flex component={motion.div} justify='center' align='center'
+            pos='absolute' left={0} top={0} right={0} bottom={0}
+          >
+            <Text component={motion.div}
+            key='no_cover'
+            fz='2.5rem'
+            initial={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 3 }}
+            >
+              No cover
+            </Text>
+          </Flex>
+        }
+    </AnimatePresence>
+  );
+}
+
+type StationLyricsProps = StationProps & {
+
   showTitle?: boolean;
   showCover?: boolean;
   showPlayhead?: boolean;
@@ -248,58 +332,138 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
   )
 }
 
-export const PlayPage: React.FC = () => {
-  const { station: stationId } = Route.useParams();
-
+const StationLyricsPanel: React.FC<StationProps & { fullscreen: boolean }>   = ({ stationId, fullscreen }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck');
-  const cover = useDeckCover(stationId, activeDeck);
 
-  const { toggle, fullscreen, ref } = useFullscreen();
+  const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
+  const hasLyrics = (trackPlay?.track?.extra?.coverAndLyrics?.lyrics?.timeline?.length ?? 0) > 4;
 
   return (
+    <>
+      <StationLyrics
+        stationId={stationId}
+        showTitle={fullscreen}
+        showPlayhead={fullscreen}
+        showCover={fullscreen}
+      />
+      <AnimatePresence>
+        {!hasLyrics && !fullscreen &&
+          <Flex component={motion.div}
+            pos='absolute'
+            bg='rgb(0 0 0 / 0.9)'
+            top={0} bottom={0} left={0} right={0} justify='center' align='center'
+            fz='2.5rem'
+            {...animatePresenceProps}
+          >
+            No lyrics
+          </Flex>
+        }
+      </AnimatePresence>
+    </>
+  );
+}
+
+type StationCoverAndLyricsProps = {
+  stationId: string;
+  toggleFullscreen: () => any;
+  fullscreen: boolean;
+  lyricsRef: Ref<HTMLDivElement>;
+}
+
+const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef: ref, toggleFullscreen: toggle, stationId, fullscreen }) => {
+  const { station } = useStation(stationId);
+  const activeDeck = useRemotableProp(station, 'activeDeck');
+  const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
+  const cover = useDeckCover(stationId, activeDeck);
+
+  const showCover = (cover?.length ?? 0) > 0;
+  const showLyrics = (trackPlay?.track?.extra?.coverAndLyrics?.lyrics?.timeline?.length ?? 0) > 4;
+
+  const coverVisible = (!showCover && showLyrics) ? 'md' : undefined;
+  const lyricsVisible = (!showCover && showLyrics) ? undefined : 'md';
+
+  const lyricsWidths = (showCover === showLyrics) ? '50%' : { base: '100%', md: '50%' };
+
+  return (
+    <Group
+      w='100%' h='55cqh'
+      wrap="nowrap"
+      gap={0}
+      bdrs='lg'
+      bg='rgb(0 0 0 / 0.3)'
+      style={{ overflow: 'hidden' }}
+      onDoubleClick={toggle}
+    >
+      <Box
+        pos='relative'
+        w={{ base: '100%', md: '50%' }}
+        h='100%'
+        visibleFrom={coverVisible}
+        style={{ transition: 'all 0.5s ease' }}
+      >
+        <Box
+          pos='absolute'
+          w='100%' h='100%'
+        >
+          <StationCover cover={cover} />
+        </Box>
+      </Box>
+      <Flex ref={ref}
+        pos='relative'
+        w={lyricsWidths} h='100%'
+        visibleFrom={lyricsVisible}
+      >
+        <StationLyricsPanel {...{ stationId, fullscreen, }} />
+      </Flex>
+    </Group>
+  );
+}
+
+export const PlayPage: React.FC = () => {
+  const { station: stationId } = Route.useParams();
+  const { toggle, fullscreen, ref } = useFullscreen();
+
+  const playingStation = usePlayingStationId();
+  const isListening = playingStation === stationId;
+
+  return (
+    <>
       <Stack
         pos='fixed'
-        gap='sm'
+        align="center"
+        mt={60}
+        left='50%'
+        w={{ base: 'calc(100% - 2em)', lg: 'calc(100% - 5em)', xl: 'calc(100% - 10em)' }}
         style={{
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          height: '50%',
-          width: '50%',
-          // outline: '1px solid yellow'
-          overflow: 'hidden',
+          transform: 'translate(-50%, 0)',
+          transition: 'all 0.5s ease',
         }}
       >
-        <Group
-          style={{ width: '100%', height: '100%', overflow: 'hidden' }}
-          wrap="nowrap"
-          bdrs='lg'
-          gap={0}
-          onDoubleClick={toggle}
-        >
-          <Box w='50%' h='100%'>
-            <Image component={motion.img}
-              key={cover}
+        <Stack w='100%' mih='4em' gap='xs' justify="center">
+          <Group justify='center' w='100%'>
+            <StationName stationId={stationId} />
+          </Group>
 
-              src={cover}
-              initial={{ opacity: 0 }}
-              exit={{ opacity: 0 }}
-              animate={{ opacity: 1}}
-              transition={{ duration: 0.6, ease: 'easeInOut' }}
-            />
-          </Box>
-          <Box ref={ref} pos='relative' w='50%' h='100%'>
-            <StationLyrics
-              stationId={stationId}
-              showTitle={fullscreen}
-              showPlayhead={fullscreen}
-              showCover={fullscreen}
-            />
-          </Box>
+          <Group justify='center' w='100%'>
+            <StationDescription stationId={stationId} />
+          </Group>
+
+          <Group justify='center' w='100%' mih='1em'>
+            <StationTrack stationId={stationId} />
+          </Group>
+        </Stack>
+
+        <StationCoverAndLyrics fullscreen={fullscreen} toggleFullscreen={toggle} stationId={stationId} lyricsRef={ref} />
+
+        <Group>
+          <Button bdrs={'lg'} onClick={() => client.playAudio(stationId)}>
+            <IconHeadphones />{isListening ? 'Listening' : 'Listen'}
+          </Button>
+
+          <Button variant="outline" bdrs={'lg'} onClick={() => { toggle(); client.playAudio(stationId)} }>Fullscreen</Button>
         </Group>
-
-        <Button bdrs={'lg'} onClick={toggle}>Fullscreen</Button>
       </Stack>
+    </>
   )
 }
