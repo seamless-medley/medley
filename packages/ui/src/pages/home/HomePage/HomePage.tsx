@@ -77,7 +77,7 @@ const CoverBackdrop: React.FC<{ cover?: string }> = ({ cover }) => {
         }}
         initial={{ opacity: 0 }}
         exit={{ opacity: 0 }}
-        animate={{ opacity: 1}}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.6, ease: 'easeInOut' }}
       />
     </AnimatePresence>
@@ -85,9 +85,9 @@ const CoverBackdrop: React.FC<{ cover?: string }> = ({ cover }) => {
 }
 
 const StationIdent: React.FC<{ stationId: string }> = ({ stationId }) => {
-   const { station } = useStation(stationId);
-   const name = useRemotableProp(station, 'name');
-   const description = useRemotableProp(station, 'description');
+  const { station } = useStation(stationId);
+  const name = useRemotableProp(station, 'name');
+  const description = useRemotableProp(station, 'description');
 
   return (
     <Group p={0} align="flex-start" justify="space-between">
