@@ -52,6 +52,7 @@ export type BeatProps = {
 
 export const InnerContainer = styled.div<BackgroundProp>`
   position: relative;
+  width: 100%;;
   height: 100%;
   overflow: hidden;
   transition: background-color 1s ease;
@@ -102,7 +103,7 @@ export const Container: React.FC<PropsWithChildren<BackgroundProp>> = (props) =>
   const p = { background };
 
   return (
-    <InnerContainer {...p} style={{ width: '100%', background }}>
+    <InnerContainer {...p} style={{ background }}>
       <TopDecorator {...p}/>
       { props.children }
       <BottomDecorator {...p}/>
