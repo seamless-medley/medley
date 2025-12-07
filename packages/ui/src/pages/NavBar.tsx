@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { AppShell, Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image } from '@mantine/core';
+import { AppShell, Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image, Text } from '@mantine/core';
 import { IconVinyl } from '@tabler/icons-react';
 import { useForm } from '@tanstack/react-form';
 import { Link } from '@tanstack/react-router';
@@ -37,7 +37,7 @@ const LoginButton = () => {
           radius="md"
           onClick={toggleOpen}
         >
-          DJ Console
+          <Text>DJ Console</Text>
         </Button>
       </Popover.Target>
       <Popover.Dropdown>
@@ -79,15 +79,14 @@ export function NavBar() {
   const { user } = useSession();
 
   return (
-    <Group h="100%" px="md" justify="space-between">
+    <Group h="100%" px="md" justify="space-between" wrap='nowrap'>
       <Group align="center" gap="sm">
         <Link to="/" style={{ textDecoration: 'none' }}>
-          <Group align="center" gap="xs">
+          <Group align="center" gap="xs" wrap='nowrap'>
             <Image src={logo} h={40} w="auto" fit="contain" />
             <Title
               size="h3"
               fw={700}
-              variant="gradient"
             >
               Medley
             </Title>
