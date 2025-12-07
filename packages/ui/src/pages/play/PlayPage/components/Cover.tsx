@@ -363,7 +363,7 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid, visible
     <>
       <CoverContainer ref={containerEl} className={clsx('revealed', visible && 'visible')}>
         <CoverDisc colors={discColors}>
-          <CoverImage ref={imageEl} style={{ opacity: url ? 0.77 : 0 }} />
+          <CoverImage ref={imageEl} style={{ opacity: url ? 0.85 : 0 }} />
           <CoverDecorator />
         </CoverDisc>
       </CoverContainer>
