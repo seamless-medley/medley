@@ -424,12 +424,12 @@ interface Colors {
 }
 
 export const defaultColors = {
-  background: 'rgb(2,2,30)',
+  background: 'rgb(2 2 30)',
   line: {
-    text: 'rgb(49, 49, 132)',
-    active: 'rgb(222, 222, 255)',
-    dim: 'rgba(61,61,147,0.5)',
-    shadow: 'rgb(80, 80, 210)',
+    text: 'rgb(49 49 132)',
+    active: 'rgb(222 222 255)',
+    dim: 'rgb(61 61 147 / 0.5)',
+    shadow: 'rgb(80 80 210)',
     glow: 'white'
   }
 }

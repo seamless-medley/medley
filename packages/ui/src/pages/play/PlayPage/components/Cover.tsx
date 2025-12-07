@@ -274,10 +274,10 @@ const CoverDecorator = styled.div`
   border-radius: 100%;
   background: radial-gradient(
     circle closest-side,
-    rgba(0,0,0,0.8) 5%,
+    rgb(0 0 0 / 0.8) 5%,
     transparent 5.5%,
     transparent 96%,
-    rgba(255,255,255,0.5) 96.5%
+    rgb(255 255 255 / 0.5) 96.5%
   );
 `;
 

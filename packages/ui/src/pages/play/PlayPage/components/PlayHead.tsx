@@ -35,7 +35,7 @@ const Box = styled.div<{ width?: string }>`
   position: relative;
   padding: 0.44em 0.6em;
   border-radius: 0.25em 0px 0px 0px;
-  background-color: rgba(200, 200, 255, 0.3);
+  background-color: rgb(200 200 255 / 0.3);
   transition: all 0.2s ease;
   white-space: nowrap;
   height: 1em;
@@ -138,7 +138,7 @@ const Next = styled.div<{ color: string }>`
   user-select: none;
 
   padding: 0.4em;
-  background-color: rgba(200, 200, 255, 0.3);
+  background-color: rgb(200 200 255 / 0.3);
   white-space: nowrap;
   height: 2.0em;
 

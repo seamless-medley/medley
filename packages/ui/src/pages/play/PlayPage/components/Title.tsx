@@ -40,7 +40,7 @@ const TitleContainer = styled.div`
 const TitleBox = styled.div`
   padding: 0.12em 0.6em 0.12em 0.33em;
   border-radius: 0px 0px 0.25em 0px;
-  background-color: rgba(200, 200, 255, 0.3);
+  background-color: rgb(200 200 255 / 0.3);
   transition: all 0.2s ease, border-radius 0.6s ease;
   white-space: nowrap;
   min-height: 1.6em;

@@ -58,10 +58,10 @@ const CoverBackdrop: React.FC<{ cover?: string }> = ({ cover }) => {
   const dimmer = linearGradient({
     toDirection: 'to bottom',
     colorStops: [
-      'rgba(0, 0, 0, 1) 0%',
+      'rgb(0 0 0 / 1) 0%',
       'transparent 30%',
       'transparent 60%',
-      'rgba(0, 0, 0, 1) 100%'
+      'rgb(0 0 0 / 1) 100%'
     ]
   }).backgroundImage.toString();
 
