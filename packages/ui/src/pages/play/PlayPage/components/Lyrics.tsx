@@ -66,7 +66,7 @@ const Decorator = styled.div`
   position: absolute;
   left: 0;
   right: 0;
-  height: calc(1.8em * 4);
+  height: calc(100% / 8 * 2.5);
   pointer-events: none;
   z-index: 2;
 `;
