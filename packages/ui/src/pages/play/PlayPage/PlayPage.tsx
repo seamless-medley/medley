@@ -270,14 +270,14 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
 
   return (
     <Box pos='relative' w='100%' h='100%' style={{ overflow: 'hidden' }}>
-      <Control>
+      {/* <Control>
         <Button onClick={() => client.playAudio(stationId) }>
           Listen
         </Button>
         <Button onClick={() => client.karaokeEnabled = !client.karaokeEnabled }>
           Karaoke
         </Button>
-      </Control>
+      </Control> */}
 
       <Cover { ...coverProps } visible={showCover} />
 
