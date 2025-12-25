@@ -56,7 +56,17 @@
               },
               "ip": {
                 "title": "Listening IP",
-                "$ref": "#/$defs/ipAddress"
+                "anyOf": [
+                  {
+                    "const": "0.0.0.0",
+                    "markdownDescription": "`announcedIp` must also be set when the `ip` is set to `0.0.0.0`"
+                  },
+                  {
+                    "const": "::",
+                    "markdownDescription": "`announcedIp` must also be set when the `ip` is set to `::`"
+                  },
+                  { "$ref": "#/$defs/ipAddress" }
+                ]
               },
               "port": {
                 "title": "Port",
@@ -70,6 +80,27 @@
               }
             },
             "required": ["protocol", "ip"],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "ip": {
+                      "oneOf": [
+                        {
+                          "const": "0.0.0.0"
+                        },
+                        {
+                          "const": "::"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "required": ["protocol", "ip", "announcedIp"]
+                }
+              }
+            ],
             "additionalProperties": false
           }
         },
