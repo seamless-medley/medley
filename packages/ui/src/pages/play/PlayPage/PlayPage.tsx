@@ -470,7 +470,7 @@ export const PlayPage: React.FC = () => {
           lyricsRef={ref}
         />
 
-        <Group>
+        <Group mt='lg'>
           <Button bdrs={'lg'} onClick={() => client.playAudio(stationId)}>
             <IconHeadphones />{isListening ? 'Listening' : 'Listen'}
           </Button>
