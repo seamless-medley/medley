@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'node:path';
-import { chain, flatten, isEqual, mapValues, matches, reject, some, toLower, uniq, without } from "lodash";
+import { camelCase, chain, flatten, isEqual, mapValues, matches, reject, some, toLower, uniq, without } from "lodash";
 import { isString } from 'lodash/fp';
 import { TypedEmitter } from "tiny-typed-emitter";
 import { createLogger, type Logger } from '../../logging';
@@ -890,8 +890,8 @@ export function trackRecordOf(track: BoomBoxTrack): TrackRecord {
 }
 
 export const extractCommentMetadata = (track: BoomBoxTrack, prefix: string) => (track.extra?.tags?.comments
-  .filter(([key]) => key.startsWith(prefix))
-  .map(([key, value]) => [key.substring(prefix.length), value])
+  .filter(([key]) => key.substring(0, prefix.length).toLowerCase() == prefix.toLowerCase())
+  .map(([key, value]) => [camelCase(key.substring(prefix.length).toLowerCase()), value])
   .reduce<Record<string, string>>((o, [key, value]) => {
     o[key] = value;
     return o;
