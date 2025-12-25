@@ -86,8 +86,6 @@ export const Title: React.FC<TitleProps> = (props) => {
   const canvasEl = useRef<HTMLCanvasElement>(null);
   const textEl = useRef<HTMLDivElement>(null);
 
-  const [text, setText] = useState(props.text);
-
   const updateBounding = () => {
     if (!canvasEl.current || !boxEl.current) {
       return;
@@ -105,26 +103,21 @@ export const Title: React.FC<TitleProps> = (props) => {
     boxEl.current.style.width = `calc(${tw}px + ${boxStyle.paddingLeft} + ${boxStyle.paddingRight})`;
   }
 
-  const updateText = () => {
-    if (props.text === text) {
-      return;
-    }
-
-    setText('');
+  const updateText = useCallback(() => {
     updateBounding();
 
     setTimeout(() => {
       const el = textEl.current!;
       el.style.backgroundImage = props.bg || "";
-      setText(el.innerText = props.text);
+      el.innerText = props.text;
       updateBounding();
     }, 700);
-  }
+  }, [props.text, props.bg]);
 
   useEffect(() => {
     updateBounding();
     updateText();
-  }, [props.text]);
+  }, [props.text, props.bg]);
 
   const viewportUpdateHandler = useCallback(debounce(() => {
     updateBounding();
