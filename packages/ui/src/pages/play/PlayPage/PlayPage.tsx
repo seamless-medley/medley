@@ -204,8 +204,8 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
             c = setSaturation(0.7, c);
           }
 
-          if (hsl.lightness < 0.3) {
-            c = setLightness(0.5, c);
+          if (hsl.lightness < 0.7) {
+            c = setLightness(0.7, c);
           }
 
           return c;
