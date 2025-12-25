@@ -9,7 +9,6 @@ import {
   Stack,
   Center,
   ThemeIcon,
-  AppShell,
   Box,
   Button,
   alpha
