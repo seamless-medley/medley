@@ -388,6 +388,13 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
   async initialize(config: WebRtcConfig): Promise<this> {
     const listens = distributeListenInfo(config.listens, cpus().length);
 
+    if (!listens.length) {
+      listens.push([
+        { protocol: 'tcp', ip: '127.0.0.1' },
+        { protocol: 'udp', ip: '127.0.0.1' }
+      ]);
+    }
+
     const bitrate = config.bitrate * 1000;
 
     class WorkerInitializationError extends Error {
