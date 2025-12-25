@@ -7,9 +7,9 @@
       "name": "Debug",
       "cwd": "${workspaceFolder}/packages/radio/",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["run", "dev", "config-dev.yml"],
+      "runtimeArgs": ["run", "debug", "config-dev.yml"],
       "env": {
-        "LOG_PRETTY": "hide-date,use-colors",
+        "LOG_PRETTY": "use-colors",
         "FORCE_COLOR": "3",
         "UV_THREADPOOL_SIZE": "20"
       },
