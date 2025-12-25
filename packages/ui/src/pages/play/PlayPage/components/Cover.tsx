@@ -319,7 +319,7 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid, visible
     }
 
     containerEl.current?.classList.add('revealed');
-  }, [url, imageEl.current]);
+  }, [colors, url, imageEl.current]);
 
   const animationTimer = useRef<number>(null);
 
