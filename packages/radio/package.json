@@ -18,7 +18,8 @@
     "clean": "rimraf .turbo build package",
     "rebuild-opus-electron": "tsx scripts/rebuild-opus-electron",
     "bump-version": "tsx scripts/bump.ts",
-    "dev": "cross-env MEDLEY_DEV_NO_TRACE=1 DEBUG=1 NODE_ENV=development node -r ts-node/register --inspect=9229 src/server/main.ts",
+    "dev": "cross-env MEDLEY_DEV_NO_TRACE=1 DEBUG=1 NODE_ENV=development ts-node src/server/main.ts",
+    "debug": "cross-env MEDLEY_DEV_NO_TRACE=1 DEBUG=1 NODE_ENV=development node -r @swc-node/register --inspect=9229 src/server/main.ts",
     "build": "tsc --build tsconfig.build.json",
     "package": "tsx scripts/package.ts",
     "package:docker": "docker build -f ./docker/Dockerfile -t medley ../.."
