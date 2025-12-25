@@ -459,8 +459,8 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
   const ctx = useMemo(() => canvas?.getContext('2d'), [canvas]);
 
   useEffect(() => {
-    if (ctx) {
-      ctx.font = window.getComputedStyle(tickerRef.current!).font;
+    if (ctx && tickerRef.current) {
+      ctx.font = window.getComputedStyle(tickerRef.current).font;
     }
   });
 
