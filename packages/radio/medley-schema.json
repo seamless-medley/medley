@@ -69,7 +69,7 @@
                 "$ref": "#/$defs/ipAddress"
               }
             },
-            "required": ["protocol", "ip", "port"],
+            "required": ["protocol", "ip"],
             "additionalProperties": false
           }
         },
