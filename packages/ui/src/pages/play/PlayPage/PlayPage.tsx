@@ -325,7 +325,7 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
           deckIndex={activeDeck}
           backgroundColor={colors?.background ?? defaultLyricsColors.background}
           textColor={colors?.line?.text ?? defaultLyricsColors.line.text}
-          activeColor={colors?.line?.active ?? defaultLyricsColors.line.active}
+          alternateColor={colors?.line?.dim ?? defaultLyricsColors.line.active}
         />
       }
     </Box>

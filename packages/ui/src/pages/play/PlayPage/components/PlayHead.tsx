@@ -174,7 +174,7 @@ interface Props {
 
   backgroundColor: string;
   textColor: string;
-  activeColor: string;
+  alternateColor: string;
 }
 
 function format(seconds: number) {
@@ -274,7 +274,7 @@ export const PlayHead: React.FC<PropsWithChildren<Props>> = (props) => {
 
       <Next
         style={{ minWidth: `calc(${containerEl.current?.clientWidth ?? 0}px - 0.4em * 2)` }}
-        color={props.activeColor}
+        color={setLightness(0.65, props.alternateColor)}
         className={clsx({ show: showNext })}
       >
         <span>{nextTrack && 'Next: '}{nextTrack}</span>
