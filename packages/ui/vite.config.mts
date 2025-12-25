@@ -29,9 +29,9 @@ export default defineConfig({
     },
     tanstackRouter({
       target: 'react',
-      virtualRouteConfig: './src/pages/routes.ts',
-      routesDirectory: './src/pages',
-      generatedRouteTree: './src/pages/routeTree.gen.ts'
+      virtualRouteConfig: './pages/routes.ts',
+      routesDirectory: './pages',
+      generatedRouteTree: './pages/routeTree.gen.ts'
     }),
     react({
       babel: {
