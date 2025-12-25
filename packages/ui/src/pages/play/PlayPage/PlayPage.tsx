@@ -268,13 +268,13 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
     const [background, dim, text, shadow, active, glow] = colorsProp;
 
     return {
-      background: findColor(background, v => getLuminance(v) >= 0.01, darken),
+      background: setLightness(0.01, background),
       line: {
-        text: findColor(findColor(text, v => getLuminance(v) >= 0.045, darken), v => getLuminance(v) < 0.0095, tint),
-        active: findColor(active, v => getLuminance(v) < 0.9, tint),
-        dim: findColor(dim, v => getLuminance(v) >= 0.03, shade),
-        shadow: findColor(shadow, v => getLuminance(v) >= 0.11, shade),
-        glow: findColor(glow, v => getLuminance(v) < 0.97, lighten)
+        text: setLightness(0.3, text),
+        active: setLightness(1, active),
+        dim: setLightness(0.2, dim),
+        shadow: setLightness(0.5, shadow),
+        glow: setLightness(0.8, glow)
       }
     }
 
