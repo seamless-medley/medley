@@ -8,8 +8,6 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createFileRoute } from '@tanstack/react-router'
-
 import { Route as rootRouteImport } from './root'
 import { Route as layoutRouteImport } from './layout'
 import { Route as djLayoutRouteImport } from './dj/layout'
@@ -18,20 +16,14 @@ import { Route as playPlayPageRouteRouteImport } from './play/PlayPage/route'
 import { Route as djDJConsolePageRouteRouteImport } from './dj/DJConsolePage/route'
 import { Route as djCollectionPageRouteRouteImport } from './dj/CollectionPage/route'
 
-const DjRouteImport = createFileRoute('/dj')()
-
-const DjRoute = DjRouteImport.update({
-  id: '/dj',
-  path: '/dj',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const layoutRoute = layoutRouteImport.update({
   id: '/_normal-layout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const djLayoutRoute = djLayoutRouteImport.update({
-  id: '/_dj-layout',
-  getParentRoute: () => DjRoute,
+  id: '/dj/_dj-layout',
+  path: '/dj',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const homeHomePageRouteRoute = homeHomePageRouteRouteImport.update({
   id: '/',
@@ -72,7 +64,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_normal-layout': typeof layoutRouteWithChildren
   '/_normal-layout/': typeof homeHomePageRouteRoute
-  '/dj': typeof DjRouteWithChildren
   '/dj/_dj-layout': typeof djLayoutRouteWithChildren
   '/_normal-layout/play/$station': typeof playPlayPageRouteRoute
   '/dj/_dj-layout/$station/': typeof djDJConsolePageRouteRoute
@@ -97,7 +88,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_normal-layout'
     | '/_normal-layout/'
-    | '/dj'
     | '/dj/_dj-layout'
     | '/_normal-layout/play/$station'
     | '/dj/_dj-layout/$station/'
@@ -106,18 +96,11 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   layoutRoute: typeof layoutRouteWithChildren
-  DjRoute: typeof DjRouteWithChildren
+  djLayoutRoute: typeof djLayoutRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/dj': {
-      id: '/dj'
-      path: '/dj'
-      fullPath: '/dj'
-      preLoaderRoute: typeof DjRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_normal-layout': {
       id: '/_normal-layout'
       path: ''
@@ -130,7 +113,7 @@ declare module '@tanstack/react-router' {
       path: '/dj'
       fullPath: '/dj'
       preLoaderRoute: typeof djLayoutRouteImport
-      parentRoute: typeof DjRoute
+      parentRoute: typeof rootRouteImport
     }
     '/_normal-layout/': {
       id: '/_normal-layout/'
@@ -190,19 +173,9 @@ const djLayoutRouteWithChildren = djLayoutRoute._addFileChildren(
   djLayoutRouteChildren,
 )
 
-interface DjRouteChildren {
-  djLayoutRoute: typeof djLayoutRouteWithChildren
-}
-
-const DjRouteChildren: DjRouteChildren = {
-  djLayoutRoute: djLayoutRouteWithChildren,
-}
-
-const DjRouteWithChildren = DjRoute._addFileChildren(DjRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   layoutRoute: layoutRouteWithChildren,
-  DjRoute: DjRouteWithChildren,
+  djLayoutRoute: djLayoutRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
