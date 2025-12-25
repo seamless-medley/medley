@@ -158,13 +158,13 @@ const StationCover: React.FC<{ cover?: string }> = ({ cover }) => {
 }
 
 type StationLyricsProps = StationProps & {
-
+  colors: string[];
   showTitle?: boolean;
   showCover?: boolean;
   showPlayhead?: boolean;
 }
 
-const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, showCover, showPlayhead }) => {
+const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, showCover, showPlayhead, colors: colorsProp }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck');
 
@@ -181,29 +181,22 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
   const [titleText, setTitleText] = useState('');
   const [titleBg, setTitleBg] = useState('');
 
-  const sortColors = (colors: string[]) => sortBy(colors, c => parseToHsl(c).hue);
-
-  const createColors = useCallback(async () => sortColors(cover
-    ? (await prominent(cover, { format: 'hex', amount: 6 })) as string[]
-    : chain(6).times().map(i => adjustHue((i - 3) * random(15, 20), hsl(random(360), random(0.5, 0.9, true), random(0.6, 0.8, true)))).value()
-  ), [cover]);
-
-  useEffect(() => void createColors().then((colors) => {
+  useEffect(() => {
     setCoverProps({
-      colors,
+      colors: colorsProp,
       url: cover,
       center: (lyrics ? lyrics.timeline.length : 2) < 2,
       uuid: trackPlay?.uuid ?? ''
     });
-  }), [cover]);
+  }, [cover, colorsProp, trackPlay?.uuid])
 
   useEffect(() => {
     let gradient;
 
     logger.debug('Colors {colors}', { colors: coverProps.colors });
 
-    if (coverProps.colors.length) {
-      const titleColor = chain(coverProps.colors)
+    if (colorsProp.length) {
+      const titleColor = chain(colorsProp)
         .map(c => {
           const hsl = parseToHsl(c);
 
@@ -241,7 +234,7 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
     }
 
     setTitleBg(gradient.toString() ?? '');
-  }, [coverProps.colors]);
+  }, [colorsProp]);
 
   useEffect(() => {
     const tags = trackPlay?.track?.extra?.tags;
@@ -274,11 +267,11 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
   }, []);
 
   const colors = useMemo(() => {
-    if (coverProps.colors.length < 6) {
+    if (colorsProp.length < 6) {
       return undefined;
     }
 
-    const [background, dim, text, shadow, active, glow] = coverProps.colors;
+    const [background, dim, text, shadow, active, glow] = colorsProp;
 
     return {
       background: findColor(background, v => getLuminance(v) >= 0.01, darken),
@@ -291,7 +284,7 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
       }
     }
 
-  }, [coverProps.colors]);
+  }, [colorsProp]);
 
   const lyrics = trackPlay?.track?.extra?.coverAndLyrics?.lyrics;
 
@@ -333,7 +326,12 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
   )
 }
 
-const StationLyricsPanel: React.FC<StationProps & { fullscreen: boolean }>   = ({ stationId, fullscreen }) => {
+type StationLyricsPanelProps = StationProps & {
+  fullscreen: boolean;
+  colors: string[];
+}
+
+const StationLyricsPanel: React.FC<StationLyricsPanelProps>   = ({ stationId, fullscreen, colors }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck');
 
@@ -343,6 +341,7 @@ const StationLyricsPanel: React.FC<StationProps & { fullscreen: boolean }>   = (
   return (
     <>
       <StationLyrics
+        colors={colors}
         stationId={stationId}
         showTitle={fullscreen}
         showPlayhead={fullscreen}
@@ -444,7 +443,7 @@ const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef
         w={lyricsWidths} h='100%'
         visibleFrom={lyricsVisible}
       >
-        <StationLyricsPanel {...{ stationId, fullscreen, }} />
+        <StationLyricsPanel {...{ stationId, fullscreen, colors }} />
       </Flex>
     </Group>
   );
