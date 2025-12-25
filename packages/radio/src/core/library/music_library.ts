@@ -221,7 +221,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
   async #indexTracks(infos: Array<IndexInfo<O>>, done: (failures: Array<IndexInfo<O>>) => void) {
     const failures: Array<IndexInfo<O>> = [];
 
-    const doIndex = (info: IndexInfo<O>) => this.#indexTrack(info)
+    await Promise.all(infos.map(info => this.#indexTrack(info)
       .then(() => {
         info.succeeded = true;
 
@@ -241,15 +241,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
         if (info.errors.length <= 3) {
           failures.push(info);
         }
-      });
-
-    const [mandatoryTracks, auxiliaryTracks] = partition(infos, info => !info.track.collection.options.auxiliary);
-
-    await Promise.all(mandatoryTracks.map(doIndex));
-
-    for (const track of auxiliaryTracks) {
-      await doIndex(track);
-    }
+      })
+    ));
 
     done(failures);
   }
