@@ -141,13 +141,15 @@ const StationCover: React.FC<{ cover?: string }> = ({ cover }) => {
           <Flex component={motion.div} justify='center' align='center'
             pos='absolute' left={0} top={0} right={0} bottom={0}
           >
-            <Text component={motion.div}
-            key='no_cover'
-            fz='2.5rem'
-            initial={{ opacity: 0 }}
-            exit={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 3 }}
+            <Text
+              component={motion.div}
+              key='no_cover'
+              fz='2.5rem'
+              initial={{ opacity: 0 }}
+              exit={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 3 }}
+              style={{ userSelect: 'none' }}
             >
               No cover
             </Text>
@@ -193,8 +195,6 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
   useEffect(() => {
     let gradient;
 
-    logger.debug('Colors {colors}', { colors: coverProps.colors });
-
     if (colorsProp.length) {
       const titleColor = chain(colorsProp)
         .map(c => {
@@ -208,12 +208,8 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
             c = setLightness(0.5, c);
           }
 
-          // return findColor(adjustHue(-30, c), v => v < 0.3, lighten);
-          // return adjustHue(-30, c);
           return c;
         })
-        .shuffle()
-        // .flatMap(c => [c, adjustHue(random(15, 90), c)])
         .value();
 
       const colorStops = titleColor.concat([...titleColor].reverse());
@@ -224,8 +220,6 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
       }).backgroundImage;
     } else {
       const colorStops = defaultCoverColors.concat([...defaultCoverColors].reverse());
-
-      logger.info('colorStops {colorStops}', { colorStops });
 
       gradient = linearGradient({
         colorStops,
@@ -354,6 +348,7 @@ const StationLyricsPanel: React.FC<StationLyricsPanelProps>   = ({ stationId, fu
             bg='rgb(0 0 0 / 0.9)'
             top={0} bottom={0} left={0} right={0} justify='center' align='center'
             fz='2.5rem'
+            style={{ userSelect: 'none' }}
             {...animatePresenceProps}
           >
             No lyrics
@@ -440,7 +435,8 @@ const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef
       </Box>
       <Flex ref={ref}
         pos='relative'
-        w={lyricsWidths} h='100%'
+        w={lyricsWidths}
+        h='100%'
         visibleFrom={lyricsVisible}
       >
         <StationLyricsPanel {...{ stationId, fullscreen, colors }} />
@@ -483,7 +479,12 @@ export const PlayPage: React.FC = () => {
           </Group>
         </Stack>
 
-        <StationCoverAndLyrics fullscreen={fullscreen} toggleFullscreen={toggle} stationId={stationId} lyricsRef={ref} />
+        <StationCoverAndLyrics
+          fullscreen={fullscreen}
+          toggleFullscreen={toggle}
+          stationId={stationId}
+          lyricsRef={ref}
+        />
 
         <Group>
           <Button bdrs={'lg'} onClick={() => client.playAudio(stationId)}>
