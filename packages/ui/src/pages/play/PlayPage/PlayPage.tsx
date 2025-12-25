@@ -1,15 +1,11 @@
-import { chain, random, sortBy } from "lodash";
-import { Ref, RefObject, useCallback, useEffect, useMemo, useState } from "react";
+import { chain, random } from "lodash";
+import { Ref, useCallback, useEffect, useMemo, useState } from "react";
 
 import { styled } from "@linaria/react";
-import { Box, BoxComponentProps, Button, Center, Container, Flex, Group, Image, MantineBreakpoint, Stack, StyleProp, Text, Title as TextTitle } from "@mantine/core";
+import { Box, Button, Flex, Group, Stack, Text, Title as TextTitle } from "@mantine/core";
 import { useFullscreen, useSetState } from "@mantine/hooks";
 
-import { getLuminance,
-  darken,
-  lighten,
-  shade,
-  tint,
+import {
   adjustHue,
   setLightness,
   linearGradient,
@@ -38,24 +34,12 @@ import { PlayHead } from "./components/PlayHead";
 
 import { Route } from "./route";
 import { AnimatePresence, motion, MotionNodeOptions } from "motion/react";
-import { TransitionText } from "@ui/components/TransitionText";
 import { AutoScroller } from "@ui/components/AutoScoller";
-import { IconHeadphones, IconPlayerPlay } from "@tabler/icons-react";
+import { IconHeadphones } from "@tabler/icons-react";
 import { usePlayingStationId } from "@ui/hooks/useClient";
 import { css } from "@linaria/core";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
-
-function findColor(base: string, predicate: (c: string) => boolean, fn: (deg: number, base: string) => string) {
-  let deg = 0.1;
-  let c = base;
-  while (deg <= 360 && predicate(c)) {
-    c = fn(deg, base);
-    deg += 0.01;
-  }
-
-  return c;
-}
 
 const Control = styled.div`
   position: absolute;
