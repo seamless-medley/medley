@@ -37,7 +37,7 @@ const LoginButton = () => {
           radius="md"
           onClick={toggleOpen}
         >
-          <Text>DJ Console</Text>
+          <Text>Login</Text>
         </Button>
       </Popover.Target>
       <Popover.Dropdown>
@@ -94,10 +94,10 @@ export function NavBar() {
         </Link>
       </Group>
 
-      { user
+      {/* { user
         ? <Avatar name={user} color='initials' />
         : <LoginButton />
-      }
+      } */}
     </Group>
   );
 }
