@@ -42,6 +42,7 @@ import { TransitionText } from "@ui/components/TransitionText";
 import { AutoScroller } from "@ui/components/AutoScoller";
 import { IconHeadphones, IconPlayerPlay } from "@tabler/icons-react";
 import { usePlayingStationId } from "@ui/hooks/useClient";
+import { css } from "@linaria/core";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -371,6 +372,27 @@ type StationCoverAndLyricsProps = {
   lyricsRef: Ref<HTMLDivElement>;
 }
 
+const stationCoverAndLyricsStyles = css`
+  overflow: hidden;
+  width: 100%;
+  flex-wrap: nowrap;
+
+  @property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: true;
+  }
+
+  @keyframes rotate {
+    to {
+      --angle: 1turn;
+    }
+  }
+
+  animation: rotate 12s linear infinite;
+  border: 4px solid transparent;
+`;
+
 const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef: ref, toggleFullscreen: toggle, stationId, fullscreen }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck');
@@ -396,12 +418,11 @@ const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef
 
   return (
     <Group
-      w='100%' h='55cqh'
-      wrap="nowrap"
+      className={stationCoverAndLyricsStyles}
+      h={{ base: '40cqh', lg: '55cqh', xl: '70cqh' }}
       gap={0}
       bdrs='lg'
-      bg='rgb(0 0 0 / 0.3)'
-      style={{ overflow: 'hidden' }}
+      bg={`linear-gradient(black) padding-box, conic-gradient(from var(--angle), ${[...colors, ...[...colors].reverse()].join(', ')}) border-box`}
       onDoubleClick={toggle}
     >
       <Box

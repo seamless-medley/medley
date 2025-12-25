@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import {
@@ -17,7 +17,7 @@ import {
 
 import { css } from "@linaria/core";
 import { IconRadio, IconHeadphones } from '@tabler/icons-react';
-import { darken, getLuminance, lighten, linearGradient } from "polished";
+import { adjustHue, darken, getLuminance, hsl, lighten, linearGradient } from "polished";
 import { prominent } from "color.js";
 import { AnimatePresence, motion } from "motion/react";
 import { formatTags } from "@seamless-medley/utils";
@@ -36,6 +36,7 @@ import { PlayRoute } from "@ui/pages/play/PlayPage/route";
 import { client } from "@ui/init";
 
 import { Route } from "./route";
+import { chain, random } from "lodash";
 
 const coverCss = css`
   background-size: cover;
@@ -52,6 +53,21 @@ const cardCss = css`
       transform: scale(1.08);
     }
   }
+
+  @property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: true;
+  }
+
+  @keyframes rotate {
+    to {
+      --angle: 1turn;
+    }
+  }
+
+  animation: rotate 8s linear infinite;
+  border: 2px solid transparent;
 `
 
 const CoverBackdrop: React.FC<{ cover?: string }> = ({ cover }) => {
@@ -187,6 +203,12 @@ const StationCard: React.FC<{ stationId: string }> = ({ stationId }) => {
   }
 
   const [colors, setColors] = useState<Colors>(defaultColors);
+  const [coverColors, setCoverColors] = useState<string[]>([]);
+
+  const createCoverColors = useCallback(async () => cover
+    ? (await prominent(cover, { format: 'hex', amount: 6, group: 40, sample: 30 })) as string[]
+    : chain(6).times().map(i => adjustHue((i - 3) * random(15, 20), hsl(random(360), random(0.5, 0.9, true), random(0.6, 0.8, true)))).value()
+  , [cover]);
 
   useEffect(() => {
     if (!isListening || !cover) {
@@ -203,8 +225,10 @@ const StationCard: React.FC<{ stationId: string }> = ({ stationId }) => {
         bg: color,
         border: isLight ? darken(0.75, color) : lighten(0.75, color)
       });
-  });
+    });
   }, [isListening, cover]);
+
+  useEffect(() => void createCoverColors().then(setCoverColors), [cover]);
 
   return (
     <Card
@@ -213,6 +237,7 @@ const StationCard: React.FC<{ stationId: string }> = ({ stationId }) => {
       radius="lg"
       h='100%'
       w='100%'
+      bg={`linear-gradient(black) padding-box, conic-gradient(from var(--angle), ${[...coverColors, ...[...coverColors].reverse()].join(', ')}) border-box`}
       className={cardCss}
     >
       <CoverBackdrop cover={cover} />
