@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { exists } from 'fs-extra';
+import { existsSync } from 'node:fs';
 
 import { isString, partition } from "lodash";
 
@@ -219,7 +219,7 @@ let buildInfo: VersionInfo = {
 }
 
 export async function loadBuildInfo(file: string): Promise<VersionInfo> {
-  if (await exists(file)) {
+  if (existsSync(file)) {
     const data = await readFile(file, 'utf-8').then(JSON.parse);
 
     buildInfo = {
