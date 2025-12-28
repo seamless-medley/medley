@@ -35,7 +35,7 @@ import { PlayRoute } from "@ui/pages/play/PlayPage/route";
 import { client } from "@ui/init";
 
 import { Route } from "./route";
-import { chain, random } from "lodash";
+import { chain, kebabCase, random } from "lodash";
 
 const coverCss = css`
   background-size: cover;
@@ -114,12 +114,16 @@ const StationIdent: React.FC<{ stationId: string }> = ({ stationId }) => {
           {description}
         </Text>
       </Stack>
+
       <ThemeIcon
-        size={50}
+        autoContrast
+        size={60}
         radius="md"
         variant="outline"
-        color="green"
-      />
+        color="rgb(from white r g b / 0.8)"
+      >
+        {kebabCase(name).split('-', 2).map(word => word[0]).join('').toUpperCase()}
+      </ThemeIcon>
     </Group>
   )
 }
