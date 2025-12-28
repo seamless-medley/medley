@@ -179,8 +179,7 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
     let gradient;
 
     if (colorsProp.length) {
-      const titleColor = chain(colorsProp)
-        .map(c => {
+      const titleColor = colorsProp.map(c => {
           const hsl = parseToHsl(c);
 
           if (hsl.saturation < 0.7) {
@@ -192,8 +191,7 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
           }
 
           return c;
-        })
-        .value();
+        });
 
       const colorStops = titleColor.concat([...titleColor].reverse());
 
