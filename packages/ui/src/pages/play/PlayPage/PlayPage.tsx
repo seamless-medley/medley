@@ -1,4 +1,4 @@
-import { chain, random } from "lodash";
+import { chain, random, sumBy } from "lodash";
 import { Ref, useCallback, useEffect, useMemo, useState } from "react";
 
 import { styled } from "@linaria/react";
@@ -167,22 +167,20 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
   const [titleBg, setTitleBg] = useState('');
 
   useEffect(() => {
+    const colorTable = colorsProp.map(c => [parseToHsl(c), c] as const);
+    const avgLightness =  sumBy(colorTable, ([hsl]) => hsl.lightness) / colorTable.length;
+
     setCoverProps({
-      colors: chain(colorsProp)
-        .map(c => {
-          const hsl = parseToHsl(c);
-
-          if (hsl.saturation < 0.7) {
-            c = setSaturation(0.7, c);
+      colors: chain(colorTable)
+        .map(([hsl, c]) => {
+          if (hsl.hue <= 4 && hsl.lightness < 0.1) {
+            c = setLightness(avgLightness * 0.6, c);
           }
 
-          if (hsl.lightness < 0.4) {
-            c = setLightness(0.4, c);
-          }
-
-          return c;
+          return [hsl, c] as const;
         })
-        .sortBy(c => parseToHsl(c).hue)
+        .sortBy(([hsl, c]) => hsl.hue)
+        .map(([hsl, c]) => c)
         .value(),
       url: cover,
       center: (lyrics ? lyrics.timeline.length : 2) < 2,
