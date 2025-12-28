@@ -16,6 +16,7 @@ import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
 
 import { Client } from "./client";
 import { KaraokeFx } from './audio/fx/karaoke';
+import { notifications } from '@mantine/notifications';
 
 const logger = getLogger(['client', 'medley']);
 
@@ -176,6 +177,14 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
 
       if (state.type === 'rtc_failed') {
         logger.warn('Transport failed: {data}', { data: { transport, info: state.transportInfo } });
+
+        notifications.show({
+          color: 'red',
+          title: 'Failed',
+          message: 'WebRTC Transport failed',
+          autoClose: 8000
+        });
+
         continue;
       }
 
@@ -196,6 +205,12 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
 
   async playAudio(stationId: string): Promise<AudioTransportPlayResult> {
     if (!this.#audioTransport) {
+      notifications.show({
+        color: 'red',
+        title: 'Error',
+        message: 'Unable to start playback, audio transport unavailable'
+      });
+
       throw new Error('No audio transport');
     }
 
