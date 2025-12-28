@@ -293,4 +293,47 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     return this.#global?.getStations() ?? [];
   }
 
+  #urlForBufferMap = new Map<string, URLForBufferInfo>;
+  #urlForBufferUrlMap = new Map<string, URLForBufferInfo>;
+
+  getURLForBuffer(id: string, { buffer, type }: { buffer: Buffer<ArrayBufferLike> | undefined, type?: string }) {
+    if (this.#urlForBufferMap.has(id)) {
+      const info = this.#urlForBufferMap.get(id)!;
+      info.refCount++;
+      return info.url;
+    }
+
+    const url = URL.createObjectURL(new Blob([buffer as BufferSource], { type }));
+
+    const info = {
+      id,
+      url,
+      refCount: 1
+    }
+
+    this.#urlForBufferMap.set(id, info);
+    this.#urlForBufferUrlMap.set(url, info)
+
+    return url;
+  }
+
+  releaseURLForBuffer(url: string) {
+    const info = this.#urlForBufferUrlMap.get(url);
+    if (!info) {
+      return;
+    }
+
+    if (--info.refCount <= 0) {
+      this.#urlForBufferMap.delete(info.id);
+      this.#urlForBufferUrlMap.delete(url);
+      URL.revokeObjectURL(url);
+    }
+  }
+}
+
+type URLForBufferInfo = {
+  id: string;
+  url: string;
+  refCount: number;
+}
 }

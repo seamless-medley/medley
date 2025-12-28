@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSetState } from "@mantine/hooks";
 import type { Deck, TrackPlay } from "@seamless-medley/remote";
 import { useSurrogate } from "./surrogate";
+import { client } from "@ui/init";
 
 export function useDeck(stationId: string | undefined, index: DeckIndex | undefined) {
   const { surrogate: deck, error } = useSurrogate('deck', stationId && index !== undefined ? `${stationId}/${index}` : undefined);
@@ -18,7 +19,7 @@ export function useDeckCover(stationId: string | undefined, index: DeckIndex | u
 
   const updateCover = (newURL?: string) => setCover((oldCover) => {
     if (oldCover) {
-      URL.revokeObjectURL(oldCover);
+      client.releaseURLForBuffer(oldCover);
     }
 
     return newURL;
@@ -31,8 +32,8 @@ export function useDeckCover(stationId: string | undefined, index: DeckIndex | u
     } = trackPlay?.track?.extra?.coverAndLyrics ?? {};
 
     updateCover(
-      cover && coverMimeType
-        ? URL.createObjectURL(new Blob([cover as BufferSource], { type: coverMimeType }))
+      trackPlay && cover && coverMimeType
+        ? client.getURLForBuffer(trackPlay?.uuid, { buffer: cover, type: coverMimeType })
         : undefined
     );
   }
@@ -49,12 +50,11 @@ export function useDeckCover(stationId: string | undefined, index: DeckIndex | u
 
   useEffect(() => {
     return () => {
-
       if (cover) {
-        URL.revokeObjectURL(cover);
+        client.releaseURLForBuffer(cover);
       }
     }
-  }, [stationId, index]);
+  }, [stationId, index, cover]);
 
   return cover;
 }
