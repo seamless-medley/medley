@@ -106,13 +106,21 @@ export const Title: React.FC<TitleProps> = (props) => {
   const updateText = useCallback(() => {
     updateBounding();
 
+    if (!textEl.current) {
+      return;
+    }
+
+    textEl.current.innerText = '';
+
     setTimeout(() => {
       const el = textEl.current!;
-      el.style.backgroundImage = props.bg || "";
-      el.innerText = props.text;
+      if (el) {
+        el.style.backgroundImage = props.bg || "";
+        el.innerText = props.text;
+      }
       updateBounding();
     }, 700);
-  }, [props.text, props.bg]);
+  }, [textEl.current, props.text, props.bg]);
 
   useEffect(() => {
     updateBounding();
