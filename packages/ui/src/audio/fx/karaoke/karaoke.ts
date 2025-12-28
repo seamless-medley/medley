@@ -1,9 +1,9 @@
-import { getLogger } from "@logtape/logtape";
+import { getLogger as getLogTape } from "@logtape/logtape";
 import worklet from "./worklets/karaoke-module.js?worker&url";
 
 type ParamNames = 'mix' | 'bg';
 
-const logger = getLogger(['audio', 'fx', 'karaoke']);
+const getLogger = () => getLogTape(['audio', 'fx', 'karaoke']);
 
 export class KaraokeFx {
   #context: AudioContext;
@@ -117,17 +117,35 @@ export class KaraokeFx {
 
   static #prepared = false;
 
+  static get prepared() {
+    return this.#prepared;
+  }
+
   static async prepare(context: AudioContext) {
     if (this.#prepared) {
       return;
     }
+
+    if (!context.audioWorklet) {
+      getLogger().warn('AudioWorklet is not available {dd}', {
+        dd: {
+          secureContext: window.isSecureContext,
+          crossOriginIsolated: window.crossOriginIsolated
+        }
+      });
+
+      return;
+    }
+
 
     try {
       await context.audioWorklet.addModule(worklet);
       this.#prepared = true;
     }
     catch (e) {
-      logger.error('Error loading medley-karaoke audio worklet', { e });
+      getLogger().error('Error loading medley-karaoke audio worklet: {e}', { e });
     }
+
+    return this.#prepared;
   }
 }

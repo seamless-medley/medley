@@ -48,7 +48,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
 
   #station?: Remotable<RemoteStation>;
 
-  #karaokeFx: Promise<KaraokeFx>;
+  #karaokeFx: Promise<KaraokeFx | undefined>;
 
   #karaokeEnabled = false;
 
@@ -77,8 +77,15 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
   }
 
   async #prepareKaraoke() {
-    await KaraokeFx.prepare(this.#audioContext);
+    if (!await KaraokeFx.prepare(this.#audioContext)) {
+      return;
+    }
+
     return new KaraokeFx(this.#audioContext).connect(this.#output);
+  }
+
+  async #getOutput() {
+    return (await this.#karaokeFx)?.input ?? this.#output;
   }
 
   protected override async handleSocketConnect() {
@@ -104,7 +111,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
           const device = new MediaSoupDevice();
           await device.load({ routerRtpCapabilities: caps });
 
-          return new WebRTCAudioTransport(rtcId, this.#transponder!, device, this.#audioContext, (await this.#karaokeFx).input);
+          return new WebRTCAudioTransport(rtcId, this.#transponder!, device, this.#audioContext, await this.#getOutput());
         }));
       }
     }
@@ -117,7 +124,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
         }
 
         logger.info('Using WebSocketAudioTransport');
-        return new WebSocketAudioTransport(this.socket.id, this.#audioContext, (await this.#karaokeFx).input);
+        return new WebSocketAudioTransport(this.socket.id, this.#audioContext, await this.#getOutput());
       }));
     }
 
@@ -233,11 +240,15 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
 
   async #temporarilyDisableKaraoke() {
     const fx = await this.#karaokeFx;
-    fx.set('mix', 0, 0.5);
+    fx?.set('mix', 0, 0.5);
   }
 
   async #restoreKaraoke() {
     const fx = await this.#karaokeFx;
+
+    if (!fx) {
+      return;
+    }
 
     if (this.#karaokeEnabled) {
       fx.bypass = false;
