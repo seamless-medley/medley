@@ -134,12 +134,13 @@ const ButtonsBar: React.FC<{ stationId: string, colors: Colors }> = ({ stationId
   const { station } = useStation(stationId);
   const audienceCount = useRemotableProp(station, 'audienceCount', 0);
   const playingStation = usePlayingStationId();
-  const navigate = useNavigate({ from: Route.fullPath });
 
   const isListening = playingStation === stationId;
   const listenClickHandler = !isListening
     ? () => client.playAudio(stationId)
     : () => client.stopAudio();
+
+  const navigate = useNavigate({ from: Route.fullPath });
 
   return (
     <Group justify="space-between">
@@ -249,7 +250,7 @@ const StationCard: React.FC<{ stationId: string }> = ({ stationId }) => {
 
         <Stack p={0} gap="xs">
           <LyricsBar stationId={stationId} nowrap autoscroll />
-          <TrackBar  stationId={stationId} />
+          <TrackBar stationId={stationId} />
         </Stack>
       </Stack>
     </Card>
