@@ -2,7 +2,7 @@ import { chain, random } from "lodash";
 import { Ref, useCallback, useEffect, useMemo, useState } from "react";
 
 import { styled } from "@linaria/react";
-import { Box, Button, Flex, Group, Stack, Text, Title as TextTitle } from "@mantine/core";
+import { Box, Button, Flex, Group, type MantineStyleProps, Stack, Text, Title as TextTitle } from "@mantine/core";
 import { useFullscreen, useSetState } from "@mantine/hooks";
 
 import {
@@ -112,17 +112,16 @@ const StationCover: React.FC<{ cover?: string }> = ({ cover }) => {
     <AnimatePresence>
       {cover
         ? <Box component={motion.div}
-          key={cover}
-          pos='absolute' left={0} top={0} right={0} bottom={0}
-          style={{
-            backgroundImage: `url(${cover})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-          {...animatePresenceProps}
-        />
-        :
-          <Flex component={motion.div} justify='center' align='center'
+            key={cover}
+            pos='absolute' left={0} top={0} right={0} bottom={0}
+            style={{
+              backgroundImage: `url(${cover})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+            {...animatePresenceProps}
+          />
+        : <Flex component={motion.div} justify='center' align='center'
             pos='absolute' left={0} top={0} right={0} bottom={0}
           >
             <Text
@@ -369,12 +368,14 @@ const stationCoverAndLyricsStyles = css`
 
   animation: rotate 12s linear infinite;
   border: 4px solid transparent;
+
+  transition: width 0.5s ease;
+  transform: scale(1) translateZ(0) rotateZ(360deg);
 `;
 
 const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef: ref, toggleFullscreen: toggle, stationId, fullscreen }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck');
-  const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
   const cover = useDeckCover(stationId, activeDeck);
 
   const [colors, setColors] = useState<string[]>([]);
@@ -386,47 +387,46 @@ const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef
 
   useEffect(() => void createColors().then(setColors), [cover]);
 
-  const showCover = (cover?.length ?? 0) > 0;
-  const showLyrics = (trackPlay?.track?.extra?.coverAndLyrics?.lyrics?.timeline?.length ?? 0) > 4;
+  const panelWidth: MantineStyleProps['w'] = {
+    base: '100%',
+    md: '50%'
+  };
 
-  const coverVisible = (!showCover && showLyrics) ? 'md' : undefined;
-  const lyricsVisible = (!showCover && showLyrics) ? undefined : 'md';
-
-  const lyricsWidths = (showCover === showLyrics) ? '50%' : { base: '100%', md: '50%' };
+  const panelHeight: MantineStyleProps['h'] = {
+    base: '50cqh',
+    md: '100%'
+  };
 
   return (
-    <Group
+    <Flex
       className={stationCoverAndLyricsStyles}
-      h={{ base: '40cqh', lg: '55cqh', xl: '70cqh' }}
-      gap={0}
+      direction={{ base: 'column', md: 'row' }}
+      w={{ base: '95%', md: '95%', lg: '75%' }}
+      h={{ base: '100%', md: '60cqh', lg: '70cqh'  }}
+      mih='50cqh'
+      align='center'
+      justify='center'
       bdrs='lg'
       bg={`linear-gradient(black) padding-box, conic-gradient(from var(--angle), ${[...colors, ...[...colors].reverse()].join(', ')}) border-box`}
       onDoubleClick={toggle}
     >
       <Box
         pos='relative'
-        w={{ base: '100%', md: '50%' }}
-        h='100%'
-        visibleFrom={coverVisible}
-        style={{ transition: 'all 0.5s ease' }}
+        w={panelWidth}
+        h={panelHeight}
       >
-        <Box
-          pos='absolute'
-          w='100%' h='100%'
-        >
-          <StationCover cover={cover} />
-        </Box>
+        <StationCover cover={cover} />
       </Box>
-      <Flex ref={ref}
+
+      <Box ref={ref}
         pos='relative'
-        w={lyricsWidths}
-        h='100%'
-        visibleFrom={lyricsVisible}
+        w={panelWidth}
+        h={panelHeight}
       >
         <StationLyricsPanel {...{ stationId, fullscreen, colors }} />
-      </Flex>
-    </Group>
-  );
+      </Box>
+    </Flex>
+  )
 }
 
 export const PlayPage: React.FC = () => {
@@ -435,20 +435,13 @@ export const PlayPage: React.FC = () => {
 
   const playingStation = usePlayingStationId();
   const isListening = playingStation === stationId;
+  const listenClickHandler = !isListening
+    ? () => client.playAudio(stationId)
+    : () => client.stopAudio();
 
   return (
     <>
-      <Stack
-        pos='fixed'
-        align="center"
-        mt={60}
-        left='50%'
-        w={{ base: 'calc(100% - 2em)', lg: 'calc(100% - 5em)', xl: 'calc(100% - 10em)' }}
-        style={{
-          transform: 'translate(-50%, 0)',
-          transition: 'all 0.5s ease',
-        }}
-      >
+      <Stack align="center" mt={50}>
         <Stack w='100%' mih='4em' gap='xs' justify="center">
           <Group justify='center' w='100%'>
             <StationName stationId={stationId} />
@@ -463,20 +456,20 @@ export const PlayPage: React.FC = () => {
           </Group>
         </Stack>
 
+        <Group mb='lg'>
+          <Button bdrs={'lg'} onClick={listenClickHandler}>
+            <IconHeadphones />{isListening ? 'Listening' : 'Listen'}
+          </Button>
+
+          <Button variant="outline" bdrs={'lg'} onClick={() => { toggle(); client.playAudio(stationId)} }>Fullscreen</Button>
+        </Group>
+
         <StationCoverAndLyrics
           fullscreen={fullscreen}
           toggleFullscreen={toggle}
           stationId={stationId}
           lyricsRef={ref}
         />
-
-        <Group mt='lg'>
-          <Button bdrs={'lg'} onClick={() => client.playAudio(stationId)}>
-            <IconHeadphones />{isListening ? 'Listening' : 'Listen'}
-          </Button>
-
-          <Button variant="outline" bdrs={'lg'} onClick={() => { toggle(); client.playAudio(stationId)} }>Fullscreen</Button>
-        </Group>
       </Stack>
     </>
   )
