@@ -93,7 +93,7 @@ export default defineConfig({
             '@tanstack/virtual-file-routes'
           ],
           mantine: [
-            '@mantine/core', '@mantine/hooks', '@mantine/carousel', '@mantine/hooks',
+            '@mantine/core', '@mantine/hooks', '@mantine/carousel', '@mantine/hooks', '@mantine/notifications',
             'embla-carousel', 'embla-carousel-react', 'mantine-contextmenu'
           ],
           rtc: [

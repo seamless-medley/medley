@@ -1,5 +1,6 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { MantineProvider } from '@mantine/core';
+import { Notifications } from '@mantine/notifications';
 import { OverlayScrollbars } from "overlayscrollbars";
 import { ContextMenuProvider } from "mantine-contextmenu";
 import { getLogger } from "@logtape/logtape";
@@ -42,6 +43,7 @@ const main = async () => {
         <ContextMenuProvider shadow="sm" borderRadius="md" repositionOnRepeat>
           <RouterProvider router={router} />
         </ContextMenuProvider>
+        <Notifications />
       </MantineProvider>
     // </React.StrictMode>
   );

@@ -17,6 +17,7 @@
     "@mantine/carousel": "^8.3.9",
     "@mantine/core": "8.3.10",
     "@mantine/hooks": "8.3.10",
+    "@mantine/notifications": "^8.3.10",
     "@seamless-medley/medley": "0.5.3",
     "@seamless-medley/remote": "../remote",
     "@seamless-medley/utils": "../utils",

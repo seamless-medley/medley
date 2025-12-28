@@ -1,6 +1,7 @@
 import { DEFAULT_THEME, createTheme, mergeMantineTheme } from "@mantine/core";
 import '@mantine/core/styles.css';
 import '@mantine/carousel/styles.css';
+import '@mantine/notifications/styles.css';
 import 'mantine-contextmenu/styles.css';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { fontFamily } from './fonts';
