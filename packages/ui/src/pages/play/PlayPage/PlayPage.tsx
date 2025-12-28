@@ -168,7 +168,8 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
 
   useEffect(() => {
     setCoverProps({
-      colors: colorsProp.map(c => {
+      colors: chain(colorsProp)
+        .map(c => {
           const hsl = parseToHsl(c);
 
           if (hsl.saturation < 0.7) {
@@ -180,7 +181,9 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
           }
 
           return c;
-        }),
+        })
+        .sortBy(c => parseToHsl(c).hue)
+        .value(),
       url: cover,
       center: (lyrics ? lyrics.timeline.length : 2) < 2,
       uuid: trackPlay?.uuid ?? ''
