@@ -16,16 +16,6 @@ services:
       - 3001:3001
       - 9989:9989
     environment:
-      MEDLEY_MUSIC_PATH: /data/musics
-      MEDLEY_DROP_PATH: /data/drops
-      MEDLEY_MONGO_DB_HOST: mongo
-      MEDLEY_MONGO_DB_PORT: 27017
-      MEDLEY_MONGO_DB_USER: root
-      MEDLEY_MONGO_DB_PASSWORD: example
-      MEDLEY_MONGO_DB_DATABASE: medley
-      # MEDLEY_DISCORD_BOT_TOKEN: discord-bot-token
-      # MEDLEY_DISCORD_CLIENT_ID: discord-client-id
-      MEDLEY_DISCORD_BASE_COMMAND: medley
       LOG_PRETTY: hide-date,use-colors
       FORCE_COLOR: 3
     volumes:

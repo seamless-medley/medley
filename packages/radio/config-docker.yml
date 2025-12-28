@@ -1,16 +1,13 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/vittee/medley/develop/packages/radio/medley-schema.json
 
-server:
-  port: 3001
-
 db:
   driver: mongodb
-  url: mongodb://${MEDLEY_MONGO_DB_HOST}:${MEDLEY_MONGO_DB_PORT}
-  database: ${MEDLEY_MONGO_DB_DATABASE}
+  url: mongodb://mongo:27017
+  database: medley
   connectionOptions:
     auth:
-      username: ${MEDLEY_MONGO_DB_USER}
-      password: ${MEDLEY_MONGO_DB_PASSWORD}
+      username: root
+      password: example
 
 stations:
   default:
@@ -23,43 +20,43 @@ stations:
       bright:
         description: Bright
         paths:
-          - ${MEDLEY_MUSIC_PATH}/bright
+          - /data/musics/bright
       brokenhearted:
         description: Broken Hearted
         paths:
-          - ${MEDLEY_MUSIC_PATH}/brokenhearted
+          - /data/musics/brokenhearted
       chill:
         description: Chill
         paths:
-          - ${MEDLEY_MUSIC_PATH}/chill
+          - /data/musics/chill
       groovy:
         description: Groovy
         paths:
-          - ${MEDLEY_MUSIC_PATH}/groovy
+          - /data/musics/groovy
       hurt:
         description: Hurt
         paths:
-          - ${MEDLEY_MUSIC_PATH}/hurt
+          - /data/musics/hurt
       lonely:
         description: Lonely
         paths:
-          - ${MEDLEY_MUSIC_PATH}/lonely
+          - /data/musics/lonely
       lovesong:
         description: Love Song
         paths:
-          - ${MEDLEY_MUSIC_PATH}/lovesong
+          - /data/musics/lovesong
       joyful:
         description: Joyful
         paths:
-          - ${MEDLEY_MUSIC_PATH}/joyful
+          - /data/musics/joyful
       upbeat:
         description: Upbeat
         paths:
-          - ${MEDLEY_MUSIC_PATH}/upbeat
+          - /data/musics/upbeat
       new-released:
         description: New Released
         paths:
-          - ${MEDLEY_MUSIC_PATH}/new-released
+          - /data/musics/new-released
         disableLatch: true
         noFollowOnRequest: true
 
@@ -68,7 +65,7 @@ stations:
         name: Default profile
         followCollectionAfterRequestTrack: true
         requestSweepers:
-          - ${MEDLEY_DROP_PATH}/your
+          - /data/drops/your
         sequences:
           # Randomly select this crate to play tracks from `new-released`, limited by one of [1, 1, 1, 2]
           - chance: random
@@ -191,7 +188,7 @@ stations:
               - lonely
               - brokenhearted
               - hurt
-            path: ${MEDLEY_DROP_PATH}/to_blue
+            path: /data/drops/to_blue
 
           - from:
               - lonely
@@ -200,7 +197,7 @@ stations:
             to:
               - lovesong
               - chill
-            path: ${MEDLEY_DROP_PATH}/blue_to_easy
+            path: /data/drops/blue_to_easy
 
           - from:
               - lonely
@@ -210,26 +207,25 @@ stations:
               - upbeat
               - groovy
               - joyful
-            path: ${MEDLEY_DROP_PATH}/blue_to_up
+            path: /data/drops/blue_to_up
 
           - to:
               - upbeat
               - groovy
               - joyful
-            path: ${MEDLEY_DROP_PATH}/to_up
+            path: /data/drops/to_up
 
           - from:
               - upbeat
               - groovy
               - joyful
               - bright
-            path: ${MEDLEY_DROP_PATH}/from_up
+            path: /data/drops/from_up
 
           - to:
               - new-released
-            path: ${MEDLEY_DROP_PATH}/fresh
-
+            path: /data/drops/fresh
 automatons:
   medley:
-    botToken: "${MEDLEY_DISCORD_BOT_TOKEN}"
-    clientId: "${MEDLEY_DISCORD_CLIENT_ID}"
+    botToken: "your_bot_token"
+    clientId: "your_app_id"
