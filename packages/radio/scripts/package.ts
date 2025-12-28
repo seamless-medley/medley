@@ -74,6 +74,18 @@ async function packageApp() {
     'npm i',
     '```'
   ].join('\n'));
+
+  // Create pnpm-workspace.yaml to allow build scripts
+  await outputFile(join(packagePath, 'pnpm-workspace.yaml'), [
+    'packages:',
+    '  - "."',
+    'onlyBuiltDependencies:',
+    '  - "@discordjs/opus"',
+    '  - "@parcel/watcher"',
+    '  - bufferutil',
+    '  - mediasoup',
+    '  - ffmpeg-static',
+  ].join('\n'));
 }
 
 packageApp();
