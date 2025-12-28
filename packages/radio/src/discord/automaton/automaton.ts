@@ -370,7 +370,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
         this.#logger.info('Login OK');
 
         await this.registerCommandsIfNeccessary();
-        this.#logger.info('OAUthURL: %s', this.oAuth2Url.toString());
+        this.#logger.info('Ready! Use this link to add the bot to your server: %s', this.oAuth2Url.toString());
       }
     })
   }
