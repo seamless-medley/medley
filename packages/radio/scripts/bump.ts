@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { argv } from 'node:process';
 import { inc, parse, ReleaseType } from 'semver';
 import { PackageJson } from 'type-fest';
+import simpleGit from 'simple-git';
 
 const types = ['major', 'minor', 'patch'];
 
@@ -29,6 +30,19 @@ async function bump(type: ReleaseType = 'patch') {
 
   await writeFile(packageFile, JSON.stringify(packageJSON, null, 2) + '\n');
   await writeFile(uiPackageFile, JSON.stringify(uiPackageJSON, null, 2) + '\n');
+
+  // Create git tag
+  const git = simpleGit();
+  const tagName = `radio@v${version}`;
+
+  await git.add([
+    'package.json',
+    'src/version.ts',
+    '../ui/package.json'
+  ]);
+
+  console.log(`Version bumped to ${version}`);
+  console.log(`Git tag: ${tagName}`);
 }
 
 bump(argv[2] as any);
