@@ -4,8 +4,8 @@ import { linearGradient, rgba, setSaturation, parseToHsl, mix } from 'polished';
 import { styled } from '@linaria/react';
 import { clamp, findIndex, findLastIndex } from 'lodash';
 
-import type { LyricLine, Timeline, EnhancedLine } from '@seamless-medley/utils';
-import { type EnhancedLineElement, interpolate, findLyricLine } from '@seamless-medley/utils';
+import type { LyricLine, Timeline, EnhancedLine, EnhancedLineElement } from '@seamless-medley/utils';
+import { interpolate, findLyricLine } from '@seamless-medley/utils';
 import type { DeckIndex } from '@seamless-medley/medley';
 import { useElementSize } from '@mantine/hooks';
 
