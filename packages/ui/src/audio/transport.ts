@@ -1,7 +1,20 @@
 import type { EventEmitter } from "eventemitter3";
-import type { AudioTransportExtra } from "@seamless-medley/remote";
+import type { AudioTransportExtra, ClientTransportInfo } from "@seamless-medley/remote";
 
-export type AudioTransportState = 'new' | 'failed' | 'ready';
+export type AudioTransportStateNew = {
+  type: 'new';
+}
+
+export type AudioTransportStateFailed = {
+  type: 'failed';
+  transportInfo: ClientTransportInfo;
+}
+
+export type AudioTransportStateReady = {
+  type: 'ready';
+}
+
+export type AudioTransportState = AudioTransportStateNew | AudioTransportStateFailed | AudioTransportStateReady;
 
 export type AudioTransportEvents = {
   stateChanged(newState: AudioTransportState): void;
@@ -20,8 +33,8 @@ export interface IAudioTransport extends EventEmitter<AudioTransportEvents> {
   get latency(): number;
 }
 
-export async function waitForAudioTransportState(transport: IAudioTransport, states: AudioTransportState[], timeout = 2000): Promise<AudioTransportState | undefined> {
-  if (states.includes(transport.state)) {
+export async function waitForAudioTransportState(transport: IAudioTransport, states: AudioTransportState['type'][], timeout = 2000): Promise<AudioTransportState | undefined> {
+  if (states.includes(transport.state.type)) {
     return transport.state;
   }
 
@@ -29,7 +42,7 @@ export async function waitForAudioTransportState(transport: IAudioTransport, sta
     const abortTimer = setTimeout(() => resolve(undefined), timeout);
 
     const handler = (newState: AudioTransportState) => {
-      if (states.includes(newState)) {
+      if (states.includes(newState.type)) {
         clearTimeout(abortTimer);
 
         transport.off('stateChanged', handler);

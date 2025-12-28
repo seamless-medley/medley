@@ -49,7 +49,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
 
   #prepared = false;
 
-  #state: AudioTransportState = 'new';
+  #state: AudioTransportState = { type: 'new' };
 
   #transmissionLatency = 0;
 
@@ -66,7 +66,7 @@ export class WebSocketAudioTransport extends EventEmitter<AudioTransportEvents> 
     const listener = (e: MessageEvent<OutputMessage>) => {
       if (e.data.type === 'open') {
         this.#clientWorker.removeEventListener('message', listener);
-        this.#setState('ready');
+        this.#setState({ type: 'ready' });
         this.#pcmBuffer.reset();
         return;
       }

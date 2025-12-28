@@ -143,14 +143,26 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
         continue;
       }
 
-      const ready = await waitForAudioTransportState(transport, ['ready', 'failed']) === 'ready';
+      const state = await waitForAudioTransportState(transport, ['ready', 'failed']);
 
-      if (ready) {
-        this.#audioTransport = transport;
-        transport.on('audioExtra', e => this.emit('audioExtra', e));
-        this.emit('audioTransport', transport);
-        return transport;
+      if (!state) {
+        logger.warn('Timeout waiting for transport to become ready: {transport}', { transport });
+        continue;
       }
+
+      if (state.type === 'failed') {
+        logger.warn('Transport failed: {data}', { data: { transport, info: state.transportInfo } });
+        continue;
+      }
+
+      if (state.type !== 'ready') {
+        continue;
+      }
+
+      this.#audioTransport = transport;
+      transport.on('audioExtra', e => this.emit('audioExtra', e));
+      this.emit('audioTransport', transport);
+      return transport;
     }
   }
 
