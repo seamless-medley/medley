@@ -66,6 +66,12 @@ const cardCss = css`
   }
 
   animation: rotate 8s linear infinite;
+  animation-play-state: paused;
+
+  &:hover {
+    animation-play-state: running;
+  }
+
   border: 2px solid transparent;
 `
 
