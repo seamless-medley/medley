@@ -357,7 +357,7 @@ const stationCoverAndLyricsStyles = css`
   @property --angle {
     syntax: "<angle>";
     initial-value: 0deg;
-    inherits: true;
+    inherits: false;
   }
 
   @keyframes rotate {
