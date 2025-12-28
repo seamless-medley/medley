@@ -46,7 +46,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
   #audioElement = new Audio();
 
-  #sourceNode?: MediaStreamAudioSourceNode;
+  #sourceNode?: AudioNode;
 
   #outputNode: AudioNode;
 
@@ -166,7 +166,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
       this.#logger.debug('transport connectionstatechange {state}', { state });
     });
 
-    const rtcState = await waitForTransportState(transport, ['connected', 'failed'], 1000);
+    const rtcState = await waitForRTCTransportState(transport, ['connected', 'failed'], 1000);
     this.#setState(rtcState === 'connected' ? { type: 'ready' } : { type: 'failed', transportInfo });
   }
 
@@ -214,9 +214,9 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     this.#sourceNode = this.#ctx.createMediaStreamSource(stream);
     this.#sourceNode.connect(this.#outputNode);
 
-    const state = await waitForTransportState(this.#transport, ['connected', 'failed'], options?.timeout);
+    const rtcState = await waitForRTCTransportState(this.#transport, ['connected', 'failed'], options?.timeout);
 
-    if (state === undefined) {
+    if (rtcState === undefined) {
       return 'transport_failed';
     }
 
@@ -353,7 +353,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
   }
 }
 
-async function waitForTransportState(transport: types.Transport, states: types.ConnectionState[], timeout = 2000): Promise<types.ConnectionState | undefined> {
+async function waitForRTCTransportState(transport: types.Transport, states: types.ConnectionState[], timeout = 2000): Promise<types.ConnectionState | undefined> {
   if (states.includes(transport.connectionState)) {
     return transport.connectionState;
   }
