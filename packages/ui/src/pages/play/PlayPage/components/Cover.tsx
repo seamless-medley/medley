@@ -194,6 +194,20 @@ const CoverDiscElement = styled.div<ColorsProp>`
       transform: scale(1) rotate(360deg);
     }
   }
+
+  @property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes rotate {
+    to {
+      --angle: 1turn;
+    }
+  }
+
+  animation: rotate 4s linear infinite;
 `;
 
 type CoverDisc = React.ComponentType & {
@@ -207,7 +221,7 @@ const CoverDisc = forwardRef<CoverDisc, PropsWithChildren<ColorsProp>>((props, r
   useEffect(() => {
     const pColors = props.colors || [];
     const colors = pColors.concat(first(pColors) || '').join(', ');
-    const gradient = `conic-gradient(from 200deg, ${colors})`;
+    const gradient = `conic-gradient(from var(--angle), ${colors})`;
     const fColor = first(props.colors) || 'black';
 
     setBackground([
