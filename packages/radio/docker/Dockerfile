@@ -45,6 +45,7 @@ COPY --from=builder /app /app
 RUN mkdir -p /data/musics /data/drops
 
 ENV UV_THREADPOOL_SIZE=4
+ENV MEDLEY_IN_DOCKER=1
 
 COPY packages/radio/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

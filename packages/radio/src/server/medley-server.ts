@@ -28,6 +28,7 @@ import { retryable, RetryOptions } from "@seamless-medley/utils";
 import { ExposedGlobal } from "./expose/core/global";
 import { MusicDb, Station, StationEvents } from "../core";
 import { Db } from "../db/db";
+import { WebRtcConfig } from "../config/webrtc";
 
 const logger = createLogger({ name: 'medley-server' });
 
@@ -68,14 +69,33 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
   #initialize = async () => {
     this.register('global', '$', new ExposedGlobal(this));
 
-    this.#rtcTransponder = (this.#configs.webrtc)
-      ? await new RTCTransponder()
-        .initialize(this.#configs.webrtc)
-        .catch((error) => {
-          logger.error(error);
-          return undefined;
-        })
-      : undefined;
+    const webrtcConfig: WebRtcConfig = this.#configs.webrtc ?? { listens: [], bitrate: 256 };
+
+    const listens = [...webrtcConfig.listens];
+
+    if (!listens.length) {
+      const isInDocker = process.env.MEDLEY_IN_DOCKER !== undefined;
+
+      const loopback = '127.0.0.1';
+      const ip = isInDocker ? '0.0.0.0' : loopback;
+      const announcedIp = isInDocker ? (process.env.MEDLEY_DEFAULT_RTC_IP || loopback) : undefined;
+      const port = isInDocker ? +(process.env.MEDLEY_DEFAULT_RTC_PORT || 9989) : undefined;
+
+      listens.push(
+        { protocol: 'tcp', ip, announcedIp, port },
+        { protocol: 'udp', ip, announcedIp, port }
+      );
+    }
+
+    this.#rtcTransponder =  await new RTCTransponder()
+      .initialize({
+        ...webrtcConfig,
+        listens
+      })
+      .catch((error) => {
+        logger.error(error);
+        return undefined;
+      });
 
     if (this.#rtcTransponder) {
       this.register('transponder', '~', new ExposedTransponder(this.#rtcTransponder));
