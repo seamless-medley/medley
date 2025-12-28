@@ -21,7 +21,7 @@
     "turbo": "^2.6.3",
     "typescript": "5.9.2"
   },
-  "packageManager": "pnpm@10.26.1",
+  "packageManager": "pnpm@10.26.2",
   "pnpm": {
     "peerDependencyRules": {
       "ignoreMissing": [
