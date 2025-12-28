@@ -76,12 +76,15 @@ export default defineConfig({
           lodash: ['lodash'],
           react: [
             'react', 'react-dom',
-            'polished', 'motion'
+            'polished',
+            'motion',
+            'motion/react'
           ],
           react_misc: [
             'overlayscrollbars',
             'overlayscrollbars-react',
-            'react-resizable-panels'
+            'react-resizable-panels',
+            '@tabler/icons-react'
           ],
           tanstack: [
             '@tanstack/react-router',
@@ -91,7 +94,7 @@ export default defineConfig({
           ],
           mantine: [
             '@mantine/core', '@mantine/hooks', '@mantine/carousel', '@mantine/hooks',
-            'embla-carousel', 'embla-carousel-react'
+            'embla-carousel', 'embla-carousel-react', 'mantine-contextmenu'
           ],
           rtc: [
             'mediasoup-client',
@@ -101,6 +104,9 @@ export default defineConfig({
           socket: [
             'socket.io-client',
             'socket.io-msgpack-parser'
+          ],
+          utils: [
+            '@seamless-medley/utils'
           ]
         },
         assetFileNames: 'assets/[ext]/[name]-[hash][extname]'
