@@ -106,7 +106,10 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     this.#transportCreators = [];
     this.#transponder = undefined;
 
-    this.#transponder = await this.surrogateOf('transponder', '~').catch(() => undefined);
+    this.#transponder = await this.surrogateOf('transponder', '~').catch((e) => {
+      logger.error('Transponder {e}', {e});
+      return undefined;
+    });
 
     if (this.#transponder) {
       const rtcCaps = this.#transponder.rtcCaps();
