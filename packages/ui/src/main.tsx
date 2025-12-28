@@ -4,7 +4,6 @@ import { OverlayScrollbars } from "overlayscrollbars";
 import { ContextMenuProvider } from "mantine-contextmenu";
 import { getLogger } from "@logtape/logtape";
 
-import { routeTree } from "./pages/routeTree.gen";
 
 import { initLogging, initRoot } from './init';
 import { theme } from "./theme/theme";
@@ -32,6 +31,8 @@ const main = async () => {
       }
     }
   );
+
+  const { routeTree } = await import('./pages/routeTree.gen');
 
   const router = createRouter({ routeTree });
 
