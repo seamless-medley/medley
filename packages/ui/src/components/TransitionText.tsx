@@ -24,6 +24,7 @@ export const TransitionText: React.FC<TransitionTextProps> = React.memo((props) 
     transition,
     autoscroll,
     className,
+    stableId,
     ...textProps
   } = props;
 
@@ -32,7 +33,7 @@ export const TransitionText: React.FC<TransitionTextProps> = React.memo((props) 
   const fromTransform = direction === 'down' ? `-${tv}` : tv;
   const leaveTransform = direction === 'down' ? tv : `-${tv}`;
 
-  const key = props.stableId ?? children?.toString();
+  const key = stableId ?? children?.toString();
 
   const text = (
     <Text {...textProps}>
