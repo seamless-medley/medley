@@ -214,7 +214,7 @@ type VersionInfo = {
 }
 
 let buildInfo: VersionInfo = {
-  version: 'dev',
+  version: `${version} (dev)`,
   buildDate: new Date()
 }
 
