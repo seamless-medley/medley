@@ -167,14 +167,14 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
         continue;
       }
 
-      const state = await waitForAudioTransportState(transport, ['ready', 'failed']);
+      const state = await waitForAudioTransportState(transport, ['ready', 'rtc_failed']);
 
       if (!state) {
         logger.warn('Timeout waiting for transport to become ready: {transport}', { transport });
         continue;
       }
 
-      if (state.type === 'failed') {
+      if (state.type === 'rtc_failed') {
         logger.warn('Transport failed: {data}', { data: { transport, info: state.transportInfo } });
         continue;
       }

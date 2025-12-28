@@ -113,7 +113,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
       return;
     }
 
-    if (newState.type === 'failed') {
+    if (newState.type === 'rtc_failed') {
       this.#transport?.close();
     }
 
@@ -155,7 +155,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
 
     if (!transport) {
       this.#setState({
-        type: 'failed',
+        type: 'rtc_failed',
         transportInfo
       });
 
@@ -167,7 +167,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
     });
 
     const rtcState = await waitForRTCTransportState(transport, ['connected', 'failed'], 1000);
-    this.#setState(rtcState === 'connected' ? { type: 'ready' } : { type: 'failed', transportInfo });
+    this.#setState(rtcState === 'connected' ? { type: 'ready' } : { type: 'rtc_failed', transportInfo });
   }
 
   async prepareAudioContext() {

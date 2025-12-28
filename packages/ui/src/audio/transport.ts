@@ -5,8 +5,12 @@ export type AudioTransportStateNew = {
   type: 'new';
 }
 
-export type AudioTransportStateFailed = {
-  type: 'failed';
+export type AudioTransportStateWebSocketFailed = {
+  type: 'ws_failed';
+}
+
+export type AudioTransportStateRTCFailed = {
+  type: 'rtc_failed';
   transportInfo: ClientTransportInfo;
 }
 
@@ -14,7 +18,7 @@ export type AudioTransportStateReady = {
   type: 'ready';
 }
 
-export type AudioTransportState = AudioTransportStateNew | AudioTransportStateFailed | AudioTransportStateReady;
+export type AudioTransportState = AudioTransportStateNew | AudioTransportStateWebSocketFailed | AudioTransportStateRTCFailed | AudioTransportStateReady;
 
 export type AudioTransportEvents = {
   stateChanged(newState: AudioTransportState): void;
