@@ -10,7 +10,7 @@ import type {
   Remotable
 } from "@seamless-medley/remote";
 
-import { IAudioTransport, waitForAudioTransportState } from "./audio/transport";
+import { AudioTransportPlayResult, IAudioTransport, waitForAudioTransportState } from "./audio/transport";
 import { WebSocketAudioTransport } from "./audio/transports/ws/transport";
 import { WebRTCAudioTransport } from "./audio/transports/webrtc/transport";
 
@@ -144,9 +144,16 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
 
   async #nextTransport() {
     while (this.#transportCreators.length) {
-      const transport = await this.#transportCreators.shift()?.();
+      const creator = this.#transportCreators.shift();
+
+      if (!creator) {
+        continue;
+      }
+
+      const transport = await creator();
 
       if (!transport) {
+        logger.warn('Could not create transport using creator: {creator}', { creator: creator.name });
         continue;
       }
 
@@ -177,9 +184,9 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     return this.#audioTransport !== undefined;
   }
 
-  async playAudio(stationId: string): Promise<boolean> {
+  async playAudio(stationId: string): Promise<AudioTransportPlayResult> {
     if (!this.#audioTransport) {
-      return false;
+      throw new Error('No audio transport');
     }
 
     await this.#audioTransport.prepareAudioContext();
@@ -201,7 +208,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
       }
     }
 
-    return false;
+    return playResult;
   }
 
   stopAudio() {
