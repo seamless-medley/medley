@@ -247,10 +247,10 @@ const CoverImage = styled.img`
   position:absolute;
   top: 50%;
   left: 50%;
-  width: 43%;
-  height: 43%;
-  margin-left: calc(-43% / 2);
-  margin-top: calc(-43% / 2);
+  width: 48%;
+  height: 48%;
+  margin-left: calc(-48% / 2);
+  margin-top: calc(-48% / 2);
   border-radius: 100%;
   object-fit: contain;
   object-position: center;
@@ -281,10 +281,10 @@ const CoverDecorator = styled.div`
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 43%;
-  height: 43%;
-  margin-left: calc(-43% / 2);
-  margin-top: calc(-43% / 2);
+  width: 48%;
+  height: 48%;
+  margin-left: calc(-48% / 2);
+  margin-top: calc(-48% / 2);
   border-radius: 100%;
   background: radial-gradient(
     circle closest-side,
