@@ -168,7 +168,19 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
 
   useEffect(() => {
     setCoverProps({
-      colors: colorsProp,
+      colors: colorsProp.map(c => {
+          const hsl = parseToHsl(c);
+
+          if (hsl.saturation < 0.7) {
+            c = setSaturation(0.7, c);
+          }
+
+          if (hsl.lightness < 0.4) {
+            c = setLightness(0.4, c);
+          }
+
+          return c;
+        }),
       url: cover,
       center: (lyrics ? lyrics.timeline.length : 2) < 2,
       uuid: trackPlay?.uuid ?? ''
