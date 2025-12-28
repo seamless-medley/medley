@@ -1,6 +1,6 @@
 {
   "name": "@seamless-medley/radio",
-  "version": "0.1.0",
+  "version": "0.0.10-abc.1",
   "description": "Play your music seamlessly like a professional radio station via your speaker, Discord, etc",
   "author": {
     "name": "Wittawas Nakkasem",
@@ -22,7 +22,7 @@
     "debug": "cross-env MEDLEY_DEV_NO_TRACE=1 DEBUG=1 NODE_ENV=development node -r @swc-node/register --inspect=9229 src/server/main.ts",
     "build": "tsc --build tsconfig.build.json",
     "package": "tsx scripts/package.ts",
-    "package:docker": "docker build -f ./docker/Dockerfile -t medley ../.."
+    "package:docker": "tsx scripts/build-docker.ts"
   },
   "dependencies": {
     "@commander-js/extra-typings": "^14.0.0",
