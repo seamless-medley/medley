@@ -303,8 +303,8 @@ const StationList = () => {
             {stations.map((stationId, i) => (
               <Group
                 key={i}
-                w={{ base: '100%', sm: '75%', md: '50%', lg: '40%', xl: '33%' }}
-                h={{ base: '33em', md: '40em', lg: '45em' }}
+                w={{ base: '100%', sm: '80%', md: '65%', lg: '45%', xl: '40%' }}
+                h='70cqh'
               >
                 <StationCard key={i} stationId={stationId} />
               </Group>
