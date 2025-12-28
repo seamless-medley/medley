@@ -1,6 +1,6 @@
 import { createNamedFunc } from '@seamless-medley/utils';
 import { Device as MediaSoupDevice } from 'mediasoup-client';
-import { clamp } from 'lodash';
+import { clamp, noop } from 'lodash';
 import { getLogger } from '@logtape/logtape';
 
 import type {
@@ -52,6 +52,8 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
 
   #karaokeEnabled = false;
 
+  #mediaSessionCover: string | undefined;
+
   constructor() {
     super();
 
@@ -62,6 +64,11 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     this.karaokeEnabled = false;
 
     this.volume = +(localStorage.getItem("volume") ?? 1.0);
+
+    if (hasMediaSession()) {
+      navigator.mediaSession.setActionHandler('play', noop);
+      navigator.mediaSession.setActionHandler('pause', () => void this.stopAudio());
+    }
   }
 
   override set latency(seconds: number) {
@@ -194,8 +201,13 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     const playResult = await this.#audioTransport.play(stationId);
 
     if (playResult === true) {
+      if (hasMediaSession()) {
+        navigator.mediaSession.playbackState = 'playing';
+      }
+
       this.playingStationId = stationId;
       this.#monitorStation();
+
       return true;
     }
 
@@ -212,6 +224,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
   }
 
   stopAudio() {
+    navigator.mediaSession.playbackState = 'none';
     this.playingStationId = undefined;
     this.#audioTransport?.stop();
   }
@@ -227,6 +240,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
 
   async #monitorStation() {
     this.#station?.off('deckStarted', this.#onDeckStarted);
+    this.#station?.off('deckActive', this.#onDeckActive);
 
     if (!this.#playingStationId) {
       return;
@@ -234,6 +248,12 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
 
     this.#station = await this.surrogateOf('station', this.#playingStationId).catch(() => undefined);
     this.#station?.on('deckStarted', this.#onDeckStarted);
+    this.#station?.on('deckActive', this.#onDeckActive);
+
+    const activeDeck = this.#station?.activeDeck();
+    if (typeof activeDeck === 'number') {
+      this.#updateMediaSession(activeDeck);
+    }
   }
 
   #onDeckStarted: RemoteStation['ϟdeckStarted'] = (deckIndex, { kind }) => {
@@ -243,6 +263,51 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     }
 
     this.#restoreKaraoke();
+  }
+
+  #onDeckActive: RemoteStation['ϟdeckActive'] = (deckIndex) => {
+    this.#updateMediaSession(deckIndex);
+  }
+
+  async #updateMediaSession(deckIndex: number) {
+    if (!hasMediaSession()) {
+      return;
+    }
+
+    if (!this.#station) {
+      return;
+    }
+
+    const deckInfo = await this.#station.getDeckInfo(deckIndex);
+    const { title, artist, album } = deckInfo.trackPlay?.track?.extra?.tags ?? {};
+    const { cover, coverMimeType } = deckInfo.trackPlay?.track?.extra?.coverAndLyrics ?? {};
+
+    if (this.#mediaSessionCover) {
+      this.releaseURLForBuffer(this.#mediaSessionCover);
+      this.#mediaSessionCover = undefined;
+    }
+
+    if (deckInfo.trackPlay && cover && coverMimeType) {
+      this.#mediaSessionCover = this.getURLForBuffer(deckInfo.trackPlay.uuid, { buffer: cover, type: coverMimeType });
+    }
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title,
+      artist,
+      album,
+      artwork: this.#mediaSessionCover
+        ? [{
+          src: this.#mediaSessionCover,
+          type: coverMimeType
+        }]
+        : undefined
+    });
+
+    navigator.mediaSession.setPositionState?.({
+      duration: Infinity,
+      playbackRate: 1,
+      position: 0
+    });
   }
 
   async #temporarilyDisableKaraoke() {
@@ -336,4 +401,7 @@ type URLForBufferInfo = {
   url: string;
   refCount: number;
 }
+
+function hasMediaSession() {
+  return 'mediaSession' in navigator;
 }
