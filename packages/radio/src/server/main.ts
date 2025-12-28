@@ -112,7 +112,7 @@ async function startServer(configs: Config) {
           httpServer.off('error', listenErrorHandler);
 
           logger.info(`Listening on port ${listeningPort}`);
-          logger.info(`Serving UI at: ${staticPath}`);
+          logger.info(`Serving UI from: ${staticPath}`);
 
           server.streamers.map(streamer => runStream(streamingRouter, streamer));
 

@@ -62,7 +62,7 @@ export class RTCWorker extends TypedEmitter<RTCWorkerEvents> {
     this.#bitrate = bitrate;
     this.#listens = listens;
 
-    this.#logger.debug(listens, 'Listens')
+    this.#logger.info(listens, 'Listens')
 
     await this.#internalInitialize();
     return this;
