@@ -2,6 +2,8 @@ import { styled } from "@linaria/react";
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import _, { debounce } from 'lodash';
 import clsx from "clsx";
+import { AutoScroller } from "@ui/components/AutoScoller";
+import { Box } from "@mantine/core";
 
 const TitleContainer = styled.div`
   position: absolute;
@@ -150,7 +152,11 @@ export const Title: React.FC<TitleProps> = (props) => {
     <TitleContainer className={clsx(props.center && 'center', props.visible && 'visible')}>
       <TitleBox ref={boxEl} className={clsx(props.center && 'center')}>
         <canvas ref={canvasEl} style={{ display: 'none' }} width={500} height={500} />
-        <TitleText ref={textEl} />
+        <Box w="95cqw">
+          <AutoScroller speed={0.8}>
+            <TitleText ref={textEl} />
+          </AutoScroller>
+        </Box>
       </TitleBox>
     </TitleContainer>
   );
