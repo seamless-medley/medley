@@ -7,6 +7,17 @@ import simpleGit from 'simple-git';
 const types = ['major', 'minor', 'patch'];
 
 async function bump(type: ReleaseType = 'patch') {
+  const git = simpleGit();
+
+  // Check for staged changes
+  const status = await git.status();
+  if (status.staged.length > 0) {
+    console.error('Error: You have staged changes. Please commit or unstage them before bumping the version.');
+    console.error('Staged files:');
+    status.staged.forEach(file => console.error(`  - ${file}`));
+    process.exit(1);
+  }
+
   const packageFile = require.resolve('../package.json');
   const packageJSON = require(packageFile) as Required<PackageJson>;
 
@@ -32,7 +43,6 @@ async function bump(type: ReleaseType = 'patch') {
   await writeFile(uiPackageFile, JSON.stringify(uiPackageJSON, null, 2) + '\n');
 
   // Create git tag
-  const git = simpleGit();
   const tagName = `radio@v${version}`;
 
   await git.add([
