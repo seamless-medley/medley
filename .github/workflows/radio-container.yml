@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.package-version.outputs.version }}
+      major: ${{ steps.package-version.outputs.major }}
+      major_minor: ${{ steps.package-version.outputs.major_minor }}
       is_prerelease: ${{ steps.package-version.outputs.is_prerelease }}
       prerelease_tag: ${{ steps.package-version.outputs.prerelease_tag }}
     steps:
@@ -38,6 +40,12 @@ jobs:
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
             echo "prerelease_tag=" >> $GITHUB_OUTPUT
+
+            MAJOR="${VERSION%%.*}"
+            MINOR="${VERSION#*.}"
+            MINOR="${MINOR%%.*}"
+            echo "major=${MAJOR}" >> $GITHUB_OUTPUT
+            echo "major_minor=${MAJOR}.${MINOR}" >> $GITHUB_OUTPUT
           fi
 
   build-image:
@@ -74,6 +82,8 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=${{ needs.extract-version.outputs.version }},suffix=-${{ matrix.arch }}
+            type=raw,value=${{ needs.extract-version.outputs.major_minor }},suffix=-${{ matrix.arch }},enable=${{ needs.extract-version.outputs.is_prerelease == 'false' }}
+            type=raw,value=${{ needs.extract-version.outputs.major }},suffix=-${{ matrix.arch }},enable=${{ needs.extract-version.outputs.is_prerelease == 'false' }}
             type=raw,value=${{ needs.extract-version.outputs.prerelease_tag }},suffix=-${{ matrix.arch }},enable=${{ needs.extract-version.outputs.is_prerelease == 'true' }}
             type=raw,value=latest,suffix=-${{ matrix.arch }},enable=${{ needs.extract-version.outputs.is_prerelease == 'false' }}
             type=sha,suffix=-${{ matrix.arch }}
@@ -127,6 +137,22 @@ jobs:
         with:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.prerelease_tag }}
           inputs: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.prerelease_tag }}-amd64,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.prerelease_tag }}-arm64
+          push: true
+
+      - name: Create and push manifest images (major.minor)
+        if: needs.extract-version.outputs.is_prerelease == 'false'
+        uses: Noelware/docker-manifest-action@v1
+        with:
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.major_minor }}
+          inputs: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.major_minor }}-amd64,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.major_minor }}-arm64
+          push: true
+
+      - name: Create and push manifest images (major)
+        if: needs.extract-version.outputs.is_prerelease == 'false'
+        uses: Noelware/docker-manifest-action@v1
+        with:
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.major }}
+          inputs: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.major }}-amd64,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.major }}-arm64
           push: true
 
       - name: Create and push manifest images (latest)
