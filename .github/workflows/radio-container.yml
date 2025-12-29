@@ -2,9 +2,8 @@ name: Build, package and publish to ghcr.io
 
 on:
   push:
-    branches:
-      # TODO: on tag? or release?
-      - combine-discord
+    tags:
+      - 'radio@v*'
 
 env:
   REGISTRY: ghcr.io
@@ -12,7 +11,26 @@ env:
   HUSKY: 0
 
 jobs:
+  extract-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.package-version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            packages/radio/package.json
+          sparse-checkout-cone-mode: false
+
+      - name: Extract version from package.json
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./packages/radio/package.json').version")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
   build-image:
+    needs: extract-version
     strategy:
       matrix:
         include:
@@ -45,6 +63,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,suffix=-${{ matrix.arch }}
+            type=raw,value=${{ needs.extract-version.outputs.version }},suffix=-${{ matrix.arch }}
             type=raw,value=latest,suffix=-${{ matrix.arch }}
 
       - name: Log in to the Container registry
@@ -68,7 +87,9 @@ jobs:
           push: true
 
   push-images:
-    needs: build-image
+    needs:
+      - extract-version
+      - build-image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -81,9 +102,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push manifest images
+      - name: Create and push manifest images (latest)
         uses: Noelware/docker-manifest-action@v1
         with:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           inputs: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-amd64,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-arm64
           push: true
+
+      - name: Create and push manifest images
+        uses: Noelware/docker-manifest-action@v1
+        with:
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.version }}
+          inputs: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.version }}-amd64,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract-version.outputs.version }}-arm64
