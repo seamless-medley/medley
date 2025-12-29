@@ -1,6 +1,6 @@
 {
   "name": "@seamless-medley/ui",
-  "version": "0.1.0-test.1",
+  "version": "0.1.0-test.2",
   "scripts": {
     "dev": "vite --port 9586 --host",
     "build": "vite build",
