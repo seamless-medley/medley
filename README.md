@@ -46,8 +46,20 @@ If you decide to self-host Medley, please refer to our [Beta Testing Guide](http
 
 Please note that self-hosting Medley requires some technical knowledge and system resources.
 
-## Medley Discord Bot Screenshots
+## Screenshots
 
+### Web UI
+
+#### Stations List
+<img width="931" height="568" alt="image" src="https://github.com/user-attachments/assets/bbe50bc3-91a7-4fbf-870d-448b39ce280c" />
+
+#### Station, With cover image and lyrics
+<img width="1261" height="780" alt="image" src="https://github.com/user-attachments/assets/666712bf-22ba-4967-8e94-ef855f8dc37c" />
+
+#### Station, With Fullscreen
+<img width="1536" height="864" alt="image" src="https://github.com/user-attachments/assets/736e5804-d133-4487-a595-66371f1b0ea0" />
+
+### Discord Bot
 <img src="https://github.com/user-attachments/assets/ac173d6e-55c7-49d9-b2be-de15e544a2b5" width="300" alt="image" >
 <br />
 <img src="https://github.com/user-attachments/assets/2554e527-9f45-458b-b31f-1602d67e5091" height="400" />
