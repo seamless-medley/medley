@@ -343,7 +343,8 @@ void Medley::emitDeckEvent(const std::string& name,  medley::Deck& deck, medley:
     threadSafeEmitter.NonBlockingCall([=](Napi::Env env, Napi::Function emitFn) {
         try {
             auto uuid = trackPlay.getUuid().toDashedString();
-            auto track = static_cast<Track*>(trackPlay.getTrack().get())->getObjectRef().Value();
+            auto* trackPtr = static_cast<Track*>(trackPlay.getTrack().get());
+            auto track = trackPtr->toObject(env);
 
             auto obj = Napi::Object::New(env);
             obj.Set("uuid", Napi::String::New(env, uuid.toStdString()));
