@@ -163,8 +163,11 @@ Medley::Medley(const CallbackInfo& info)
     queueJS = Persistent(queueObj);
 
     try {
+        auto thisObj = info.This().ToObject();
+        auto emitFn = thisObj.Get("emit").As<Function>();
+
         threadSafeEmitter = ThreadSafeFunction::New(
-            env, info.This().ToObject().Get("emit").As<Function>(),
+            env, emitFn,
             "Medley Emitter",
             0, 1
         );
