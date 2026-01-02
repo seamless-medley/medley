@@ -126,7 +126,14 @@ Medley::Medley(const CallbackInfo& info)
 
     auto queueObj = arg1.ToObject();
 
-    if (!queueObj.InstanceOf(Queue::ctor.Value())) {
+    Queue* testQueue = nullptr;
+    try {
+        testQueue = Queue::Unwrap(queueObj);
+        if (testQueue == nullptr) {
+            TypeError::New(env, "Is not a queue").ThrowAsJavaScriptException();
+            return;
+        }
+    } catch (...) {
         TypeError::New(env, "Is not a queue").ThrowAsJavaScriptException();
         return;
     }
