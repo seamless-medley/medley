@@ -142,6 +142,6 @@ void NullAudioDevice::run()
             continue;
         }
 
-        std::this_thread::sleep_for(std::chrono::duration<double>(timeToWait));
+        std::this_thread::sleep_for(std::chrono::duration<seconds_t>(timeToWait));
     }
 }
