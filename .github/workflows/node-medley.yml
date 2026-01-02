@@ -145,7 +145,7 @@ jobs:
         run: |
           docker build \
             --platform=${{ matrix.platform }} \
-            -f ./builder/linux/Dockerfile \
+            -f ./docker/Dockerfile \
             --progress=plain \
             -t node-medley-prebuild ../.. && \
           docker container create \
