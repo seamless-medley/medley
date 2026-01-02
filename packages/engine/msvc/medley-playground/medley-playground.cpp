@@ -463,7 +463,7 @@ private:
                 g.setColour(Colours::antiquewhite);
             }
             else if (deck.isTrackLoaded()) {
-                g.setColour(deck.isPlaying() ? Colours::lightseagreen : Colours::lightsalmon);
+                g.setColour(deck.hasStarted() ? Colours::lightseagreen : Colours::lightsalmon);
             }
             else {
                 g.setColour(Colours::lightgrey);
@@ -543,7 +543,7 @@ private:
                     auto volStr = String::formatted("Vol: %d%%", (int)(deck.getVolume() * 100));
                     g.drawText(volStr, lineX(3), Justification::topRight);
 
-                    g.drawText(deck.isPlaying() ? "Playing" : "Cued", lineX(4), Justification::topRight);
+                    g.drawText(deck.hasStarted() ? "Playing" : "Cued", lineX(4), Justification::topRight);
 
                     if (deck.isMain()) {
                         g.setColour(Colours::orangered);
@@ -1459,7 +1459,7 @@ private:
         }
 
         void updatePlayButton() {
-            btnPlay.setColour(TextButton::buttonColourId, medley.isDeckPlaying() ? Colours::lightgreen : getLookAndFeel().findColour(TextButton::buttonColourId));
+            btnPlay.setColour(TextButton::buttonColourId, medley.hasAnyDeckStarted() ? Colours::lightgreen : getLookAndFeel().findColour(TextButton::buttonColourId));
             updatePauseButton();
         }
 
