@@ -1,19 +1,19 @@
 # How to build node-medley
 
-## Github Actions
-Usually, the native module for all supported platforms are built using Github Actions [Workflow](../../.github/workflows/node-medley.yml)
+## GitHub Actions
+Usually, the native modules for all supported platforms are built using GitHub Actions [Workflow](../../.github/workflows/node-medley.yml)
 
 ## Version bumping
 ```sh
 pnpm bump-version [major|minor|patch|<pre-release string>]
 ```
 
-Be sure to bump the version before building since the version number would be compiled and embeded into the binary itself.
+Be sure to bump the version before building since the version number will be compiled and embedded into the binary itself.
 
-## Build & Pack manually
+## Build manually
 
 ### Build for the host platform
-Issue the following command on each platform:
+Run the following command on each platform:
 ```sh
 pnpm prebuild
 ```
@@ -24,8 +24,8 @@ pnpm prebuild
 pnpm prebuild:linux
 ```
 
-This will build the module using Docker on any platforms.
+This will build the module using Docker on any platform.
 
-The result binary will then be copied from container into the `prebuilds` folder.
+The resulting binary will then be copied from the container into the `prebuilds` folder.
 
 
