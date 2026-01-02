@@ -432,7 +432,7 @@ Napi::Value Medley::reduction(const CallbackInfo& info) {
 }
 
 Napi::Value Medley::playing(const CallbackInfo& info) {
-    return Napi::Boolean::New(info.Env(), engine->isPlaying());
+    return Napi::Boolean::New(info.Env(), engine->hasStarted());
 }
 
 Napi::Value Medley::paused(const CallbackInfo& info) {

@@ -889,7 +889,7 @@ int Deck::PlayHead::useTimeSlice()
         }
     }
 
-    return deck.isPlaying() ? 10 : 250;
+    return deck.hasStarted() ? 10 : 250;
 }
 
 }

@@ -54,7 +54,7 @@ public:
 
     void setPositionFractional(double fraction);
 
-    bool isPlaying() const noexcept { return playing && !internallyPaused; }
+    bool hasStarted() const noexcept { return started && !internallyPaused; }
 
     void addListener(Callback* cb);
 

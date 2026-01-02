@@ -431,7 +431,7 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
         decksTransition[sender.index].fader.reset();
         decksTransition[sender.index].fader.resetTime();
 
-        if (nextDeck->isTrackLoaded() && !nextDeck->isPlaying()) {
+        if (nextDeck->isTrackLoaded() && !nextDeck->hasStarted()) {
             sender.log(LogLevel::Warn, "Stopped before transition would happen, try starting next deck");
             nextDeck->start();
         }
@@ -773,7 +773,7 @@ void Medley::stop(bool shouldFade)
 bool Medley::isDeckPlaying()
 {
     for (auto deck : decks) {
-        if (deck->isPlaying()) {
+        if (deck->hasStarted()) {
             return true;
         }
     }

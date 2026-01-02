@@ -116,7 +116,7 @@ public:
 
     bool isDeckPlaying();
 
-    inline bool isPlaying() { return isDeckPlaying(); }
+    inline bool hasStarted() { return hasAnyDeckStarted(); }
 
     void addListener(Callback* cb);
 
