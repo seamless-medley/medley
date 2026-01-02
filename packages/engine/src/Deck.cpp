@@ -875,6 +875,10 @@ void Deck::Scanner::scan(const ITrack::Ptr track)
 
 int Deck::PlayHead::useTimeSlice()
 {
+    if (!deck.isTrackLoaded()) {
+        return 250;
+    }
+
     auto pos = deck.getPosition();
     if (lastPosition != pos) {
         deck.doPositionChange(pos);
