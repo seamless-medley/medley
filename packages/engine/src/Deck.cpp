@@ -226,7 +226,7 @@ void Deck::unloadTrackInternal()
 {
     _isTrackLoading = false;
     inputStreamEOF = false;
-    playing = false;
+    started = false;
     stopped = true;
     fading = false;
 
@@ -548,7 +548,7 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
     {
         resamplerSource->getNextAudioBlock(info);
 
-        if (!playing)
+        if (!started)
         {
             // just stopped playing, so fade out the last block..
             for (int i = info.buffer->getNumChannels(); --i >= 0;) {
@@ -565,11 +565,11 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
 
         if (nextReadPosition > samplesToPlay + 1 && !bufferingSource->isLooping())
         {
-            playing = false;
+            started = false;
             inputStreamEOF = true;
         }
 
-        stopped = !playing;
+        stopped = !started;
 
         for (int i = info.buffer->getNumChannels(); --i >= 0;) {
             info.buffer->applyGainRamp(i, info.startSample, info.numSamples, lastGain, gain);
@@ -640,7 +640,7 @@ bool Deck::isLooping() const
 bool Deck::start()
 {
     logger->debug("Try to start playing");
-    if ((!playing || internallyPaused) && resamplerSource != nullptr)
+    if ((!started || internallyPaused) && resamplerSource != nullptr)
     {
         if (!internallyPaused) {
             listeners.call([this](Callback& cb) {
@@ -648,7 +648,7 @@ bool Deck::start()
             });
         }
 
-        playing = true;
+        started = true;
         internallyPaused = false;
         stopped = false;
         fading = false;
@@ -657,14 +657,14 @@ bool Deck::start()
         return true;
     }
 
-    return playing;
+    return started;
 }
 
 void Deck::stop()
 {
-    if (playing)
+    if (started)
     {
-        playing = false;
+        started = false;
     }
 
     fading = false;
@@ -805,7 +805,7 @@ void Deck::setSource(AudioFormatReaderSource* newSource)
 
     nextReadPosition = 0;
     inputStreamEOF = false;
-    playing = false;
+    started = false;
 
     if (oldResamplerSource != nullptr) {
         oldResamplerSource->releaseResources();
@@ -881,10 +881,10 @@ int Deck::PlayHead::useTimeSlice()
         lastPosition = pos;
     }
     else {
-        if (deck.stopped && deck.playing) {
+        if (deck.stopped && deck.started) {
             // This is rare, something went wrong and playback was stalled somehow.
             // try to restart playback
-            deck.playing = false;
+            deck.started = false;
             deck.start();
         }
     }

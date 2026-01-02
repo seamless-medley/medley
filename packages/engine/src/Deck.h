@@ -218,7 +218,7 @@ private:
     ITrack::Ptr track = nullptr;
     TrackPlay trackPlay;
 
-    std::atomic<bool> playing{ false };
+    std::atomic<bool> started{ false };
     std::atomic<bool> internallyPaused{ false };
     std::atomic<bool> stopped{ true };
 
