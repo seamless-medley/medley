@@ -18,7 +18,7 @@ Issue the following command on each platform:
 pnpm prebuild
 ```
 
-### Build for Linux using [Docker](./builder/linux/Dockerfile)
+### Build for Linux using [Docker](./docker/Dockerfile)
 
 ```sh
 pnpm prebuild:linux
