@@ -114,7 +114,7 @@ public:
 
     void stop(bool shouldFade = true);
 
-    bool isDeckPlaying();
+    bool hasAnyDeckStarted();
 
     inline bool hasStarted() { return hasAnyDeckStarted(); }
 

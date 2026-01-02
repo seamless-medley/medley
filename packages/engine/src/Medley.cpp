@@ -461,7 +461,7 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
     }
 
     // Just in case
-    if (keepPlaying && !isDeckPlaying()) {
+    if (keepPlaying && !hasAnyDeckStarted()) {
         auto shouldContinuePlaying = (nextDeck->getTrack() != nullptr) || (queue.count() > 0);
 
         if (shouldContinuePlaying) {
@@ -528,7 +528,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                             if (done) {
                                 pTransition->state = DeckTransitionState::CueNext;
 
-                                if (keepPlaying && !isDeckPlaying()) {
+                                if (keepPlaying && !hasAnyDeckStarted()) {
                                     // Playing has stopped during enqueuing phase and caused the timing to stop either
                                     // re-trigger timing
                                     logger->warn("Enqueuing had been stalled and could not provide track in time");
@@ -556,7 +556,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                 pTransition->state = DeckTransitionState::NextIsLoading;
 
                 auto currentDeck = &sender;
-                loadNextTrack(currentDeck, keepPlaying && !isDeckPlaying(), [&, _pTransition = pTransition, _pNextTransition = pNextTransition, _position = position, tsp = transitionStartPos, tep = transitionEndPos, cd = currentDeck, nd = nextDeck](bool loaded) {
+                loadNextTrack(currentDeck, keepPlaying && !hasAnyDeckStarted(), [&, _pTransition = pTransition, _pNextTransition = pNextTransition, _position = position, tsp = transitionStartPos, tep = transitionEndPos, cd = currentDeck, nd = nextDeck](bool loaded) {
                     if (loaded) {
                         _pTransition->state = DeckTransitionState::NextIsReady;
                         transitingFromDeck = cd;
@@ -731,8 +731,8 @@ void Medley::setFadingCurve(double curve) {
 
 bool Medley::play(bool shouldFade)
 {
-    if (!isDeckPlaying()) {
         Deck* loadedDeck = nullptr;
+    if (!hasAnyDeckStarted()) {
 
         for (auto deck : decks) {
             if (deck->_isTrackLoading || deck->isTrackLoaded()) {
@@ -770,7 +770,7 @@ void Medley::stop(bool shouldFade)
     mixer.fadeOut(400, stopAndUnload);
 }
 
-bool Medley::isDeckPlaying()
+bool Medley::hasAnyDeckStarted()
 {
     for (auto deck : decks) {
         if (deck->hasStarted()) {
