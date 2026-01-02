@@ -292,6 +292,22 @@ private:
         PostProcessor processor;
     };
 
+    class PlaybackWatchdog : public TimeSliceClient {
+    public:
+        friend class Medley;
+
+        PlaybackWatchdog(Medley& medley)
+            : medley(medley)
+        {
+
+        }
+
+        int useTimeSlice() override;
+
+    private:
+        Medley& medley;
+    };
+
     AudioDeviceManager deviceMgr;
 
     SupportedFormats formatMgr;
@@ -302,6 +318,8 @@ private:
 
     Mixer mixer;
     AudioSourcePlayer mainOut;
+
+    PlaybackWatchdog watchdog;
 
     IQueue& queue;
 

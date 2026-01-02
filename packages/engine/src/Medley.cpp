@@ -14,6 +14,7 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter, bool skipDeviceScanning)
     :
     audioInterceptor(*this),
     mixer(*this),
+    watchdog(*this),
     queue(queue),
     loadingThread("Loading Thread"),
     readAheadThread("Read-ahead-thread"),
@@ -55,6 +56,7 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter, bool skipDeviceScanning)
     visualizationThread.startThread();
     audioInterceptionThread.startThread(9);
 
+    loadingThread.addTimeSliceClient(&watchdog);
     visualizationThread.addTimeSliceClient(&mixer);
     audioInterceptionThread.addTimeSliceClient(&audioInterceptor);
 
@@ -981,6 +983,38 @@ void Medley::Mixer::updateAudioConfig()
 
         prepared = true;
     }
+}
+
+int Medley::PlaybackWatchdog::useTimeSlice()
+{
+    constexpr int SLEEP_DURATION = 5000;
+    constexpr int WAIT_DURATION = SLEEP_DURATION / 2;
+
+    if (!medley.keepPlaying) {
+        return SLEEP_DURATION;
+    }
+
+    if (medley.hasAnyDeckStarted()) {
+        return SLEEP_DURATION;
+    }
+
+    // No decks have been started
+    for (auto deck : medley.decks) {
+        // but it is loading, just wait a little more
+        if (deck->isTrackLoading()) {
+            return WAIT_DURATION;
+        }
+
+        if (deck->isTrackLoaded()) {
+            if (deck->start()) {
+                return WAIT_DURATION;
+            }
+        }
+    }
+
+    // Reaching this point means all decks are empty
+    medley.loadNextTrack(nullptr, true);
+    return WAIT_DURATION;
 }
 
 }
