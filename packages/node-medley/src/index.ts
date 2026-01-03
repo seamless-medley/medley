@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { basename, dirname } from 'node:path';
 import { Readable } from 'node:stream';
-import type { AudioFormat, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult } from './index.d';
+import type { AudioFormat, MedleyOptions, Medley as MedleyType, Queue as QueueType, RequestAudioOptions, RequestAudioResult, RequestAudioStreamResult, TrackInfo } from './index.d';
 
 const nodeGypBuild = require('node-gyp-build');
 const module_id = process.env.MEDLEY_DEV ? dirname(__dirname) : __dirname;
@@ -148,4 +148,10 @@ Medley.prototype.deleteAudioStream = function(id: number) {
   audioStreamResults.delete(id);
 
   return result;
+}
+
+export function createMedley<T extends TrackInfo = TrackInfo>(options?: MedleyOptions) {
+  const queue = new Queue() as QueueType<T>;
+  const medley = new Medley(queue, options) as MedleyType<T>;
+  return { medley, queue }
 }

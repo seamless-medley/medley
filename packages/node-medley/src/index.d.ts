@@ -446,3 +446,5 @@ export type KaraokeParams = {
 export type KaraokeUpdateParams = Partial<KaraokeParams & {
   dontTransit?: boolean;
 }>;
+
+export declare function createMedley<T extends TrackInfo = TrackInfo>(options?: MedleyOptions): { medley: Medley<T>, queue: Queue<T> };

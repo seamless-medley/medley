@@ -1,4 +1,4 @@
-import { Medley, Queue } from '..';
+import { createMedley, Medley } from '..';
 import { extname } from 'node:path';
 import test, { ExecutionContext } from 'ava';
 
@@ -70,8 +70,7 @@ for (const { ext } of middlec) {
 }
 
 test('Null Audio Device playback', t => {
-  const queue = new Queue();
-  const medley = new Medley(queue, { skipDeviceScanning: true });
+  const { medley, queue } = createMedley({ skipDeviceScanning: true });
 
   t.is(medley.constructor, Medley, `${Medley.name} instance expected`);
 

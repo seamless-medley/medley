@@ -71,10 +71,23 @@ pnpm add @seamless-medley/medley
 # Getting started
 
 ```ts
-// Import the main classes
+import { createMedley } from '@seamless-medley/medley';
+
+// Create both queue and medley instances
+const { queue, medley } = createMedley();
+
+// Add tracks to the `queue` and start playing
+queue.add('/path/to/file');
+queue.add('/path/to/file2');
+medley.play();
+```
+> This will start playback on the default audio device.
+
+Alternatively, you can create instances manually:
+
+```ts
 import { Medley, Queue } from '@seamless-medley/medley';
 
-// Create a queue instance and pass it to the Medley class during instantiation
 const queue = new Queue();
 const medley = new Medley(queue);
 
@@ -83,7 +96,6 @@ queue.add('/path/to/file');
 queue.add('/path/to/file2');
 medley.play();
 ```
-> This will start playback on the default audio device.
 
 # Supported File Formats
 Currently, the supported file formats include: `wav`, `aiff`, `mp3`, `ogg`, `flac` and `opus`. More formats may be added in the future.
@@ -232,6 +244,9 @@ See also:
 
 # API
 
+- [Functions](#functions)
+    - [createMedley](#createmedleyoptions)
+
 - [Medley](#medley-class)
     - Methods
         - [play](#playshouldfade--true)
@@ -289,6 +304,44 @@ See also:
 
 - [TrackInfo](#trackinfo)
 - [Metadata](#metadata)
+
+## Functions
+
+### `createMedley(options?)`
+
+A convenience function that creates and returns both a `Medley` and `Queue` instance together.
+
+**Parameters:**
+- `options?` - Optional configuration object, same as [Medley constructor options](#options)
+
+**Returns:**
+
+An object containing:
+- `medley` - A new [Medley](#medley-class) instance initialized with the queue
+- `queue` - A new [Queue](#queue-class) instance
+
+**Example:**
+
+```ts
+import { createMedley } from '@seamless-medley/medley';
+
+const { medley, queue } = createMedley();
+
+queue.add('/path/to/track.mp3');
+medley.play();
+```
+
+This is equivalent to:
+
+```ts
+import { Medley, Queue } from '@seamless-medley/medley';
+
+const queue = new Queue();
+const medley = new Medley(queue);
+
+queue.add('/path/to/track.mp3');
+medley.play();
+```
 
 ## `Medley` class
 

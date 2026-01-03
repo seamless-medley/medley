@@ -1,4 +1,4 @@
-import { Medley, Queue } from '..';
+import { createMedley, Medley } from '..';
 
 function log(name: string, ...args: any[]) {
   console.log(`${new Date().toISOString()}> [${name}]:`, ...args)
@@ -14,8 +14,7 @@ async function main() {
 
   nodeLog(Medley.getInfo());
 
-  const queue = new Queue();
-  const medley = new Medley(queue, { logging: true, skipDeviceScanning: isCI });
+  const { queue, medley } = createMedley({ logging: true, skipDeviceScanning: isCI });
 
   const r = await medley.requestAudioStream();
 
