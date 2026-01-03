@@ -28,7 +28,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-wget https://github.com/libsndfile/libsamplerate/releases/download/${LIBSAMPLERATE_VERSION}/libsamplerate-${LIBSAMPLERATE_VERSION}.tar.xz \
+# wget https://github.com/libsndfile/libsamplerate/releases/download/${LIBSAMPLERATE_VERSION}/libsamplerate-${LIBSAMPLERATE_VERSION}.tar.xz \
+wget https://github.com/libsndfile/libsamplerate/archive/2ccde9568cca73c7b32c97fefca2e418c16ae5e3.zip \
     -O libsamplerate.tar.gz
 tar xvf libsamplerate.tar.gz
 mv libsamplerate-* libsamplerate
