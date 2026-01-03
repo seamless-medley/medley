@@ -72,5 +72,8 @@
     "nodeArguments": [
       "--import=tsx"
     ]
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
