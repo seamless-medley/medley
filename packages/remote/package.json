@@ -7,6 +7,6 @@
     "@seamless-medley/radio": "../radio",
     "@seamless-medley/utils": "../utils",
     "mediasoup": "^3.19.12",
-    "type-fest": "^5.3.0"
+    "type-fest": "^5.3.1"
   }
 }
