@@ -5,14 +5,24 @@ on:
       - node-medley native module
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Workflow run ID to download artifacts from'
+        required: true
+        type: string
 env:
   NODE_MEDLEY_DIR: ./packages/node-medley
   PREBUILDS_DIR: ./packages/node-medley/prebuilds
   HUSKY: 0
 jobs:
   pack-and-publish:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
     steps:
       - name: Install Node
         uses: actions/setup-node@v4
@@ -53,7 +63,7 @@ jobs:
         id: download
         uses: dawidd6/action-download-artifact@v6
         with:
-          run_id: ${{ github.event.workflow_run.id }}
+          run_id: ${{ github.event_name == 'workflow_dispatch' && inputs.run_id || github.event.workflow_run.id }}
           name_is_regexp: true
           name: ^(win32|linux|darwin)-(x64|arm64)$
           path: ${{ env.PREBUILDS_DIR }}
