@@ -6,7 +6,6 @@ import { FileScanner, FileScanOptions } from "../collections";
 
 interface Methods {
   scanDir(dir: string): false | string[];
-  fileExists(path: string): boolean;
 }
 
 class Scanner extends WorkerPoolAdapter<Methods> {
@@ -16,10 +15,6 @@ class Scanner extends WorkerPoolAdapter<Methods> {
 
   async scanDir(dir: string) {
     return this.exec('scanDir', dir).catch(stubFalse);
-  }
-
-  async fileExists(path: string) {
-    return this.exec('fileExists', path).catch(stubFalse);
   }
 }
 
@@ -88,8 +83,4 @@ export async function scanDirStream({ dir, chunkSize, onFiles, onDone }: FileSca
   });
 
   return true as const;
-}
-
-export async function fileExists(path: string) {
-  return getDefaultInstance().fileExists(path);
 }

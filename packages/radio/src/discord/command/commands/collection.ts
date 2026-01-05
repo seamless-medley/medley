@@ -34,8 +34,6 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   }
 
   const getCollections = (pinned?: TrackCollection<any>) => {
-    station.crates.flatMap(c => c.sources)
-
     return [
       ...(pinned ? [pinned] : []),
       ...chain(station.crates)

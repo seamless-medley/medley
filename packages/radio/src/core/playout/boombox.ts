@@ -130,7 +130,6 @@ type BoomBoxOptions<T extends BoomBoxTrack, R extends BaseRequester> = {
   medley: Medley<BoomBoxTrack>;
   queue: Queue<BoomBoxTrack>;
 
-  db?: MusicDb;
   metadataHelper: MetadataHelper;
 
   /**

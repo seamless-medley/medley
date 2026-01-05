@@ -7,7 +7,6 @@ import { omitBy, negate } from 'lodash/fp';
 import { BoomBoxCoverAnyLyrics } from '../playout';
 import { isEqual, omit, stubFalse } from 'lodash';
 import { LyricProviderName, LyricsSearchResult } from './lyrics/types';
-import { cachedWith } from '@seamless-medley/utils';
 import { getThreadPoolSize } from '../utils';
 
 const falsy = negate(Boolean);
