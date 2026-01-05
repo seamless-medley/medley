@@ -48,7 +48,7 @@ export class AudioDispatcher {
     // No exciters left to prepare
     // schedule next cycle
     if (this.#nextTime !== -1) {
-      this.#timer = setTimeout(this.#cycle, this.#nextTime - performance.now());
+      this.#timer = setTimeout(this.#cycle, Math.max(0, this.#nextTime - performance.now()));
     }
   }
 
