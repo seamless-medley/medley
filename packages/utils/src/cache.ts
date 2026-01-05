@@ -2,8 +2,14 @@ export function cachedWith<K, O extends WeakKey>(getter: (key: K) => Promise<O>)
   const cache = new Map<K, WeakRef<O>>();
 
   const finalizationHandler = (key: K) => {
-    if (!cache.get(key)?.deref()) {
-      cache.delete(key)
+    const ref = cache.get(key);
+
+    if (!ref) {
+      return;
+    }
+
+    if (ref.deref()) {
+      cache.delete(key);
     }
   }
 
@@ -11,7 +17,11 @@ export function cachedWith<K, O extends WeakKey>(getter: (key: K) => Promise<O>)
 
   return async (key: K) => {
     if (cache.has(key)) {
-      return cache.get(key)!.deref()!;
+      const cached = cache.get(key)!.deref();
+
+      if (cached !== undefined) {
+        return cached;
+      }
     }
 
     const value = await getter(key);
