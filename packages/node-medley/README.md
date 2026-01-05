@@ -73,8 +73,8 @@ pnpm add @seamless-medley/medley
 ```ts
 import { createMedley } from '@seamless-medley/medley';
 
-// Create both queue and medley instances
-const { queue, medley } = createMedley();
+// Create both `medley` and `queue` instances
+const { medley, queue } = createMedley();
 
 // Add tracks to the `queue` and start playing
 queue.add('/path/to/file');
