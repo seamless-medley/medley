@@ -6,17 +6,19 @@ import {
   Message,
   MessageActionRowComponentBuilder,
   MessageComponentInteraction,
+  MessageEditOptions,
+  MessageFlags,
   RepliableInteraction,
+  TextDisplayBuilder,
   time as formatTime,
   userMention
 } from "discord.js";
 
 import { MedleyAutomaton } from "../automaton";
 import { deferReply, guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
-import { noop } from "lodash";
 import { Strings } from "./type";
 
-export type InteractorMessageBuilder = () => Promise<Omit<InteractionReplyOptions, 'flags'>>;
+export type InteractorMessageBuilder = () => Promise<Omit<InteractionReplyOptions, 'flags'> & Pick<MessageEditOptions, 'flags'>>;
 
 export type InteractorOnCollectParams<D> = {
   data?: D;
@@ -41,6 +43,8 @@ export type InteractorOptions<D = unknown> = {
   onGoing?: Set<string>;
   ttl?: number;
   data?: D;
+  useComponentV2?: boolean;
+  ephemeral?: boolean;
   //
   formatTimeout?: (time: string) => string;
   makeCaption: (data?: D) => Promise<Strings>;
@@ -59,6 +63,8 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
     interaction,
     onGoing,
     ttl,
+    useComponentV2,
+    ephemeral,
     formatTimeout,
     makeCaption,
     makeComponents
@@ -78,19 +84,34 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
 
   const makeTimeout = () => ttl ? (formatTimeout ?? defaultFunctions.formatTimeout)(formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')) : undefined;
 
-  const buildMessage: InteractorMessageBuilder = async () => ({
-    withResponse: true,
-    content: joinStrings([
-      !interaction.isChatInputCommand() ? `${userMention(issuer)} ` : undefined,
-      makeTimeout(),
-      ...await makeCaption(options.data)
-    ]),
-    components: await makeComponents(options.data)
-  });
+  const content = joinStrings([
+    !interaction.isChatInputCommand() ? `${userMention(issuer)} ` : undefined,
+    makeTimeout(),
+    ...await makeCaption(options.data)
+  ]);
 
-  const replyMessage = async () => reply(interaction, await buildMessage());
+  const flags = ephemeral ? MessageFlags.Ephemeral : 0;
 
-  const selector = await replyMessage().then(m => m?.fetch?.());
+  const buildMessage: InteractorMessageBuilder = useComponentV2
+    ? async () => ({
+        withResponse: true,
+        flags: flags | MessageFlags.IsComponentsV2,
+        components: [
+          new TextDisplayBuilder()
+            .setContent(content),
+          ...await makeComponents(options.data)
+        ]
+      })
+    : async () => ({
+        withResponse: true,
+        flags,
+        content,
+        components: await makeComponents(options.data)
+      })
+
+  const replyMessage = async () => (await reply(interaction, await buildMessage())) as Message<boolean>;
+
+  const selector = await replyMessage();
 
   if (!selector) {
     return;
@@ -108,7 +129,7 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
       collector.stop();
 
       if (shouldDelete && selector.deletable) {
-        await selector.delete();
+        await interaction.deleteReply();
       }
     }
   }
@@ -129,21 +150,24 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
     },
 
     cancel: (reason) => {
-      interaction.editReply({
-        content: makeColoredMessage('yellow', reason ?? 'Canceled'),
-        components: []
-      });
+      const content = makeColoredMessage('yellow', reason ?? 'Canceled');
+      interaction.editReply(useComponentV2
+        ? { flags: flags | MessageFlags.IsComponentsV2, components: [new TextDisplayBuilder().setContent(content)] }
+        : { content, components: [] }
+      );
 
       return stop(false);
     }
   })
 
   collector.on('collect', async (collected) => {
+    const content = `Sorry, this selection is for${userMention(issuer)} only`;
+
     if (collected.user.id !== issuer) {
-      collected.reply({
-        content: `Sorry, this selection is for${userMention(issuer)} only`,
-        ephemeral: true
-      })
+      collected.reply(useComponentV2
+        ? { flags: flags | MessageFlags.IsComponentsV2, components: [new TextDisplayBuilder().setContent(content)] }
+        : { content, ephemeral: true }
+      );
       return;
     }
 
@@ -162,12 +186,12 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
   collector.on('end', async () => {
     cleanup?.();
 
-    if (!done && selector.editable) {
-      await selector.edit({
-        content: makeColoredMessage('yellow', 'Timed out, please try again'),
-        components: []
-      })
-      .catch(noop);
+    if (!done) {
+      const content = makeColoredMessage('yellow', 'Timed out, please try again');
+      await interaction.editReply(useComponentV2
+        ? { flags: flags | MessageFlags.IsComponentsV2, components: [new TextDisplayBuilder().setContent(content)] }
+        : { content, components: [] }
+      );
     }
 
     await stop(false);
