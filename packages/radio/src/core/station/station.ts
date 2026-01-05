@@ -35,6 +35,7 @@ import {
 
 import { SearchQueryField } from "../library/search";
 import { CrateProfile } from "../crate/profile";
+import { MetadataHelper } from '../metadata';
 
 export enum PlayState {
   Idle = 'idle',
@@ -169,6 +170,8 @@ export class Station extends TypedEmitter<StationEvents> {
 
   #audienceCount = 0;
 
+  readonly metadataHelper = new MetadataHelper();
+
   #logger: Logger;
 
   constructor(options: StationOptions) {
@@ -221,7 +224,8 @@ export class Station extends TypedEmitter<StationEvents> {
     this.#library = new MusicLibrary<Station>(
       this.id,
       this,
-      this.#musicDb
+      this.#musicDb,
+      this.metadataHelper
     );
 
     this.#library.on('stats', this.#handleLibraryStats);
@@ -233,7 +237,8 @@ export class Station extends TypedEmitter<StationEvents> {
       queue: this.queue,
       artistBacklog: options.artistBacklog !== false ? Math.max(options.artistBacklog ?? 0, this.maxTrackHistory) : false,
       duplicationSimilarity: options.duplicationSimilarity,
-      onInsertRequestTrack: this.#handleRequestTrack
+      onInsertRequestTrack: this.#handleRequestTrack,
+      metadataHelper: this.metadataHelper
     });
 
     boombox.on('trackQueued', this.#handleTrackQueued);

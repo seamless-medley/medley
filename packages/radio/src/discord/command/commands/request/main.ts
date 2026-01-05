@@ -249,7 +249,7 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
       return audioPropsPromises.get(track.id)!;
     }
 
-    const promise = (fetchAudioProps(track, `audio-props-${automaton.id}`) ?? Promise.resolve(undefined)).catch(() => undefined);
+    const promise = (fetchAudioProps(track, station.metadataHelper) ?? Promise.resolve(undefined)).catch(() => undefined);
     audioPropsPromises.set(track.id, promise);
 
     return promise;

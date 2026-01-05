@@ -64,7 +64,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
   constructor(
     readonly id: string,
     readonly owner: O,
-    readonly musicDb: MusicDb
+    readonly musicDb: MusicDb,
+    readonly metadataHelper: MetadataHelper
   ) {
     super();
 
@@ -251,7 +252,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     let modified = false;
 
     if (force || !track.extra?.tags) {
-      const { metadata, timestamp, modified: metadataUpdated } = await MetadataHelper.for(`library-${this.id}`, helper => helper.fetchMetadata(track, this.musicDb, force));
+      const { metadata, timestamp, modified: metadataUpdated } = await this.metadataHelper.fetchMetadata(track, this.musicDb, force);
 
       track.musicId = metadata.isrc,
       track.extra = {

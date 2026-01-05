@@ -19,7 +19,7 @@ export function stringSimilarity(a: string, b: string): number {
   return (longestLength - editDistance) / longestLength
 }
 
-export function fetchAudioProps(track: BoomBoxTrack, helperDomain: string = 'audio-props'): Promise<AudioProperties> | undefined {
+export function fetchAudioProps(track: BoomBoxTrack, helper: MetadataHelper): Promise<AudioProperties> | undefined {
   const { extra } = track;
 
   if (!extra) {
@@ -27,7 +27,7 @@ export function fetchAudioProps(track: BoomBoxTrack, helperDomain: string = 'aud
   }
 
   if (extra.maybeAudioProperties === undefined) {
-    extra.maybeAudioProperties = MetadataHelper.for(helperDomain, helper => helper.audioProperties(track.path));
+    extra.maybeAudioProperties = helper.audioProperties(track.path);
   }
 
   return extra.maybeAudioProperties;

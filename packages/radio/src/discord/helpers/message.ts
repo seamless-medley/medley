@@ -7,8 +7,8 @@ export type CoverImageAttachment = {
   url: string;
 }
 
-export async function createCoverImageAttachment({ extra, path }: StationTrack, helperDomain = 'track-message'): Promise<CoverImageAttachment | undefined> {
-  const coverAndLyrics = await (extra?.maybeCoverAndLyrics ?? MetadataHelper.for(helperDomain, helper => helper.coverAndLyrics(path)));
+export async function createCoverImageAttachment({ extra, path }: StationTrack, helper: MetadataHelper): Promise<CoverImageAttachment | undefined> {
+  const coverAndLyrics = await (extra?.maybeCoverAndLyrics ?? helper.coverAndLyrics(path));
 
   if (!coverAndLyrics) {
     return;

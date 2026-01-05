@@ -161,12 +161,6 @@ export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   async searchLyrics(artist: string, title: string, provider: LyricProviderName) {
     return this.#runIfNeeded(`searchLyrics:${artist}:${title}`, async () => this.exec('searchLyrics', artist, title, provider));
   }
-
-  static #cache = cachedWith(async () => new MetadataHelper());
-
-  static async for<R>(domain: string, fn: (helper: MetadataHelper) => R): Promise<Awaited<R>> {
-    return await this.#cache(domain).then(fn)
-  }
 }
 
 const isUint8Array = (o: any): o is Uint8Array => o?.constructor === Uint8Array;

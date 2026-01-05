@@ -36,7 +36,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
   const trackExtra = track.extra;
 
   const { lyrics: lyricsText, lyricsSource } = await new Promise<BoomBoxCoverAnyLyrics>(async (resolve) => {
-    const bbCoverAndLyrics = await (trackExtra?.maybeCoverAndLyrics ?? MetadataHelper.for(`lyrics-${automaton.id}`, helper => helper.coverAndLyrics(track.path)));
+    const bbCoverAndLyrics = await (trackExtra?.maybeCoverAndLyrics ?? station.metadataHelper.coverAndLyrics(track.path));
 
     let { lyrics, lyricsSource } = bbCoverAndLyrics;
     const { cover, coverMimeType } = bbCoverAndLyrics;
@@ -50,7 +50,7 @@ const createButtonHandler: InteractionHandlerFactory<ButtonInteraction> = (autom
       if (artist && title) {
         await deferReply(interaction);
 
-        searchResult = await searchLyrics(artist, title, `lyrics-${automaton.id}`).catch(() => undefined);
+        searchResult = await searchLyrics(artist, title, station.metadataHelper).catch(() => undefined);
 
         if (searchResult?.lyrics) {
           lyrics = searchResult.lyrics;

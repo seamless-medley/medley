@@ -24,7 +24,7 @@ export class Normal extends TrackMessageCreator {
 
     const data = getEmbedDataForTrack(track, metadataFields);
     const spotifyIds = extractSpotifyMetadata(track);
-    const cover = await createCoverImageAttachment(track, `track-message-${this.automaton.id}`);
+    const cover = await createCoverImageAttachment(track, station.metadataHelper);
 
     (embed)
       .setAuthor({
