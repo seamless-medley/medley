@@ -8,6 +8,7 @@ import {
   type RequestAudioOptions,
   type TrackPlay,
   type UpdateAudioStreamOptions,
+  createMedley,
   Medley,
   Queue
 } from "@seamless-medley/medley";
@@ -190,8 +191,9 @@ export class Station extends TypedEmitter<StationEvents> {
 
     const logMedley = process.env.DEBUG !== undefined;
 
-    this.queue = new Queue();
-    this.medley = new Medley(this.queue, { logging: logMedley });
+    const medley = createMedley<StationTrack>({ logging: logMedley });
+    this.queue = medley.queue;
+    this.medley = medley.medley;
 
     if (logMedley) {
       const medleyLogger = createLogger({ name: 'medley', id: this.id });
