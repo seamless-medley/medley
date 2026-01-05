@@ -16,7 +16,7 @@ import type { StationAudioLevels } from '@seamless-medley/remote';
 
 import { createLogger, type Logger } from '../../logging';
 
-import { TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
+import { RescanOptions, ScanFlags, TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
 import { Crate, LatchOptions, LatchSession } from "../crate";
 import { FindByCommentOptions, Library, LibrarySearchParams, LibraryOverallStats, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicLibraryEvents, MusicTrack, MusicTrackCollection } from "../library";
 import {
@@ -939,7 +939,7 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#boombox.allLatches;
   }
 
-  async rescan(full?: boolean, scanningCb?: (collection: BoomBoxTrackCollection) => any) {
+  async rescan(options: RescanOptions, scanningCb?: (collection: BoomBoxTrackCollection) => any) {
     const jingleCollections = this.profiles
       .flatMap(profile => ([
         profile.intros,
@@ -949,10 +949,10 @@ export class Station extends TypedEmitter<StationEvents> {
       .filter((c): c is WatchTrackCollection<BoomBoxTrack> => c instanceof WatchTrackCollection)
 
     for (const col of jingleCollections) {
-      col.rescan(full);
+      col.rescan(options.flags);
     }
 
-    return this.#library.rescan(full, scanningCb);
+    return this.#library.rescan(options, scanningCb);
   }
 
   get libraryStats() {

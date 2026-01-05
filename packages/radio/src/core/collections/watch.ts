@@ -1,10 +1,10 @@
 import os from 'node:os';
-import { dirname } from 'node:path';
-import { stat, access } from "node:fs/promises";
+import path, { dirname } from 'node:path';
+import { stat } from "node:fs/promises";
 
 import fg from 'fast-glob';
 import { minimatch } from 'minimatch';
-import { chain, debounce, noop, once, shuffle, stubTrue, stubFalse, sumBy, uniq } from "lodash";
+import { chain, debounce, noop, once, shuffle, stubFalse, sumBy, uniq, difference } from "lodash";
 import normalizePath from "normalize-path";
 import watcher, { AsyncSubscription, SubscribeCallback, BackendType } from '@parcel/watcher';
 
@@ -41,24 +41,35 @@ export type FileScanner = (info: FileScanOptions) => Promise<true | undefined>;
 export type WatchTrackCollectionOptions<T extends Track<any>> = TrackCollectionOptions<T> & {
   // scanner?: (dir: string) => Promise<false | string[]>;
   scanner?: FileScanner;
-  fileExistentChecker?: (path: string) => Promise<boolean>;
 }
 
 export type ScanStats = {
   scanned: number;
   added: number;
+  removed: number;
   updated: number;
+}
+
+export type ScanFlags = {
+    detectAddition: boolean;
+    detectRemoval: boolean;
+    updateExisting: boolean;
+  }
+
+type ScanOptions = {
+  dir: string;
+  flags: ScanFlags;
+  chunkSize?: number;
+  onFirstChunkAdded?: () => any;
+}
+
+export type RescanOptions = {
+  flags: ScanFlags;
+  onlyCollections?: string[];
 }
 
 export type RescanStats = ScanStats & {
   removed: number;
-}
-
-type ScanOptions = {
-  dir: string;
-  updateExisting?: boolean;
-  chunkSize?: number;
-  onFirstChunkAdded?: () => any;
 }
 
 export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = TrackExtraOf<T>, Extra = any> extends TrackCollection<T, TE, Extra, WatchTrackCollectionOptions<T>> {
@@ -177,7 +188,14 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
 
       if (stats.isDirectory()) {
         // A sub folder rename results in a single create event, explicitly scan the path now
-        this.#scan({ dir: path });
+        this.#scan({
+          dir: path,
+          flags: {
+            detectAddition: true,
+            detectRemoval: false,
+            updateExisting: false
+          }
+        });
         continue;
       }
 
@@ -216,7 +234,14 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
 
     if (info.subscription) {
       this.logger.info(`Resume subscription for ${dir}`);
-      await this.#scan({ dir });
+      await this.#scan({
+        dir,
+        flags: {
+          detectAddition: true,
+          detectRemoval: true,
+          updateExisting: true
+        }
+      });
     }
   }
 
@@ -237,6 +262,11 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
 
     await this.#scan({
       dir: normalized,
+      flags: {
+        detectAddition: true,
+        detectRemoval: false,
+        updateExisting: false
+      },
       onFirstChunkAdded: async () => {
         this.logger.info(`Watching ${normalized}`);
         await this.#subscribeToPath(normalized, options);
@@ -286,29 +316,35 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
     return true;
   }
 
-  #scanning = 0;
+  #scanPromises = new Map<string, Promise<ScanStats>>();
 
-  async #scan({ dir, onFirstChunkAdded, chunkSize, updateExisting }: ScanOptions): Promise<ScanStats> {
-    if (this.#scanning === 0) {
-      this.emit('scan' as any);
+  async #scan({ dir, onFirstChunkAdded, chunkSize, flags }: ScanOptions): Promise<ScanStats> {
+    if (this.#scanPromises.has(dir)) {
+      return this.#scanPromises.get(dir)!;
     }
 
-    this.#scanning++;
+    const counter: ScanStats = {
+      scanned: 0,
+      added: 0,
+      removed: 0,
+      updated: 0
+    }
+
+    if (!(flags.detectAddition || flags.detectRemoval || flags.updateExisting)) {
+      return Promise.resolve(counter);
+    }
+
+    this.emit('scan' as any, this, path.normalize(dir));
 
     const onChunkAdded = once(onFirstChunkAdded ?? noop) as ChunkHandler<T>;
 
     const scanners: Array<FileScanner> = [this.#extScanner, this.#globScanner];
-    const counter: ScanStats = {
-      scanned: 0,
-      added: 0,
-      updated: 0
-    }
 
     chunkSize = chunkSize ?? getThreadPoolSize(this.options.auxiliary ? 10 : 20);
 
     const scannedFiles: string[] = [];
 
-    return new Promise<ScanStats>(async (resolve) => {
+    const promise = new Promise<ScanStats>(async (resolve) => {
       for (const scanner of scanners) {
         const ok = await scanner.call(this, {
           dir,
@@ -319,24 +355,44 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
           },
 
           onDone: async () => {
-            const { scanned, added, updated } = await this.add({
-              paths: shuffle(scannedFiles),
-              updateExisting,
-              chunkSize,
-              onChunkAdded
-            });
+            let removed = 0;
 
-            await breath();
+            if (flags?.detectRemoval) {
+              const dirPath = path.resolve(dir);
 
-            counter.scanned += scanned.length;
-            counter.added += added.length;
-            counter.updated += updated;
+              const isFileInDir = (filePath: string) => {
+                const rel = path.relative(dirPath, path.resolve(filePath));
+                return !rel.startsWith('..') && !path.isAbsolute(rel);
+              }
 
-            this.#scanning--;
+              const knownPathsForDir = this.tracks
+                .map(t => t.path)
+                .filter(isFileInDir);
 
-            if (this.#scanning === 0) {
-              this.emit('scan-done' as any);
+              const absentFilePaths = difference(knownPathsForDir, scannedFiles);
+              removed = (await this.remove(absentFilePaths)).length;
             }
+
+            if (flags.detectAddition || flags.updateExisting) {
+              const { scanned, added, updated } = await this.add({
+                paths: shuffle(scannedFiles),
+                updateExisting: flags.updateExisting,
+                chunkSize,
+                onChunkAdded
+              });
+
+              await breath();
+
+              counter.scanned += scanned.length;
+              counter.added += added.length;
+              counter.updated += updated;
+            }
+
+            counter.removed += removed;
+
+            this.emit('scan-done' as any, this, path.normalize(dir));
+
+            this.#scanPromises.delete(dir);
 
             resolve(counter);
           }
@@ -347,31 +403,18 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
         }
       }
     });
+
+    this.#scanPromises.set(dir, promise);
+    return promise;
   }
 
-  async #checkFileExistent(path: string) {
-    if (this.options.fileExistentChecker) {
-      return this.options.fileExistentChecker(path);
-    }
-
-    return access(path).then(stubTrue).catch(stubFalse);
-  }
-
-  async rescan(full?: boolean): Promise<RescanStats | undefined> {
-    if (this.#scanning) {
-      return;
-    }
-
-    const removed = await this.removeNonExistent({
-      fileExistentChecker: (path) => this.#checkFileExistent(path)
-    });
-
+  async rescan(flags: ScanFlags): Promise<RescanStats | undefined> {
     const results: ScanStats[] = [];
 
     for (const dir of this.#watchInfos.keys()) {
       results.push(await this.#scan({
         dir,
-        updateExisting: full
+        flags
       }));
 
       await breath();
@@ -381,7 +424,7 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
       scanned: sumBy(results, c => c.scanned),
       added: sumBy(results, c => c.added),
       updated: sumBy(results, c => c.updated),
-      removed: removed.length
+      removed: sumBy(results, c => c.removed)
     }
   }
 

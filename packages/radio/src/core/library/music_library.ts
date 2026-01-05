@@ -1,5 +1,5 @@
-import { castArray, chain, isString, partition, stubFalse, uniq } from 'lodash';
-import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents, WatchPathWithOption, RescanStats, TracksUpdateEvent } from '../collections';
+import { castArray, chain, chunk, isString, partition, stubFalse, uniq } from 'lodash';
+import { TrackCreator, WatchTrackCollection, TrackCollectionBasicOptions, TrackCollectionEvents, WatchPathWithOption, RescanStats, TracksUpdateEvent, ScanFlags, RescanOptions } from '../collections';
 import { createLogger, type Logger } from '../../logging';
 import { BoomBoxTrack, TrackKind } from '../playout';
 import { BaseLibrary } from './library';
@@ -7,7 +7,8 @@ import { SearchEngine, Query, TrackDocumentFields, SearchQuery, TrackDocumentRes
 import { MetadataHelper } from '../metadata';
 import { FindByCommentOptions, MusicDb } from './music_db';
 import { TrackExtraOf, TrackWithCollectionExtra } from '../track';
-import { fileExists, scanDir, scanDirStream } from './scanner';
+import { scanDirStream } from './scanner';
+import { getThreadPoolSize } from '../utils';
 
 export type MusicCollectionWatch = WatchPathWithOption | string;
 
@@ -54,6 +55,13 @@ export type LibrarySearchParams = {
 
 export interface MusicLibraryEvents {
   stats(stats: LibraryOverallStats): void;
+}
+
+type IndexQueueTask<O> = {
+  infos: IndexInfo<O>[];
+  chunkIndex: number;
+  totalChunks: number;
+  collection: WatchTrackCollection<MusicTrack<O>>;
 }
 
 export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicLibraryEvents> {
@@ -114,6 +122,47 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
   #collectionEventHandlers = new WeakMap<WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>, Record<any, Function>>();
 
+  #indexQueue: IndexQueueTask<O>[] = [];
+
+  #runIndexQueue = async () => {
+    const task = this.#indexQueue[0];
+
+    if (task) {
+      const { chunkIndex, totalChunks, infos, collection } = task;
+      const tag = totalChunks > 1 ? `[${chunkIndex + 1}/${totalChunks}] ` : '';
+
+      this.#logger.debug(`${tag}Indexing ${infos.length} track(s) from collection '${collection.extra.description}'`);
+
+      const onDone = () => {
+        const [succeeded, failures] = partition(infos, info => info.succeeded);
+
+        this.#logger.info(`${tag}${succeeded.length} tracks(s) from collection '${collection.extra.description}' have been indexed`);
+
+        if (failures.length) {
+          this.#logger.warn(
+            failures.map(f => ({
+              path: f.track.path,
+              errors: uniq(f.errors?.map(e => e.message))
+            })),
+            'Could not index'
+          );
+        }
+
+        if (chunkIndex + 1 === totalChunks) {
+          this.#logger.info('Done indexing: %s', collection.extra.description);
+        }
+
+        this.#indexQueue.shift();
+
+        if (this.#indexQueue.length > 0) {
+          setTimeout(this.#runIndexQueue, 100);
+        }
+      }
+
+      this.#tryIndexTracks(infos, onDone);
+    }
+  }
+
   #handleTrackAddition = (collection: WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>) => (tracks: Array<MusicTrack<O>>, chunkIndex: number, totalChunks: number) => {
     this.overallStats = {
       discovered: this.#overallStats.discovered + tracks.length
@@ -121,32 +170,19 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
 
     const infos = tracks.map<IndexInfo<O>>(track => ({ track, succeeded: false }));
 
-    const tag = totalChunks > 1 ? `[${chunkIndex + 1}/${totalChunks}] ` : '';
-
-    this.#logger.debug(`${tag}Indexing ${infos.length} track(s) from collection '${collection.extra.description}'`);
-
-    this.#tryIndexTracks(infos, () => {
-      const [succeeded, failures] = partition(infos, info => info.succeeded);
-
-      this.#logger.info(`${tag}${succeeded.length} tracks(s) from collection '${collection.extra.description}' have been indexed`);
-
-      if (failures.length) {
-        this.#logger.warn(
-          failures.map(f => ({
-            path: f.track.path,
-            errors: uniq(f.errors?.map(e => e.message))
-          })),
-          'Could not index'
-        );
-      }
-
-      if (chunkIndex + 1 === totalChunks) {
-        this.#logger.info('Done indexing: %s', collection.extra.description);
-      }
+    this.#indexQueue.push({
+      infos,
+      chunkIndex,
+      totalChunks,
+      collection
     });
+
+    if (this.#indexQueue.length === 1) {
+      this.#runIndexQueue();
+    }
   }
 
-  #tryIndexTracks = async (infos: Array<IndexInfo<O>>, done: () => void) => {
+  #tryIndexTracks = (infos: Array<IndexInfo<O>>, done: () => void) => {
     this.overallStats = {
       indexing: this.#overallStats.indexing + infos.length
     }
@@ -190,12 +226,12 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     }))
   }
 
-  #handleCollectionScanStart = (collection: WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>) => () => {
-    this.#logger.info('Start scanning collection \`%s\`', collection.extra.description);
+  #handleCollectionScanStart = (collection: WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>, dir: string) => {
+    this.#logger.info('Start scanning collection `%s`, dir: `%s`', collection.extra.description, dir);
   }
 
-  #handleCollectionScanDone = (collection: WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>) => () => {
-    this.#logger.info('Finish scanning collection \'%s\'', collection.extra.description);
+  #handleCollectionScanDone = (collection: WatchTrackCollection<MusicTrack<O>, TrackExtraOf<MusicTrack<O>>, MusicLibraryExtra<O>>, dir: string) => {
+    this.#logger.info('Finish scanning collection `%s`, dir: `%s`', collection.extra.description, dir);
   }
 
   remove(...collections: Array<string | MusicTrackCollection<O>>) {
@@ -222,7 +258,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
   async #indexTracks(infos: Array<IndexInfo<O>>, done: (failures: Array<IndexInfo<O>>) => void) {
     const failures: Array<IndexInfo<O>> = [];
 
-    await Promise.all(infos.map(info => this.#indexTrack(info)
+    const doIndex = (info: IndexInfo<O>) => this.#indexTrack(info)
       .then(() => {
         info.succeeded = true;
 
@@ -242,8 +278,17 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
         if (info.errors.length <= 3) {
           failures.push(info);
         }
-      })
-    ));
+      });
+
+    const [mandatoryTracks, auxiliaryTracks] = partition(infos, info => !info.track.collection.options.auxiliary);
+
+    for (const tracks of chunk(mandatoryTracks, getThreadPoolSize())) {
+      await Promise.all(tracks.map(doIndex));
+    }
+
+    for (const tracks of chunk(auxiliaryTracks, getThreadPoolSize(0.5))) {
+      await Promise.all(tracks.map(doIndex));
+    }
 
     done(failures);
   }
@@ -290,8 +335,7 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
         {
           ...options,
           trackCreator: this.#trackCreator,
-          scanner: scanDirStream,
-          fileExistentChecker: fileExists
+          scanner: scanDirStream
         }
       );
 
@@ -305,8 +349,8 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
         tracksAdd: this.#handleTrackAddition(newCollection),
         tracksRemove: this.#handleTrackRemoval,
         tracksUpdate: this.#handleTracksUpdate,
-        scan: this.#handleCollectionScanStart(newCollection),
-        'scan-done': this.#handleCollectionScanDone(newCollection),
+        scan: this.#handleCollectionScanStart,
+        'scan-done': this.#handleCollectionScanDone,
       }
 
       for (const [event, handler] of Object.entries(handlers)) {
@@ -469,14 +513,22 @@ export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicL
     return result.map(s => s.suggestion);
   }
 
-  async rescan(full?: boolean, scanningCb?: (collection: MusicTrackCollection<O>) => any): Promise<LibraryRescanStats<O>[]> {
+  async rescan(options: RescanOptions, scanningCb?: (collection: MusicTrackCollection<O>) => any): Promise<LibraryRescanStats<O>[]> {
     const stats: LibraryRescanStats<O>[] = [];
 
-    for (const collection of this) {
+    const collections = [...this].filter(c => {
+      if (!options.onlyCollections || !options.onlyCollections.length) {
+        return true;
+      }
+
+      return options.onlyCollections.includes(c.id);
+    })
+
+    for (const collection of collections) {
       scanningCb?.(collection);
 
       const started = performance.now();
-      const result = await collection.rescan(full);
+      const result = await collection.rescan(options.flags);
 
       if (result) {
         stats.push({
