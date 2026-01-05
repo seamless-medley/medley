@@ -8,6 +8,7 @@ import { BoomBoxCoverAnyLyrics } from '../playout';
 import { isEqual, omit, stubFalse } from 'lodash';
 import { LyricProviderName, LyricsSearchResult } from './lyrics/types';
 import { cachedWith } from '@seamless-medley/utils';
+import { getThreadPoolSize } from '../utils';
 
 const falsy = negate(Boolean);
 
@@ -47,7 +48,7 @@ class TaskTimeoutError extends Error {
 
 export class MetadataHelper extends WorkerPoolAdapter<Methods> {
   constructor(workerType?: WorkerPoolOptions['workerType']) {
-    super(__dirname + '/worker.js', { workerType });
+    super(__dirname + '/worker.js', { workerType, maxWorkers: getThreadPoolSize(0.5) });
   }
 
   #ongoingTasks = new Map<string, Promise<any>>();
