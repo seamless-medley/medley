@@ -33,7 +33,11 @@ export function fetchAudioProps(track: BoomBoxTrack, helper: MetadataHelper): Pr
   return extra.maybeAudioProperties;
 }
 
-export function getThreadPoolSize() {
+export function getThreadPoolSize(factor: number = 1.0) {
+  if (factor <= 0) {
+    factor = 1.0;
+  }
+
   const uv = +(process.env.UV_THREADPOOL_SIZE ?? 0);
-  return uv > 0 ? uv : os.cpus().length;
+  return Math.max(1, Math.ceil(factor * (uv > 0 ? uv : os.cpus().length)));
 }
