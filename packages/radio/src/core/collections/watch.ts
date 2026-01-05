@@ -304,7 +304,7 @@ export class WatchTrackCollection<T extends Track<TE>, TE extends TrackExtra = T
       updated: 0
     }
 
-    chunkSize = chunkSize ?? 25 * getThreadPoolSize();
+    chunkSize = chunkSize ?? getThreadPoolSize(this.options.auxiliary ? 10 : 20);
 
     const scannedFiles: string[] = [];
 

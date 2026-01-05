@@ -186,11 +186,10 @@ export class TrackCollection<
 
   async #transform(options: {
     paths: string[];
-    chunkSize?: number;
+    chunkSize: number;
     onChunkCreated: ChunkHandler<T>
   }) {
-    const threadPoolSize =  getThreadPoolSize();
-    const { paths, onChunkCreated, chunkSize = 25 * threadPoolSize } = options;
+    const { paths, onChunkCreated, chunkSize } = options;
     const validPaths = chain(paths)
       .castArray()
       .map(p => normalizePath(p))
@@ -209,7 +208,7 @@ export class TrackCollection<
     const immediateTracks: T[] = [];
     const newTracks: T[] = [];
 
-    const buckets = chunk(validPaths, Math.max(threadPoolSize, chunkSize));
+    const buckets = chunk(validPaths, chunkSize);
 
     for (const [index, bucket] of buckets.entries()) {
       const created = new Array<T>(bucket.length);
@@ -239,13 +238,13 @@ export class TrackCollection<
     chunkSize?: number;
     onChunkAdded?: ChunkHandler<T>;
   }) {
-    const { paths, mode, updateExisting, chunkSize = 25 * getThreadPoolSize(), onChunkAdded } = options;
+    const { paths, mode, updateExisting, chunkSize, onChunkAdded } = options;
 
     let totalUpdatedCount = 0;
 
     const transformed = await this.#transform({
       paths,
-      chunkSize,
+      chunkSize: chunkSize ?? getThreadPoolSize(this.options.auxiliary ? 10 : 20),
       onChunkCreated: async (tracks, chunkIndex, totalChunks) => {
         const { added, updated } = await this.#addTracks({
           tracks,
@@ -262,6 +261,10 @@ export class TrackCollection<
         return added;
       }
     });
+
+    if (transformed.added.length > 0) {
+      this.logger.info(`${transformed.added.length} track(s) added`);
+    }
 
     return {
       ...transformed,
@@ -338,7 +341,6 @@ export class TrackCollection<
         this.trackIdMap.set(track.id, track);
       }
 
-      this.logger.info(`${totalChunks > 1 ? `[${chunkIndex+1}/${totalChunks}] ` : ''}${mapped.length} track(s) added`);
       this.emit('tracksAdd', mapped, chunkIndex, totalChunks);
     }
 
@@ -373,6 +375,7 @@ export class TrackCollection<
   async update(paths: string[]) {
     return this.#transform({
       paths,
+      chunkSize: getThreadPoolSize(this.options.auxiliary ? 10 : 20),
       onChunkCreated: async updated => {
         const existing = updated.filter(it => this.trackIdMap.has(it.id));
 
