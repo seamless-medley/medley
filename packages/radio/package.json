@@ -30,7 +30,7 @@
     "@discordjs/rest": "2.6.0",
     "@node-rs/argon2": "^2.0.2",
     "@parcel/watcher": "^2.3.0",
-    "@seamless-medley/medley": "0.5.4-pre.1",
+    "@seamless-medley/medley": "0.5.4",
     "@seamless-medley/remote": "../remote",
     "@seamless-medley/utils": "../utils",
     "@snazzah/davey": "^0.1.9",
