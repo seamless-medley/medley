@@ -79,9 +79,9 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     setInterval(this.#pingSockets, 1000);
   }
 
-  #objectGlobalObservers = new Map<KindName, Map<ObjectId, ObjectObserver<object>>>();
+  #objectGlobalObservers = new Map<KindName, Map<ObjectId, ObjectObserver<any>>>();
 
-  #objectSocketObservers = new Map<Socket, Map<KindName, Map<ObjectId, ObjectObserver<object>>>>();
+  #objectSocketObservers = new Map<Socket, Map<KindName, Map<ObjectId, ObjectObserver<any>>>>();
 
   #socketSubscriptions = new Map<Socket, Map<object, { [event: string]: (...args: any[]) => any }>>();
 
@@ -555,8 +555,8 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
   }
 
-  register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, o: Exposable<Remote[Kind]>, scopedWith?: Socket) {
-    if (typeof o !== 'object') {
+  register<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, exposable: Exposable<Remote[Kind]>, scopedWith?: Socket) {
+    if (typeof exposable !== 'object') {
       return;
     }
 
@@ -577,16 +577,18 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
     }
 
     const observers = objectObservers.get(kind)!;
-    const instance = o as unknown as object;
+    const existingObserver = observers.get(id);
 
-    if (observers.get(id)?.instance === instance) {
-      // Already registered
-      return;
+    if (existingObserver) {
+      if ((existingObserver.instance === exposable)) {
+        // Already registered
+        return;
+      }
+
+      existingObserver.dispose();
     }
 
-    this.deregister(kind, id, scopedWith);
-
-    observers.set(id, new ObjectObserver(instance, async (instance, changes) => {
+    const notifier: ObservedPropertyHandler<Exposable<Remote[Kind]>> = async (instance, changes) => {
       if (scopedWith) {
         this.#notifySocketForPropertyChanges(scopedWith, kind, id, instance, changes);
         return;
@@ -595,7 +597,15 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       for (const socket of this.io.sockets.sockets.values()) {
         this.#notifySocketForPropertyChanges(socket, kind, id, instance, changes);
       }
-    }));
+    }
+
+    exposable.notify = (prop: any, value: any) => {
+      notifier(exposable, [{ p: prop, n: value }]);
+    };
+
+    const observer = new ObjectObserver(exposable, notifier);
+    observers.set(id, observer);
+    return observer;
   }
 
   protected deregister<Kind extends Extract<ConditionalKeys<Remote, object>, string>>(kind: Kind, id: string, scopedWith?: Socket) {
@@ -610,7 +620,8 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       return;
     }
 
-    const object = observers.get(id)!;
+    const observer = observers.get(id)!;
+    const object = observer.instance;
 
     if (object instanceof EventEmitter) {
       for (const [socket, subscriptions] of [...this.#socketSubscriptions]) {
@@ -640,6 +651,7 @@ export class SocketServerController<Remote> extends TypedEmitter<SocketServerEve
       }
     }
 
+    observer.dispose();
     observers.delete(id);
 
     if (observers.size <= 0) {
@@ -706,6 +718,8 @@ export class ObjectObserver<T extends object> {
 
   readonly #declaredProps: Partial<Record<string, TypedPropertyDescriptorOf>>;
 
+  #alive = true;
+
   constructor(readonly instance: T, private readonly notify: ObservedPropertyHandler<T>) {
     const exposingInstance = this.#getExposing();
 
@@ -749,11 +763,19 @@ export class ObjectObserver<T extends object> {
     }
   }
 
+  dispose() {
+    this.#alive = false;
+  }
+
   #observeProperty(desc: TypedPropertyDescriptorOf, notify: (instance: object, changes: ObservedPropertyChange[]) => Promise<any>) {
     Object.defineProperty(desc.instance, desc.name, {
       get: () => desc.get ? desc.get.call(desc.instance) : desc.value,
 
       set: (v) => {
+        if (!this.#alive) {
+          return;
+        }
+
         const changes: ObservedPropertyChange[] = [];
 
         const dependents = getDependents(desc.instance, desc.name)
