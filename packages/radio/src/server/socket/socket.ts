@@ -8,7 +8,7 @@ import { ConditionalKeys } from "type-fest";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { isProperty, isPublicPropertyName, propertyDescriptorOf } from '@seamless-medley/utils';
 
-import type { Exposable, ClientEvents, RemoteCallback, RemoteResponse, ServerEvents, AuthData, ObservedPropertyChange, ObservedPropertyHandler, WithoutEvents, ClientAuthResult  } from "@seamless-medley/remote";
+import type { Exposable, ClientEvents, RemoteCallback, RemoteResponse, ServerEvents, AuthData, ObservedPropertyChange, ObservedPropertyHandler, ClientAuthResult  } from "@seamless-medley/remote";
 
 import { Socket, ClientSocketData, getSocketSession } from './types';
 
