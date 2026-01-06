@@ -15,6 +15,7 @@ import type {
   CollectionView,
   Exposable,
   MetadataOnlyTrack,
+  Notify,
   Remotable
 } from "@seamless-medley/remote";
 import { toRemoteMetadataOnlyTrack, toRemoteTrack } from "./track";
@@ -22,6 +23,8 @@ import { toRemoteMetadataOnlyTrack, toRemoteTrack } from "./track";
 export class ExposedCollection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
   $Exposing: MusicTrackCollection<Station>;
   $Kind = 'collection';
+
+  notify!: Notify<Collection>;
 
   constructor(collection: MusicTrackCollection<Station>) {
     super();
@@ -113,6 +116,7 @@ export class ExposedCollection extends MixinEventEmitterOf<Collection>() impleme
 export class ExposedCollectionView extends MixinEventEmitterOf<CollectionView>() implements Exposable<CollectionView> {
   $Exposing: TrackCollectionView<MusicTrack<Station>>;
   $Kind = 'collection_view';
+  notify!: Notify<CollectionView>;
 
   constructor(view: TrackCollectionView<MusicTrack<Station>>) {
     super();

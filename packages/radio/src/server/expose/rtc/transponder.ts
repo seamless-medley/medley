@@ -1,20 +1,21 @@
 import { last } from 'lodash';
 import type { types } from 'mediasoup';
 import { MixinEventEmitterOf } from '../../socket';
-import type { ClientConsumerInfo, ClientTransportInfo, RTCTransponder as RemoteRTCTransponder, Exposable } from '@seamless-medley/remote';
+import type { ClientConsumerInfo, ClientTransportInfo, RTCTransponder as RemoteRTCTransponder, Exposable, Notify } from '@seamless-medley/remote';
 import type { RTCTransponder, RTCWorker } from "../../audio/rtc/transponder";
 import type { Station } from '../../../core';
 
 export class ExposedTransponder extends MixinEventEmitterOf<RemoteRTCTransponder>() implements Exposable<RemoteRTCTransponder> {
   $Exposing: RTCTransponder;
   $Kind = 'transponder';
+  notify!: Notify<RemoteRTCTransponder>;
 
   constructor(transponder: RTCTransponder) {
     super();
 
     this.$Exposing = transponder;
 
-    this.#transponder.on('restart', this.#onRestart)
+    this.#transponder.on('restart', this.#onRestart);
   }
 
   dispose() {

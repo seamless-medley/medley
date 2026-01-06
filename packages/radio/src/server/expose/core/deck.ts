@@ -1,7 +1,7 @@
 import type { Writable } from "type-fest";
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 
-import type { Deck, DeckInfo, DeckInfoWithPositions, Exposable } from "@seamless-medley/remote";
+import type { Deck, DeckInfo, DeckInfoWithPositions, Exposable, Notify } from "@seamless-medley/remote";
 
 import {
   Station,
@@ -40,6 +40,8 @@ export class ExposedDeck implements Exposable<Deck> {
   };
 
   $Kind = 'deck';
+
+  notify!: Notify<Deck>;
 
   constructor(station: Station, deckIndex: DeckIndex) {
     this.#station = station;
