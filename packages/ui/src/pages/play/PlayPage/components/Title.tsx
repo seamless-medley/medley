@@ -40,12 +40,13 @@ const TitleContainer = styled.div`
 `;
 
 const TitleBox = styled.div`
-  padding: 0.12em 0.6em 0.12em 0.33em;
+  position: relative;
+  padding: 0.12em 0.3em;
   border-radius: 0px 0px 0.25em 0px;
   background-color: rgb(200 200 255 / 0.3);
   transition: all 0.2s ease, border-radius 0.6s ease;
   white-space: nowrap;
-  min-height: 1.6em;
+  min-height: 1.65em;
 
   &.center {
     border-radius: 0.25em;
@@ -102,7 +103,7 @@ export const Title: React.FC<TitleProps> = (props) => {
     const tm = ctx.measureText(props.text);
     const tw = tm.width;
 
-    boxEl.current.style.width = `calc(${tw}px + ${boxStyle.paddingLeft} + ${boxStyle.paddingRight})`;
+    boxEl.current.style.width = `clamp(0em, calc(${tw}px + ${boxStyle.paddingLeft} + ${boxStyle.paddingRight} + 0.1em), 100cqw)`;
   }
 
   const updateText = useCallback(() => {
@@ -152,7 +153,7 @@ export const Title: React.FC<TitleProps> = (props) => {
     <TitleContainer className={clsx(props.center && 'center', props.visible && 'visible')}>
       <TitleBox ref={boxEl} className={clsx(props.center && 'center')}>
         <canvas ref={canvasEl} style={{ display: 'none' }} width={500} height={500} />
-        <Box w="95cqw">
+        <Box>
           <AutoScroller speed={0.8}>
             <TitleText ref={textEl} />
           </AutoScroller>
