@@ -8,7 +8,7 @@ const Layout = () => {
       <AppShell.Header>
         <NavBar />
       </AppShell.Header>
-      <AppShell.Main p="md">
+      <AppShell.Main p="md" pt={70}>
         <Outlet />
       </AppShell.Main>
     </AppShell>

@@ -452,7 +452,7 @@ export const PlayPage: React.FC = () => {
 
   return (
     <>
-      <Stack align="center" mt={50}>
+      <Stack align="center">
         <Stack w='100%' mih='4em' gap='xs' justify="center">
           <Group justify='center' w='100%'>
             <StationName stationId={stationId} />
