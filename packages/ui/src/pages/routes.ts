@@ -15,4 +15,4 @@ export const routes = rootRoute('root.tsx', [
       ])
     ])
   ])
-])
+]);

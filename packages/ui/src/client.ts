@@ -718,7 +718,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
           store.reject(error);
           reject(error);
         }
-      })
+      });
 
       this.socket.emit('r:ob', kind, id, options, async (response: RemoteResponse<any>) => {
         abortTimeout();

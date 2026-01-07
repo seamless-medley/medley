@@ -1,5 +1,5 @@
 import { styled } from "@linaria/react";
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import _, { debounce } from 'lodash';
 import clsx from "clsx";
 import { AutoScroller } from "@ui/components/AutoScoller";
