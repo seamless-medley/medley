@@ -333,7 +333,7 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
   }
 
   protected async startSession() {
-    await this.#restoreObservingStores((kind, id, store) => store.error?.errorType === 'prohibited');
+    await this.#restoreObservingStores((kind, id, store) => store.error?.errorType !== 'prohibited');
 
     this.emit('start');
   }
