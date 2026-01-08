@@ -7,6 +7,7 @@
 #include "PostProcessor.h"
 #include "Fader.h"
 #include <list>
+#include <memory>
 
 using namespace juce;
 
@@ -312,7 +313,7 @@ private:
 
     SupportedFormats formatMgr;
 
-    Deck* decks[numDecks]{};
+    std::unique_ptr<Deck> decks[numDecks];
 
     AudioInterceptor audioInterceptor;
 

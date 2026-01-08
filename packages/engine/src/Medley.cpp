@@ -46,9 +46,9 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter, bool skipDeviceScanning)
     deviceMgr.addChangeListener(&mixer);
 
     for (int i = 0; i < numDecks; i++) {
-        decks[i] = new Deck(i, "Deck " + String(i), logWriter, formatMgr, loadingThread, readAheadThread);
+        decks[i].reset(new Deck(i, "Deck " + String(i), logWriter, formatMgr, loadingThread, readAheadThread));
         decks[i]->addListener(this);
-        mixer.addInputSource(decks[i], false);
+        mixer.addInputSource(decks[i].get(), false);
     }
 
     loadingThread.startThread(6);
@@ -74,10 +74,10 @@ Medley::Medley(IQueue& queue, ILoggerWriter* logWriter, bool skipDeviceScanning)
 }
 
 Medley::~Medley() {
-    for (auto deck : decks) {
+    for (auto& deck : decks) {
         deck->removeListener(this);
     }
-    //
+
     mixer.removeAllInputs();
     mainOut.setSource(nullptr);
 
@@ -87,9 +87,7 @@ Medley::~Medley() {
 
     deviceMgr.closeAudioDevice();
 
-    for (auto deck : decks) {
-        delete deck;
-    }
+    // Decks are automatically deleted by unique_ptr
 }
 
 Medley::SupportedFormats::SupportedFormats()
@@ -212,7 +210,7 @@ double Medley::getPositionInSeconds(int deckIndex) const
 
 void Medley::setMaximumFadeOutDuration(double value) {
     maximumFadeOutDuration = value;
-    for (auto deck : decks) {
+    for (auto& deck : decks) {
         deck->setMaximumFadeOutDuration(value);
     }
 }
@@ -328,12 +326,12 @@ void Medley::deckTrackScanned(Deck& sender)
 }
 
 Deck* Medley::getAvailableDeck() {
-    for (auto deck : decks) {
+    for (auto& deck : decks) {
         if (deck->isTrackLoading() || deck->isTrackLoaded()) {
             continue;
         }
 
-        return deck;
+        return deck.get();
     }
 
     return nullptr;
@@ -347,10 +345,10 @@ Deck* Medley::getNextDeck(Deck* from)
 
     if (from == nullptr) {
         auto next = getAvailableDeck();
-        return (next != nullptr) ? next : decks[0];
+        return (next != nullptr) ? next : decks[0].get();
     }
 
-    return decks[(from->index + 1) % numDecks];
+    return decks[(from->index + 1) % numDecks].get();
 }
 
 Deck* Medley::getPreviousDeck(Deck* from)
@@ -359,24 +357,24 @@ Deck* Medley::getPreviousDeck(Deck* from)
         from = getMainDeck();
     }
 
-    if (from == decks[0]) {
-        return decks[2];
+    if (from == decks[0].get()) {
+        return decks[2].get();
     }
 
-    if (from == decks[1]) {
-        return decks[0];
+    if (from == decks[1].get()) {
+        return decks[0].get();
     }
 
-    if (from == decks[2]) {
-        return decks[1];
+    if (from == decks[2].get()) {
+        return decks[1].get();
     }
 
-    return decks[2];
+    return decks[2].get();
 }
 
 Deck* Medley::getDeck(int index) const
 {
-    return index == -1 ? getMainDeck() : decks[index];
+    return index == -1 ? getMainDeck() : decks[index].get();
 }
 
 inline String Medley::getDeckName(Deck& deck) {
@@ -717,9 +715,9 @@ double Medley::getOutputSampleRate()
 
 Deck* Medley::getMainDeck() const
 {
-    for (auto deck : decks) {
+    for (const auto& deck : decks) {
         if (deck->isMain()) {
-            return deck;
+            return deck.get();
         }
     }
 
@@ -736,8 +734,8 @@ bool Medley::play(bool shouldFade)
     if (!hasAnyDeckStarted()) {
         bool shouldLoadNextTrack = true;
 
-        for (auto deck : decks) {
-            if (deck->_isTrackLoading || deck->isTrackLoaded()) {                
+        for (auto& deck : decks) {
+            if (deck->_isTrackLoading || deck->isTrackLoaded()) {
                 if (deck->start()) {
                     shouldLoadNextTrack = false;
                     break;
@@ -758,10 +756,10 @@ bool Medley::play(bool shouldFade)
 
 void Medley::stop(bool shouldFade)
 {
-    auto stopAndUnload = [=]() {
+    auto stopAndUnload = [this]() {
         keepPlaying = false;
 
-        for (auto deck : decks) {
+        for (auto& deck : decks) {
             deck->stop();
             deck->unloadTrack();
         }
@@ -777,7 +775,7 @@ void Medley::stop(bool shouldFade)
 
 bool Medley::hasAnyDeckStarted()
 {
-    for (auto deck : decks) {
+    for (const auto& deck : decks) {
         if (deck->hasStarted()) {
             return true;
         }
@@ -817,7 +815,7 @@ bool Medley::isTrackLoadable(const ITrack::Ptr track) {
 
 void Medley::setReplayGainBoost(float decibels)
 {
-    for (auto deck : decks) {
+    for (auto& deck : decks) {
         deck->setReplayGainBoost(decibels);
     }
 }
@@ -999,7 +997,7 @@ int Medley::PlaybackWatchdog::useTimeSlice()
     }
 
     // No decks have been started
-    for (auto deck : medley.decks) {
+    for (auto& deck : medley.decks) {
         // but it is loading, just wait a little more
         if (deck->isTrackLoading()) {
             return WAIT_DURATION;
