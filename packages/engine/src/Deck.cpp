@@ -382,6 +382,12 @@ int64 Deck::findFadingPosition(AudioFormatReader* reader, int64 startSample, int
 
 void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
 {
+    if (fadingOut) {
+        // Skip scanning if already fading out to prevent overwriting fade-out transition marks with scan results.
+        // This can occur when track is forced to fade out before scanning completes
+        return;
+    }
+
     auto scanningReader = utils::createAudioReaderFor(formatMgr, trackToScan);
 
     if (!scanningReader) {
@@ -477,6 +483,10 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
 
 void Deck::calculateTransition()
 {
+    if (fadingOut) {
+        // transition positions should not be changed during fade out
+        return;
+    }
 
     transitionStartPosition = lastAudibleSamplePosition / sourceSampleRate;
     transitionEndPosition = transitionStartPosition;
