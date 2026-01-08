@@ -8,6 +8,7 @@
 #include "Fader.h"
 #include <list>
 #include <memory>
+#include <atomic>
 
 using namespace juce;
 
@@ -331,7 +332,7 @@ private:
 
     bool keepPlaying = false;
 
-    Deck* transitingFromDeck = nullptr;
+    std::atomic<Deck*> transitingFromDeck{nullptr};
 
     enum class DeckTransitionState {
         Idle,
@@ -361,7 +362,7 @@ private:
     double minimumLeadingToFade = 2.5;
     double maximumFadeOutDuration{};
 
-    int forceFadingOut = 0;
+    std::atomic<int> forceFadingOut{0};
 
     CriticalSection callbackLock;
     ListenerList<Callback> listeners;

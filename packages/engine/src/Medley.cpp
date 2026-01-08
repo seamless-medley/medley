@@ -220,13 +220,17 @@ bool Medley::fadeOutMainDeck()
     if (auto deck = getMainDeck()) {
         forceFadingOut++;
 
-            transitingFromDeck->unloadTrack();
+        if (deck != nullptr && deck == transitingFromDeck.load() && deck->isFadingOut()) {
+            auto fromDeck = transitingFromDeck.load();
+            if (fromDeck) {
+                fromDeck->unloadTrack();
+            }
+
             deck = getNextDeck(deck);
-        if (deck != nullptr && deck == transitingFromDeck && deck->isFadingOut()) {
         }
 
         if (deck) {
-            deck->fadeOut(forceFadingOut >= 2 || queue.count() == 0);
+            deck->fadeOut(forceFadingOut.load() >= 2 || queue.count() == 0);
             decksTransition[deck->index].fader.start(deck->getTransitionStartPosition(), deck->getTransitionEndPosition() + 0.05, deck->getVolume(), 0.0f, fadingFactor, 0.0f);
             mixer.setPause(false, false);
         }
@@ -427,7 +431,7 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
 
     auto nextDeck = getNextDeck(&sender);
 
-    if (&sender == transitingFromDeck) {
+    if (&sender == transitingFromDeck.load()) {
         decksTransition[sender.index].fader.reset();
         decksTransition[sender.index].fader.resetTime();
 
@@ -438,10 +442,10 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
     }
 
     decksTransition[sender.index].state = DeckTransitionState::Idle;
-    transitingFromDeck = nullptr;
+    transitingFromDeck.store(nullptr);
     nextDeck->setVolume(1.0f);
 
-    if (forceFadingOut > 0) {
+    if (forceFadingOut.load() > 0) {
         forceFadingOut--;
     }
 
@@ -559,10 +563,10 @@ void Medley::deckPosition(Deck& sender, double position) {
                 loadNextTrack(currentDeck, keepPlaying && !hasAnyDeckStarted(), [&, _pTransition = pTransition, _pNextTransition = pNextTransition, _position = position, tsp = transitionStartPos, tep = transitionEndPos, cd = currentDeck, nd = nextDeck](bool loaded) {
                     if (loaded) {
                         _pTransition->state = DeckTransitionState::NextIsReady;
-                        transitingFromDeck = cd;
+                        transitingFromDeck.store(cd);
 
-                        if (forceFadingOut > 0) {
                             _pNextTransition->fader.start(_position, tep, 0.0f, 1.0f, fadingFactor * 0.5f);
+                        if (forceFadingOut.load() > 0) {
                         }
                         else {
                             auto leadInDuration = !cd->disableNextTrackLeadIn ? nd->getLeadingDuration() : 0.0;
@@ -572,10 +576,10 @@ void Medley::deckPosition(Deck& sender, double position) {
                     }
                     else {
                         _pTransition->state = DeckTransitionState::CueNext; // Move back to the previous state, this will cause a retry
-                        transitingFromDeck = nullptr;
+                        transitingFromDeck.store(nullptr);
 
                         // No more track, do not transit
-                        if (forceFadingOut <= 0) {
+                        if (forceFadingOut.load() <= 0) {
                             return;
                         }
                     }
@@ -616,7 +620,7 @@ void Medley::doTransition(Deck* deck, double position) {
                 nextDeck->setVolume(1.0f);
                 nextDeck->setPosition(nextDeck->getFirstAudiblePosition());
 
-                if (forceFadingOut > 0) {
+                if (forceFadingOut.load() > 0) {
                     if (hasLongLeadIn) {
                         nextDeck->setPosition(nextDeck->getFirstAudiblePosition() + leadingDuration - minimumLeadingToFade);
                     }
@@ -665,7 +669,7 @@ void Medley::doTransition(Deck* deck, double position) {
 
     // Fade out current
     if (deck->isMain()) {
-        auto shouldFade = pTransition->fader.isReversed() && (forceFadingOut > 0 || pTransition->state >= DeckTransitionState::NextIsReady);
+        auto shouldFade = pTransition->fader.isReversed() && (forceFadingOut.load() > 0 || pTransition->state >= DeckTransitionState::NextIsReady);
         if (shouldFade) {
             auto currentVolume = deck->getVolume();
 
@@ -679,7 +683,7 @@ void Medley::doTransition(Deck* deck, double position) {
 
     if (position >= transitionEndPos) {
         if (pTransition->state != DeckTransitionState::Idle) {
-            forceFadingOut = 0;
+            forceFadingOut.store(0);
             deck->stop();
         }
     }
