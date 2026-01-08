@@ -263,13 +263,13 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
                 return;
             }
 
-            listener.enqueueNext([&, _pQueue = &queue, p = play, _onLoadingDone = onLoadingDone](bool enqueueResult) {
-                if (enqueueResult && _pQueue->count() > 0) {
+            listener.enqueueNext([this, p = play, onLoadingDone](bool enqueueResult) {
+                if (enqueueResult && queue.count() > 0) {
                     // enqueue succeeded, try to load again using available deck
-                    loadNextTrack(nullptr, p, _onLoadingDone);
+                    loadNextTrack(nullptr, p, onLoadingDone);
                 }
                 else {
-                    _onLoadingDone(false);
+                    onLoadingDone(false);
                 }
             });
         });
