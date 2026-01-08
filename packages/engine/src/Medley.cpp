@@ -514,9 +514,8 @@ void Medley::deckPosition(Deck& sender, double position) {
                     pTransition->state = DeckTransitionState::Enqueue;
                     ScopedLock sl(callbackLock);
 
-                    auto pSender = &sender;
-                    listeners.call([=, _sender = pSender](Callback& cb) {
-                        enqueueLock.enter();
+                    auto deckIndex = sender.index;
+                    listeners.call([this, deckIndex, cuePos](Callback& cb) {
                         ScopedLock enqueueSl(enqueueLock);
 
                         // In case a race condition has occured, return from this function and try it later
@@ -524,7 +523,14 @@ void Medley::deckPosition(Deck& sender, double position) {
                             return;
                         }
 
-                        cb.enqueueNext([=](bool done) {
+                        cb.enqueueNext([this, deckIndex, cuePos](bool done) {
+                            auto pTransition = &decksTransition[deckIndex];
+                            auto pSender = decks[deckIndex].get();
+
+                            if (!pSender) {
+                                return;  // Safety check: deck no longer exists
+                            }
+
                             if (done) {
                                 pTransition->state = DeckTransitionState::CueNext;
 
@@ -532,7 +538,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                                     // Playing has stopped during enqueuing phase and caused the timing to stop either
                                     // re-trigger timing
                                     logger->warn("Enqueuing had been stalled and could not provide track in time");
-                                    deckPosition(*_sender, cuePos + 0.1);
+                                    deckPosition(*pSender, cuePos + 0.1);
                                     pTransition->state = DeckTransitionState::Idle;
                                     return;
                                 }
@@ -553,24 +559,36 @@ void Medley::deckPosition(Deck& sender, double position) {
             if (position > cuePos) {
                 pTransition->state = DeckTransitionState::NextIsLoading;
 
-                auto currentDeck = &sender;
-                loadNextTrack(currentDeck, keepPlaying && !hasAnyDeckStarted(), [&, _pTransition = pTransition, _pNextTransition = pNextTransition, _position = position, tsp = transitionStartPos, tep = transitionEndPos, cd = currentDeck, nd = nextDeck](bool loaded) {
-                    if (loaded) {
-                        _pTransition->state = DeckTransitionState::NextIsReady;
-                        transitingFromDeck.store(cd);
+                auto currentDeckIndex = sender.index;
+                auto nextDeckIndex = nextDeck->index;
 
-                            _pNextTransition->fader.start(_position, tep, 0.0f, 1.0f, fadingFactor * 0.5f);
+                loadNextTrack(&sender, keepPlaying && !hasAnyDeckStarted(), [this, position, transitionStartPos, transitionEndPos, currentDeckIndex, nextDeckIndex](bool loaded) {
+                    auto cd = decks[currentDeckIndex].get();
+                    auto nd = decks[nextDeckIndex].get();
+
+                    if (!cd || !nd) {
+                        return;  // Safety check: decks no longer exist
+                    }
+
+                    auto pTransition = &decksTransition[currentDeckIndex];
+                    auto pNextTransition = &decksTransition[nextDeckIndex];
+
+                    if (loaded) {
+                        transitingFromDeck.store(cd);
+                        pTransition->state = DeckTransitionState::NextIsReady;
+
                         if (forceFadingOut.load() > 0) {
+                            pNextTransition->fader.start(position, transitionEndPos, 0.0f, 1.0f, fadingFactor * 0.5f);
                         }
                         else {
                             auto leadInDuration = !cd->disableNextTrackLeadIn ? nd->getLeadingDuration() : 0.0;
-                            auto fadeInStart = jmax(0.0, tsp - leadInDuration, _position);
-                            _pNextTransition->fader.start(fadeInStart, tsp, 0.25f, 1.0f, fadingFactor);
+                            auto fadeInStart = jmax(0.0, transitionStartPos - leadInDuration, position);
+                            pNextTransition->fader.start(fadeInStart, transitionStartPos, 0.25f, 1.0f, fadingFactor);
                         }
                     }
                     else {
-                        _pTransition->state = DeckTransitionState::CueNext; // Move back to the previous state, this will cause a retry
                         transitingFromDeck.store(nullptr);
+                        pTransition->state = DeckTransitionState::CueNext; // Move back to the previous state, this will cause a retry
 
                         // No more track, do not transit
                         if (forceFadingOut.load() <= 0) {
@@ -578,7 +596,7 @@ void Medley::deckPosition(Deck& sender, double position) {
                         }
                     }
 
-                    doTransition(cd, _position);
+                    doTransition(cd, position);
                 });
             }
         }
