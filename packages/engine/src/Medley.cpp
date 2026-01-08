@@ -756,13 +756,14 @@ void Medley::setFadingCurve(double curve) {
 
 bool Medley::play(bool shouldFade)
 {
-    if (!hasAnyDeckStarted()) {
+    if (!keepPlaying && !hasAnyDeckStarted()) {
         bool shouldLoadNextTrack = true;
 
         for (auto& deck : decks) {
             if (deck->_isTrackLoading || deck->isTrackLoaded()) {
+                shouldLoadNextTrack = false;
+
                 if (deck->start()) {
-                    shouldLoadNextTrack = false;
                     break;
                 }
             }
