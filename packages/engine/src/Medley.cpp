@@ -713,12 +713,16 @@ void Medley::setAudioDeviceByIndex(int index) {
 int Medley::getOutputLatency()
 {
     auto device = getCurrentAudioDevice();
+    if (!device) {
+        return 0;
+    }
+
     auto latency = device->getOutputLatencyInSamples();
 
 #ifdef JUCE_WINDOWS
-        if (device->getTypeName() == "DirectSound") {
-            latency *= 16;
-        }
+    if (device->getTypeName() == "DirectSound") {
+        latency *= 16;
+    }
 #endif
 
     return latency;
