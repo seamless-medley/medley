@@ -450,8 +450,8 @@ void Medley::deckUnloaded(Deck& sender, TrackPlay& trackPlay) {
     nextDeck->markAsMain(nextTrackLoaded);
 
     {
+        ScopedLock sl(callbackLock);
         listeners.call([&](Callback& cb) {
-            ScopedLock sl(callbackLock);
             cb.deckUnloaded(sender, trackPlay);
 
             if (nextTrackLoaded && nextDeck->isMain()) {
@@ -517,10 +517,10 @@ void Medley::deckPosition(Deck& sender, double position) {
                     auto pSender = &sender;
                     listeners.call([=, _sender = pSender](Callback& cb) {
                         enqueueLock.enter();
+                        ScopedLock enqueueSl(enqueueLock);
 
                         // In case a race condition has occured, return from this function and try it later
                         if (queue.count() > 0) {
-                            enqueueLock.exit();
                             return;
                         }
 
@@ -540,8 +540,6 @@ void Medley::deckPosition(Deck& sender, double position) {
                             else {
                                 pTransition->state = DeckTransitionState::Idle; // Move back to the previous state, this will cause a retry
                             }
-
-                            enqueueLock.exit();
                         });
                     });
                 }
