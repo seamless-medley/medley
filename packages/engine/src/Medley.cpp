@@ -220,9 +220,9 @@ bool Medley::fadeOutMainDeck()
     if (auto deck = getMainDeck()) {
         forceFadingOut++;
 
-        if (deck != nullptr && deck == transitingFromDeck && deck->isFading()) {
             transitingFromDeck->unloadTrack();
             deck = getNextDeck(deck);
+        if (deck != nullptr && deck == transitingFromDeck && deck->isFadingOut()) {
         }
 
         if (deck) {

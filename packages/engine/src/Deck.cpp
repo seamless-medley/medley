@@ -228,7 +228,7 @@ void Deck::unloadTrackInternal()
     inputStreamEOF = false;
     started = false;
     stopped = true;
-    fading = false;
+    fadingOut = false;
 
     bool deckUnloaded = false;
     {
@@ -477,6 +477,7 @@ void Deck::scanTrackInternal(const ITrack::Ptr trackToScan)
 
 void Deck::calculateTransition()
 {
+
     transitionStartPosition = lastAudibleSamplePosition / sourceSampleRate;
     transitionEndPosition = transitionStartPosition;
 
@@ -579,7 +580,7 @@ void Deck::getNextAudioBlock(const AudioSourceChannelInfo& info)
     {
         info.clearActiveBufferRegion();
         stopped = true;
-        fading = false;
+        fadingOut = false;
     }
 
     lastGain = gain;
@@ -651,7 +652,7 @@ bool Deck::start()
         started = true;
         internallyPaused = false;
         stopped = false;
-        fading = false;
+        fadingOut = false;
         inputStreamEOF = false;
 
         return true;
@@ -667,7 +668,7 @@ void Deck::stop()
         started = false;
     }
 
-    fading = false;
+    fadingOut = false;
 }
 
 void Deck::fireFinishedCallback()
@@ -720,13 +721,13 @@ double Deck::getEndPosition() const
 
 void Deck::fadeOut(bool force)
 {
-    if (!fading || force) {
+    if (!fadingOut || force) {
         transitionEnqueuePosition = getPosition();
         transitionCuePosition = transitionEnqueuePosition;
         transitionStartPosition = transitionCuePosition + 0.25;
         //
         transitionEndPosition = jmin(transitionStartPosition + jmin(3.0, maximumFadeOutDuration), getEndPosition());
-        fading = true;
+        fadingOut = true;
     }
 }
 

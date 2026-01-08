@@ -125,7 +125,7 @@ public:
 
     inline bool isMain() const { return main; }
 
-    inline bool isFading() const { return fading; }
+    inline bool isFadingOut() const { return fadingOut; }
 
     const Metadata& metadata() const {
         return m_metadata;
@@ -279,7 +279,7 @@ private:
 
     bool main = false;
 
-    bool fading = false;
+    bool fadingOut = false;
 
     Metadata m_metadata;
 
