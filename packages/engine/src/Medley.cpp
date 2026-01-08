@@ -257,11 +257,9 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
     if (queue.count() <= 0) {
         ScopedLock sl(callbackLock);
         listeners.call([&](Callback& listener) {
-            enqueueLock.enter();
+            ScopedLock enqueueSl(enqueueLock);
 
-            // In case a race condition has occured, return from this function and try it later
             if (queue.count() > 0) {
-                enqueueLock.exit();
                 return;
             }
 
@@ -273,8 +271,6 @@ void Medley::loadNextTrack(Deck* currentDeck, bool play, Deck::OnLoadingDone onL
                 else {
                     _onLoadingDone(false);
                 }
-
-                enqueueLock.exit();
             });
         });
 
