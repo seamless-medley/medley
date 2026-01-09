@@ -470,7 +470,7 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
       if (requester) {
         const matchRequester = matches(requester);
 
-        const requests = this.#requests.filter(r => r.requestedBy.some(matchRequester));
+        const requests = this.#requests.filter(r => requestIds.includes(r.rid) && r.requestedBy.some(matchRequester));
 
         for (const r of requests) {
           const counter = r.requestedBy.length;
@@ -482,9 +482,7 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
           }
         }
 
-        this.#requests.removeBy(r => r.requestedBy.length === 0);
-
-        return requests;
+        return this.#requests.removeBy(r => r.requestedBy.length === 0);
       }
 
       const all = new Set(requestIds);
