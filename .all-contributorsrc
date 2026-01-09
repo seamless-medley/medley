@@ -60,6 +60,16 @@
         "doc",
         "code"
       ]
+    },
+    {
+      "login": "metismode",
+      "name": "metismode",
+      "avatar_url": "https://avatars.githubusercontent.com/u/9065300?v=4",
+      "profile": "https://github.com/metismode",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
