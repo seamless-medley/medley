@@ -90,7 +90,7 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
     ...await makeCaption(options.data)
   ]);
 
-  const flags = ephemeral ? MessageFlags.Ephemeral : 0;
+  const flags = (ephemeral ? MessageFlags.Ephemeral : 0) as MessageFlags;
 
   const buildMessage: InteractorMessageBuilder = useComponentV2
     ? async () => ({
@@ -166,7 +166,7 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
     if (collected.user.id !== issuer) {
       collected.reply(useComponentV2
         ? { flags: flags | MessageFlags.IsComponentsV2, components: [new TextDisplayBuilder().setContent(content)] }
-        : { content, ephemeral: true }
+        : { flags: ephemeral ? MessageFlags.Ephemeral : undefined, content: content }
       );
       return;
     }
