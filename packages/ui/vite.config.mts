@@ -107,7 +107,8 @@ export default defineConfig({
             '@seamless-medley/utils'
           ]
         },
-        assetFileNames: 'assets/[ext]/[name]-[hash][extname]'
+        assetFileNames: 'assets/[ext]/[name]-[hash][extname]',
+        chunkFileNames: 'js/[name]-[hash].js'
       },
       onwarn: (warning, handler) => {
         if (['SOURCEMAP_ERROR', 'INVALID_ANNOTATION'].includes(warning.code ?? '')) {
