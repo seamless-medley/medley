@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Box, Group, Table, px } from "@mantine/core";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Badge, Flex, Group, Table, px } from "@mantine/core";
 import { useDebouncedState } from "@mantine/hooks";
-import { styled } from "@linaria/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AutoScroller } from "@ui/components/AutoScoller";
 import type { Collection, CollectionView, MetadataOnlyTrack, Remotable, TrackKind } from "@seamless-medley/remote";
@@ -12,6 +11,7 @@ import { useRemotableProp } from "@ui/hooks/remotable";
 import { useContextMenu } from "mantine-contextmenu";
 import { IconArrowsShuffle } from "@tabler/icons-react";
 import { contextMenuClassNames } from "@ui/theme";
+import classes from './CollectionTracks.module.css';
 
 type TrackRowData = {
   id: string;
@@ -20,24 +20,6 @@ type TrackRowData = {
   title?: string;
   album?: string;
 }
-
-const TrackListContainer = styled(Box)`
-  overflow: hidden auto;
-  flex: 1;
-  min-height: 0; // Critical for flex child with overflow
-`;
-
-const TrackListBody = styled(Table.Tbody)`
-  position: relative;
-  width: 100%;
-  will-change: transform;
-`;
-
-const TrackRow = styled(Table.Tr)`
-  display: flex;
-  position: absolute;
-  width: 100%;
-`;
 
 export type TrackItemProps = {
   size: number;
@@ -92,9 +74,16 @@ export const TrackItem = (props: TrackItemProps) => {
     )
 
   return (
-    <TrackRow h={size} style={{ transform: `translateY(${start}px)` }} onContextMenu={onContextMenu}>
+    <Table.Tr
+      display='flex'
+      pos='absolute'
+      w='100%'
+      h={size}
+      style={{ transform: `translateY(${start}px)` }}
+      onContextMenu={onContextMenu}
+    >
       {children}
-    </TrackRow>
+    </Table.Tr>
   )
 }
 
@@ -182,7 +171,7 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
   const { showContextMenu } = useContextMenu();
 
   return (
-    <TrackListContainer ref={tableRef}>
+    <Flex ref={tableRef} mih={0} className={classes.container}>
       <Table>
         <Table.Thead pos="sticky" bg="dark.8">
           <Table.Tr display="flex" fw='bold'>
@@ -195,7 +184,12 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
           </Table.Tr>
         </Table.Thead>
 
-        <TrackListBody h={virt.getTotalSize()}>
+        <Table.Tbody
+          pos='relative'
+          w='100%'
+          h={virt.getTotalSize()}
+          className={classes.listBody}
+        >
           {virtualItems.map(vrow => <TrackItem
             key={tracks[vrow.index]?.id ?? vrow.index}
             size={vrow.size}
@@ -216,8 +210,8 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
               }
             )}
           />)}
-        </TrackListBody>
+        </Table.Tbody>
       </Table>
-    </TrackListContainer>
+    </Flex>
   )
 }

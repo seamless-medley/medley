@@ -1,0 +1,22 @@
+.playhead {
+    display: inline-block;
+    text-align: center;
+    user-select: none;
+    width: 1ch;
+}
+
+.punc {
+    transform: translateY(-0.1em);
+}
+
+.colon {
+    transform: translateY(-0.1em);
+    width: 0.5ch;
+}
+
+.container {
+    position: relative;
+    width: max-content;
+    height: fit-content;
+    transition: color 1s ease;
+}

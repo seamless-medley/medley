@@ -1,56 +1,8 @@
 import React, { forwardRef, PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
 import { chain, first } from 'lodash';
 import { rgba, transparentize } from "polished";
-import { styled } from '@linaria/react';
 import clsx from 'clsx';
-
-const CoverContainer = styled.div`
-  --size: min(22cqh, 22cqw);
-
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: var(--size);
-  height: var(--size);
-  z-index: 30;
-  opacity: 0;
-  margin: 0.2em;
-
-  transform: scale(1.4) rotateZ(360deg) rotate(-180deg);
-
-  transition:
-    opacity 0.5s ease,
-    transform 1s cubic-bezier(.5,-0.72,.41,1.56),
-    bottom 1s ease-in-out,
-    left 1s ease-in-out,
-    width 1s ease-in-out,
-    height 1s ease-in-out;
-  ;
-
-  transform-origin: -12%;
-
-  will-change: opacity, transform, bottom, left, width, height;
-
-  &.visible {
-    opacity: 0.88;
-  }
-
-  &.revealed {
-    transform: scale(1) rotateZ(360deg) rotate(0deg);
-  }
-
-  &.center {
-    --centered-size: calc(var(--size) * 3.5);
-
-    bottom: calc((100% - var(--centered-size)) / 2);
-    left: calc((100% - var(--centered-size)) / 2);
-    width: var(--centered-size);
-    height: var(--centered-size);
-
-    transform: rotateZ(360deg) rotate(0deg);
-    transform-origin: -38%;
-  }
-`;
+import classes from './Cover.module.css';
 
 //#region backgrounds
 function tracks(n: number, color: string) {
@@ -146,77 +98,12 @@ interface ColorsProp {
   colors: string[];
 }
 
-const CoverDiscElement = styled.div<ColorsProp>`
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  border-radius: 100%;
-
-  background-blend-mode:normal,normal,color-dodge,normal,normal;
-
-  animation: wiggle 30ms infinite;
-
-  backface-visibility: hidden;
-  perspective: 1000;
-
-  will-change: transform;
-
-  &::before {
-    content:"";
-    position:absolute;
-    width:100%;
-    height:100%;
-    background:repeating-radial-gradient(${grooves()});
-    border-radius:100%;
-    animation: wabble 15s infinite alternate ease-in-out;
-  }
-
-  @keyframes wiggle {
-    0% {
-      transform: rotate(0);
-    }
-    100% {
-      transform: rotate(0.5deg);
-    }
-  }
-
-  @keyframes wabble {
-    0% {
-      opacity: 0.5;
-      transform: scale(1.4);
-    }
-    50% {
-      opacity: 0.8;
-      transform: scale(1.2) rotate(180deg);
-    }
-    100% {
-      opacity: 0.5;
-      transform: scale(1) rotate(360deg);
-    }
-  }
-
-  @property --angle {
-    syntax: "<angle>";
-    initial-value: 0deg;
-    inherits: false;
-  }
-
-  @keyframes rotate {
-    to {
-      --angle: 1turn;
-    }
-  }
-
-  animation: rotate 4s linear infinite;
-`;
-
 type CoverDisc = React.ComponentType & {
 
 }
 
 const CoverDisc = forwardRef<CoverDisc, PropsWithChildren<ColorsProp>>((props, ref) => {
   const [background, setBackground] = useState<string>();
-
 
   useEffect(() => {
     const pColors = props.colors || [];
@@ -237,63 +124,11 @@ const CoverDisc = forwardRef<CoverDisc, PropsWithChildren<ColorsProp>>((props, r
   }, [props.colors]);
 
   return (
-    <CoverDiscElement colors={props.colors} style={{ background }}>
+    <div className={classes.disc} style={{ background }}>
       {props.children}
-    </CoverDiscElement>
+    </div>
   );
 });
-
-const CoverImage = styled.img`
-  position:absolute;
-  top: 50%;
-  left: 50%;
-  width: 48%;
-  height: 48%;
-  margin-left: calc(-48% / 2);
-  margin-top: calc(-48% / 2);
-  border-radius: 100%;
-  object-fit: contain;
-  object-position: center;
-  opacity: 0;
-  user-select: none;
-  border: none;
-
-  will-change: opacity, transform;
-
-  animation: spin 4s infinite linear;
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg) translateZ(0) rotateZ(360deg);
-    }
-
-    to {
-      transform: rotate(360deg) translateZ(0) rotateZ(360deg);
-    }
-  }
-
-  &.visible {
-    opacity: 1;
-  }
-`;
-
-const CoverDecorator = styled.div`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 48%;
-  height: 48%;
-  margin-left: calc(-48% / 2);
-  margin-top: calc(-48% / 2);
-  border-radius: 100%;
-  background: radial-gradient(
-    circle closest-side,
-    rgb(0 0 0 / 0.8) 5%,
-    transparent 5.5%,
-    transparent 96%,
-    rgb(255 255 255 / 0.5) 96.5%
-  );
-`;
 
 export type CoverProps = {
   url?: string;
@@ -310,29 +145,27 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid, visible
   const [discColors, setDiscColors] = useState(colors);
 
   const updateCenter = () => {
-    const c = 'center';
-
     if (center) {
-      containerEl.current?.classList.add(c);
+      containerEl.current?.classList.add(classes.center);
     } else {
-      containerEl.current?.classList.remove(c);
+      containerEl.current?.classList.remove(classes.center);
     }
   }
 
   const hide = () => {
-    containerEl.current?.classList.remove('revealed');
+    containerEl.current?.classList.remove(classes.revealed);
   }
 
   const reveal = useCallback(() => {
     setDiscColors(colors);
 
     if (imageEl.current) {
-      imageEl.current.classList.remove('revealed');
+      imageEl.current.classList.remove(classes.revealed);
       imageEl.current.src = url || '';
-      imageEl.current.classList.add('revealed');
+      imageEl.current.classList.add(classes.revealed);
     }
 
-    containerEl.current?.classList.add('revealed');
+    containerEl.current?.classList.add(classes.revealed);
   }, [colors, url, imageEl.current]);
 
   const animationTimer = useRef<number>(null);
@@ -364,7 +197,7 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid, visible
   }
 
   useEffect(() => {
-    const isCentered = containerEl.current?.classList.contains('center') ?? false;
+    const isCentered = containerEl.current?.classList.contains(classes.center) ?? false;
 
     const animate = visible && url
       ? ((isCentered && !center) ? centerThenReveal : revealThenCenter)
@@ -375,12 +208,15 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid, visible
 
   return (
     <>
-      <CoverContainer ref={containerEl} className={clsx('revealed', visible && 'visible')}>
+      <div ref={containerEl} className={clsx(classes.container, classes.revealed, visible && classes.visible)}>
         <CoverDisc colors={discColors}>
-          <CoverImage ref={imageEl} style={{ opacity: url ? 0.85 : 0 }} />
-          <CoverDecorator />
+          <img ref={imageEl}
+            className={classes.image}
+            style={{ opacity: url ? 0.85 : 0 }}
+          />
+          <div className={classes.decorator} />
         </CoverDisc>
-      </CoverContainer>
+      </div>
     </>
   )
 }

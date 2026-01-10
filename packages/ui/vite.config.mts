@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react";
 import tsconfigPaths from 'vite-tsconfig-paths'
 import topLevelAwait from "vite-plugin-top-level-await";
 import { tanstackRouter  } from '@tanstack/router-plugin/vite'
-import wyw from '@wyw-in-js/vite';
 import pkg from './package.json';
 
 export default defineConfig({
@@ -42,14 +41,13 @@ export default defineConfig({
           ["@babel/plugin-proposal-decorators", { legacy: true }]
         ]
       }
-    }),
-    wyw({
-      include: ['**/*.{ts,tsx}'],
-      babelOptions: {
-        presets: ['@babel/preset-typescript', ['@babel/preset-react', { runtime: 'automatic' }]],
-      },
     })
   ],
+  css: {
+    modules: {
+      localsConvention: 'camelCase'
+    }
+  },
   server: {
     https: {
 

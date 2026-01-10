@@ -1,0 +1,9 @@
+@property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+
+.contextmenu {
+    outline: 1px solid var(--mantine-color-gray-5);
+}

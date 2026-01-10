@@ -1,20 +1,9 @@
 import { Box, Group } from "@mantine/core";
-import { styled } from "@linaria/react";
 import { useParams } from "@tanstack/react-router";
 import { useCollection } from "@ui/hooks/useCollection";
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { CollectionTracks } from "../components/CollectionTracks";
-
-const Container = styled(Box)`
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 60px - 200px); // Viewport minus AppShell header minus TopBar
-`;
-
-const Header = styled(Group)`
-  flex-shrink: 0; // Prevent shrinking
-  justify-content: space-between;
-`;
+import classes from './CollectionPage.module.css';
 
 export const CollectionPage = () => {
   const { station, collectionId } = useParams({ strict: false });
@@ -23,12 +12,12 @@ export const CollectionPage = () => {
   const length = useRemotableProp(collection, 'length', 0);
 
   return (
-    <Container>
-      <Header mx='md'>
+    <Box className={classes.container}>
+      <Group className={classes.header} mx='md'>
         <h2>{description} - {length} tracks</h2>
-      </Header>
+      </Group>
 
       <CollectionTracks collection={collection} />
-    </Container>
+    </Box>
   )
 }

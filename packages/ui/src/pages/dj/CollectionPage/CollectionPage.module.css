@@ -1,0 +1,10 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 60px - 200px); /* Viewport minus AppShell header minus TopBar */
+}
+
+.header {
+    flex-shrink: 0; /* Prevent shrinking */
+    justify-content: space-between;
+}

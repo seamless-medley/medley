@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
+import clsx from "clsx";
 import { Link } from "@tanstack/react-router";
-import { styled } from "@linaria/react";
-import { cx } from "@linaria/core";
 import { Box, Card, Flex, Image, Text } from "@mantine/core";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { transparentize } from "polished";
@@ -14,6 +13,7 @@ import { AutoScroller } from "@ui/components/AutoScoller";
 import { PlayHeadText } from "@ui/components/PlayHeadText";
 import { DJConsoleRoute } from "../DJConsolePage/route";
 import { CollectionRoute } from "../CollectionPage/route";
+import classes from './PlayDeck.module.css';
 
 export type PlayDeckProps = {
   stationId: string | undefined;
@@ -123,77 +123,6 @@ const PlayHead: React.FC<PlayDeckProps> = ({ stationId, index }) => {
   )
 }
 
-const Header = styled(Text)`
-  padding: 4px;
-  color: white;
-  font-weight: 800;
-  text-align: center;
-  ${`text-wrap`}: nowrap;
-
-  transition: background-color 1s ease;
-  user-select: none;
-
-  &::before {
-    content: 'DECK';
-    padding-right: 0.5em;
-  }
-
-  background-color: var(--mantine-color-dark-8);
-
-  &.loaded {
-    background-color: var(--mantine-color-indigo-5);
-  }
-
-  &.loaded.active {
-    background-color: var(--mantine-color-green-5);
-  }
-`;
-
-const CoverBox = styled(Box)`
-  position: relative;
-  aspect-ratio: 1;
-`;
-
-const CoverImage = styled(Image)`
-  position: absolute;
-  height: 100%;
-  object-fit: cover;
-`;
-
-const CoverInfo = styled(motion.div)`
-  position: absolute;
-  padding: 8px;
-  width: 100%;
-  height: 100%;
-  color: var(--mantine-color-dark-9);
-  background-color: white;
-
-  overflow: clip;
-  user-select: none;
-`;
-
-const CoverIdle = styled(CoverInfo)`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
-`;
-
-const DeckInfo = styled(Text)`
-  text-decoration: solid underline rgb(0 0 0 / 10%) 0.05em;
-`;
-
-const DeckInfoBig = styled(DeckInfo)`
-  font-weight: 800;
-  font-size: 3.5em;
-`;
-
-const DeckInfoMedium = styled(DeckInfo)`
-  font-weight: 500;
-  font-size: 1.75em;
-  margin-top: 0.5em;
-`;
-
 export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
   const { active, trackPlay } = useDeckInfo(stationId, index, 'active', 'trackPlay');
   const cover = useDeckCover(stationId, index);
@@ -210,15 +139,18 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
   return (
     <Card pos="relative" shadow="sm" m="sm" padding="lg" radius="md" withBorder>
       <Card.Section>
-        <Header className={cx(trackPlay?.uuid && 'loaded', active && 'active')}>
+        <Text className={clsx(classes.header, trackPlay?.uuid && classes.loaded, active && classes.active)}>
           {index+1}
-        </Header>
+        </Text>
 
-        <CoverBox>
+        <Box pos='relative' style={{ aspectRatio: 1 }}>
           <AnimatePresence>
             {hasCover &&
-              <CoverImage component={motion.img}
-                key="cover"
+              <Image component={motion.img}
+                key='cover'
+                pos='absolute'
+                h='100%'
+                fit='cover'
                 src={cover}
                 fallbackSrc="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
                 {...animatePresenceProps}
@@ -226,25 +158,25 @@ export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
             }
 
             {trackPlay && !hasCover &&
-              <CoverInfo key="info" {...animatePresenceProps}>
-                <DeckInfoBig>
+              <motion.div key="info" className={classes.coverInfo} {...animatePresenceProps}>
+                <Text className={clsx(classes.deckInfo, classes.big)}>
                   {trackPlay?.track.extra?.tags?.title ?? 'Untitled'}
-                </DeckInfoBig>
-                <DeckInfoMedium>
+                </Text>
+                <Text className={clsx(classes.deckInfo, classes.medium)}>
                   {trackPlay?.track.extra?.tags?.artist}
-                </DeckInfoMedium>
-              </CoverInfo>
+                </Text>
+              </motion.div>
             }
 
             {!trackPlay &&
-              <CoverIdle key="idle" {...animatePresenceProps}>
-                <DeckInfoMedium>
+              <motion.div key="idle" className={clsx(classes.coverInfo, classes.idle)} {...animatePresenceProps}>
+                <Text className={clsx(classes.deckInfo, classes.medium)}>
                   idle
-                </DeckInfoMedium>
-              </CoverIdle>
+                </Text>
+              </motion.div>
             }
           </AnimatePresence>
-        </CoverBox>
+        </Box>
       </Card.Section>
 
       <Card.Section>

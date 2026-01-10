@@ -1,0 +1,25 @@
+.container {
+    overflow: hidden;
+    position: relative;
+    --end-gradient-width: 0.5em;
+
+    &.gradient {
+        mask-image: linear-gradient(to right, transparent 0, #000 var(--end-gradient-width), #000 calc(100% - var(--end-gradient-width)), transparent 100%);
+    }
+
+    &.gradient-left {
+        mask-image: linear-gradient(to right, transparent 0, #000 var(--end-gradient-width));
+    }
+
+    &.gradient-right {
+        mask-image: linear-gradient(to left, transparent 0, #000 var(--end-gradient-width));
+    }
+}
+
+.scroller {
+    --trans-x: 0px;
+    display: flex;
+    transform: translateX(var(--trans-x));
+    white-space: nowrap;
+    width: fit-content;
+}

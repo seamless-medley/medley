@@ -22,7 +22,10 @@
     "outDir": "./dist",
     "plugins": [
       {
-        "name": "@styled/typescript-styled-plugin"
+        "name": "typescript-plugin-css-modules",
+        "options": {
+          "classnameTransform": "camelCase"
+        }
       }
     ]
   },

@@ -1,0 +1,17 @@
+.station-cover-and-lyrics {
+    overflow: hidden;
+    width: 100%;
+    flex-wrap: nowrap;
+
+    @keyframes rotate {
+        to {
+            --angle: 1turn;
+        }
+    }
+
+    animation: rotate 12s linear infinite;
+    border: 4px solid transparent;
+
+    transition: width 0.5s ease;
+    transform: scale(1) translateZ(0) rotateZ(360deg);
+}

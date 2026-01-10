@@ -1,38 +1,15 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { css } from "@linaria/core";
-import { styled } from "@linaria/react";
+import clsx from "clsx";
 import { Box, Text, TextProps } from "@mantine/core";
 import type { DeckIndex } from "@seamless-medley/medley";
 import { useDeck } from "@ui/hooks/useDeck";
+import classes from './PlayHeadText.module.css';
 
-const PlayHeadStyledText = styled(Text)`
-  display: inline-block;
-  text-align: center;
-  user-select: none;
-  width: 1ch;
-`;
-
-const PlayHeadChar: React.FC<TextProps & { children: string }> = ({ children: text, ...props }) => (
-  text.split('').map((c, index) => <PlayHeadStyledText key={index} {...props} span>
+const PlayHeadChar: React.FC<TextProps & { children: string }> = ({ children: text, className, ...props }) => (
+  text.split('').map((c, index) => <Text key={index} {...props} className={clsx(classes.playhead, className)} span>
     {c}
-  </PlayHeadStyledText>)
+  </Text>)
 )
-
-const punc = css`
-  transform: translateY(-0.1em);
-`;
-
-const colon = css`
-  transform: translateY(-0.1em);
-  width: 0.5ch;
-`;
-
-const Container = styled(Box)`
-  position: relative;
-  width: max-content;
-  height: fit-content;
-  transition: color 1s ease;
-`;
 
 type PlayHeadTextProps = TextProps & {
   stationId: string;
@@ -79,9 +56,9 @@ export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId
   const [duration_mm, duration_ss] = showDuration ? [(duration / 60) % 99, duration % 60].map(v => Math.trunc(v).toString()) : [];
 
   return (
-    <Container onClick={() => setShowRemaining(prev => !prev)}>
+    <Box className={classes.container} onClick={() => setShowRemaining(prev => !prev)}>
       {isRemaining ?
-        (<PlayHeadChar {...textProps} className={punc}>
+        (<PlayHeadChar {...textProps} className={classes.punc}>
           -
         </PlayHeadChar>)
         : undefined
@@ -93,7 +70,7 @@ export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId
 
       <PlayHeadChar
         {...textProps}
-        className={colon}
+        className={classes.colon}
       >
         :
       </PlayHeadChar>
@@ -114,7 +91,7 @@ export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId
 
           <PlayHeadChar
             {...textProps}
-            className={colon}
+            className={classes.colon}
           >
             :
           </PlayHeadChar>
@@ -126,6 +103,6 @@ export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId
         : undefined
       }
 
-    </Container>
+    </Box>
   )
 });

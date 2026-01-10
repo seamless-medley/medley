@@ -1,0 +1,60 @@
+.header {
+    padding: 4px;
+    color: white;
+    font-weight: 800;
+    text-align: center;
+
+    text-wrap: nowrap;
+
+    transition: background-color 1s ease;
+    user-select: none;
+
+    &::before {
+        content: 'DECK';
+        padding-right: 0.5em;
+    }
+
+    background-color: var(--mantine-color-dark-8);
+
+    &.loaded {
+        background-color: var(--mantine-color-indigo-5);
+    }
+
+    &.loaded.active {
+        background-color: var(--mantine-color-green-5);
+    }
+}
+
+.cover-info {
+    position: absolute;
+    padding: 8px;
+    width: 100%;
+    height: 100%;
+    color: var(--mantine-color-dark-9);
+    background-color: white;
+
+    overflow: clip;
+    user-select: none;
+
+    &.idle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: transparent;
+    }
+}
+
+.deck-info {
+    text-decoration: solid underline rgb(0 0 0 / 10%) 0.05em;
+
+    &.big {
+        font-weight: 800;
+        font-size: 3.5em;
+    }
+
+    &.medium {
+        font-weight: 500;
+        font-size: 1.75em;
+        margin-top: 0.5em;
+    }
+}

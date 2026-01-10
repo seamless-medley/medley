@@ -1,0 +1,32 @@
+.cover {
+    background-size: cover;
+    background-position: center;
+    text-decoration: none;
+
+    transition: transform 600ms ease;
+}
+
+.card {
+    text-shadow: #000 0.05em 0.1em 0.011em;
+
+    &:hover {
+        & .cover {
+            transform: scale(1.08);
+        }
+    }
+
+    @keyframes rotate {
+        to {
+            --angle: 1turn;
+        }
+    }
+
+    animation: rotate 8s linear infinite;
+    animation-play-state: paused;
+
+    &:hover {
+        animation-play-state: running;
+    }
+
+    border: 2px solid transparent;
+}

@@ -1,7 +1,5 @@
 import { chain, random, sumBy } from "lodash";
 import { Ref, useCallback, useEffect, useMemo, useState } from "react";
-
-import { styled } from "@linaria/react";
 import { Box, Button, Flex, Group, type MantineStyleProps, Stack, Text, Title as TextTitle } from "@mantine/core";
 import { useFullscreen, useSetState } from "@mantine/hooks";
 
@@ -37,27 +35,9 @@ import { AnimatePresence, motion, MotionNodeOptions } from "motion/react";
 import { AutoScroller } from "@ui/components/AutoScoller";
 import { IconHeadphones } from "@tabler/icons-react";
 import { usePlayingStationId } from "@ui/hooks/useClient";
-import { css } from "@linaria/core";
+import classes from './PlayPage.module.css';
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
-
-const Control = styled.div`
-  position: absolute;
-  right: 0;
-  top: 0;
-  padding: 0;
-  z-index: 90000;
-  cursor: pointer;
-  opacity: 0;
-  border-radius: 0 0 0 0.5em;
-  transition: all 0.7s ease;
-
-  user-select: none;
-
-  &:hover {
-    opacity: 1;
-  }
-`;
 
 const logger = getLogger(['ui', 'page', 'play']);
 
@@ -360,30 +340,6 @@ type StationCoverAndLyricsProps = {
   lyricsRef: Ref<HTMLDivElement>;
 }
 
-const stationCoverAndLyricsStyles = css`
-  overflow: hidden;
-  width: 100%;
-  flex-wrap: nowrap;
-
-  @property --angle {
-    syntax: "<angle>";
-    initial-value: 0deg;
-    inherits: false;
-  }
-
-  @keyframes rotate {
-    to {
-      --angle: 1turn;
-    }
-  }
-
-  animation: rotate 12s linear infinite;
-  border: 4px solid transparent;
-
-  transition: width 0.5s ease;
-  transform: scale(1) translateZ(0) rotateZ(360deg);
-`;
-
 const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef: ref, toggleFullscreen: toggle, stationId, fullscreen }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck');
@@ -410,7 +366,7 @@ const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef
 
   return (
     <Flex
-      className={stationCoverAndLyricsStyles}
+      className={classes.stationCoverAndLyrics}
       direction={{ base: 'column', md: 'row' }}
       w={{ base: '95%', md: '95%', lg: '75%' }}
       h={{ base: '100%', md: '60cqh', lg: '70cqh'  }}

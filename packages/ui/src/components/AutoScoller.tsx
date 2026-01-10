@@ -1,31 +1,5 @@
 import React, { PropsWithChildren, useCallback, useEffect, useRef } from "react";
-import { styled } from "@linaria/react";
-
-const Container = styled.div`
-  overflow: hidden;
-  position: relative;
-  --end-gradient-width: 0.5em;
-
-  &.gradient {
-    mask-image: linear-gradient(to right, transparent 0, #000 var(--end-gradient-width), #000 calc(100% - var(--end-gradient-width)),transparent 100%);
-  }
-
-  &.gradient-left {
-    mask-image: linear-gradient(to right, transparent 0, #000 var(--end-gradient-width));
-  }
-
-  &.gradient-right {
-    mask-image: linear-gradient(to left, transparent 0, #000 var(--end-gradient-width));
-  }
-`;
-
-const Scroller = styled.div`
-  --trans-x: 0px;
-  display: flex;
-  transform: translateX(var(--trans-x));
-  white-space: nowrap;
-  width: fit-content;
-`;
+import classes from './AutoScroller.module.css';
 
 export type AutoScrollerProps = PropsWithChildren<{
   title?: string;
@@ -82,9 +56,9 @@ export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
     const classList = containerRef.current?.classList;
 
     if (classList) {
-      classList.toggle('gradient-left', l);
-      classList.toggle('gradient-right', r);
-      classList.toggle('gradient', b);
+      classList.toggle(classes.gradientLeft, l);
+      classList.toggle(classes.gradientRight, r);
+      classList.toggle(classes.gradient, b);
     }
   }, []);
 
@@ -190,10 +164,10 @@ export const AutoScroller: React.FC<AutoScrollerProps> = (props) => {
   useEffect(() => stopAnimation, []);
 
   return (
-    <Container ref={containerRef} title={props.title}>
-      <Scroller ref={scrollerRef}>
+    <div ref={containerRef} className={classes.container} title={props.title}>
+      <div ref={scrollerRef} className={classes.scroller}>
         {props.children}
-      </Scroller>
-    </Container>
+      </div>
+    </div>
   )
 }

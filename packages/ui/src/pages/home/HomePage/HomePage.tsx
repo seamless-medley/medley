@@ -1,3 +1,4 @@
+import { chain, kebabCase, random } from "lodash";
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -14,7 +15,6 @@ import {
   alpha
 } from '@mantine/core';
 
-import { css } from "@linaria/core";
 import { IconRadio, IconHeadphones } from '@tabler/icons-react';
 import { adjustHue, darken, getLuminance, hsl, lighten, linearGradient } from "polished";
 import { prominent } from "color.js";
@@ -35,45 +35,8 @@ import { PlayRoute } from "@ui/pages/play/PlayPage/route";
 import { client } from "@ui/init";
 
 import { Route } from "./route";
-import { chain, kebabCase, random } from "lodash";
 
-const coverCss = css`
-  background-size: cover;
-  background-position: center;
-  text-decoration: none;
-
-  transition: transform 600ms ease;
-`;
-
-const cardCss = css`
-  text-shadow: #000 0.05em 0.1em 0.011em;
-  &:hover {
-    & .${coverCss} {
-      transform: scale(1.08);
-    }
-  }
-
-  @property --angle {
-    syntax: "<angle>";
-    initial-value: 0deg;
-    inherits: false;
-  }
-
-  @keyframes rotate {
-    to {
-      --angle: 1turn;
-    }
-  }
-
-  animation: rotate 8s linear infinite;
-  animation-play-state: paused;
-
-  &:hover {
-    animation-play-state: running;
-  }
-
-  border: 2px solid transparent;
-`
+import classes from './HomePage.module.css';
 
 const CoverBackdrop: React.FC<{ cover?: string }> = ({ cover }) => {
   const dimmer = linearGradient({
@@ -91,7 +54,7 @@ const CoverBackdrop: React.FC<{ cover?: string }> = ({ cover }) => {
       <Box component={motion.div}
         key={cover}
         pos='absolute' left={0} top={0} right={0} bottom={0}
-        className={coverCss}
+        className={classes.cover}
         style={{
           backgroundImage: `${dimmer}, url(${cover})`,
           zIndex: 0
@@ -248,7 +211,7 @@ const StationCard: React.FC<{ stationId: string }> = ({ stationId }) => {
       h='100%'
       w='100%'
       bg={`linear-gradient(black) padding-box, conic-gradient(from var(--angle), ${[...coverColors, ...[...coverColors].reverse()].join(', ')}) border-box`}
-      className={cardCss}
+      className={classes.card}
     >
       <CoverBackdrop cover={cover} />
 

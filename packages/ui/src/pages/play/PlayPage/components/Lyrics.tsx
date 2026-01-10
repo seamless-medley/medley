@@ -1,7 +1,6 @@
 import React, { RefObject, CSSProperties, PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { linearGradient, rgba, setSaturation, parseToHsl, mix } from 'polished';
-import { styled } from '@linaria/react';
 import { clamp, findIndex, findLastIndex } from 'lodash';
 
 import type { LyricLine, Timeline, EnhancedLine, EnhancedLineElement } from '@seamless-medley/utils';
@@ -13,6 +12,8 @@ import { attrs } from '@ui/utils/attrs';
 import { useDeck, useDeckInfo } from '@ui/hooks/useDeck';
 import { client } from '@ui/init';
 import { createCssStrokeFx } from '@ui/utils';
+
+import classes from './Lyrics.module.css';
 
 export type BackgroundProp = {
   background: string;
@@ -50,64 +51,27 @@ export type BeatProps = {
   beatInterval?: number;
 }
 
-export const InnerContainer = styled.div<BackgroundProp>`
-  position: relative;
-  width: 100%;;
-  height: 100%;
-  overflow: hidden;
-  transition: background-color 1s ease;
-  will-change: background-color;
-  transform: translateZ(0) rotateZ(360deg);
-  z-index: 0;
-  opacity: 0.99;
-`;
-
-const Decorator = styled.div`
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: calc(100% / 8 * 2.5);
-  pointer-events: none;
-  z-index: 2;
-`;
-
-const TopDecorator = attrs(props => {
-  return ({
-    style: {
-      background: linearGradient({
-        toDirection: 'to top',
-        colorStops: [rgba(props.background!, 0), props.background!]
-      }).backgroundImage.toString()
-    }
-  });
-
-}, styled(Decorator)<BackgroundProp>`
-  top: 0;
-`);
-
-const BottomDecorator = attrs(props => {
-  return ({
-    style: {
-      background: linearGradient({
-        toDirection: 'to bottom',
-        colorStops: [rgba(props.background!, 0), props.background!]
-      }).backgroundImage.toString()
-    }
-  });
-}, styled(Decorator)<BackgroundProp>`
-  bottom: 0;
-`);
-
 export const Container: React.FC<PropsWithChildren<BackgroundProp>> = (props) => {
   const { background } = props;
-  const p = { background };
+
+  const colorStops = [rgba(background, 0), background];
 
   return (
-    <InnerContainer {...p} style={{ background }}>
-      <TopDecorator {...p}/>
+    <div className={classes.container} style={{ background }}>
+      <div
+        className={classes.topDecorator}
+        style={{
+          background: linearGradient({ toDirection: 'to top', colorStops }).backgroundImage.toString()
+        }}
+      />
       { props.children }
-      <BottomDecorator {...p}/>
-    </InnerContainer>
+      <div
+        className={classes.bottomDecorator}
+        style={{
+          background: linearGradient({ toDirection: 'to bottom', colorStops }).backgroundImage.toString()
+        }}
+      />
+    </div>
   )
 }
 const TickerContainer: React.FC<PropsWithChildren<LineLayoutProps & BeatProps>> = (props) => {
@@ -123,196 +87,49 @@ const TickerContainer: React.FC<PropsWithChildren<LineLayoutProps & BeatProps>> 
   )
 }
 
-const TickerScroller = attrs(props => {
-  const { position } = props;
-
-  return ({
-    className: clsx({ smooth: position! > 0}),
-    style: {
-      transform: `translate3d(0px, ${-position!}px, 0px)`,
-    }
-  });
-}, styled.div<PositionProps>`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  text-align: center;
-  white-space: nowrap;
-  will-change: transform;
-
-  transition: transform 0.75s ease-out;
-
-  backface-visibility: hidden;
-  perspective: 1000px;
-`);
-
 export const Ticker = React.forwardRef<HTMLDivElement, PropsWithChildren<LineLayoutProps & PositionProps & BeatProps>>(({ lineHeight, lines, position, children, beatInterval }, ref) => {
   return (
     <TickerContainer {...{ lines, lineHeight, beatInterval } }>
-      <TickerScroller ref={ref} {...{ position }}>
+      <div
+        ref={ref}
+        className={classes.scroller}
+        style={{
+          transform: `translate3d(0px, ${-position}px, 0px)`,
+        }}
+      >
         {children}
-      </TickerScroller>
+      </div>
 
       <canvas style={{ display: 'none' }} />
     </TickerContainer>
   )
 })
 
-const LineText = attrs(props => {
-  const { zoom, active, dim, karaoke } = props;
-
-  const colors = props.colors!;
-
-  const style: CSSProperties = {};
-
+const LineText: React.FC<PropsWithChildren<LineTextProps>> = ({ children, zoom, active, dim, karaoke, colors, lineHeight: h }) => {
+  const lineHeight = `${h}em`;
 
   const createKaraokeTextFx = () => createCssStrokeFx(0.025, mix(0.7, colors.glow, colors.shadow), { precision: 0.1, unit: 'em' });
 
-  if (active) {
-    style.color = !karaoke ? colors.active : colors.text;
-    style.textShadow = !karaoke
-      ? `0px 0px 0.3em ${colors.glow}, 0.025em 0.025em 0.013em ${colors.shadow}`
-      : createKaraokeTextFx();
-
-  } else {
-    style.textShadow = '';
-    style.color = dim ? colors.dim : colors.text
-  }
-
-  return ({
-    style,
-    className: clsx({ zoom: zoom || active, dim })
-  });
-
-}, styled.div<LineTextProps>`
-  display: flex;
-  align-items: center;
-
-  transition: color 0.3s ease, font-size 1s ease, transform 1s ease, text-shadow 0.6s ease;
-  transform: scale(var(--scale)) translateZ(0) rotateZ(360deg);
-
-  line-height: ${props => props.lineHeight}em;
-  min-height: ${props => props.lineHeight}em;
-
-  user-select: none;
-
-  will-change: transform, font-size, color, text-shadow;
-  backface-visibility: hidden;
-  perspective: 1000px;
-
-  font-size: 1em;
-
-  &.zoom {
-    transform: scale(var(--zoomedScale)) translateZ(0) rotateZ(360deg);
-  }
-
-  &.dim {
-    opacity: 0.7;
-  }
-`);
-
-type KaraokeTextOverlayProps = {
-  active: boolean;
-  lineHeight: number;
-  color: string;
-  strokeColor: string;
+  return (
+    <div
+      className={clsx(classes.text, (zoom || active) && classes.zoom, dim && classes.dim )}
+      style={{
+        lineHeight,
+        minHeight: lineHeight,
+        color: active
+          ? (!karaoke ? colors.active : colors.text)
+          : (dim ? colors.dim : colors.text),
+        textShadow: active
+          ? (!karaoke
+            ? `0px 0px 0.3em ${colors.glow}, 0.025em 0.025em 0.013em ${colors.shadow}`
+            : createKaraokeTextFx())
+          : ''
+      }}
+    >
+      {children}
+    </div>
+  );
 }
-
-const KaraokeTextOverlay = attrs(props => {
-  const { active } = props;
-
-  return ({
-    className: clsx({ active })
-  });
-
-}, styled.div<KaraokeTextOverlayProps>`
-  position: absolute;
-
-  visibility: hidden;
-
-  display: flex;
-  align-items: center;
-
-  transition: color 0.3s ease, font-size 1s ease, transform 1s ease;
-  transform: scale(var(--scale)) translateZ(0) rotateZ(360deg);
-
-  line-height: ${props => props.lineHeight}em;
-  min-height: ${props => props.lineHeight}em;
-
-  user-select: none;
-
-  will-change: transform, font-size, color, clip-path;
-  backface-visibility: hidden;
-  perspective: 1000px;
-
-  color: ${props => props.color};
-  text-shadow: ${props => createCssStrokeFx(0.025, props.strokeColor, { precision: 0.1, unit: 'em' })};
-
-  font-size: 1em;
-
-  &.active {
-    visibility: visible;
-    transform: scale(var(--zoomedScale)) translateZ(0) rotateZ(360deg);
-  }
-
-  clip-path: inset(0 100% 0 0);
-`);
-
-type IndicatorProps = {
-  color: string;
-}
-
-const LineFarIndicator = attrs(props => {
-  const style = {
-    borderColor: `${props.color}`
-  } as CSSProperties;
-
-  return ({ style });
-
-}, styled.div<IndicatorProps>`
-  --size: 0.2em;
-
-  position: absolute;
-  width: var(--size);
-  height: var(--size);
-
-  left: calc(-2 * var(--size) - 0.2em);
-
-  border-style: solid;
-  border-width: var(--size);
-  border-radius: 50%;
-
-  animation: wobble var(--beat-interval) infinite reverse linear;
-
-  opacity: 0;
-  will-change: height, opacity, transform, animation-duration;
-
-  transition: opacity 0.8s linear, border-color 0.5s linear;
-
-  .dim {
-    opacity: 0;
-  }
-
-  @keyframes wobble {
-    from {
-      transform: scale(1) translateZ(0) rotateZ(360deg);
-    }
-
-    to {
-      transform: scale(1.2) translateZ(0) rotateZ(360deg);
-    }
-  }
-`);
-
-const LineWrapper = styled.div`
-  position: relative;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-
-  --scale: 1.0;
-  --zoomedScale: 1.12;
-`;
 
 export type EnhancedLineElementInfo = EnhancedLineElement & {
   x: number;
@@ -388,14 +205,19 @@ export class Line extends React.Component<PropsWithChildren<LineProps>> {
       '--zoomedScale': zoomedScale >= 0 ? zoomedScale : 0
     } as React.CSSProperties;
 
-
     return (
-      <LineWrapper ref={this.el} style={{ ...zoomAndScale }}>
-        <LineText {...textProps} karaoke={Boolean(tokens?.length)}>
+      <div ref={this.el} className={classes.lineWrapper} style={{ ...zoomAndScale }}>
+        <LineText
+          {...textProps}
+          karaoke={Boolean(tokens?.length)}
+        >
           { far && (
-              <LineFarIndicator
+              <div
                 ref={this.farEl}
-                color={ active || dim ? colors.dim : colors.active}
+                className={classes.farIndicator}
+                style={{
+                  borderColor: active || dim ? colors.dim : colors.active
+                }}
               />
             )
           }
@@ -403,17 +225,20 @@ export class Line extends React.Component<PropsWithChildren<LineProps>> {
         </LineText>
 
         {!!tokens?.length &&
-          <KaraokeTextOverlay
+          <div
             ref={this.karaokeEl}
-            {...textProps}
-            color={colors.active}
-            strokeColor={setSaturation(parseToHsl(colors.active).saturation, colors.dim)}
+            className={clsx(classes.karaokeOverlay, active && classes.active)}
+            style={{
+              lineHeight: textProps.lineHeight,
+              minHeight: textProps.lineHeight,
+              color: colors.active,
+              textShadow: createCssStrokeFx(0.025, setSaturation(parseToHsl(colors.active).saturation, colors.dim), { precision: 0.1, unit: 'em' })
+            } as React.CSSProperties}
           >
             {this.props.children}
-          </KaraokeTextOverlay>
+          </div>
         }
-
-      </LineWrapper>
+      </div>
     );
 
   }

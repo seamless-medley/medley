@@ -1,0 +1,7 @@
+.container {
+    overflow: hidden auto;
+}
+
+.list-body {
+    will-change: transform;
+}

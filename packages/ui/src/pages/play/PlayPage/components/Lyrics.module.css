@@ -1,0 +1,140 @@
+.container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    transition: background-color 1s ease;
+    will-change: background-color;
+    transform: translateZ(0) rotateZ(360deg);
+    z-index: 0;
+    opacity: 0.99;
+}
+
+.line-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+
+    --scale: 1.0;
+    --zoomedScale: 1.12;
+}
+
+.far-indicator {
+    --size: 0.2em;
+
+    position: absolute;
+    width: var(--size);
+    height: var(--size);
+
+    left: calc(-2 * var(--size) - 0.2em);
+
+    border-style: solid;
+    border-width: var(--size);
+    border-radius: 50%;
+
+    animation: wobble var(--beat-interval) infinite reverse linear;
+
+    opacity: 0;
+    will-change: height, opacity, transform, animation-duration;
+
+    transition: opacity 0.8s linear, border-color 0.5s linear;
+
+    .dim {
+        opacity: 0;
+    }
+
+    @keyframes wobble {
+        from {
+            transform: scale(1) translateZ(0) rotateZ(360deg);
+        }
+
+        to {
+            transform: scale(1.2) translateZ(0) rotateZ(360deg);
+        }
+    }
+}
+
+.decorator {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: calc(100% / 8 * 2.5);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.top-decorator {
+    composes: decorator;
+    top: 0;
+}
+
+.bottom-decorator {
+    composes: decorator;
+    bottom: 0;
+}
+
+.scroller {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-align: center;
+    white-space: nowrap;
+    will-change: transform;
+
+    transition: transform 0.75s ease-out;
+
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+.karaoke-overlay {
+    position: absolute;
+
+    visibility: hidden;
+
+    display: flex;
+    align-items: center;
+
+    transition: color 0.3s ease, font-size 1s ease, transform 1s ease;
+    transform: scale(var(--scale)) translateZ(0) rotateZ(360deg);
+
+    user-select: none;
+
+    will-change: transform, font-size, color, clip-path;
+    backface-visibility: hidden;
+    perspective: 1000px;
+
+    font-size: 1em;
+
+    &.active {
+        visibility: visible;
+        transform: scale(var(--zoomedScale)) translateZ(0) rotateZ(360deg);
+    }
+
+    clip-path: inset(0 100% 0 0);
+}
+
+.text {
+    display: flex;
+    align-items: center;
+
+    transition: color 0.3s ease, font-size 1s ease, transform 1s ease, text-shadow 0.6s ease;
+    transform: scale(var(--scale)) translateZ(0) rotateZ(360deg);
+
+    user-select: none;
+
+    will-change: transform, font-size, color, text-shadow;
+    backface-visibility: hidden;
+    perspective: 1000px;
+
+    font-size: 1em;
+
+    &.zoom {
+        transform: scale(var(--zoomedScale)) translateZ(0) rotateZ(360deg);
+    }
+
+    &.dim {
+        opacity: 0.7;
+    }
+}

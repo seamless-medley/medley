@@ -1,81 +1,9 @@
-import { styled } from "@linaria/react";
 import React, { useCallback, useEffect, useRef } from 'react';
 import _, { debounce } from 'lodash';
 import clsx from "clsx";
 import { AutoScroller } from "@ui/components/AutoScoller";
 import { Box } from "@mantine/core";
-
-const TitleContainer = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform: translate(0, 0);
-  opacity: 0;
-
-  z-index: 30;
-
-  transition:
-    opacity 0.6s ease,
-    top 0.6s ease 0.6s,
-    left 0.6s ease 0s,
-    transform 0.6s ease 0s
-    ;
-
-  &.visible {
-    opacity: 1;
-  }
-
-  &.center {
-    top: calc(50% - 1.6em);
-    left: 50%;
-    transform: translate(-50%, 0);
-
-    transition:
-      opacity 0.6s ease,
-      top 0.6s ease 0s,
-      left 0.6s ease 0.6s,
-      transform 0.6s ease 0.6s
-    ;
-  }
-`;
-
-const TitleBox = styled.div`
-  position: relative;
-  padding: 0.12em 0.3em;
-  border-radius: 0px 0px 0.25em 0px;
-  background-color: rgb(200 200 255 / 0.3);
-  transition: all 0.2s ease, border-radius 0.6s ease;
-  white-space: nowrap;
-  min-height: 1.65em;
-
-  &.center {
-    border-radius: 0.25em;
-  }
-`;
-
-const TitleText = styled.div`
-  background-size: 300cqw 25cqw;
-
-  animation: bg 18s infinite alternate linear;
-
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  line-height: 1.6em;
-  user-select: none;
-
-  transform: translateX(0px) translateZ(0) rotateZ(360deg);
-
-  transition: transform 1s linear;
-
-  @keyframes bg {
-    0% { background-position: 0% 0%; }
-    10% { background-position: 0% 0%; }
-    90% { background-position: 100% 100%; }
-    100% { background-position: 100% 100%; }
-  }
-`;
+import classes from './Title.module.css';
 
 export type TitleProps = {
   text: string;
@@ -150,15 +78,15 @@ export const Title: React.FC<TitleProps> = (props) => {
   }, [props.text]);
 
   return (
-    <TitleContainer className={clsx(props.center && 'center', props.visible && 'visible')}>
-      <TitleBox ref={boxEl} className={clsx(props.center && 'center')}>
+    <div className={clsx(classes.container, props.center && classes.center, props.visible && classes.visible)}>
+      <div ref={boxEl} className={clsx(classes.box, props.center && classes.center)}>
         <canvas ref={canvasEl} style={{ display: 'none' }} width={500} height={500} />
         <Box>
           <AutoScroller speed={0.8}>
-            <TitleText ref={textEl} />
+            <div ref={textEl} className={classes.text} />
           </AutoScroller>
         </Box>
-      </TitleBox>
-    </TitleContainer>
+      </div>
+    </div>
   );
 }

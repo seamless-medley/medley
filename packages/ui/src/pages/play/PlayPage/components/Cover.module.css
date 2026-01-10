@@ -1,0 +1,155 @@
+.container {
+    --size: min(22cqh, 22cqw);
+
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: var(--size);
+    height: var(--size);
+    z-index: 30;
+    opacity: 0;
+    margin: 0.2em;
+
+    transform: scale(1.4) rotateZ(360deg) rotate(-180deg);
+
+    transition:
+        opacity 0.5s ease,
+        transform 1s cubic-bezier(.5, -0.72, .41, 1.56),
+        bottom 1s ease-in-out,
+        left 1s ease-in-out,
+        width 1s ease-in-out,
+        height 1s ease-in-out;
+    ;
+
+    transform-origin: -12%;
+
+    will-change: opacity, transform, bottom, left, width, height;
+
+    &.visible {
+        opacity: 0.88;
+    }
+
+    &.revealed {
+        transform: scale(1) rotateZ(360deg) rotate(0deg);
+    }
+
+    &.center {
+        --centered-size: calc(var(--size) * 3.5);
+
+        bottom: calc((100% - var(--centered-size)) / 2);
+        left: calc((100% - var(--centered-size)) / 2);
+        width: var(--centered-size);
+        height: var(--centered-size);
+
+        transform: rotateZ(360deg) rotate(0deg);
+        transform-origin: -38%;
+    }
+}
+
+.disc {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 100%;
+
+    background-blend-mode: normal, normal, color-dodge, normal, normal;
+
+    backface-visibility: hidden;
+    perspective: 1000;
+
+    will-change: transform;
+
+    &::before {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: repeating-radial-gradient(rgba(0, 0, 0, 0.0031) 1.1864406779661016px, rgba(0, 0, 0, 0.1418) 2.3728813559322033px, rgba(0, 0, 0, 0.0016) 3.559322033898305px, rgba(0, 0, 0, 0.1512) 4.745762711864407px, rgba(0, 0, 0, 0.012) 5.932203389830509px, rgba(0, 0, 0, 0.17629999999999998) 7.11864406779661px, rgba(0, 0, 0, 0.0409) 8.305084745762711px, rgba(0, 0, 0, 0.1316) 9.491525423728813px, rgba(0, 0, 0, 0.0048) 10.677966101694915px, rgba(0, 0, 0, 0.13369999999999999) 11.864406779661017px, rgba(0, 0, 0, 0.0394) 13.050847457627118px, rgba(0, 0, 0, 0.1447) 14.23728813559322px, rgba(0, 0, 0, 0.051699999999999996) 15.423728813559322px, rgba(0, 0, 0, 0.1479) 16.610169491525422px, rgba(0, 0, 0, 0.0215) 17.796610169491526px, rgba(0, 0, 0, 0.1612) 18.983050847457626px, rgba(0, 0, 0, 0.0088) 20.169491525423727px, rgba(0, 0, 0, 0.149) 21.35593220338983px, rgba(0, 0, 0, 0.0487) 22.54237288135593px, rgba(0, 0, 0, 0.14880000000000002) 23.728813559322035px, rgba(0, 0, 0, 0.028999999999999998) 24.915254237288135px, rgba(0, 0, 0, 0.1631) 26.101694915254235px, rgba(0, 0, 0, 0.037599999999999995) 27.28813559322034px, rgba(0, 0, 0, 0.1325) 28.47457627118644px, rgba(0, 0, 0, 0.049) 29.66101694915254px, rgba(0, 0, 0, 0.158) 30.847457627118644px, rgba(0, 0, 0, 0.0088) 32.03389830508475px, rgba(0, 0, 0, 0.1479) 33.220338983050844px, rgba(0, 0, 0, 0.049100000000000005) 34.40677966101695px, rgba(0, 0, 0, 0.1309) 35.59322033898305px, rgba(0, 0, 0, 0.022099999999999998) 36.77966101694915px, rgba(0, 0, 0, 0.166) 37.96610169491525px, rgba(0, 0, 0, 0.0528) 39.152542372881356px, rgba(0, 0, 0, 0.1377) 40.33898305084745px, rgba(0, 0, 0, 0.008) 41.52542372881356px, rgba(0, 0, 0, 0.1333) 42.71186440677966px, rgba(0, 0, 0, 0.046799999999999994) 43.89830508474576px, rgba(0, 0, 0, 0.1711) 45.08474576271186px, rgba(0, 0, 0, 0.0218) 46.271186440677965px, rgba(0, 0, 0, 0.17370000000000002) 47.45762711864407px, rgba(0, 0, 0, 0.0227) 48.644067796610166px, rgba(0, 0, 0, 0.1714) 49.83050847457627px, rgba(0, 0, 0, 0.0482) 51.016949152542374px, rgba(0, 0, 0, 0.1578) 52.20338983050847px, rgba(0, 0, 0, 0.0197) 53.389830508474574px, rgba(0, 0, 0, 0.1483) 54.57627118644068px, rgba(0, 0, 0, 0.0436) 55.762711864406775px, rgba(0, 0, 0, 0.1624) 56.94915254237288px, rgba(0, 0, 0, 0.0426) 58.13559322033898px, rgba(0, 0, 0, 0.15130000000000002) 59.32203389830508px, rgba(0, 0, 0, 0.0453) 60.50847457627118px, rgba(0, 0, 0, 0.1557) 61.69491525423729px, rgba(0, 0, 0, 0.0438) 62.881355932203384px, rgba(0, 0, 0, 0.1678) 64.0677966101695px, rgba(0, 0, 0, 0.008100000000000001) 65.25423728813558px, rgba(0, 0, 0, 0.1766) 66.44067796610169px, rgba(0, 0, 0, 0.042300000000000004) 67.62711864406779px, rgba(0, 0, 0, 0.1411) 68.8135593220339px, rgba(0, 0, 0, 0.0391) 70px);
+        border-radius: 100%;
+        animation: wabble 15s infinite alternate ease-in-out;
+    }
+
+    animation: wiggle 30ms infinite;
+
+    @keyframes wabble {
+        0% {
+            opacity: 0.5;
+            transform: scale(1.4);
+        }
+
+        50% {
+            opacity: 0.8;
+            transform: scale(1.2) rotate(180deg);
+        }
+
+        100% {
+            opacity: 0.5;
+            transform: scale(1) rotate(360deg);
+        }
+    }
+
+    @keyframes wiggle {
+        0% {
+            transform: rotate(0);
+        }
+
+        100% {
+            transform: rotate(0.5deg);
+        }
+    }
+
+    @keyframes rotate {
+        to {
+            --angle: 1turn;
+        }
+    }
+
+    animation: rotate 4s linear infinite;
+}
+
+.image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 48%;
+    height: 48%;
+
+    margin-left: calc(-48% / 2);
+    margin-top: calc(-48% / 2);
+    border-radius: 100%;
+    object-fit: contain;
+    object-position: center;
+    opacity: 0;
+    user-select: none;
+    border: none;
+
+    will-change: opacity, transform;
+
+    animation: spin 4s infinite linear;
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg) translateZ(0) rotateZ(360deg);
+        }
+
+        to {
+            transform: rotate(360deg) translateZ(0) rotateZ(360deg);
+        }
+    }
+}
+
+.decorator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 48%;
+    height: 48%;
+    margin-left: calc(-48% / 2);
+    margin-top: calc(-48% / 2);
+    border-radius: 100%;
+    background: radial-gradient(circle closest-side,
+            rgb(0 0 0 / 0.8) 5%,
+            transparent 5.5%,
+            transparent 96%,
+            rgb(100% 100% 100% / 0.5) 96.5%);
+}
