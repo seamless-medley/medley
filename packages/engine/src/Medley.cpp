@@ -84,10 +84,13 @@ Medley::~Medley() {
     loadingThread.stopThread(100);
     readAheadThread.stopThread(100);
     visualizationThread.stopThread(100);
+    audioInterceptionThread.stopThread(100);
 
     deviceMgr.closeAudioDevice();
 
-    // Decks are automatically deleted by unique_ptr
+    for (auto& deck : decks) {
+        deck.reset();
+    }
 }
 
 Medley::SupportedFormats::SupportedFormats()
