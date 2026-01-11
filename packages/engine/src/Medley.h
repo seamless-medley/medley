@@ -363,6 +363,7 @@ private:
     double maximumFadeOutDuration{};
 
     std::atomic<int> forceFadingOut{0};
+    std::atomic<bool> enqueueInProgress{false};
 
     CriticalSection callbackLock;
     ListenerList<Callback> listeners;
