@@ -48,14 +48,3 @@ export function useSurrogate<
 
   return state as SurrogateState<T>;
 }
-
-/**
- *
- * @deprecated
- */
-export function useSurrogateWithRemotable<Kind extends keyof RemoteObjects>(kind: Kind, id: string) {
-  const { surrogate: remote, error } = useSurrogate(kind, id);
-  const values = useRemotableProps(remote);
-
-  return [remote, values, error] as const;
-}
