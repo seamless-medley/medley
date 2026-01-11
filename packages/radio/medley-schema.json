@@ -172,7 +172,7 @@
               "markdownDescription": "See: [Driver Documentation](https://www.mongodb.com/docs/manual/reference/connection-string)"
             },
             "metadataTTL": {
-              "description": "Time-To-Live for music metadata",
+              "markdownDescription": "**Deprecated:** No longer used\n\nTime-To-Live for music metadata",
               "type": "object",
               "properties": {
                 "min": {

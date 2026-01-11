@@ -33,12 +33,6 @@ let searchHistory;
 /** @type {Collection<TimestampedTrackRecord & { stationId: string }>} */
 let trackHistory;
 
-/** @type {[min: number, max: number]?} */
-let ttls = [
-  60 * 60 * 24 * 1,
-  60 * 60 * 24 * 1.5
-];
-
 const logger = createLogger({
   name: 'music-db',
   id: `thread-${threadId.toString().padStart(2, '0')}`
@@ -70,10 +64,6 @@ process.on('unhandledRejection', (e) => {
  * @param {Options} options
  */
 async function configure(options) {
-  if (options?.ttls) {
-    ttls = options.ttls;
-  }
-
   client?.removeAllListeners();
 
   client = new MongoClient(options.url, {
@@ -156,7 +146,6 @@ async function find(value, by) {
 
   const found = await musics.findOne({
     [by]: value,
-    expires: { $gte: Date.now() }
   }, { projection: { _id: 0 } })
   .catch((e) => {
     logError(e, `Error in findBy${capitalize(by)} (${value})`);
@@ -167,7 +156,7 @@ async function find(value, by) {
   }
 
   // @ts-ignore
-  return omitBy(found, (v, p) => ['expires', 'path'].includes(p));
+  return omitBy(found, (v, p) => ['path'].includes(p));
 }
 
 /**
@@ -212,11 +201,6 @@ async function findByComment(field, value, options) {
         [`comments.${field}`]: {
           $in: [value]
         }
-      }
-    },
-    {
-      $sort: {
-        expires: -1
       }
     }
   ];
@@ -265,8 +249,7 @@ const update = async (trackId, fields) => {
   await musics.updateOne({ trackId },
     {
       $set: {
-        ...track,
-        expires: ttls ? Date.now() + random(...ttls) * 1000 : undefined
+        ...track
       }
     },
     { upsert: true }
@@ -445,10 +428,7 @@ const search_unmatchedItems = async(stationId) => {
         stationId,
         ...record
       }
-    )
-    .catch((e) => {
-
-    });
+    );
   }
   catch (e) {
     logError(e, 'Error in TrackHistory::add, while inserting');

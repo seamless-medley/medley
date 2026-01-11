@@ -9,12 +9,6 @@ export type Options = {
   connectionOptions?: MongoClientOptions;
 
   database: string;
-
-  /**
-   * TTL in seconds, default to 24,36 hours
-   * @default [86400,129600]  (24,36 hours)
-   */
-   ttls?: [min: number, max: number];
 }
 
 type PrefixRemap<Prefix extends string, T> = {

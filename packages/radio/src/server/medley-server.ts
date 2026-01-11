@@ -272,11 +272,7 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
       await musicDb.init({
         url: dbConfig.url,
         database: dbConfig.database,
-        connectionOptions: dbConfig.connectionOptions,
-        ttls: [
-          dbConfig.metadataTTL?.min ?? 60 * 60 * 24 * 7,
-          dbConfig.metadataTTL?.max ?? 60 * 60 * 24 * 12,
-        ]
+        connectionOptions: dbConfig.connectionOptions
       });
 
       await db.init({

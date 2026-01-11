@@ -41,13 +41,7 @@ export const MongoDbConfig = z.object({
   driver: z.literal('mongodb'),
   url: z.string().min(1),
   database: z.string().min(1),
-  connectionOptions: MongoClientOptions.optional(),
-  metadataTTL: z.object({
-      min: z.number().nonnegative(),
-      max: z.number().nonnegative(),
-    })
-    .refine(({ min, max }) => min <= max, { message: 'Time-To-Live values are invalid, min <= max' })
-    .optional()
+  connectionOptions: MongoClientOptions.optional()
 }).strict();
 
 
