@@ -1,6 +1,6 @@
 {
   "name": "@seamless-medley/ui",
-  "version": "0.1.1-pre.0",
+  "version": "0.1.1-pre.1",
   "type": "module",
   "scripts": {
     "dev": "vite --port 9586 --host",
