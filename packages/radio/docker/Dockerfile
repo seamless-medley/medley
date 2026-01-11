@@ -1,6 +1,6 @@
 FROM node:24.12.0-bookworm AS builder
 
-RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@10.27.0
+RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@10.28.0
 
 # install build dependencies
 RUN apt update \
