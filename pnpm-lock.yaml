@@ -101,8 +101,8 @@ importers:
         specifier: ^2.3.0
         version: 2.5.1
       '@seamless-medley/medley':
-        specifier: 0.5.4
-        version: 0.5.4
+        specifier: 0.5.5-alpha.1
+        version: 0.5.5-alpha.1
       '@seamless-medley/remote':
         specifier: ../remote
         version: link:../remote
@@ -1912,6 +1912,10 @@ packages:
 
   '@seamless-medley/medley@0.5.4':
     resolution: {integrity: sha512-VI1wtaoAyH8a3n7Cfb29yBS/js1MLtkgWcMxKwMNBWoBjiFlKu2+cf2TNAsHNJNpGXceTkw70oM0DVCDuvVjlA==}
+    engines: {node: '>=18'}
+
+  '@seamless-medley/medley@0.5.5-alpha.1':
+    resolution: {integrity: sha512-Rdo4AO05vsgT4TeYraaoUa/eoLoptNpScTnWhI345d4OahOuX6XxCnpZ87orw1BVSUf1b/iMB53j43BsOgsRrg==}
     engines: {node: '>=18'}
 
   '@sec-ant/readable-stream@0.4.1':
@@ -6767,6 +6771,10 @@ snapshots:
   '@sapphire/snowflake@3.5.5': {}
 
   '@seamless-medley/medley@0.5.4':
+    dependencies:
+      node-gyp-build: 4.8.4
+
+  '@seamless-medley/medley@0.5.5-alpha.1':
     dependencies:
       node-gyp-build: 4.8.4
 
