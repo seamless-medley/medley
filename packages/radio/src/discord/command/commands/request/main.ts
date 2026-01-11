@@ -184,22 +184,13 @@ export type RequestCommandQueryOptions = BaseRequestCommandOptions & {
   noHistory?: boolean;
 }
 
-/**
- * @deprecated
- */
-export type RequestCommandSpotifyTrackOptions = BaseRequestCommandOptions & {
-  type: 'spotify:track';
-  id: string;
-  title: string;
-}
-
 export type RequestCommandSpotifyArtistOptions = BaseRequestCommandOptions & {
   type: 'spotify:artist';
   id: string;
   artist: string;
 }
 
-export type RequestCommandSpotifyOptions = RequestCommandSpotifyTrackOptions | RequestCommandSpotifyArtistOptions;
+export type RequestCommandSpotifyOptions = RequestCommandSpotifyArtistOptions;
 
 export type RequestCommandOptions = RequestCommandQueryOptions | RequestCommandSpotifyOptions;
 
@@ -401,13 +392,6 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
         return uniqBy(foundTracks, t => t.id);
       }
 
-      /**
-       * @deprecated This is not so useful since a spotify track can be resovled to a track id at the spotify url detection stage
-       * and should perform an advanced track search instead when a track could not be found
-       */
-      case 'spotify:track':
-        return station.findTracksByComment(options.type, options.id, { valueDelimiter: ',' });
-
       case 'spotify:artist': {
         const exactMatches = await station.findTracksByComment(
           options.type,
@@ -451,9 +435,6 @@ export const handleRequestCommand = async (options: RequestCommandOptions) => {
 
         case 'spotify:artist':
           return [['artist', options.artist]];
-
-        case 'spotify:track':
-          return [['title', options.title]];
       }
     })();
 
