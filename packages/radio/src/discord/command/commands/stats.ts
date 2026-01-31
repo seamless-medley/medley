@@ -3,6 +3,7 @@ import { AutomatonPermissionError, CommandDescriptor, InteractionHandlerFactory,
 import { AutomatonAccess, MedleyAutomaton } from "../../automaton";
 import { deny, joinStrings, reply } from "../utils";
 import { Station } from "../../../core";
+import { getVersion } from "../../../helper";
 
 const declaration: SubCommandLikeOption = {
   type: OptionType.SubCommand,
@@ -56,6 +57,10 @@ async function showFullStats(interaction: ChatInputCommandInteraction, automaton
   const lines: string[] = [];
 
   const intl = new Intl.NumberFormat();
+
+  lines.push(
+    `# Version: ${getVersion()}`
+  );
 
   lines.push(
     '# Stats:',
