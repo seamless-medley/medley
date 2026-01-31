@@ -69,7 +69,7 @@ export class ShoutAdapter extends FFMpegAdapter {
       outputFormat,
       icecast: {
         tls: false,
-        userAgent: `Medley/${getVersion()}`,
+        userAgent: `Medley/${getVersion().replace(/\s/, '_')}`,
         ...icecast
       },
       fx

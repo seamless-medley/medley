@@ -229,7 +229,7 @@ export class IcyAdapter extends FFMpegAdapter {
       }
     });
 
-    const version = getVersion();
+    const version = getVersion().replace(/\s/, '_');
 
     const resHeaders: OutgoingHttpHeaders = {
       'Connection': 'close',
