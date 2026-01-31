@@ -348,7 +348,7 @@ const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef
   const [colors, setColors] = useState<string[]>([]);
 
   const createColors = useCallback(async () => cover
-    ? (await prominent(cover, { format: 'hex', amount: 6, group: 40, sample: 30 })) as string[]
+    ? (await prominent(cover, { format: 'hex', amount: 6, group: 30, sample: 24 })) as string[]
     : chain(6).times().map(i => adjustHue((i - 3) * random(15, 20), hsl(random(360), random(0.5, 0.9, true), random(0.6, 0.8, true)))).value()
   , [cover]);
 
