@@ -40,7 +40,7 @@ const main = async () => {
   initRoot().render(
     // <React.StrictMode>
       <MantineProvider theme={theme} forceColorScheme="dark" classNamesPrefix="medley">
-        <ContextMenuProvider shadow="lg" borderRadius="sm" repositionOnRepeat>
+        <ContextMenuProvider shadow="0 0 1.2em 0 rgb(0 0 0 / 0.5)" borderRadius="sm" repositionOnRepeat>
           <RouterProvider router={router} />
         </ContextMenuProvider>
         <Notifications />
