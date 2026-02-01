@@ -9,31 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './root'
-import { Route as layoutRouteImport } from './layout'
+import { Route as mainLayoutRouteImport } from './main-layout'
 import { Route as homeHomePageRouteRouteImport } from './home/HomePage/route'
 import { Route as djLayoutRouteImport } from './dj/layout'
 import { Route as playPlayPageRouteRouteImport } from './play/PlayPage/route'
 import { Route as djDJConsolePageRouteRouteImport } from './dj/DJConsolePage/route'
 import { Route as djCollectionPageRouteRouteImport } from './dj/CollectionPage/route'
 
-const layoutRoute = layoutRouteImport.update({
+const mainLayoutRoute = mainLayoutRouteImport.update({
   id: '/_layout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const homeHomePageRouteRoute = homeHomePageRouteRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => layoutRoute,
+  getParentRoute: () => mainLayoutRoute,
 } as any)
 const djLayoutRoute = djLayoutRouteImport.update({
   id: '/dj/_dj-layout',
   path: '/dj',
-  getParentRoute: () => layoutRoute,
+  getParentRoute: () => mainLayoutRoute,
 } as any)
 const playPlayPageRouteRoute = playPlayPageRouteRouteImport.update({
   id: '/play/$station',
   path: '/play/$station',
-  getParentRoute: () => layoutRoute,
+  getParentRoute: () => mainLayoutRoute,
 } as any)
 const djDJConsolePageRouteRoute = djDJConsolePageRouteRouteImport.update({
   id: '/$station/',
@@ -62,7 +62,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_layout': typeof layoutRouteWithChildren
+  '/_layout': typeof mainLayoutRouteWithChildren
   '/_layout/': typeof homeHomePageRouteRoute
   '/_layout/play/$station': typeof playPlayPageRouteRoute
   '/_layout/dj/_dj-layout': typeof djLayoutRouteWithChildren
@@ -95,7 +95,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  layoutRoute: typeof layoutRouteWithChildren
+  mainLayoutRoute: typeof mainLayoutRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -104,7 +104,7 @@ declare module '@tanstack/react-router' {
       id: '/_layout'
       path: ''
       fullPath: ''
-      preLoaderRoute: typeof layoutRouteImport
+      preLoaderRoute: typeof mainLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_layout/': {
@@ -112,21 +112,21 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof homeHomePageRouteRouteImport
-      parentRoute: typeof layoutRoute
+      parentRoute: typeof mainLayoutRoute
     }
     '/_layout/dj/_dj-layout': {
       id: '/_layout/dj/_dj-layout'
       path: '/dj'
       fullPath: '/dj'
       preLoaderRoute: typeof djLayoutRouteImport
-      parentRoute: typeof layoutRoute
+      parentRoute: typeof mainLayoutRoute
     }
     '/_layout/play/$station': {
       id: '/_layout/play/$station'
       path: '/play/$station'
       fullPath: '/play/$station'
       preLoaderRoute: typeof playPlayPageRouteRouteImport
-      parentRoute: typeof layoutRoute
+      parentRoute: typeof mainLayoutRoute
     }
     '/_layout/dj/_dj-layout/$station/': {
       id: '/_layout/dj/_dj-layout/$station/'
@@ -159,23 +159,24 @@ const djLayoutRouteWithChildren = djLayoutRoute._addFileChildren(
   djLayoutRouteChildren,
 )
 
-interface layoutRouteChildren {
+interface mainLayoutRouteChildren {
   homeHomePageRouteRoute: typeof homeHomePageRouteRoute
   playPlayPageRouteRoute: typeof playPlayPageRouteRoute
   djLayoutRoute: typeof djLayoutRouteWithChildren
 }
 
-const layoutRouteChildren: layoutRouteChildren = {
+const mainLayoutRouteChildren: mainLayoutRouteChildren = {
   homeHomePageRouteRoute: homeHomePageRouteRoute,
   playPlayPageRouteRoute: playPlayPageRouteRoute,
   djLayoutRoute: djLayoutRouteWithChildren,
 }
 
-const layoutRouteWithChildren =
-  layoutRoute._addFileChildren(layoutRouteChildren)
+const mainLayoutRouteWithChildren = mainLayoutRoute._addFileChildren(
+  mainLayoutRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
-  layoutRoute: layoutRouteWithChildren,
+  mainLayoutRoute: mainLayoutRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
