@@ -4,6 +4,22 @@
     inherits: false;
 }
 
+a {
+  color: var(--mantine-color-anchor);
+  transition: color 0.6s ease;
+}
+
+a:hover {
+  color: var(--mantine-primary-color-2);
+}
+
+:root {
+  @mixin dark-root {
+    --mantine-color-body: var(--mantine-color-dark-9);
+    --mantine-color-anchor: var(--mantine-primary-color-4);
+  }
+}
+
 .contextmenu {
     outline: 1px solid var(--mantine-color-gray-8);
 }
