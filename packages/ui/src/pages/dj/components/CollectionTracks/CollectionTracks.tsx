@@ -173,7 +173,7 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
   return (
     <Flex ref={tableRef} mih={0} className={classes.container}>
       <Table>
-        <Table.Thead pos="sticky" bg="dark.8">
+        <Table.Thead pos="sticky" bg="dark.7">
           <Table.Tr display="flex" fw='bold'>
             <Table.Td w="50%">
               Artist
