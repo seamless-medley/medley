@@ -58,6 +58,7 @@ const Sidebar = () => {
               from={DJConsoleRoute.fullPath}
               to={CollectionRoute.fullPath}
               params={{ collectionId: id } as any}
+              noWrap
             />
         ))}
       </NavLink>
