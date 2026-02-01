@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { CSSProperties, useCallback, useState } from 'react';
 import { Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image, Text, Flex, rem } from '@mantine/core';
 import { IconVinyl } from '@tabler/icons-react';
 import { useForm } from '@tanstack/react-form';
@@ -108,7 +108,12 @@ function PlaybackInfo() {
   const name = useRemotableProp(station, 'name');
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
   const info = useDeckInfo(stationId, activeDeck, 'trackPlay');
-  const { cover } = useDeckCover(stationId, activeDeck);
+  const { cover, colors } = useDeckCover(stationId, activeDeck, {
+    amount: 6,
+    sample: 30,
+    group: 40,
+    getDefaultColors: () => ['transparent']
+  });
   const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
 
   const title = trackPlay?.track?.extra?.tags?.title;
@@ -124,6 +129,7 @@ function PlaybackInfo() {
           boxShadow: '0px 0px 34px 0px var(--mantine-color-dark-9)',
           transition: { duration: 0.4, delay: 0.2  }
         }}
+        style={{ '--colors': [...colors, ...[...colors].reverse()].join(', ') as CSSProperties}}
       >
         <AnimatePresence mode="wait">
           <Image component={motion.img}

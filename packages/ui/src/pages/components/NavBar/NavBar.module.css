@@ -37,14 +37,25 @@
     flex: 1 0 auto;
 
     & .image-box {
-        background-color: transparent;
+        border: 1px solid transparent;
+        border-radius: 10%;
+        overflow: hidden;
+        background: linear-gradient(black) padding-box, conic-gradient(from var(--angle), var(--colors)) border-box;
+
         transform-origin: 0 0;
         z-index: 10;
+
+        @keyframes rotate {
+            to {
+                --angle: 1turn;
+            }
+        }
+
+        animation: rotate 6s linear infinite;
 
         & img {
             width: 70px;
             height: 70px;
-            border-radius: 2px;
             object-fit: cover;
         }
     }
