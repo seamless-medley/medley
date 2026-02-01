@@ -12,7 +12,7 @@ const PlayHeadChar: React.FC<TextProps & { children: string }> = ({ children: te
 )
 
 type PlayHeadTextProps = TextProps & {
-  stationId: string;
+  stationId?: string;
   deckIndex: DeckIndex;
   showDuration?: boolean;
 }
