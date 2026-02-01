@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AppShell, Box, NavLink } from '@mantine/core'
+import { Box, Flex, NavLink, Stack } from '@mantine/core'
 import { createFileRoute, Link, Outlet, useMatchRoute, useParams } from '@tanstack/react-router'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
 import { TopBar } from './components/TopBar';
@@ -35,6 +35,7 @@ const Sidebar = () => {
   useEffect(() => {
     atCollection && setShowingCollections(true)
   }, [atCollection]);
+
   return (
     <OverlayScrollbarsComponent>
       <NavLink
@@ -68,35 +69,20 @@ const Layout = () => {
   const params = useParams({ strict: false });
 
   return (
-    <AppShell
-      header={{ height: 60 }}
-      navbar={{
-        width: 200,
-        breakpoint: 20,
-        collapsed: {
-          mobile: false,
-          desktop: false
-        },
-      }}
-    >
-      <AppShell.Header>
-        Nav
-      </AppShell.Header>
-
-      <AppShell.Navbar p="sm" style={{ overflow: 'hidden', textWrap: 'wrap', wordBreak: 'break-word' }}>
-        <Sidebar />
-      </AppShell.Navbar>
-
-      <AppShell.Main>
-        <Box style={{ position: 'sticky', top: 60, height: 200, zIndex: 100 }} >
-          <TopBar stationId={params.station || ''} />
+    <>
+      <Flex>
+        <Box style={{ position: 'sticky', top: 80, height: 200, width: 300, zIndex: 10 }}>
+          <Sidebar />
         </Box>
-
-        <Outlet />
-      </AppShell.Main>
-
-    </AppShell>
-  )
+        <Stack w='100%'>
+          <Box style={{ position: 'sticky', top: 80, height: 200, zIndex: 10 }} >
+            <TopBar stationId={params.station || ''} />
+          </Box>
+          <Outlet />
+        </Stack>
+      </Flex>
+    </>
+  );
 }
 
 export const Route = createFileRoute('/_layout/dj/_dj-layout')({
