@@ -14,7 +14,7 @@ export type VUMeterProps = {
   peakWidth?: number;
 }
 
-export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidth = 2 }) => {
+export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidth = 2 * 5 }) => {
   const elementSize = useElementSize();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const elementRef = useMergedRef(elementSize.ref, canvasRef);
@@ -30,8 +30,8 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
   useEffect(() => {
     if (ctxRef.current) {
       const grad = orientation === 'horizontal'
-        ? ctxRef.current.createLinearGradient(0, 0, elementSize.width, elementSize.height)
-        : ctxRef.current.createLinearGradient(elementSize.width, elementSize.height, 0, 0)
+        ? ctxRef.current.createLinearGradient(0, 0, elementSize.width * 10, elementSize.height)
+        : ctxRef.current.createLinearGradient(elementSize.width, elementSize.height * 10, 0, 0)
 
       grad.addColorStop(0.1, transparentize('0.9', theme.colors.green[5]));
       grad.addColorStop(0.4, transparentize('0.5', theme.colors.green[5]));
@@ -168,8 +168,8 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
   return (
     <canvas
       ref={elementRef}
-      width={elementSize.width}
-      height={elementSize.height}
+      width={elementSize.width * 10}
+      height={elementSize.height * 10}
       style={{
         position: 'absolute',
         width: '100%',
