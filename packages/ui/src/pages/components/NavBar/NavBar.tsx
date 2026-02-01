@@ -12,8 +12,8 @@ import { useDeckCover, useDeckInfo } from '@ui/hooks/useDeck';
 import { AnimatePresence, motion } from 'motion/react';
 import { TransitionText } from '@ui/components/TransitionText';
 import { PlayHeadText } from '@ui/components/PlayHeadText';
+import { VUBar } from '@ui/components/VUBar';
 import classes from './NavBar.module.css';
-import { VUBar } from '../VUBar';
 
 const LoginButton = () => {
   const [opened, setOpened] = useState(false);
