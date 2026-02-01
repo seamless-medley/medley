@@ -4,7 +4,7 @@ import { PlayPage as component } from './PlayPage';
 import { client } from "@ui/init";
 import { Alert, Container, Title } from "@mantine/core";
 
-export const Route = createFileRoute('/_normal-layout/play/$station')({
+export const Route = createFileRoute('/_layout/play/$station')({
   component,
   loader: ({ params }) => client.remoteGet('station', params.station, 0, 'id').catch(notFound),
   notFoundComponent: () => (

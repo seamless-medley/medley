@@ -94,7 +94,7 @@ const Layout = () => {
   )
 }
 
-export const Route = createFileRoute('/dj/_dj-layout')({
+export const Route = createFileRoute('/_layout/dj/_dj-layout')({
   component: Layout
 });
 

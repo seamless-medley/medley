@@ -15,6 +15,6 @@ const Layout = () => {
   )
 }
 
-export const Route = createFileRoute('/_normal-layout')({
+export const Route = createFileRoute('/_layout')({
   component: Layout,
 })
