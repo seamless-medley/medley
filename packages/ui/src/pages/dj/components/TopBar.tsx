@@ -179,12 +179,7 @@ const Cover: React.FC<StationIdProps> = React.memo(({ stationId }) => {
 
   return (
     <Box component={motion.div}
-      style={{ aspectRatio: 1, zIndex: 10, overflow: 'visible' }}
-      whileHover={{
-        scale: 1.6,
-        boxShadow: '0px 0px 34px 0px var(--mantine-color-dark-6)',
-        transition: { duration: 0.4, delay: 0.2  }
-      }}
+      style={{ aspectRatio: 1 }}
     >
       <AnimatePresence mode="wait">
         <Image component={motion.img}
