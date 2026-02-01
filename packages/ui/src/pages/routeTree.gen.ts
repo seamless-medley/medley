@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './root'
 import { Route as mainLayoutRouteImport } from './main-layout'
 import { Route as homeHomePageRouteRouteImport } from './home/HomePage/route'
-import { Route as djLayoutRouteImport } from './dj/layout'
+import { Route as djDjLayoutRouteImport } from './dj/dj-layout'
 import { Route as playPlayPageRouteRouteImport } from './play/PlayPage/route'
 import { Route as djDJConsolePageRouteRouteImport } from './dj/DJConsolePage/route'
 import { Route as djCollectionPageRouteRouteImport } from './dj/CollectionPage/route'
@@ -25,7 +25,7 @@ const homeHomePageRouteRoute = homeHomePageRouteRouteImport.update({
   path: '/',
   getParentRoute: () => mainLayoutRoute,
 } as any)
-const djLayoutRoute = djLayoutRouteImport.update({
+const djDjLayoutRoute = djDjLayoutRouteImport.update({
   id: '/dj/_dj-layout',
   path: '/dj',
   getParentRoute: () => mainLayoutRoute,
@@ -38,25 +38,25 @@ const playPlayPageRouteRoute = playPlayPageRouteRouteImport.update({
 const djDJConsolePageRouteRoute = djDJConsolePageRouteRouteImport.update({
   id: '/$station/',
   path: '/$station/',
-  getParentRoute: () => djLayoutRoute,
+  getParentRoute: () => djDjLayoutRoute,
 } as any)
 const djCollectionPageRouteRoute = djCollectionPageRouteRouteImport.update({
   id: '/$station/collection/$collectionId',
   path: '/$station/collection/$collectionId',
-  getParentRoute: () => djLayoutRoute,
+  getParentRoute: () => djDjLayoutRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof homeHomePageRouteRoute
   '/play/$station': typeof playPlayPageRouteRoute
-  '/dj': typeof djLayoutRouteWithChildren
+  '/dj': typeof djDjLayoutRouteWithChildren
   '/dj/$station': typeof djDJConsolePageRouteRoute
   '/dj/$station/collection/$collectionId': typeof djCollectionPageRouteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof homeHomePageRouteRoute
   '/play/$station': typeof playPlayPageRouteRoute
-  '/dj': typeof djLayoutRouteWithChildren
+  '/dj': typeof djDjLayoutRouteWithChildren
   '/dj/$station': typeof djDJConsolePageRouteRoute
   '/dj/$station/collection/$collectionId': typeof djCollectionPageRouteRoute
 }
@@ -65,7 +65,7 @@ export interface FileRoutesById {
   '/_layout': typeof mainLayoutRouteWithChildren
   '/_layout/': typeof homeHomePageRouteRoute
   '/_layout/play/$station': typeof playPlayPageRouteRoute
-  '/_layout/dj/_dj-layout': typeof djLayoutRouteWithChildren
+  '/_layout/dj/_dj-layout': typeof djDjLayoutRouteWithChildren
   '/_layout/dj/_dj-layout/$station/': typeof djDJConsolePageRouteRoute
   '/_layout/dj/_dj-layout/$station/collection/$collectionId': typeof djCollectionPageRouteRoute
 }
@@ -118,7 +118,7 @@ declare module '@tanstack/react-router' {
       id: '/_layout/dj/_dj-layout'
       path: '/dj'
       fullPath: '/dj'
-      preLoaderRoute: typeof djLayoutRouteImport
+      preLoaderRoute: typeof djDjLayoutRouteImport
       parentRoute: typeof mainLayoutRoute
     }
     '/_layout/play/$station': {
@@ -133,42 +133,42 @@ declare module '@tanstack/react-router' {
       path: '/$station'
       fullPath: '/dj/$station'
       preLoaderRoute: typeof djDJConsolePageRouteRouteImport
-      parentRoute: typeof djLayoutRoute
+      parentRoute: typeof djDjLayoutRoute
     }
     '/_layout/dj/_dj-layout/$station/collection/$collectionId': {
       id: '/_layout/dj/_dj-layout/$station/collection/$collectionId'
       path: '/$station/collection/$collectionId'
       fullPath: '/dj/$station/collection/$collectionId'
       preLoaderRoute: typeof djCollectionPageRouteRouteImport
-      parentRoute: typeof djLayoutRoute
+      parentRoute: typeof djDjLayoutRoute
     }
   }
 }
 
-interface djLayoutRouteChildren {
+interface djDjLayoutRouteChildren {
   djDJConsolePageRouteRoute: typeof djDJConsolePageRouteRoute
   djCollectionPageRouteRoute: typeof djCollectionPageRouteRoute
 }
 
-const djLayoutRouteChildren: djLayoutRouteChildren = {
+const djDjLayoutRouteChildren: djDjLayoutRouteChildren = {
   djDJConsolePageRouteRoute: djDJConsolePageRouteRoute,
   djCollectionPageRouteRoute: djCollectionPageRouteRoute,
 }
 
-const djLayoutRouteWithChildren = djLayoutRoute._addFileChildren(
-  djLayoutRouteChildren,
+const djDjLayoutRouteWithChildren = djDjLayoutRoute._addFileChildren(
+  djDjLayoutRouteChildren,
 )
 
 interface mainLayoutRouteChildren {
   homeHomePageRouteRoute: typeof homeHomePageRouteRoute
   playPlayPageRouteRoute: typeof playPlayPageRouteRoute
-  djLayoutRoute: typeof djLayoutRouteWithChildren
+  djDjLayoutRoute: typeof djDjLayoutRouteWithChildren
 }
 
 const mainLayoutRouteChildren: mainLayoutRouteChildren = {
   homeHomePageRouteRoute: homeHomePageRouteRoute,
   playPlayPageRouteRoute: playPlayPageRouteRoute,
-  djLayoutRoute: djLayoutRouteWithChildren,
+  djDjLayoutRoute: djDjLayoutRouteWithChildren,
 }
 
 const mainLayoutRouteWithChildren = mainLayoutRoute._addFileChildren(

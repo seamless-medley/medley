@@ -8,7 +8,7 @@ export const routes = rootRoute('root.tsx', [
     ]),
 
     route('/dj', [
-      layout('dj-layout', 'dj/layout.tsx', [
+      layout('dj-layout', 'dj/dj-layout.tsx', [
         route('/$station', [
           index('dj/DJConsolePage/route.tsx'),
           route('/collection/$collectionId', 'dj/CollectionPage/route.tsx')
