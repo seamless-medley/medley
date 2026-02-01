@@ -49,7 +49,7 @@ export function useDeckCover(stationId: string | undefined, index: DeckIndex | u
       const coverUrl = client.getURLForBuffer(trackPlay?.uuid, { buffer: newCover, type: coverMimeType});
       updateCover(coverUrl);
 
-      const coverColors = (colorOptions) ? await prominent(coverUrl, { ...colors, format: 'hex' }) as string[] : undefined;
+      const coverColors = (colorOptions) ? await prominent(coverUrl, { ...colorOptions, format: 'hex' }) as string[] : undefined;
       setColors(typeof coverColors === 'string' ? [coverColors as unknown as string] : coverColors);
 
     } else {
