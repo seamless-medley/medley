@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { Box, Flex, FlexProps, MantineStyleProps } from "@mantine/core";
+import { Box, Flex, FlexProps, MantineSpacing, MantineStyleProps } from "@mantine/core";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { parseToRgb, rgbToColorString, transparentize } from "polished";
 import { easeOut } from "motion/react";
@@ -33,7 +33,7 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
         ? ctxRef.current.createLinearGradient(0, 0, elementSize.width * 10, elementSize.height)
         : ctxRef.current.createLinearGradient(elementSize.width, elementSize.height * 10, 0, 0)
 
-      grad.addColorStop(0.1, transparentize('0.9', theme.colors.green[5]));
+      grad.addColorStop(0.1, transparentize('0.97', theme.colors.green[5]));
       grad.addColorStop(0.4, transparentize('0.5', theme.colors.green[5]));
       grad.addColorStop(0.8, theme.colors.green[5]);
       grad.addColorStop(0.94, theme.colors.yellow[5]);
@@ -79,15 +79,14 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
     }
 
     const w = orientation === 'horizontal' ? ctx.canvas.width : ctx.canvas.height;
-    const h = orientation === 'horizontal' ? ctx.canvas.height : ctx.canvas.width;
 
     ctx.fillStyle = theme.colors.dark[8];
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     ctx.fillStyle = grad;
-
     ctx.globalAlpha = 0.12;
+
     fillRect(ctx,
       0,
       w
@@ -106,7 +105,7 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
 
     if (data?.reduction) {
       ctx.globalAlpha = 0.8;
-      ctx.fillStyle = theme.colors.grape[8];
+      ctx.fillStyle = theme.colors.grape[4];
       fillRect(ctx,
         data.reduction * w,
         w
@@ -114,9 +113,9 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
     }
 
     const peakColor = parseToRgb((peakDb >= -3)
-      ? theme.colors.red[8]
+      ? theme.colors.red[4]
       : (peakDb >= -6)
-        ? theme.colors.yellow[8]
+        ? theme.colors.yellow[4]
         : '#ffffff');
 
     const now = performance.now();
@@ -181,19 +180,27 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
   );
 }
 
-export const VUBar: React.FC<{ size?: number; orientation: VUMeterProps['orientation'] }> = ({ orientation, size = 6 }) => {
-  const sizeProp = orientation === 'horizontal' ? 'h' : 'w';
-  const sizeProp2 = orientation === 'horizontal' ? 'w' : 'h';
+export type VUBarProps = {
+  size?: number;
+  gap?: MantineSpacing;
+  orientation: VUMeterProps['orientation']
+}
+
+export const VUBar: React.FC<VUBarProps> = ({ orientation, size = 6, gap }) => {
+  const mainProp = orientation === 'horizontal' ? 'h' : 'w';
+  const crossProp = orientation === 'horizontal' ? 'w' : 'h';
 
   const containerProp = {
     direction: (orientation === 'horizontal' ? 'column' : 'row') as FlexProps['direction'],
-    [sizeProp]: size * 2
+    [mainProp]: size * 2,
+    [crossProp]: '100%',
+    gap
   }
 
   const barProp = {
     pos: 'relative' as MantineStyleProps['pos'],
-    [sizeProp]: size,
-    [sizeProp2]: '100%'
+    [mainProp]: size,
+    [crossProp]: '100%'
   }
 
   return (
