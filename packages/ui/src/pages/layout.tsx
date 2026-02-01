@@ -5,12 +5,12 @@ import { NavBar } from './components/NavBar'
 const Layout = () => {
 
   return (
-    <>
+    <Box>
       <NavBar />
-      <Box pt={80}>
+      <Box pt='var(--navbar-height)'>
         <Outlet />
       </Box>
-    </>
+    </Box>
   )
 }
 

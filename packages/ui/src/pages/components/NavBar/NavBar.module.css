@@ -2,7 +2,7 @@
     position: fixed;
     padding: 0 1.5em;
     width: 100%;
-    height: 80px;
+    height: var(--navbar-height);
     background:
         linear-gradient(var(--mantine-color-body)) padding-box,
         linear-gradient(

@@ -4,6 +4,10 @@
     inherits: false;
 }
 
+:root {
+    --navbar-height: 80px;
+}
+
 a {
   color: var(--mantine-color-anchor);
   transition: color 0.6s ease;
