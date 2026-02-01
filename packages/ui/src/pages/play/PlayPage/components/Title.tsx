@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import _, { debounce } from 'lodash';
 import clsx from "clsx";
-import { AutoScroller } from "@ui/components/AutoScoller";
+import { AutoScroller } from "@ui/components/AutoScroller";
 import { Box } from "@mantine/core";
 import classes from './Title.module.css';
 

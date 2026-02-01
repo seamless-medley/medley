@@ -32,7 +32,7 @@ import { PlayHead } from "./components/PlayHead";
 
 import { Route } from "./route";
 import { AnimatePresence, motion, MotionNodeOptions } from "motion/react";
-import { AutoScroller } from "@ui/components/AutoScoller";
+import { AutoScroller } from "@ui/components/AutoScroller";
 import { IconHeadphones } from "@tabler/icons-react";
 import { usePlayingStationId } from "@ui/hooks/useClient";
 import classes from './PlayPage.module.css';

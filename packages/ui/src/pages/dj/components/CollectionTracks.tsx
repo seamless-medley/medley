@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Flex, Group, Table, px } from "@mantine/core";
 import { useDebouncedState } from "@mantine/hooks";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { AutoScroller } from "@ui/components/AutoScoller";
+import { AutoScroller } from "@ui/components/AutoScroller";
 import type { Collection, CollectionView, MetadataOnlyTrack, Remotable, TrackKind } from "@seamless-medley/remote";
 
 import { range } from "lodash";
