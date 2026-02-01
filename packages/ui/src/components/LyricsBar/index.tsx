@@ -1,0 +1,1 @@
+export { LyricsBar } from './LyricsBar';
