@@ -6,7 +6,6 @@ import { Link } from '@tanstack/react-router';
 import { usePlayingStationId, useSession } from '@ui/hooks/useClient';
 import { client } from '@ui/init';
 import logo from '@ui/logo.png';
-import { VUBar } from '../../dj/components/VUBar';
 import { useStation } from '@ui/hooks/useStation';
 import { useRemotableProp } from '@ui/hooks/remotable';
 import { useDeckCover, useDeckInfo } from '@ui/hooks/useDeck';
@@ -14,6 +13,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { TransitionText } from '@ui/components/TransitionText';
 import { PlayHeadText } from '@ui/components/PlayHeadText';
 import classes from './NavBar.module.css';
+import { VUBar } from '../VUBar';
 
 const LoginButton = () => {
   const [opened, setOpened] = useState(false);

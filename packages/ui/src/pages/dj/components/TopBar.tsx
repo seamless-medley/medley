@@ -16,8 +16,7 @@ import { client } from "@ui/init";
 import { PlayHeadText } from "@ui/components/PlayHeadText";
 import { TransitionText } from "@ui/components/TransitionText";
 import { LyricsBar } from "@ui/components/LyricsBar";
-
-import { VUBar } from "./VUBar";
+import { VUBar } from "@ui/pages/components/VUBar";
 import { DeckBanner } from "./DeckBanner";
 
 const VolumeControl: React.FC<{ color: string }> = ({ color }) => {
