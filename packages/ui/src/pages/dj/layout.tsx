@@ -69,19 +69,17 @@ const Layout = () => {
   const params = useParams({ strict: false });
 
   return (
-    <>
-      <Flex>
-        <Box style={{ position: 'sticky', top: 80, height: 200, width: 300, zIndex: 10 }}>
-          <Sidebar />
+    <Flex>
+      <Box style={{ position: 'sticky', height: 'calc(100cqh - var(--navbar-height))', top: 80, width: 300, zIndex: 10 }}>
+        <Sidebar />
+      </Box>
+      <Stack w='100%'>
+        <Box style={{ position: 'sticky', top: 80, height: 200, zIndex: 10 }} >
+          <TopBar stationId={params.station || ''} />
         </Box>
-        <Stack w='100%'>
-          <Box style={{ position: 'sticky', top: 80, height: 200, zIndex: 10 }} >
-            <TopBar stationId={params.station || ''} />
-          </Box>
-          <Outlet />
-        </Stack>
-      </Flex>
-    </>
+        <Outlet />
+      </Stack>
+    </Flex>
   );
 }
 
