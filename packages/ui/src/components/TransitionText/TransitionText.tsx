@@ -1,7 +1,7 @@
 import React, { CSSProperties, PropsWithChildren } from "react";
 import { Text, TextProps } from "@mantine/core";
 import { AnimatePresence, motion, Transition } from 'motion/react';
-import { AutoScroller } from "@ui/components/AutoScoller";
+import { AutoScroller } from "@ui/components/AutoScroller";
 
 type TransitionTextProps = PropsWithChildren<Omit<TextProps, 'style'>> & {
   className?: string;
