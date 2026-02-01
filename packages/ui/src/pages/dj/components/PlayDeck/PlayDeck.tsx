@@ -11,8 +11,8 @@ import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
 import { theme } from "@ui/theme";
 import { AutoScroller } from "@ui/components/AutoScroller";
 import { PlayHeadText } from "@ui/components/PlayHeadText";
-import { DJConsoleRoute } from "../DJConsolePage/route";
-import { CollectionRoute } from "../CollectionPage/route";
+import { DJConsoleRoute } from "../../DJConsolePage/route";
+import { CollectionRoute } from "../../CollectionPage/route";
 import classes from './PlayDeck.module.css';
 
 export type PlayDeckProps = {
