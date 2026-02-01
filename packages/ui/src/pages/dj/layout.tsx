@@ -30,6 +30,11 @@ const Sidebar = () => {
   const match = matchRoute({ to: CollectionRoute.fullPath });
   const atCollection = match && match.collectionId !== undefined;
 
+  const [isShowingCollections, setShowingCollections] = useState(atCollection);
+
+  useEffect(() => {
+    atCollection && setShowingCollections(true)
+  }, [atCollection]);
   return (
     <OverlayScrollbarsComponent>
       <NavLink
@@ -40,7 +45,7 @@ const Sidebar = () => {
         label="Station"
       />
 
-      <NavLink label="Collections" defaultOpened={atCollection}>
+      <NavLink label="Collections" opened={isShowingCollections} onClick={() => setShowingCollections(prev => !prev)}>
         {collections.map(({ id, description }) => (
             <NavLink
               key={id}
