@@ -207,30 +207,6 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
     setTitleText((tags ? formatTags(tags) : '')|| '');
   }, [trackPlay?.track?.extra?.tags]);
 
-  useEffect(() => {
-    const overrides = {
-      overflow: 'hidden',
-      'font-size': 'calc(100cqh / 30)'
-    }
-
-    const saved: Partial<Record<string, string>> = {};
-
-    for (const [prop, value] of Object.entries(overrides)) {
-      saved[prop] = document.body.style[prop as any];
-      document.body.style[prop as any] = value;
-    }
-
-    return () => {
-      for (const prop of Object.keys(overrides)) {
-        const value = saved[prop];
-
-        if (value !== undefined) {
-          document.body.style[prop as any] = value;
-        }
-      }
-    }
-  }, []);
-
   const colors = useMemo(() => {
     if (colorsProp.length < 6) {
       return undefined;
@@ -256,7 +232,7 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
   const simple = !!titleText && !cover && !lyrics?.timeline?.length;
 
   return (
-    <Box pos='relative' w='100%' h='100%' style={{ overflow: 'hidden' }}>
+    <Box pos='relative' w='100%' h='100%' style={{ overflow: 'hidden', fontSize: 'calc(100cqh / 30)' }}>
       {/* <Control>
         <Button onClick={() => client.playAudio(stationId) }>
           Listen
