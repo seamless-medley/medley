@@ -88,7 +88,7 @@ function HomeLogo() {
     <Group align="center" gap="sm">
       <Link to="/" style={{ textDecoration: 'none' }}>
         <Group align="center" gap="xs" wrap='nowrap'>
-          <Image src={logo} h={40} w="auto" fit="contain" />
+          <Image src={logo} h={65} w="auto" fit="contain" />
           <Title
             size="h3"
             fw={700}
