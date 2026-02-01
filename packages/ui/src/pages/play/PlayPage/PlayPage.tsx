@@ -1,19 +1,15 @@
-import { chain, random, sumBy } from "lodash";
-import { Ref, useCallback, useEffect, useMemo, useState } from "react";
+import { chain, sumBy } from "lodash";
+import { Ref, useEffect, useMemo, useState } from "react";
 import { Box, Button, Flex, Group, type MantineStyleProps, Stack, Text, Title as TextTitle } from "@mantine/core";
 import { useFullscreen, useSetState } from "@mantine/hooks";
 
 import {
-  adjustHue,
   setLightness,
   linearGradient,
   rgb,
   parseToHsl,
-  setSaturation,
-  hsl
+  setSaturation
 } from 'polished';
-
-import { prominent } from 'color.js'
 
 import { formatTags } from "@seamless-medley/utils";
 
@@ -36,6 +32,7 @@ import { AutoScroller } from "@ui/components/AutoScroller";
 import { IconHeadphones } from "@tabler/icons-react";
 import { usePlayingStationId } from "@ui/hooks/useClient";
 import classes from './PlayPage.module.css';
+import { randomColors } from "@ui/utils";
 
 const defaultCoverColors = [rgb(182, 244, 146), rgb(51, 139, 147)];
 
@@ -133,7 +130,7 @@ const StationLyrics: React.FC<StationLyricsProps> = ({ stationId, showTitle, sho
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck');
 
-  const cover = useDeckCover(stationId, activeDeck);
+  const { cover } = useDeckCover(stationId, activeDeck);
   const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
 
   const [coverProps, setCoverProps] = useSetState<CoverProps>({
@@ -343,16 +340,12 @@ type StationCoverAndLyricsProps = {
 const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef: ref, toggleFullscreen: toggle, stationId, fullscreen }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck');
-  const cover = useDeckCover(stationId, activeDeck);
-
-  const [colors, setColors] = useState<string[]>([]);
-
-  const createColors = useCallback(async () => cover
-    ? (await prominent(cover, { format: 'hex', amount: 6, group: 30, sample: 24 })) as string[]
-    : chain(6).times().map(i => adjustHue((i - 3) * random(15, 20), hsl(random(360), random(0.5, 0.9, true), random(0.6, 0.8, true)))).value()
-  , [cover]);
-
-  useEffect(() => void createColors().then(setColors), [cover]);
+  const { cover, colors } = useDeckCover(stationId, activeDeck, {
+    amount: 6,
+    group: 30,
+    sample: 24,
+    getDefaultColors: () => randomColors(6)
+  });
 
   const panelWidth: MantineStyleProps['w'] = {
     base: '100%',

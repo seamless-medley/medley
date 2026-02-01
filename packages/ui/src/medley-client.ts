@@ -18,6 +18,11 @@ import { Client } from "./client";
 import { KaraokeFx } from './audio/fx/karaoke';
 import { notifications } from '@mantine/notifications';
 
+export type GetUrlForBufferOptions = {
+  buffer?: Buffer<ArrayBufferLike>;
+  type?: string;
+}
+
 const logger = getLogger(['client', 'medley']);
 
 type MedleyClientEvents = {
@@ -306,7 +311,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     }
 
     if (deckInfo.trackPlay && cover && coverMimeType) {
-      this.#mediaSessionCover = this.getURLForBuffer(deckInfo.trackPlay.uuid, { buffer: cover, type: coverMimeType });
+      this.#mediaSessionCover = this.getURLForBuffer(deckInfo.trackPlay.uuid, { buffer: cover, type: coverMimeType })
     }
 
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -379,7 +384,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
   #urlForBufferMap = new Map<string, URLForBufferInfo>;
   #urlForBufferUrlMap = new Map<string, URLForBufferInfo>;
 
-  getURLForBuffer(id: string, { buffer, type }: { buffer: Buffer<ArrayBufferLike> | undefined, type?: string }) {
+  getURLForBuffer(id: string, { buffer, type }: GetUrlForBufferOptions) {
     if (this.#urlForBufferMap.has(id)) {
       const info = this.#urlForBufferMap.get(id)!;
       info.refCount++;
@@ -395,7 +400,7 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     }
 
     this.#urlForBufferMap.set(id, info);
-    this.#urlForBufferUrlMap.set(url, info)
+    this.#urlForBufferUrlMap.set(url, info);
 
     return url;
   }

@@ -1,4 +1,6 @@
 import type { DeckIndex } from "@seamless-medley/medley";
+import { chain, random } from "lodash";
+import { adjustHue, hsl } from "polished";
 import type { RgbColor } from "polished/lib/types/color";
 
 export const isSameRgb = (a: RgbColor, b: RgbColor) => !(
@@ -16,6 +18,8 @@ export function colorInterpolate(a: RgbColor, b: RgbColor, p: number): RgbColor 
     blue: lerp(a.blue, b.blue),
   }
 }
+
+export const randomColors = (n: number) => chain(n).times().map(i => adjustHue((i - (n/2)) * random(15, 20), hsl(random(360), random(0.5, 0.9, true), random(0.6, 0.8, true)))).value()
 
 export function createCssStrokeFx(size: number, color: string, options: { precision: number, unit: string }) {
   const { precision = 1, unit = 'px' } = options;

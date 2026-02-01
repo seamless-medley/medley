@@ -175,7 +175,7 @@ const Cover: React.FC<StationIdProps> = React.memo(({ stationId }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
   const info = useDeckInfo(stationId, activeDeck, 'trackPlay');
-  const cover = useDeckCover(stationId, activeDeck);
+  const { cover } = useDeckCover(stationId, activeDeck);
 
   return (
     <Box component={motion.div}

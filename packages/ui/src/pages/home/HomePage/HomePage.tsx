@@ -1,5 +1,5 @@
-import { chain, kebabCase, random } from "lodash";
-import React, { useCallback, useEffect, useState } from "react";
+import { kebabCase } from "lodash";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import {
@@ -37,6 +37,7 @@ import { client } from "@ui/init";
 import { Route } from "./route";
 
 import classes from './HomePage.module.css';
+import { randomColors } from "@ui/utils";
 
 const CoverBackdrop: React.FC<{ cover?: string }> = ({ cover }) => {
   const dimmer = linearGradient({
@@ -166,42 +167,31 @@ const TrackBar: React.FC<{ stationId: string }> = ({ stationId }) => {
 const StationCard: React.FC<{ stationId: string }> = ({ stationId }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
-  const cover = useDeckCover(stationId, activeDeck);
-  const playingStation = usePlayingStationId();
-  const isListening = playingStation === stationId;
+
+  const { cover, colors: coverColors } = useDeckCover(stationId, activeDeck, {
+    amount: 6,
+    group: 40,
+    sample: 30,
+    getDefaultColors: () => randomColors(6)
+  });
 
   const defaultColors: Colors = {
     text: '#fff',
     border: '#fff'
   }
 
-  const [colors, setColors] = useState<Colors>(defaultColors);
-  const [coverColors, setCoverColors] = useState<string[]>([]);
+  const { colors: buttonColor } = useDeckCover(stationId, activeDeck, {
+    amount: 1,
+    getDefaultColors: () => [defaultColors.text]
+  });
 
-  const createCoverColors = useCallback(async () => cover
-    ? (await prominent(cover, { format: 'hex', amount: 6, group: 40, sample: 30 })) as string[]
-    : chain(6).times().map(i => adjustHue((i - 3) * random(15, 20), hsl(random(360), random(0.5, 0.9, true), random(0.6, 0.8, true)))).value()
-  , [cover]);
+  const isLight = buttonColor.length ? getLuminance(buttonColor[0]) > 0.3 : false;
 
-  useEffect(() => {
-    if (!isListening || !cover) {
-      setColors(defaultColors);
-      return;
-    }
-
-    prominent(cover, { format: 'hex', amount: 1 }).then((out) => {
-      const color = alpha(out as string, 0.8);
-      const isLight = getLuminance(color as string) > 0.3;
-
-      setColors({
-        text: isLight ? 'black' : 'white',
-        bg: color,
-        border: isLight ? darken(0.75, color) : lighten(0.75, color)
-      });
-    });
-  }, [isListening, cover]);
-
-  useEffect(() => void createCoverColors().then(setCoverColors), [cover]);
+  const colors: Colors = buttonColor.length ? ({
+    text: isLight ? 'black' : 'white',
+    bg: buttonColor[0],
+    border: isLight ? darken(0.75, buttonColor[0]) : lighten(0.75, buttonColor[0])
+  }): defaultColors;
 
   return (
     <Card

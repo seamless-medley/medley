@@ -125,7 +125,7 @@ const PlayHead: React.FC<PlayDeckProps> = ({ stationId, index }) => {
 
 export const PlayDeck: React.FC<PlayDeckProps> = ({ stationId, index }) => {
   const { active, trackPlay } = useDeckInfo(stationId, index, 'active', 'trackPlay');
-  const cover = useDeckCover(stationId, index);
+  const { cover } = useDeckCover(stationId, index);
 
   const hasCover = (trackPlay?.track?.extra?.coverAndLyrics?.cover?.byteLength ?? 0) !== 0;
 
