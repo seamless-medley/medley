@@ -81,7 +81,6 @@ export default defineConfig({
           react_misc: [
             'overlayscrollbars',
             'overlayscrollbars-react',
-            'react-resizable-panels',
             '@tabler/icons-react'
           ],
           tanstack: [
@@ -92,7 +91,7 @@ export default defineConfig({
           ],
           mantine: [
             '@mantine/core', '@mantine/hooks', '@mantine/carousel', '@mantine/hooks', '@mantine/notifications',
-            'embla-carousel', 'embla-carousel-react', 'mantine-contextmenu'
+            'mantine-contextmenu'
           ],
           rtc: [
             'mediasoup-client',
