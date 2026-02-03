@@ -43,7 +43,7 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
       update();
     }
 
-  }, [ctxRef.current, elementSize.width, elementSize.height]);
+  }, [orientation, ctxRef.current, elementSize.width, elementSize.height]);
 
   let lastPeakColor = parseToRgb('#ffffff');
   let peakColorFrom = lastPeakColor;
@@ -51,7 +51,7 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
   let peakColorTo = peakColorFrom;
   let lastPeakColorTime = 0;
 
-  const fillRect = (ctx: CanvasRenderingContext2D, from: number, size: number) => {
+  const fillRect = useCallback((ctx: CanvasRenderingContext2D, from: number, size: number) => {
     switch (orientation) {
       case 'horizontal':
         ctx.fillRect(
@@ -67,7 +67,7 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
         );
         return;
     }
-  }
+  }, [orientation]);
 
   const draw = useCallback(() => {
     const data = audRef.current;
@@ -144,16 +144,16 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
     );
 
     raf.current = 0;
-  }, []);
+  }, [fillRect]);
 
-  function update() {
+  const update = useCallback(() => {
     cancelAnimationFrame(raf.current);
 
     raf.current = requestAnimationFrame(() => {
       draw();
       update();
     });
-  }
+  }, [draw]);
 
   const audioLevelsHandler = useCallback((data: UseAudioLevelsData) => {
     if (document.hidden) {
