@@ -1,0 +1,12 @@
+.left-panel {
+    position: sticky;
+    top: var(--navbar-height);
+    width: 300px;
+    height: calc(100cqh - var(--navbar-height));
+    z-index: 10;
+}
+
+.right-panel {
+    width: 100%;
+    overflow: visible;
+}

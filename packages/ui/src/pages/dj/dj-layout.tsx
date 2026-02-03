@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Box, Flex, NavLink, Stack } from '@mantine/core'
-import { createFileRoute, Link, Outlet, useMatchRoute, useParams } from '@tanstack/react-router'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
+import { Box, NavLink } from '@mantine/core'
+import { createFileRoute, Link, Outlet, useMatchRoute, useParams } from '@tanstack/react-router'
+import { TrackCollection } from '@seamless-medley/remote';
+import { ResizablePanel } from '@ui/components/ResizablePanel';
+import { useStation } from '@ui/hooks/useStation';
+import { useRemotableProp } from '@ui/hooks/remotable';
 import { TopBar } from './components/TopBar';
 import { DJConsoleRoute } from './DJConsolePage/route';
-import { useStation } from '@ui/hooks/useStation';
-import { TrackCollection } from '@seamless-medley/remote';
-import { useRemotableProp } from '@ui/hooks/remotable';
 import { CollectionRoute } from './CollectionPage/route';
+import classes from './dj-layout.module.css';
 
 const Sidebar = () => {
   const params = useParams({ strict: false });
@@ -70,17 +72,30 @@ const Layout = () => {
   const params = useParams({ strict: false });
 
   return (
-    <Flex>
-      <Box style={{ position: 'sticky', height: 'calc(100cqh - var(--navbar-height))', top: 80, width: 300, zIndex: 10 }}>
+    <ResizablePanel.Group orientation='horizontal'>
+      <ResizablePanel
+        className={classes.leftPanel}
+        minSize={200}
+        maxSize={400}
+        flexSize={0.1}
+      >
         <Sidebar />
-      </Box>
-      <Stack w='100%'>
-        <Box style={{ position: 'sticky', top: 80, height: 200, zIndex: 10 }} >
-          <TopBar stationId={params.station || ''} />
-        </Box>
-        <Outlet />
-      </Stack>
-    </Flex>
+      </ResizablePanel>
+
+      <ResizablePanel.Resizer />
+
+      <ResizablePanel
+        className={classes.rightPanel}
+        minSize={200}
+        flexSize={0.9}
+      >
+          <Box style={{ position: 'sticky', top: 'var(--navbar-height)', height: 200, zIndex: 10 }} >
+            <TopBar stationId={params.station || ''} />
+          </Box>
+
+          <Outlet />
+      </ResizablePanel>
+    </ResizablePanel.Group>
   );
 }
 
