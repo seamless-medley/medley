@@ -350,7 +350,6 @@ export const TopBar: React.FC<StationIdProps> = ({ stationId }) => {
       animate={{ backgroundImage }}
     >
       <StationBanner stationId={stationId} colors={stationColors} />
-      <VUBar orientation="vertical" size={12} />
       <ActiveDeck stationId={stationId} />
 
       <Flex
