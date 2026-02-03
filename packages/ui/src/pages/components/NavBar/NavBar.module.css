@@ -21,12 +21,62 @@
 .left-pane {
     height: 100%;
     flex-wrap: nowrap;
+
+    & .brand {
+        height: 100%;
+        flex-wrap: nowrap;
+        gap: var(--mantine-spacing-sm);
+    }
 }
 
 .right-pane {
     justify-items: right;
     align-items: center;
     flex: 0 1 auto;
+}
+
+.logo-box {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--mantine-spacing-xs);
+    flex-wrap: nowrap;
+    user-select: none;
+
+    @mixin larger-than $mantine-breakpoint-sm {
+        flex-direction: row;
+    }
+
+    & .logo {
+        width: auto;
+        height: 45px;
+        object-fit: cover;
+        transition: height 0.2s ease;
+
+        @mixin larger-than $mantine-breakpoint-sm {
+            height: 65px;
+        }
+    }
+
+    & .title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-top: -6px;
+
+        @mixin larger-than $mantine-breakpoint-sm {
+            font-size: 1.5rem;
+        }
+    }
+}
+
+.vubox {
+    width: 18px;
+    height: 100%;
+    padding: 5px;
+    align-items: center;
+
+    &[data-orientation='horizontal'] {
+        width: 100px;
+    }
 }
 
 
@@ -44,6 +94,7 @@
 
         transform-origin: 0 0;
         z-index: 10;
+        user-select: none;
 
         @keyframes rotate {
             to {

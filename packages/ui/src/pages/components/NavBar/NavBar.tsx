@@ -85,20 +85,14 @@ const LoginButton = () => {
 
 function HomeLogo() {
   return (
-    <Group align="center" gap="sm">
-      <Link to="/" style={{ textDecoration: 'none' }}>
-        <Group align="center" gap="xs" wrap='nowrap'>
-          <Image src={logo} h={65} w="auto" fit="contain" />
-          <Title
-            size="h3"
-            fw={700}
-            mt={-6}
-          >
-            Medley
-          </Title>
-        </Group>
-      </Link>
-    </Group>
+    <Link to="/">
+      <Flex className={classes.logoBox}>
+        <Image className={classes.logo} src={logo} />
+        <Title component='h1' className={classes.title}>
+          Medley
+        </Title>
+      </Flex>
+    </Link>
   )
 }
 
