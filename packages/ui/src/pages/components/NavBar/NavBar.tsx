@@ -1,5 +1,5 @@
 import { CSSProperties, useCallback, useState } from 'react';
-import { Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image, Text, Flex, rem } from '@mantine/core';
+import { Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image, Text, Flex, rem, useMatches } from '@mantine/core';
 import { IconVinyl } from '@tabler/icons-react';
 import { useForm } from '@tanstack/react-form';
 import { Link } from '@tanstack/react-router';
@@ -12,7 +12,7 @@ import { useDeckCover, useDeckInfo } from '@ui/hooks/useDeck';
 import { AnimatePresence, motion } from 'motion/react';
 import { TransitionText } from '@ui/components/TransitionText';
 import { PlayHeadText } from '@ui/components/PlayHeadText';
-import { VUBar } from '@ui/components/VUBar';
+import { VUBar, VUBarProps } from '@ui/components/VUBar';
 import classes from './NavBar.module.css';
 
 const LoginButton = () => {
@@ -178,14 +178,19 @@ function PlaybackInfo() {
 export function NavBar() {
   const { user } = useSession();
 
+  const vuBarOrientation = useMatches<VUBarProps['orientation']>({
+    base: 'vertical',
+    sm: 'horizontal'
+  });
+
   return (
     <Flex component='header' className={classes.navbar}>
       <Group className={classes.leftPane}>
-        <Group wrap='nowrap' gap='sm'>
+        <Group className={classes.brand}>
           <HomeLogo />
-          <Stack w={100}>
-            <VUBar orientation='horizontal' size={8} gap={2} />
-          </Stack>
+          <Flex className={classes.vubox} mod={{ orientation: vuBarOrientation }}>
+            <VUBar orientation={vuBarOrientation} size={8} gap={2} />
+          </Flex>
         </Group>
 
         <PlaybackInfo />
