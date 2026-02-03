@@ -1,0 +1,12 @@
+.panel-group {
+    flex: 1 0 0;
+    position: relative;
+}
+
+.horizontal {
+    flex-direction: row;
+}
+
+.vertical {
+    flex-direction: column;
+}
