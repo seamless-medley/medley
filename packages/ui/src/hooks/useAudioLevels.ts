@@ -1,6 +1,6 @@
 import { gainToDecibels, interpolate } from "@seamless-medley/utils";
 import { mapValues } from "lodash";
-import { useCallback, useEffect } from "react";
+import { type DependencyList, useCallback, useEffect } from "react";
 import type { StationAudioLevels, AudioTransportExtra } from "@seamless-medley/remote";
 import { client } from "@ui/init";
 
@@ -29,7 +29,7 @@ export type UseAudioLevelsData = {
   reduction: number;
 }
 
-export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, options?: { max?: number }) {
+export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, deps: DependencyList, options?: { max?: number }) {
   const max = options?.max ?? 0;
   const normalize = (db: number) => interpolate(Math.min(db, max), [-100, max], [0, 1]);
 
@@ -50,10 +50,10 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, opti
       right: levelToChannelLevel(levels.right),
       reduction
     });
-  }, []);
+  }, [callback]);
 
-  const handleAudioExtra = useCallback((extra: AudioTransportExtra) => update(extra.audioLevels), [callback]);
-  const handleDisconnect = useCallback(() => update(emptyLevel), []);
+  const handleAudioExtra = useCallback((extra: AudioTransportExtra) => update(extra.audioLevels), [update]);
+  const handleDisconnect = useCallback(() => update(emptyLevel), [update]);
 
   useEffect(() => {
     client.on('audioExtra', handleAudioExtra);
@@ -63,5 +63,5 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, opti
       client.off('audioExtra', handleAudioExtra);
       client.off('disconnect', handleDisconnect);
     }
-  }, []);
+  }, deps);
 }

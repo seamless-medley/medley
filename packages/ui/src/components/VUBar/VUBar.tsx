@@ -155,14 +155,16 @@ export const VUMeter: React.FC<VUMeterProps> = ({ orientation, channel, peakWidt
     });
   }
 
-  useAudioLevels(data => {
+  const audioLevelsHandler = useCallback((data: UseAudioLevelsData) => {
     if (document.hidden) {
       return;
     }
 
     audRef.current = data;
     update();
-  });
+  }, [update]);
+
+  useAudioLevels(audioLevelsHandler, [update]);
 
   return (
     <canvas
