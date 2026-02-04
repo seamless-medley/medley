@@ -12,6 +12,7 @@ import { usePlayingStationId } from "@ui/hooks/useClient";
 import { useStation } from "@ui/hooks/useStation";
 import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
 import { client } from "@ui/init";
+import { useVolume } from "@ui/hooks/useVolume";
 
 import { PlayHeadText } from "@ui/components/PlayHeadText";
 import { TransitionText } from "@ui/components/TransitionText";
@@ -20,20 +21,11 @@ import { VUBar } from "@ui/components/VUBar";
 import { DeckBanner } from "./DeckBanner";
 
 const VolumeControl: React.FC<{ color: string }> = ({ color }) => {
-  const [gain, setGain] = useState(client.volume);
-
   const { ref } = useMove(({ y }) => {
-    const v = 1 - y;
-    client.volume = v;
+    client.volume = 1 - y;
   });
 
-  useEffect(() => {
-    client.on('volume', setGain);
-
-    return () => {
-      client.off('volume', setGain);
-    }
-  }, [client.volume]);
+  const gain = useVolume();
 
   const borderRadius = '1000px';
   const w = 8;
