@@ -25,7 +25,7 @@ export class DaveSession extends TypedEmitter<DaveSessionEvents> {
 
   #session?: DaveySession;
 
-  #pendingTransition?: DavePrepareTransitionData;
+  #pendingTransitions = new Map<number, number>();
 
   #downgraded = false;
 
@@ -86,7 +86,7 @@ export class DaveSession extends TypedEmitter<DaveSessionEvents> {
   }
 
   prepareTransition(data: DavePrepareTransitionData) {
-    this.#pendingTransition = data;
+    this.#pendingTransitions.set(data.transition_id, data.protocol_version);
 
     if (data.transition_id === 0) {
 			this.executeTransition(data.transition_id);
@@ -102,30 +102,25 @@ export class DaveSession extends TypedEmitter<DaveSessionEvents> {
   }
 
   executeTransition(transitionId: number) {
-    if (!this.#pendingTransition) {
-      return;
+    if (!this.#pendingTransitions.has(transitionId)) {
+      return false;
     }
 
-    let transitioned = false;
+    const oldVersion = this.#protocolVersion;
+    this.#protocolVersion = this.#pendingTransitions.get(transitionId)!;
 
-    if (transitionId === this.#pendingTransition.transition_id) {
-      const oldVersion = this.#protocolVersion;
-      this.#protocolVersion = this.#pendingTransition.protocol_version;
-
-      if (oldVersion !== this.#protocolVersion && this.#protocolVersion === 0) {
-        this.#downgraded = true;
-      } else if (transitionId > 0 && this.#downgraded) {
-        this.#downgraded = false;
-        this.#session?.setPassthroughMode(true, TRANSITION_EXPIRY);
-      }
-
-      transitioned = true;
-      this.reinitializing = false;
-			this.lastTransitionId = transitionId;
+    if (oldVersion !== this.#protocolVersion && this.#protocolVersion === 0) {
+      this.#downgraded = true;
+    } else if (transitionId > 0 && this.#downgraded) {
+      this.#downgraded = false;
+      this.#session?.setPassthroughMode(true, TRANSITION_EXPIRY);
     }
 
-		this.#pendingTransition = undefined;
-		return transitioned;
+    this.reinitializing = false;
+    this.lastTransitionId = transitionId;
+
+		this.#pendingTransitions.delete(transitionId);
+		return true;
   }
 
   encrypt(packet: Buffer) {
@@ -177,7 +172,7 @@ export class DaveSession extends TypedEmitter<DaveSessionEvents> {
 				this.reinitializing = false;
 				this.lastTransitionId = transitionId;
 			} else {
-				this.#pendingTransition = { transition_id: transitionId, protocol_version: this.#protocolVersion };
+        this.#pendingTransitions.set(transitionId, this.#protocolVersion);
 			}
 
 			return { transitionId, success: true };
@@ -199,7 +194,7 @@ export class DaveSession extends TypedEmitter<DaveSessionEvents> {
 				this.reinitializing = false;
 				this.lastTransitionId = transitionId;
 			} else {
-				this.#pendingTransition = { transition_id: transitionId, protocol_version: this.#protocolVersion };
+				this.#pendingTransitions.set(transitionId, this.#protocolVersion);
 			}
 
 			return { transitionId, success: true };
