@@ -1,15 +1,19 @@
 import { CSSProperties, useCallback, useState } from 'react';
-import { Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image, Text, Flex, rem, useMatches } from '@mantine/core';
-import { IconVinyl } from '@tabler/icons-react';
+import { Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image, Text, Flex, useMatches } from '@mantine/core';
+import { useMove, UseMovePosition } from '@mantine/hooks';
+import { IconVinyl, IconVolume, IconVolume2 } from '@tabler/icons-react';
 import { useForm } from '@tanstack/react-form';
 import { Link } from '@tanstack/react-router';
+import { AnimatePresence, motion } from 'motion/react';
+import clsx from 'clsx';
+
 import { usePlayingStationId, useSession } from '@ui/hooks/useClient';
 import { client } from '@ui/init';
 import logo from '@ui/logo.png';
 import { useStation } from '@ui/hooks/useStation';
 import { useRemotableProp } from '@ui/hooks/remotable';
 import { useDeckCover, useDeckInfo } from '@ui/hooks/useDeck';
-import { AnimatePresence, motion } from 'motion/react';
+import { useVolume } from '@ui/hooks/useVolume';
 import { TransitionText } from '@ui/components/TransitionText';
 import { PlayHeadText } from '@ui/components/PlayHeadText';
 import { VUBar, VUBarProps } from '@ui/components/VUBar';
@@ -169,6 +173,33 @@ function PlaybackInfo() {
   )
 }
 
+const VolumeControl: React.FC<{ orientation: 'horizontal' | 'vertical' }> = ({ orientation }) => {
+  const compute = useCallback(orientation === 'horizontal'
+      ? ({ x }: UseMovePosition) => x
+      : ({ y }: UseMovePosition) => 1 - y,
+    [orientation]
+  );
+
+  const handler = useCallback((e: UseMovePosition) => client.volume = compute(e), [orientation]);
+
+  const { ref } = useMove(handler);
+
+  const gain = useVolume();
+
+  const isHorizontal = orientation === 'horizontal';
+
+  return (
+    <Flex className={clsx(classes.volumeBox, isHorizontal ? classes.horizontal : classes.vertical)}>
+      <IconVolume2 size={20}/>
+      <Box className={clsx(classes.volumeControl, isHorizontal ? classes.horizontal : classes.vertical)} ref={ref} style={{ '--gain': gain }}>
+        <div className={classes.range} />
+        <div className={classes.thumb} />
+      </Box>
+      <IconVolume size={20}/>
+    </Flex>
+  )
+}
+
 export function NavBar() {
   const { user } = useSession();
 
@@ -182,8 +213,9 @@ export function NavBar() {
       <Group className={classes.leftPane}>
         <Group className={classes.brand}>
           <HomeLogo />
-          <Flex className={classes.vubox} mod={{ orientation: vuBarOrientation }}>
+          <Flex className={classes.vubox} mod={{ orientation: vuBarOrientation }} gap={5}>
             <VUBar orientation={vuBarOrientation} size={8} gap={2} />
+            <VolumeControl orientation={vuBarOrientation} />
           </Flex>
         </Group>
 
