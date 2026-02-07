@@ -21,11 +21,16 @@
 .left-pane {
     height: 100%;
     flex-wrap: nowrap;
+    gap: var(--mantine-spacing-xs);
 
     & .brand {
         height: 100%;
         flex-wrap: nowrap;
         gap: var(--mantine-spacing-sm);
+    }
+
+    &.vertical {
+        gap: 0;
     }
 }
 
@@ -191,11 +196,12 @@
     &.horizontal .thumb {
         left: calc(var(--gain) * 100% - var(--ta));
         transform: translate(calc(var(--ta) * -1.75), calc(var(--ta) * -1));
+        will-change: left;
     }
 
     &.vertical .thumb {
         bottom: calc(var(--gain) * 100% - var(--ta));
         transform: translate(calc(var(--ta) * -1), calc(var(--ta) * 1.25));
-
+        will-change: bottom;
     }
 }

@@ -1,4 +1,4 @@
-import { CSSProperties, useCallback, useState } from 'react';
+import { CSSProperties, PointerEvent, RefObject, useCallback, useRef, useState } from 'react';
 import { Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image, Text, Flex, useMatches } from '@mantine/core';
 import { useMove, UseMovePosition } from '@mantine/hooks';
 import { IconVinyl, IconVolume, IconVolume2 } from '@tabler/icons-react';
@@ -18,6 +18,7 @@ import { TransitionText } from '@ui/components/TransitionText';
 import { PlayHeadText } from '@ui/components/PlayHeadText';
 import { VUBar, VUBarProps } from '@ui/components/VUBar';
 import classes from './NavBar.module.css';
+import { debounce } from 'lodash';
 
 const LoginButton = () => {
   const [opened, setOpened] = useState(false);
@@ -180,9 +181,39 @@ const VolumeControl: React.FC<{ orientation: 'horizontal' | 'vertical' }> = ({ o
     [orientation]
   );
 
-  const handler = useCallback((e: UseMovePosition) => client.volume = compute(e), [orientation]);
+  const moveHandler = useCallback((e: UseMovePosition) => client.volume = compute(e), [orientation]);
 
-  const { ref } = useMove(handler);
+  const decrease = useCallback(() => client.volume -= 0.05, []);
+  const increase = useCallback(() => client.volume += 0.05, []);
+
+  type RepeatState = { debounce: any, repeat: any }
+
+  const upState = useRef<RepeatState>({ debounce: 0, repeat: 0 });
+  const downState = useRef<RepeatState>({ debounce: 0, repeat: 0 });
+
+  const clearTimers = ({ debounce, repeat }: RepeatState) => {
+      clearTimeout(debounce);
+      clearInterval(repeat);
+  }
+
+  const ptDownHandler = useCallback((state: RepeatState, fn: () => any) => {
+    return (e: PointerEvent) => {
+      if (e.button !== 0) return;
+
+      e.stopPropagation();
+      e.preventDefault();
+
+      clearTimers(state);
+
+      fn();
+
+      state.debounce = setTimeout(() => state.repeat = setInterval(fn, 1000/10), 500);
+    }
+  }, []);
+
+  const ptUphandler = useCallback((state: RepeatState) => () => clearTimers(state), []);
+
+  const { ref } = useMove(moveHandler);
 
   const gain = useVolume();
 
@@ -190,12 +221,12 @@ const VolumeControl: React.FC<{ orientation: 'horizontal' | 'vertical' }> = ({ o
 
   return (
     <Flex className={clsx(classes.volumeBox, isHorizontal ? classes.horizontal : classes.vertical)}>
-      <IconVolume2 size={20}/>
+      <IconVolume2 size={20} onPointerDown={ptDownHandler(upState.current, decrease)} onPointerUp={ptUphandler(upState.current)} />
       <Box className={clsx(classes.volumeControl, isHorizontal ? classes.horizontal : classes.vertical)} ref={ref} style={{ '--gain': gain }}>
         <div className={classes.range} />
         <div className={classes.thumb} />
       </Box>
-      <IconVolume size={20}/>
+      <IconVolume size={20} onPointerDown={ptDownHandler(downState.current, increase)} onPointerUp={ptUphandler(downState.current)} />
     </Flex>
   )
 }
@@ -210,7 +241,7 @@ export function NavBar() {
 
   return (
     <Flex component='header' className={classes.navbar}>
-      <Group className={classes.leftPane}>
+      <Group className={clsx(classes.leftPane, vuBarOrientation === 'horizontal' ? classes.horizontal : classes.vertical)}>
         <Group className={classes.brand}>
           <HomeLogo />
           <Flex className={classes.vubox} mod={{ orientation: vuBarOrientation }} gap={5}>
