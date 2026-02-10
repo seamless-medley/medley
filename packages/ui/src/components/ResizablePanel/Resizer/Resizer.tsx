@@ -121,7 +121,9 @@ export const Resizer: React.FC = () => {
 
     nodeRef.current!.setPointerCapture(event.pointerId);
     subscribe('pointermove', onPointerMove);
+    subscribe('pointerup', onPoinerUp);
   }, [getAdjacentPanels]);
+
 
   const ref: RefCallback<HTMLElement | null>  = useCallback((node) => {
     if (!node) return;
@@ -129,7 +131,6 @@ export const Resizer: React.FC = () => {
     nodeRef.current = node;
 
     subscribe('pointerdown', onPointerDown);
-    subscribe('pointerup', onPoinerUp);
   }, []);
 
   useEffect(() => {
