@@ -15,8 +15,10 @@ export interface Station {
   readonly playState: PlayState;
   readonly activeDeck: DeckIndex | undefined;
   readonly audienceCount: number;
-
   readonly currentCollection: string | undefined;
+  readonly currentProfile: string | undefined;
+  readonly profiles: StationProfile[];
+
 
   start(): void;
   pause(): void;
@@ -34,4 +36,25 @@ export interface Station {
 
   ϟcollectionChange(prevCollection: string | undefined, newCollection: string, fromRequestTrack: boolean): void;
   ϟcrateChange: (oldCrate: string | undefined, newCrate: string) => void;
+  ϟprofileChange: (oldProfile: string | undefined, newProfile: string) => void;
+  ϟprofileBookChange: () => void;
+}
+
+export interface StationProfile {
+  readonly id: string;
+
+  name: string;
+  description?: string;
+
+  crates: Array<Create>;
+}
+
+export interface Create {
+  readonly id: string;
+
+  readonly sources: Array<{ id: string, weight: number }>;
+
+  readonly limit: number | string;
+
+  readonly chance: string | undefined;
 }
