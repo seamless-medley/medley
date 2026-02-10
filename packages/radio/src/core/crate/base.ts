@@ -172,6 +172,10 @@ export class Crate<T extends Track<any>> {
     return this.#sources;
   }
 
+  get weights() {
+    return this.#sourceWeights;
+  }
+
   updateSources(newSources: CrateSourceWithWeight<T>[]) {
     this.#sources = newSources.map(s => s.collection);
     this.#sourceWeights = newSources.map(s => s.weight);

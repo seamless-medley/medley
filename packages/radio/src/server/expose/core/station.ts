@@ -1,8 +1,17 @@
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import { MixinEventEmitterOf, PureExpose } from "../../socket";
-import type { DeckInfoWithPositions, Station as RemoteStation, Exposable, Notify } from "@seamless-medley/remote";
-import { Station, type StationEvents, type PlayState } from "../../../core";
+import type {
+  DeckInfoWithPositions,
+  Station as RemoteStation,
+  StationProfile as RemoteProfile,
+  Create as RemoteCrate,
+  Exposable,
+  Notify
+} from "@seamless-medley/remote";
+
+import { Station, type StationEvents, type PlayState, StationProfile, Crate, StationTrack, Chanceable } from "../../../core";
 import { toRemoteDeckInfoWithPositions } from "./deck";
+import { isFunction, zip, zipObject } from "lodash";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
   $Exposing: Station;
@@ -11,11 +20,17 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   #currentCollectionId?: string;
 
+  #currentProfileId: string;
+
+  #profiles: RemoteProfile[] = [];
+
   constructor(station: Station) {
     super();
     this.$Exposing = station;
 
     this.#currentCollectionId = station.currentCollection?.id;
+    this.#currentProfileId = station.profile.id;
+    this.setProfiles(station.profiles);
 
     this.#station.on('deckLoaded', this.#onDeckLoaded);
     this.#station.on('deckUnloaded', this.#onDeckUnloaded);
@@ -23,6 +38,10 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#station.on('deckActive', this.#onDeckActive);
     this.#station.on('collectionChange', this.#onCollectionChange);
     this.#station.on('crateChange', this.#onCrateChange);
+    this.#station.on('sequenceProfileChange', this.#onSequenceProfileChange);
+    this.#station.on('profileChange', this.#onProfileChange);
+    this.#station.on('profileBookChange', this.#onProfileBookChange);
+
   }
 
   dispose() {
@@ -81,6 +100,23 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   #onCrateChange: StationEvents['crateChange'] = (oldCrate, newCrate) => {
     this.emit('crateChange', oldCrate?.id, newCrate.id);
+  }
+
+  #onSequenceProfileChange: StationEvents['sequenceProfileChange'] = (oldProfile, newProfile) => {
+    if (this.currentProfile === newProfile.id) return;
+
+    this.currentProfile = newProfile.id;
+    this.emit('profileChange', oldProfile?.id, newProfile.id);
+  }
+
+  #onProfileChange: StationEvents['profileChange'] = (oldProfile, newProfile) => {
+    this.currentProfile = newProfile.id;
+    this.emit('profileChange', oldProfile?.id, newProfile.id);
+  }
+
+  #onProfileBookChange: StationEvents['profileBookChange'] = () => {
+    this.setProfiles(this.#station.profiles);
+    this.emit('profileBookChange');
   }
 
   get audienceCount() {
@@ -148,6 +184,15 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#currentCollectionId = value;
   }
 
+  get currentProfile() {
+    return this.#currentProfileId;
+  }
+
+  @PureExpose
+  private set currentProfile(value) {
+    this.#currentProfileId = value;
+  }
+
   async start() {
     this.#station.start();
   }
@@ -176,4 +221,36 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
       description: c.extra.description
     }));
   }
+
+  get profiles() {
+    return this.#profiles;
+  }
+
+  @PureExpose
+  private set profiles(value) {
+    this.#profiles = value;
+  }
+
+  private setProfiles(profiles: StationProfile[]) {
+    this.profiles = profiles.map(toRemoteStationProfile);
+  }
 };
+
+export const toRemoteStationProfile = (p: StationProfile): RemoteProfile => ({
+  id: p.id,
+  name: p.name,
+  description: p.description,
+  crates: p.crates.map(toRemoteCrate)
+});
+
+export const toRemoteCrate = (c: Crate<StationTrack>): RemoteCrate => ({
+  id: c.id,
+  sources: zip(c.sources, c.weights).map(([src, weight]) => ({ id: src!.id, weight: weight! })),
+  limit: isFunction(c.limit) ? c.limit.name : c.limit,
+  chance: toRemoteChance(c.chance)
+});
+
+const toRemoteChance = (ch: Chanceable | undefined): string | undefined => {
+  if (isFunction(ch?.chances)) return ch.chances.name;
+  return ch?.next?.name;
+}
