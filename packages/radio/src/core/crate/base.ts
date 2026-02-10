@@ -62,13 +62,13 @@ export function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit  {
   const { by } = limit;
 
   if (by === 'upto') {
-    const upto = createNamedFunc(`upto_${limit.upto}`, () => random(1, limit.upto));
+    const upto = createNamedFunc(`upto:${limit.upto}`, () => random(1, limit.upto));
     return upto;
   }
 
   if (by === 'range') {
     const [min, max] = sortBy(limit.range);
-    const range = createNamedFunc(`range_${min}_${max}`, () => random(min, max));
+    const range = createNamedFunc(`range:${min}_${max}`, () => random(min, max));
     return range;
   }
 
@@ -79,7 +79,7 @@ export function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit  {
   return 0;
 }
 
-const randomChance = function randomChance() { return random() === 1; }
+const randomChance = createNamedFunc('random', () => random() === 1);
 const always = () => true;
 
 export function createChanceable(def: SequenceChance | undefined): Chanceable {
@@ -97,7 +97,7 @@ export function createChanceable(def: SequenceChance | undefined): Chanceable {
 
   return {
     next: always,
-    chances: () => [true]
+    chances: function always() { return [true] }
   }
 }
 
@@ -123,7 +123,7 @@ function chanceOf(n: [yes: number, no: number]): Chanceable {
 
       return v ?? false;
     },
-    chances: () => all
+    chances: createNamedFunc(`chanceOf:[${all}]`, () => all)
   }
 }
 
