@@ -213,7 +213,7 @@ const VolumeControl: React.FC<{ orientation: 'horizontal' | 'vertical' }> = ({ o
 
       fn();
 
-      state.debounce = setTimeout(() => state.repeat = setInterval(fn, 1000/10), 500);
+      state.debounce = setTimeout(() => state.repeat = setInterval(fn, 1000/15), 500);
     }
   }, []);
 
