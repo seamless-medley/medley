@@ -19,6 +19,7 @@ import { PlayHeadText } from '@ui/components/PlayHeadText';
 import { VUBar, VUBarProps } from '@ui/components/VUBar';
 import classes from './NavBar.module.css';
 import { debounce } from 'lodash';
+import fallbackImage from '@ui/fallback-image.svg?inline';
 
 const LoginButton = () => {
   const [opened, setOpened] = useState(false);
@@ -137,7 +138,7 @@ function PlaybackInfo() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            fallbackSrc="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='-50 -50 100 100'><style>text{ font-family: sans-serif }</style><rect x='-50' y='-50' width='200%' height='200%' fill='%23555' /><text x='-35' y='5'>No Image</text></svg>"
+            fallbackSrc={fallbackImage}
           />
         </AnimatePresence>
       </Box>
