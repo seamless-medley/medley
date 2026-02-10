@@ -19,7 +19,6 @@ import { TransitionText } from '@ui/components/TransitionText';
 import { PlayHeadText } from '@ui/components/PlayHeadText';
 import { VUBar, VUBarProps } from '@ui/components/VUBar';
 import classes from './NavBar.module.css';
-import { debounce } from 'lodash';
 import fallbackImage from '@ui/fallback-image.svg?inline';
 import { useAudioLevels, UseAudioLevelsData } from '@ui/hooks/useAudioLevels';
 
