@@ -112,7 +112,7 @@ function PlaybackInfo() {
     amount: 6,
     sample: 30,
     group: 40,
-    getDefaultColors: () => ['transparent']
+    getDefaultColors: () => ['black']
   });
   const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
 
