@@ -1,5 +1,5 @@
 .container {
-    overflow: hidden;
+    overflow: visible;
     position: relative;
     --end-gradient-width: 0.5em;
 
