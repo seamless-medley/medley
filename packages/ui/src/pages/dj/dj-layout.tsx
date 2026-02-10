@@ -6,10 +6,10 @@ import { TrackCollection } from '@seamless-medley/remote';
 import { ResizablePanel } from '@ui/components/ResizablePanel';
 import { useStation } from '@ui/hooks/useStation';
 import { useRemotableProp } from '@ui/hooks/remotable';
-import { TopBar } from './components/TopBar';
 import { DJConsoleRoute } from './DJConsolePage/route';
 import { CollectionRoute } from './CollectionPage/route';
 import classes from './dj-layout.module.css';
+import { TopBar } from './components/TopBar';
 
 const Sidebar = () => {
   const params = useParams({ strict: false });

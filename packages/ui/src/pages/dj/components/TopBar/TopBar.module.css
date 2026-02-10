@@ -1,0 +1,123 @@
+.topbar {
+    --fill-color: hsl(from var(--panel-color) h s calc(l - 2));
+    --fill-background: linear-gradient(to right, var(--fill-color), var(--panel-color));
+
+    flex-direction: column;
+    height: 200px;
+    background: var(--mantine-color-body) padding-box;
+    border-bottom: 1px solid var(--mantine-color-dark-6);
+
+    .main {
+        height: 150px;
+        border-bottom: 1px solid var(--mantine-color-dark-8);
+    }
+
+    .lyrics-bar {
+        height: 50px;
+        padding: 4px;
+        justify-content: center;
+        background: var(--fill-background);
+    }
+
+    .fill {
+        background: var(--fill-background);
+    }
+}
+
+.station {
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px;
+
+    .info {
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        gap: var(--mantine-spacing-xs);
+
+        .info-line {
+            justify-content: center;
+            width: 100%;
+        }
+    }
+
+    .listeners {
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        margin: 4px;
+        gap: var(--mantine-spacing-sm);
+    }
+}
+
+.playback {
+    width: 450px;
+
+    .track {
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: space-between;
+        overflow: visible;
+        position: relative;
+
+        .track-box {
+
+            padding: 4px;
+            width: 100%;
+            height: 300px;
+            overflow: visible;
+            height: 300px;
+            outline: 1px solid red;
+
+            .track-info {
+                display: flex;
+                overflow: visible;
+                width: 100%;
+                gap: var(--mantine-spacing-xs);
+                outline: 1px solid yellow;
+            }
+        }
+    }
+}
+
+.profile {
+    flex-direction: column;
+    height: 100%;
+    font-size: 0.7rem;
+    gap: 0;
+
+    .item {
+        padding: 0 4px;
+        flex-direction: row;
+        border-bottom: 1px solid var(--mantine-color-dark-8);
+        width: 100%;
+        height: 2.5lh;
+        justify-content: space-between;
+        flex: 1 0 auto;
+        user-select: none;
+
+        &:hover {
+            background-color: var(--mantine-primary-color-light-hover);
+        }
+
+        .text {
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .desc {
+            color: var(--mantine-color-dark-3);
+        }
+
+        &.selected {
+            background-color: var(--mantine-primary-color-filled-hover);
+
+            .desc {
+                color: var(--mantine-color-dark-1);
+            }
+        }
+    }
+}
+
+
