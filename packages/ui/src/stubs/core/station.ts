@@ -16,6 +16,9 @@ class StubbingStation {
   audienceCount = undefined as any;
 
   currentCollection = undefined as any;
+  currentProfile = undefined as any;
+
+  profiles = undefined as any;
 
   start = noop as any;
   pause = noop as any;
