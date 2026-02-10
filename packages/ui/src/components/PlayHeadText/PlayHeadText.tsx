@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
-import { Box, Text, TextProps } from "@mantine/core";
+import { Flex, Text, TextProps } from "@mantine/core";
 import type { DeckIndex } from "@seamless-medley/medley";
 import { useDeck } from "@ui/hooks/useDeck";
 import classes from './PlayHeadText.module.css';
@@ -56,7 +56,7 @@ export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId
   const [duration_mm, duration_ss] = showDuration ? [(duration / 60) % 99, duration % 60].map(v => Math.trunc(v).toString()) : [];
 
   return (
-    <Box className={classes.container} onClick={() => setShowRemaining(prev => !prev)}>
+    <Flex className={classes.container} onClick={() => setShowRemaining(prev => !prev)}>
       {isRemaining ?
         (<PlayHeadChar {...textProps} className={classes.punc}>
           -
@@ -103,6 +103,6 @@ export const PlayHeadText: React.FC<PlayHeadTextProps> = React.memo(({ stationId
         : undefined
       }
 
-    </Box>
+    </Flex>
   )
 });
