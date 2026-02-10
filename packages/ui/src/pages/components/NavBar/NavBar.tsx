@@ -143,33 +143,38 @@ function PlaybackInfo() {
         </AnimatePresence>
       </Box>
 
-      <Stack className={classes.info} gap={0}>
-        <TransitionText size='1.2em' fw={700}>
-          {name ?? 'No station'}
-        </TransitionText>
-        <TransitionText
-          size="1em"
-          truncate="end"
-          fw={500}
-          transition={{ delay: 0.4 }}
-          nowrap
-        >
-          {title ?? 'Unknown title'}
-        </TransitionText>
-        <TransitionText
-          size="1em"
-          truncate="end"
-          transition={{ delay: 0.5 }}
-          nowrap
-        >
-          {artist ?? 'Unknown artist'}
-        </TransitionText>
-        <PlayHeadText
-          stationId={stationId}
-          deckIndex={activeDeck}
-          size='1em'
-          c='indigo.4'
-        />
+      <Stack className={classes.info}>
+        <Flex direction={'column'}>
+          <TransitionText size='1.2em' h='1.5em' fw={700}>
+            {name ?? 'No station'}
+          </TransitionText>
+          <TransitionText
+            size="1em"
+            h='1.2em'
+            fw={500}
+            transition={{ delay: 0.4 }}
+            nowrap
+            autoscroll
+          >
+            {title ?? 'Unknown title'}
+          </TransitionText>
+          <TransitionText
+            size="1em"
+            h='1.2em'
+            transition={{ delay: 0.5 }}
+            nowrap
+          >
+            {artist ?? 'Unknown artist'}
+          </TransitionText>
+        </Flex>
+        <Flex h='1.2em' align={'center'} mb={4}>
+          <PlayHeadText
+            stationId={stationId}
+            deckIndex={activeDeck}
+            size='1em'
+            c='indigo.4'
+          />
+        </Flex>
       </Stack>
     </Group>
   )
