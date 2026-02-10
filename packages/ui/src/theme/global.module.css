@@ -6,6 +6,7 @@
 
 :root {
     --navbar-height: 80px;
+    --panel-color: hsl(205, 10%, 8%);
 }
 
 a {
