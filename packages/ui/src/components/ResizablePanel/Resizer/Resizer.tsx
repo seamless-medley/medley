@@ -70,7 +70,7 @@ export const Resizer: React.FC = () => {
     const delta = position - startState.current.pointer;
 
     const totalSize = startState.current.size.prev + startState.current.size.next;
-    const totalFlex = prev.props.flexSize + next.props.flexSize;
+    const totalFlex = +prev.ref.current!.style.flexGrow + +next.ref.current!.style.flexGrow;
 
     const minSize = [prev.props.minSize, next.props.minSize];
     const maxSize = [prev.props.maxSize ?? Number.MAX_SAFE_INTEGER, next.props.maxSize ?? Number.MAX_SAFE_INTEGER];
