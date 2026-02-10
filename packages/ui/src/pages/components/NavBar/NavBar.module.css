@@ -46,6 +46,7 @@
     gap: var(--mantine-spacing-xs);
     flex-wrap: nowrap;
     user-select: none;
+    transform-origin: 50% 50%;
 
     @mixin larger-than $mantine-breakpoint-sm {
         flex-direction: row;

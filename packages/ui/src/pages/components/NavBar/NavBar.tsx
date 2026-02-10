@@ -1,4 +1,4 @@
-import { CSSProperties, PointerEvent, RefObject, useCallback, useRef, useState } from 'react';
+import { CSSProperties, PointerEvent, useCallback, useRef, useState } from 'react';
 import { Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image, Text, Flex, useMatches } from '@mantine/core';
 import { useMove, UseMovePosition } from '@mantine/hooks';
 import { IconVinyl, IconVolume, IconVolume2 } from '@tabler/icons-react';
@@ -6,6 +6,7 @@ import { useForm } from '@tanstack/react-form';
 import { Link } from '@tanstack/react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import clsx from 'clsx';
+import { clamp } from 'lodash';
 
 import { usePlayingStationId, useSession } from '@ui/hooks/useClient';
 import { client } from '@ui/init';
@@ -20,6 +21,7 @@ import { VUBar, VUBarProps } from '@ui/components/VUBar';
 import classes from './NavBar.module.css';
 import { debounce } from 'lodash';
 import fallbackImage from '@ui/fallback-image.svg?inline';
+import { useAudioLevels, UseAudioLevelsData } from '@ui/hooks/useAudioLevels';
 
 const LoginButton = () => {
   const [opened, setOpened] = useState(false);
@@ -90,10 +92,22 @@ const LoginButton = () => {
 }
 
 function HomeLogo() {
+  const ref = useRef<HTMLImageElement>(null);
+
+  const audioLevelsHandler = useCallback((data: UseAudioLevelsData) => {
+    if (!ref.current) return;
+
+    const scale = 1 + clamp((1 - data.reduction) * 5 * client.volume, 0, 0.1);
+
+    ref.current.style.scale = `${scale}`;
+  }, []);
+
+  useAudioLevels(audioLevelsHandler, []);
+
   return (
     <Link to="/">
       <Flex className={classes.logoBox}>
-        <Image className={classes.logo} src={logo} />
+        <Image ref={ref} className={classes.logo} src={logo} />
         <Title component='h1' className={classes.title}>
           Medley
         </Title>
