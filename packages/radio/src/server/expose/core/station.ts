@@ -56,10 +56,6 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     return this.$Exposing;
   }
 
-  #prefixWithStationId(s: string) {
-    return `${this.id}/${s}`
-  }
-
   #onDeckLoaded: StationEvents['deckLoaded'] = async (deckIndex: number) => {
     const info = await this.getDeckInfo(deckIndex);
     this.emit('deckLoaded', deckIndex, info);
