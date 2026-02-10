@@ -11,13 +11,11 @@ import {
   Center,
   ThemeIcon,
   Box,
-  Button,
-  alpha
+  Button
 } from '@mantine/core';
 
 import { IconRadio, IconHeadphones } from '@tabler/icons-react';
-import { adjustHue, darken, getLuminance, hsl, lighten, linearGradient } from "polished";
-import { prominent } from "color.js";
+import { darken, getLuminance, lighten, linearGradient } from "polished";
 import { AnimatePresence, motion } from "motion/react";
 import { formatTags } from "@seamless-medley/utils";
 
