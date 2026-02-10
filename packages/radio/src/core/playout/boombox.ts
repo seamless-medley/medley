@@ -99,6 +99,11 @@ export type BoomBoxEvents<P extends BoomBoxProfile = BoomBoxProfile> = {
    */
   profileChange: (oldProfile: P | undefined, newProfile: P) => void;
 
+  /**
+   * Emit when profile book has changed
+   */
+  profileBookChange: () => void;
+
   latchCreated: (session: LatchSession<BoomBoxTrack, BoomBoxTrackExtra>) => void;
 
   /**
@@ -237,6 +242,8 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
     this.#sweeperInserter = new SweeperInserter(this, []);
 
     this.#metadataHelper = options.metadataHelper;
+
+    this.#profileBook.on('changed', () => this.emit('profileBookChange'));
   }
 
 

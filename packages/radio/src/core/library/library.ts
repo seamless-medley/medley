@@ -5,7 +5,7 @@ type IDOf<T> = T extends { id: infer ID } ? ID : never;
 type LibraryEvents<E extends ListenerSignature<any>, T> = E & {
   changed: () => void;
   add: (element: T) => void;
-  delete: (element: T) => void;
+  remove: (element: T) => void;
 }
 
 export interface IReadonlyLibrary<T extends { id: ID }, Events extends ListenerSignature<Events> = {}, ID = IDOf<T>> extends Iterable<T> {
@@ -68,7 +68,7 @@ export class BaseLibrary<T extends { id: ID }, Events extends ListenerSignature<
       const item = this.elements.get(key);
 
       if (this.elements.delete(key)) {
-        (this.emit as any)('delete', item);
+        (this.emit as any)('remove', item);
         changed = true;
       }
     }

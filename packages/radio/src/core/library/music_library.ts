@@ -53,7 +53,10 @@ export type LibrarySearchParams = {
   fuzzy?: 'exact' | number;
 }
 
-export interface MusicLibraryEvents {
+export interface MusicLibraryEvents<T> {
+  changed: () => void;
+  add: (element: T) => void;
+  remove: (element: T) => void;
   stats(stats: LibraryOverallStats): void;
 }
 
@@ -64,7 +67,7 @@ type IndexQueueTask<O> = {
   collection: WatchTrackCollection<MusicTrack<O>>;
 }
 
-export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicLibraryEvents> {
+export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicLibraryEvents<O>> {
   #logger: Logger;
 
   #searchEngine = new SearchEngine();

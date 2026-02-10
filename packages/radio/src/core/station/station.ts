@@ -17,7 +17,7 @@ import type { StationAudioLevels } from '@seamless-medley/remote';
 
 import { createLogger, type Logger } from '../../logging';
 
-import { RescanOptions, ScanFlags, TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
+import { RescanOptions, TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
 import { Crate, LatchOptions, LatchSession } from "../crate";
 import { FindByCommentOptions, Library, LibrarySearchParams, LibraryOverallStats, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicLibraryEvents, MusicTrack, MusicTrackCollection } from "../library";
 import {
@@ -125,6 +125,7 @@ export type StationEvents = {
   crateChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
   sequenceProfileChange: (oldProfile: StationProfile | undefined, newProfile: StationProfile) => void;
   profileChange: (oldProfile: StationProfile | undefined, newProfile: StationProfile) => void;
+  profileBookChange: () => void;
   latchCreated: (session: LatchSession<StationTrack, any>) => void;
 
   requestTrackAdded: (track: StationTrackIndex) => void;
@@ -135,6 +136,7 @@ export type StationEvents = {
   collectionUpdated: (collection: StationTrackCollection) => void;
   //
   libraryStats: (stats: LibraryOverallStats) => void;
+  libraryChanged: () => void;
   //
   audienceChanged: () => void;
 }
@@ -231,6 +233,7 @@ export class Station extends TypedEmitter<StationEvents> {
     );
 
     this.#library.on('stats', this.#handleLibraryStats);
+    this.#library.on('changed', this.#handleLibraryChanged);
 
     // Create boombox
     const boombox = new BoomBox<Requester, StationProfile>({
@@ -259,6 +262,7 @@ export class Station extends TypedEmitter<StationEvents> {
     boombox.on('profileChange', this.#handleProfileChange);
     boombox.on('sequenceProfileChange', (o, n) => this.emit('sequenceProfileChange', o, n));
     boombox.on('latchCreated', session => this.emit('latchCreated', session));
+    boombox.on('profileBookChange', () => this.emit('profileBookChange'));
 
     this.#musicDb.trackHistory
       .getAll(this.id)
@@ -299,8 +303,12 @@ export class Station extends TypedEmitter<StationEvents> {
     }
   }
 
-  #handleLibraryStats: MusicLibraryEvents['stats'] = (stats) => {
+  #handleLibraryStats: MusicLibraryEvents<StationTrackCollection>['stats'] = (stats) => {
     this.emit('libraryStats', stats);
+  }
+
+  #handleLibraryChanged: MusicLibraryEvents<StationTrackCollection>['changed'] = () => {
+    this.emit('libraryChanged');
   }
 
   #handleTrackQueued: BoomBoxEventsForStation['trackQueued'] = (track: StationTrack) => {
