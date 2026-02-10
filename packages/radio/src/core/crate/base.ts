@@ -26,7 +26,6 @@ export type CrateOptions<T extends Track<any>> = {
   chance?: Chanceable;
 
   limit: CrateLimit;
-  max?: number | (() => number);
 }
 
 export type SequenceChance = 'random' | { yes: number, no: number } | (() => Promise<boolean>);
@@ -143,7 +142,7 @@ export class Crate<T extends Track<any>> {
   limit: CrateLimit;
   chance?: Chanceable;
 
-  #max: number | (() => number);
+  #max: number | (() => number) = 0;
 
   #logger: Logger;
 
@@ -152,8 +151,6 @@ export class Crate<T extends Track<any>> {
 
     this.chance = options.chance;
     this.limit = options.limit;
-
-    this.#max = options.max ?? 0;
 
     this.#logger = createLogger({
       name: 'crate',
