@@ -254,7 +254,7 @@ export function parseLyrics(s: string, { bpm = 90 }: ParseLyricOptions = {}): Ly
 
 export const lyricsToText = (lyrics: Lyrics, removeEmptyLine: boolean = true) => {
   const texts = lyrics.type === 'enhanced'
-    ? lyrics.timeline.map(({ line }) => line.join(''))
+    ? lyrics.timeline.map(({ line }) => line.map(e => e.token).join(''))
     : lyrics.timeline.map(({ line }) => line);
 
   return removeEmptyLine ? texts.filter(text => !!text) : texts;
