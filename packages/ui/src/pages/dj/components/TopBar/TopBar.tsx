@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { ActionIcon, Badge, Box, Button, Flex, Group, Image, rem, Text, Tooltip } from "@mantine/core";
 import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext } from "@tabler/icons-react";
@@ -235,32 +235,36 @@ const ProfilePanel: React.FC = () => {
   const profiles = useRemotableProp(station, 'profiles');
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
+  const itemRefs = useRef<Record<string, HTMLElement | null>>({});
+
   const { showContextMenu } = useContextMenu();
+
+  const setSelection = useCallback((id: string) => {
+    setSelectedId(id);
+    itemRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, []);
 
   const changeProfile = useCallback((id: string) => {
     if (station?.changeProfile?.(id)) {
-      setSelectedId(id);
+      setSelection(id);
     }
   }, [station]);
 
   useEffect(() => {
     if (currentProfileId && !selectedId) {
-      setSelectedId(currentProfileId);
+      setSelection(currentProfileId);
     }
   }, [currentProfileId]);
 
   return (
-    <Panel w={240}
-      justify="space-between"
-      header='PROFILES'
-      flex='0 1 auto'
-    >
+    <Panel className={classes.profile} w={240} header='PROFILES'>
       <OverlayScrollbarsComponent>
-        <Flex className={classes.profile}>
+        <Flex className={classes.profileContent}>
           {profiles?.map((p) => (
             <Flex
               key={p.id}
               className={clsx(classes.item, selectedId === p.id && classes.selected)}
+              ref={(el) => { itemRefs.current[p.id] = el} }
               onClick={() => setSelectedId(p.id)}
               onContextMenu={showContextMenu(
                 [

@@ -83,6 +83,10 @@
 }
 
 .profile {
+    flex: 0 1 auto;
+}
+
+.profile-content {
     flex-direction: column;
     height: 100%;
     font-size: 0.7rem;
