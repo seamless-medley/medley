@@ -242,11 +242,10 @@ export const toRemoteStationProfile = (p: StationProfile): RemoteProfile => ({
 export const toRemoteCrate = (c: Crate<StationTrack>): RemoteCrate => ({
   id: c.id,
   sources: zip(c.sources, c.weights).map(([src, weight]) => ({ id: src!.id, weight: weight! })),
-  limit: isFunction(c.limit) ? c.limit.name : c.limit,
+  limit: isFunction(c.limit) ? c.limit.sequenceLimit : c.limit,
   chance: toRemoteChance(c.chance)
 });
 
-const toRemoteChance = (ch: Chanceable | undefined): string | undefined => {
-  if (isFunction(ch?.chances)) return ch.chances.name;
-  return ch?.next?.name;
+const toRemoteChance = (ch: Chanceable): Chanceable['chances'] => {
+  return ch.chances;
 }
