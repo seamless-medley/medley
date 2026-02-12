@@ -81,7 +81,7 @@ const StationPanel: React.FC = () => {
   )
 }
 
-export const Cover: React.FC = () => {
+const Cover: React.FC = () => {
   const { stationId } = useContext(TopBarContext);
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
@@ -109,7 +109,7 @@ export const Cover: React.FC = () => {
   )
 }
 
-export const TransportControl: React.FC = () => {
+const TransportControl: React.FC = () => {
   const { stationId } = useContext(TopBarContext);
   const { station } = useStation(stationId);
   const playState = useRemotableProp(station, 'playState');
@@ -228,7 +228,7 @@ const TrackPanel: React.FC = () => {
   )
 }
 
-export const ProfilePanel: React.FC = () => {
+const ProfilePanel: React.FC = () => {
   const { stationId } = useContext(TopBarContext);
   const { station } = useStation(stationId);
   const currentProfileId = useRemotableProp(station, 'currentProfile');
