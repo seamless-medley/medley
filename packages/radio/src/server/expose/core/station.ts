@@ -230,6 +230,10 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   private setProfiles(profiles: StationProfile[]) {
     this.profiles = profiles.map(toRemoteStationProfile);
   }
+
+  changeProfile(id: string): boolean {
+    return this.#station.changeProfile(id) !== undefined;
+  }
 };
 
 export const toRemoteStationProfile = (p: StationProfile): RemoteProfile => ({

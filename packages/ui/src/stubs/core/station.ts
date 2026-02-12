@@ -28,6 +28,8 @@ class StubbingStation {
   getDeckInfo = noop as any;
 
   getCollections = noop as any;
+
+  changeProfile = noop as any;
 }
 
 export const StubStation = StubOf<Station>(StubbingStation);

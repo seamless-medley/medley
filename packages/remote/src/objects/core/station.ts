@@ -29,6 +29,8 @@ export interface Station {
 
   getCollections(): TrackCollection[];
 
+  changeProfile(id: string): boolean;
+
   ϟdeckLoaded(deckIndex: number, info: DeckInfoWithPositions): void;
   ϟdeckUnloaded(deckIndex: number): void;
   ϟdeckStarted(deckIndex: number, position: DeckPositionsWithTrackKind): void;

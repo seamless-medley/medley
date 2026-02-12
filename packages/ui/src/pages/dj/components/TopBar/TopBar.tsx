@@ -19,7 +19,7 @@ import { CollectionRoute } from "@ui/pages/dj/CollectionPage/route";
 import { client } from "@ui/init";
 import fallbackImage from '@ui/fallback-image.svg?inline';
 import classes from './TopBar.module.css';
-import { useScrollIntoView } from "@mantine/hooks";
+import { useContextMenu } from "mantine-contextmenu";
 
 type StationIdProps = {
   stationId: string;
@@ -235,6 +235,14 @@ export const ProfilePanel: React.FC = () => {
   const profiles = useRemotableProp(station, 'profiles');
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
+  const { showContextMenu } = useContextMenu();
+
+  const changeProfile = useCallback((id: string) => {
+    if (station?.changeProfile?.(id)) {
+      setSelectedId(id);
+    }
+  }, [station]);
+
   useEffect(() => {
     if (currentProfileId && !selectedId) {
       setSelectedId(currentProfileId);
@@ -250,16 +258,28 @@ export const ProfilePanel: React.FC = () => {
       <OverlayScrollbarsComponent>
         <Flex className={classes.profile}>
           {profiles?.map((p) => (
-            <Flex key={p.id} className={clsx(classes.item, selectedId === p.id && classes.selected)} onClick={() => setSelectedId(p.id)}>
+            <Flex
+              key={p.id}
+              className={clsx(classes.item, selectedId === p.id && classes.selected)}
+              onClick={() => setSelectedId(p.id)}
+              onContextMenu={showContextMenu(
+                [
+                  {
+                    key: 'switch',
+                    title: 'Switch to this profile',
+                    disabled: station === undefined,
+                    onClick: () => changeProfile(p.id)
+                  }
+                ]
+              )}
+            >
               <Flex className={classes.text}>
                 <Group>{p.name}</Group>
                 <Group className={classes.desc}>{p.description}</Group>
               </Flex>
-              {p.id === currentProfileId &&
-                <Group>
-                  <Badge size='xs' autoContrast mr={10}>Current</Badge>
-                </Group>
-              }
+              <Group mr={10}>
+                {p.id === currentProfileId && <Badge size='xs' autoContrast>Current</Badge>}
+              </Group>
             </Flex>
           ))}
         </Flex>
