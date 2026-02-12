@@ -130,10 +130,9 @@ export const TransportControl: React.FC = () => {
     <ActionIcon.Group style={{ group: { borderRadius: 0 } }} bg='dark.8'>
       <ActionIcon
         aria-label="Play"
-        variant="subtle"
         disabled={playState === 'playing'}
         size={iconSize}
-        color='white'
+        color='dark.8'
         onClick={play}
         radius={0}
       >
@@ -142,10 +141,9 @@ export const TransportControl: React.FC = () => {
 
       <ActionIcon
         aria-label="Pause"
-        variant="subtle"
         disabled={playState === 'paused'}
         size={iconSize}
-        color="white"
+        color="dark.8"
         onClick={() => station?.pause()}
         radius={0}
       >
@@ -155,9 +153,8 @@ export const TransportControl: React.FC = () => {
       <Tooltip withArrow autoContrast label="Skip to next track" position="right">
         <ActionIcon
           aria-label="Skip"
-          variant="subtle"
           size={iconSize}
-          color="white"
+          color="dark.8"
           onClick={() => station?.skip()}
           radius={0}
         >
