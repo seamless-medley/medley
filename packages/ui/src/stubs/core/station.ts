@@ -17,6 +17,7 @@ class StubbingStation {
 
   currentCollection = undefined as any;
   currentProfile = undefined as any;
+  currentCrate = undefined as any;
 
   profiles = undefined as any;
 

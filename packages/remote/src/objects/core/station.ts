@@ -2,6 +2,7 @@ import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import type { DeckInfoWithPositions, DeckPositionsWithTrackKind } from "./deck";
 import type { TrackCollection } from "./track";
 import type { Chanceable, SequenceLimit } from "@seamless-medley/radio";
+export type { SequenceLimit } from '@seamless-medley/radio';
 
 export type PlayState = 'idle' | 'playing' | 'paused';
 
@@ -19,6 +20,7 @@ export interface Station {
   readonly currentCollection: string | undefined;
   readonly currentProfile: string | undefined;
   readonly profiles: StationProfile[];
+  readonly currentCrate: string | undefined;
 
   start(): void;
   pause(): void;
@@ -51,10 +53,15 @@ export interface StationProfile {
   crates: Array<Create>;
 }
 
+export type CrateSource = {
+  id: string;
+  weight: number;
+}
+
 export interface Create {
   readonly id: string;
 
-  readonly sources: Array<{ id: string, weight: number }>;
+  readonly sources: Array<CrateSource>;
 
   readonly limit: SequenceLimit;
 

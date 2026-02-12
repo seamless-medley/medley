@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { ActionIcon, Badge, Box, Button, Flex, Group, Image, rem, Text, Tooltip } from "@mantine/core";
 import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext } from "@tabler/icons-react";
@@ -20,6 +20,7 @@ import { client } from "@ui/init";
 import fallbackImage from '@ui/fallback-image.svg?inline';
 import classes from './TopBar.module.css';
 import { useContextMenu } from "mantine-contextmenu";
+import type { CrateSource, SequenceLimit, TrackCollection } from "@seamless-medley/remote";
 
 type StationIdProps = {
   stationId: string;
@@ -228,19 +229,30 @@ const TrackPanel: React.FC = () => {
   )
 }
 
+type ProfileContextValue = {
+  selectedProfileId: string | undefined;
+  setSelectedProfileId: (newValue: string) => any;
+}
+
+const ProfilePanelContext = createContext<ProfileContextValue>(null!);
+
 const ProfilePanel: React.FC = () => {
   const { stationId } = useContext(TopBarContext);
   const { station } = useStation(stationId);
   const currentProfileId = useRemotableProp(station, 'currentProfile');
   const profiles = useRemotableProp(station, 'profiles');
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const { selectedProfileId, setSelectedProfileId } = useContext(ProfilePanelContext);
 
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  const storeItemRef = useCallback((id: string) => (el: HTMLElement | null) => {
+    itemRefs.current[id] = el;
+  }, [])
 
   const { showContextMenu } = useContextMenu();
 
   const setSelection = useCallback((id: string) => {
-    setSelectedId(id);
+    setSelectedProfileId(id);
     itemRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, []);
 
@@ -251,21 +263,21 @@ const ProfilePanel: React.FC = () => {
   }, [station]);
 
   useEffect(() => {
-    if (currentProfileId && !selectedId) {
+    if (currentProfileId && !selectedProfileId) {
       setSelection(currentProfileId);
     }
   }, [currentProfileId]);
 
   return (
-    <Panel className={classes.profile} w={240} header='PROFILES'>
+    <Panel w={240} header='PROFILES'>
       <OverlayScrollbarsComponent>
-        <Flex className={classes.profileContent}>
+        <Flex className={classes.listPanel}>
           {profiles?.map((p) => (
             <Flex
               key={p.id}
-              className={clsx(classes.item, selectedId === p.id && classes.selected)}
-              ref={(el) => { itemRefs.current[p.id] = el} }
-              onClick={() => setSelectedId(p.id)}
+              className={clsx(classes.item, selectedProfileId === p.id && classes.selected)}
+              ref={storeItemRef(p.id)}
+              onClick={() => setSelection(p.id)}
               onContextMenu={showContextMenu(
                 [
                   {
@@ -277,9 +289,9 @@ const ProfilePanel: React.FC = () => {
                 ]
               )}
             >
-              <Flex className={classes.text}>
+              <Flex className={classes.primary}>
                 <Group>{p.name}</Group>
-                <Group className={classes.desc}>{p.description}</Group>
+                <Group className={classes.secondary}>{p.description}</Group>
               </Flex>
               <Group mr={10}>
                 {p.id === currentProfileId && <Badge size='xs' autoContrast>Current</Badge>}
@@ -292,6 +304,132 @@ const ProfilePanel: React.FC = () => {
   )
 }
 
+const CratePanel: React.FC = () => {
+  const { stationId } = useContext(TopBarContext);
+  const { station } = useStation(stationId);
+  const [collections, setCollections] = useState<TrackCollection[]>([]);
+  const profiles = useRemotableProp(station, 'profiles');
+  const { selectedProfileId } = useContext(ProfilePanelContext);
+  const crates = profiles?.find(p => p.id === selectedProfileId)?.crates ?? [];
+  const currentCrate = useRemotableProp(station, 'currentCrate');
+
+  useEffect(() => {
+    station?.getCollections().then(setCollections);
+  }, [station]);
+
+  const formatSource = useCallback((source: CrateSource, showWeight: boolean) => {
+    const col = collections.find(col => col.id === source.id);
+    if (!col) return '';
+
+    return (
+      <>
+        <span>{col.description}</span>
+        {showWeight && <span className={classes.sourceWeight}>({source.weight})</span>}
+      </>
+    )
+  }, [collections]);
+
+  const formatLimit = useCallback((limit: SequenceLimit) => {
+    if (limit === 'entirely') {
+      return <span className={classes.sequenceLimit}>All</span>;
+    }
+
+    if (typeof limit === 'number') {
+      return (
+        <>
+          <span className={classes.sequenceLimit}>{limit}</span> track(s)
+        </>
+      );
+    }
+
+    switch (limit.by) {
+      case 'sample':
+      case 'one-of':
+        return (
+          <>
+            One of [<span className={classes.sequenceLimit}>{limit.list.join(', ')}</span>] track(s)
+          </>
+        )
+
+      case 'range':
+        return (
+          <>
+            <span className={classes.sequenceLimit}>{limit.range.min}</span>
+            to
+            <span className={classes.sequenceLimit}>{limit.range.max}</span>
+            track(s)
+          </>
+        )
+
+      case 'upto':
+        return (
+          <>
+            Up to
+            <span className={classes.sequenceLimit}>{limit.upto}</span>
+            track(s)
+          </>
+        )
+    }
+  }, []);
+
+  return (
+    <Panel w={240} header='SEQUENCES'>
+      <OverlayScrollbarsComponent>
+        <Flex className={classes.listPanel}>
+          {collections.length && crates.map((c) => (
+            <Flex
+              key={c.id}
+              className={classes.item}
+              // ref={storeItemRef(c.id)}
+              // onClick={() => setSelection(c.id)}
+              // onContextMenu={showContextMenu(
+              //   [
+              //     {
+              //       key: 'switch',
+              //       title: 'Switch to this profile',
+              //       disabled: station === undefined,
+              //       onClick: () => changeProfile(p.id)
+              //     }
+              //   ]
+              // )}
+            >
+              <Flex className={classes.primary}>
+                {c.sources.map(s =>
+                  <Group key={`${c.id}:${s.id}`} gap={0}>
+                    {formatSource(s, c.sources.length > 1)}
+                  </Group>
+                )}
+
+                {/* <Group>{c.sources.map(s => [s.id, s.weight].join(': '))}</Group> */}
+                <Group className={classes.secondary} gap={0}>{formatLimit(c.limit)}</Group>
+              </Flex>
+              <Group mr={10}>
+                {c.id === currentCrate && <Badge size='xs' autoContrast>Current</Badge>}
+              </Group>
+            </Flex>
+          ))}
+        </Flex>
+      </OverlayScrollbarsComponent>
+    </Panel>
+  );
+}
+
+const ProfileAndCrate: React.FC = () => {
+  const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>(undefined);
+
+  const profileContext: ProfileContextValue = {
+    selectedProfileId,
+    setSelectedProfileId
+  }
+
+  return (
+    <ProfilePanelContext value={profileContext}>
+      <ProfilePanel />
+      <CratePanel />
+    </ProfilePanelContext>
+  );
+}
+
 export const TopBar: React.FC<StationIdProps> = React.memo((props) => {
   return (
     <TopBarContext.Provider value={props}>
@@ -299,8 +437,8 @@ export const TopBar: React.FC<StationIdProps> = React.memo((props) => {
         <Flex className={classes.main}>
           <StationPanel />
           <TrackPanel />
-          <ProfilePanel />
-          <Box className={classes.fill} flex='1 1 0' />
+          <ProfileAndCrate />
+          <Box className={classes.fill} />
         </Flex>
         <Panel className={clsx(classes.lyricsBar)} header="LYRICS">
           <LyricsBar stationId={props.stationId} size="lg" autoscroll />

@@ -24,6 +24,8 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   #profiles: RemoteProfile[] = [];
 
+  #currentCrate?: string;
+
   constructor(station: Station) {
     super();
     this.$Exposing = station;
@@ -31,6 +33,7 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#currentCollectionId = station.currentCollection?.id;
     this.#currentProfileId = station.profile.id;
     this.setProfiles(station.profiles);
+    this.#currentCrate = station.currentCrate?.id;
 
     this.#station.on('deckLoaded', this.#onDeckLoaded);
     this.#station.on('deckUnloaded', this.#onDeckUnloaded);
@@ -95,6 +98,7 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   }
 
   #onCrateChange: StationEvents['crateChange'] = (oldCrate, newCrate) => {
+    this.currentCrate = newCrate.id;
     this.emit('crateChange', oldCrate?.id, newCrate.id);
   }
 
@@ -233,6 +237,15 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   changeProfile(id: string): boolean {
     return this.#station.changeProfile(id) !== undefined;
+  }
+
+  get currentCrate() {
+    return this.#currentCrate
+  }
+
+  @PureExpose
+  private set currentCrate(value) {
+    this.#currentCrate = value;
   }
 };
 
