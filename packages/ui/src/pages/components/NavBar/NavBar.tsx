@@ -158,7 +158,7 @@ function PlaybackInfo() {
 
       <Stack className={classes.info}>
         <Flex direction={'column'}>
-          <TransitionText size='1.2em' h='1.5em' fw={700}>
+          <TransitionText size='1.2em' h='1.5em' fw={700} nowrap autoscroll>
             {name ?? 'No station'}
           </TransitionText>
           <TransitionText
@@ -176,6 +176,7 @@ function PlaybackInfo() {
             h='1.2em'
             transition={{ delay: 0.5 }}
             nowrap
+            autoscroll
           >
             {artist ?? 'Unknown artist'}
           </TransitionText>
@@ -268,9 +269,9 @@ export function NavBar() {
             <VolumeControl orientation={vuBarOrientation} />
           </Flex>
         </Group>
-
-        <PlaybackInfo />
       </Group>
+
+      <PlaybackInfo />
 
       {/* <Flex className={classes.rightPane}>
         { user
