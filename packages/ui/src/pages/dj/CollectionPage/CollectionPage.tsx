@@ -1,4 +1,4 @@
-import { Box, Group } from "@mantine/core";
+import { Box, Group, NumberFormatter, Title } from "@mantine/core";
 import { useParams } from "@tanstack/react-router";
 import { useCollection } from "@ui/hooks/useCollection";
 import { useRemotableProp } from "@ui/hooks/remotable";
@@ -13,8 +13,8 @@ export const CollectionPage = () => {
 
   return (
     <Box className={classes.container}>
-      <Group className={classes.header} mx='md'>
-        <h2>{description} - {length} tracks</h2>
+      <Group className={classes.header} m='md'>
+        <Title order={2}>{description} - <NumberFormatter thousandSeparator value={length}/> tracks</Title>
       </Group>
 
       <CollectionTracks collection={collection} />
