@@ -79,37 +79,37 @@ export type BoomBoxCollectionChangeEvent = {
 
 export type BoomBoxEvents<P extends BoomBoxProfile = BoomBoxProfile> = {
   /**
-   * Emit when the active crate was changed by the sequencer during the sequencing phase
+   * Emitted when the active crate was changed by the sequencer during the sequencing phase
    */
   sequenceChange: (activeCrate: BoomBoxCrate, oldCrate?: BoomBoxCrate) => void;
 
   sequenceProfileChange: (oldProfile: P | undefined, newProfile: P) => void;
 
   /**
-   * Emit when the active collection was changed by any means during track queuing phase
+   * Emitted when the active collection was changed by any means during track queuing phase
    *
    * This event is triggered by node-medley itself
    *
-   * To detect change during the actual playback, listen to `trackStarted` event and check the collection from trackPlay instead
+   * To detect changes during the actual playback, listen to `trackStarted` event and check the collection from trackPlay instead
    */
   collectionChange: (event: BoomBoxCollectionChangeEvent) => void;
 
   /**
-   * Emit when the active profile was changed during track queuing phase
+   * Emitted when the active profile was changed during track queuing phase
    */
   profileChange: (oldProfile: P | undefined, newProfile: P) => void;
 
   /**
-   * Emit when profile book has changed
+   * Emitted when the profile book has changed
    */
   profileBookChange: () => void;
 
   latchCreated: (session: LatchSession<BoomBoxTrack, BoomBoxTrackExtra>) => void;
 
   /**
-   * Emit when the active crate was changed by any means during track queuing phase
+   * Emitted when the active crate was changed by any means during track queuing phase
    *
-   * Note that this is not the same as `sequenceChange` event
+   * Note that this is not the same as the `sequenceChange` event
    * This event is triggered by node-medley itself
    */
   crateChange: (oldCrate: BoomBoxCrate | undefined, newCrate: BoomBoxCrate) => void;
