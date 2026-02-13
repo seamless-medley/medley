@@ -22,6 +22,7 @@ import fallbackImage from '@ui/fallback-image.svg?inline';
 import classes from './TopBar.module.css';
 import type { CrateSource, SequenceChances, SequenceLimit, TrackCollection } from "@seamless-medley/remote";
 import { theme } from "@ui/theme";
+import { noop } from "lodash";
 
 type StationIdProps = {
   stationId: string;
@@ -166,7 +167,6 @@ const TransportControl: React.FC = () => {
     </ActionIcon.Group>
   )
 }
-
 
 const TrackPanel: React.FC = () => {
   const { stationId } = useContext(TopBarContext);
@@ -323,12 +323,15 @@ const CratePanel: React.FC = () => {
   const { selectedProfileId } = useContext(ProfilePanelContext);
   const crates = profiles?.find(p => p.id === selectedProfileId)?.crates ?? [];
   const currentCrate = useRemotableProp(station, 'currentCrate');
+  const currentCollection = useRemotableProp(station, 'currentCollection');
+  const activeDeck = useRemotableProp(station, 'activeDeck');
+  const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
 
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const storeItemRef = useCallback((id: string) => (el: HTMLElement | null) => {
     itemRefs.current[id] = el;
-  }, [])
+  }, []);
 
   useEffect(() => {
     station?.getCollections().then(setCollections);
@@ -421,6 +424,8 @@ const CratePanel: React.FC = () => {
     }
   }, []);
 
+  const isLatching = trackPlay?.track.sequencing?.latch !== undefined;
+
   return (
     <Panel w={240} header='SEQUENCES'>
       <OverlayScrollbarsComponent>
@@ -430,16 +435,28 @@ const CratePanel: React.FC = () => {
               key={crate.id}
               className={classes.item}
               ref={storeItemRef(crate.id)}
-              onContextMenu={showContextMenu(
-                crate.sources
+              onContextMenu={showContextMenu([
+                ...(isLatching
+                  ? [
+                    { key: 'latching', title: 'Latching is active', disabled: true, onClick: () => noop },
+                  ]
+                  : (currentProfileId !== selectedProfileId)
+                    ? [
+                      { key: 'profile_inactive', title: 'Profile is not active', disabled: true, onClick: () => noop },
+                    ]
+                    : []
+                ),
+                ...(!isLatching && (currentProfileId === selectedProfileId))
+                ? crate.sources
                   .map(s => collections.find(col => col.id === s.id)!)
                   .map(col => ({
                     key: col.id,
-                    title: `Play from ${col.description}`,
-                    disabled: (currentCrate === crate.id) || (currentProfileId !== selectedProfileId),
+                    title: <>Play from <span style={{ color: theme.colors.blue[5] }}>{col.description}</span></>,
+                    disabled: (col.id === currentCollection),
                     onClick: () => changeSequence(crate.id, col.id)
                   }))
-              )}
+                : []
+              ])}
             >
               <Flex className={classes.primary}>
                 {crate.sources.map(s =>
