@@ -128,7 +128,7 @@ export class TrackCollection<
     return {
       id: createdTrack?.id ?? generatedId,
       path,
-      collection: this as unknown as T['collection'],
+      collection: this as unknown as TrackCollection<T, TE>,
       ...omit(createdTrack, 'id', 'path'),
     } as T;
   }

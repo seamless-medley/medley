@@ -3,7 +3,7 @@ import { Crate, LatchSession } from "./crate";
 import { TrackCollection } from "./collections";
 
 export interface Track<E extends TrackExtra> extends TrackInfo {
-  readonly collection: TrackCollection<Track<E>>;
+  readonly collection: TrackCollection<any>;
 
   sequencing?: TrackSequencing<Track<E>, E>;
 

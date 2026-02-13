@@ -3,9 +3,10 @@ import { Track } from "../track";
 import { createLogger, type Logger } from '../../logging';
 import { createNamedFunc, weightedSample } from "@seamless-medley/utils";
 import { CrateProfile } from "./profile";
+import { TrackCollection } from "../collections";
 
 export type CrateSourceWithWeight<T extends Track<any>> = {
-  collection: T['collection'];
+  collection: TrackCollection<T>;
   weight: number;
 }
 
@@ -152,7 +153,7 @@ export class Crate<T extends Track<any>> {
 
   #profile!: CrateProfile<T>;
 
-  #sources: T['collection'][] = [];
+  #sources: TrackCollection<T>[] = [];
   #sourceWeights: number[] = [];
 
   limit: CrateLimit;
@@ -240,7 +241,7 @@ export class Crate<T extends Track<any>> {
    *
    * The `intendedCollection` is not necessary to belong to the crate.
    */
-  async next(validator?: (path: string) => Promise<boolean>, intendedCollection?: T['collection']): Promise<T | undefined> {
+  async next(validator?: (path: string) => Promise<boolean>, intendedCollection?: TrackCollection<T>): Promise<T | undefined> {
     const source = intendedCollection ?? weightedSample(this.#sources, this.#sourceWeights);
 
     if (!source) {

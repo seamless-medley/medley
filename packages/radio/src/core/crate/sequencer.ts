@@ -45,7 +45,7 @@ export type LatchSession<T extends Track<E>, E extends TrackExtra> = {
   uuid: string;
   count: number;
   max: number;
-  collection: T['collection'];
+  collection: TrackCollection<T, E>
 }
 
 type LatchWithLength = {
@@ -58,7 +58,7 @@ type LatchIncrement = {
 }
 
 export type LatchOptions<T extends Track<any>> = (LatchWithLength | LatchIncrement) & {
-  collection?: T['collection'];
+  collection?: TrackCollection<T>
   important?: boolean;
 }
 
@@ -73,7 +73,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
   #playCounter = 0;
   #crateIndex = 0;
   #lastCrate: Crate<T> | undefined;
-  #currentCollection: T['collection'] | undefined;
+  #currentCollection: TrackCollection<T, E> | undefined;
 
   #logger: Logger;
 
@@ -222,7 +222,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
 
   #logNoCrates = debounce(() => this.#logger.error('No crates'), 1000);
 
-  #temporalCollection: T['collection'] | undefined;
+  #temporalCollection: TrackCollection<T, E> | undefined;
 
   async nextTrack(): Promise<SequencedTrack<T> | undefined> {
     if (this.#crates.length < 1) {
@@ -382,11 +382,11 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
     return [...this.#crates];
   }
 
-  isKnownCollection(collection: T['collection']): boolean {
+  isKnownCollection(collection: TrackCollection<T, E>): boolean {
     return this.#crates.find(c => c.sources.includes(collection)) !== undefined;
   }
 
-  forcefullySelectCrate(crateId: string, collection?: T['collection']): boolean {
+  forcefullySelectCrate(crateId: string, collection?: TrackCollection<T, E>): boolean {
     const crateIndex = this.#crates.findIndex(c => c.id === crateId);
     if (crateIndex === -1) {
       return false;
@@ -405,7 +405,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
     return true;
   }
 
-  forcefullySelectCollection(collection: T['collection']): boolean {
+  forcefullySelectCollection(collection: TrackCollection<T, E>): boolean {
     const crateIndex = this.#crates.findIndex(c => c.sources.includes(collection));
     if (crateIndex === -1) {
       return false;
@@ -457,7 +457,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
     }
   }
 
-  #getLatchSessionFor(collection: T['collection'] | undefined, important?: boolean): LatchSession<T, E> | undefined {
+  #getLatchSessionFor(collection: TrackCollection<T, E> | undefined, important?: boolean): LatchSession<T, E> | undefined {
     const existingIndex = collection ? this.#latchSessions.findIndex(s => s.collection.id === collection.id) : -1;
 
     if (existingIndex > -1) {
