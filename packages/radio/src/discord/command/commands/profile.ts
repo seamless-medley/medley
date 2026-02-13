@@ -21,9 +21,8 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
   }
 
   const { station } = guildStationGuard(automaton, interaction);
-  const { profiles } = station;
 
-  if (profiles.length <= 1) {
+  if (station.profiles.length <= 1) {
     warn(interaction, `${station.name} has no profiles other than the default one`);
     return;
   }
@@ -37,7 +36,7 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
 
     makeCaption: async () => [],
     async makeComponents() {
-      const listing = profiles.map<SelectMenuComponentOptionData>(p => ({
+      const listing = station.profiles.map<SelectMenuComponentOptionData>(p => ({
         label: p.name,
         description: p.description ?? `${p.name} profile`,
         value: p.id,
@@ -88,15 +87,23 @@ const createCommandHandler: InteractionHandlerFactory<ChatInputCommandInteractio
       }
     },
 
-    hook({ cancel }) {
+    hook({ refresh, cancel }) {
       const handleStationChange = () => {
         cancel('Canceled, the station has been changed');
       }
 
+      const handleProfileChange = () => {
+        refresh();
+      }
+
       automaton.on('stationTuned', handleStationChange);
+      station.on('profileChange', handleProfileChange);
+      station.on('sequenceProfileChange', handleProfileChange);
 
       return () => {
         automaton.off('stationTuned', handleStationChange);
+        station.off('profileChange', handleProfileChange);
+        station.off('sequenceProfileChange', handleProfileChange);
       }
     },
   });
