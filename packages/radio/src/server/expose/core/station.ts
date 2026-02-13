@@ -260,9 +260,5 @@ export const toRemoteCrate = (c: Crate<StationTrack>): RemoteCrate => ({
   id: c.id,
   sources: zip(c.sources, c.weights).map(([src, weight]) => ({ id: src!.id, weight: weight! })),
   limit: isFunction(c.limit) ? c.limit.sequenceLimit : c.limit,
-  chance: toRemoteChance(c.chance)
+  chances: c.chance.chances
 });
-
-const toRemoteChance = (ch: Chanceable): Chanceable['chances'] => {
-  return ch.chances;
-}

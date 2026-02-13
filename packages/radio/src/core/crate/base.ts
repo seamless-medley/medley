@@ -16,7 +16,7 @@ export interface CrateChanceFn {
 
 export interface Chanceable {
   next: () => boolean | Promise<boolean>;
-  chances: SequenceChance;
+  chances: SequenceChances;
 }
 
 export type CrateLimitValue = number | 'entirely';
@@ -38,7 +38,7 @@ export type CrateOptions<T extends Track<any>> = {
   limit: CrateLimit;
 }
 
-export type SequenceChance = 'random' | { yes: number, no: number };
+export type SequenceChances = 'random' | { yes: number, no: number };
 
 export type LimitByUpto = {
   by: 'upto';
@@ -99,7 +99,7 @@ export function crateLimitFromSequenceLimit(limit: SequenceLimit): CrateLimit  {
 const randomChance = createNamedFunc('random', () => random() === 1);
 const always = () => true;
 
-export function createChanceable(def: SequenceChance | undefined): Chanceable {
+export function createChanceable(def: SequenceChances | undefined): Chanceable {
   if (def === undefined) {
     return {
       next: always,

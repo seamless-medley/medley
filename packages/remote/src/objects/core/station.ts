@@ -1,8 +1,8 @@
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import type { DeckInfoWithPositions, DeckPositionsWithTrackKind } from "./deck";
 import type { TrackCollection } from "./track";
-import type { Chanceable, SequenceLimit } from "@seamless-medley/radio";
-export type { SequenceLimit } from '@seamless-medley/radio';
+import type { SequenceChances, SequenceLimit } from "@seamless-medley/radio";
+export type { SequenceLimit, SequenceChances } from '@seamless-medley/radio';
 
 export type PlayState = 'idle' | 'playing' | 'paused';
 
@@ -65,5 +65,5 @@ export interface Create {
 
   readonly limit: SequenceLimit;
 
-  readonly chance: Chanceable['chances'];
+  readonly chances: SequenceChances;
 }
