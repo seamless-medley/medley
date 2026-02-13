@@ -247,6 +247,10 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   private set currentCrate(value) {
     this.#currentCrate = value;
   }
+
+  changePlaySequence(crateId: string, collectionId: string): true | string {
+    return this.#station.forcefullySelectCrate(crateId, collectionId);
+  }
 };
 
 export const toRemoteStationProfile = (p: StationProfile): RemoteProfile => ({

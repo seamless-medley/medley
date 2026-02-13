@@ -32,6 +32,7 @@ export interface Station {
   getCollections(): TrackCollection[];
 
   changeProfile(id: string): boolean;
+  changePlaySequence(crateId: string, collectionId: string): true | string;
 
   ϟdeckLoaded(deckIndex: number, info: DeckInfoWithPositions): void;
   ϟdeckUnloaded(deckIndex: number): void;
