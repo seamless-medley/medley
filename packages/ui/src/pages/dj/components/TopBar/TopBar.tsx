@@ -187,7 +187,6 @@ const TrackPanel: React.FC = () => {
             size='1rem'
             h='1.8rem'
             transition={{ delay: 0.4 }}
-            nowrap
             autoscroll
           >
             {title}
@@ -198,7 +197,6 @@ const TrackPanel: React.FC = () => {
             size="0.8rem"
             h='2rem'
             transition={{ delay: 0.5 }}
-            nowrap
             autoscroll
           >
             {artist}

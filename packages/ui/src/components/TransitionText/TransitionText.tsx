@@ -8,7 +8,6 @@ type TransitionTextProps = PropsWithChildren<Omit<TextProps, 'style'>> & {
   transition?: Transition;
   direction?: 'up' | 'down';
   inline?: boolean;
-  nowrap?: boolean;
   style?: CSSProperties;
   autoscroll?: boolean;
   stableId?: string;
@@ -19,7 +18,6 @@ export const TransitionText: React.FC<TransitionTextProps> = React.memo((props) 
     children,
     direction,
     inline,
-    nowrap,
     style,
     transition,
     autoscroll,

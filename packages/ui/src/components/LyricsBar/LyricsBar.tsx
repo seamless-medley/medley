@@ -11,11 +11,10 @@ import { EnhancedLine, findLyricLine } from "@seamless-medley/utils";
 type LyricsBarProps = Omit<TextProps, 'style'> & {
   stationId: string;
   inline?: boolean;
-  nowrap?: boolean;
   autoscroll?: boolean;
 }
 
-export const LyricsBar: React.FC<LyricsBarProps> = ({ stationId, inline, nowrap, autoscroll, ...textProps }) => {
+export const LyricsBar: React.FC<LyricsBarProps> = ({ stationId, inline, autoscroll, ...textProps }) => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
   const { deck } = useDeck(stationId, activeDeck);
@@ -66,7 +65,6 @@ export const LyricsBar: React.FC<LyricsBarProps> = ({ stationId, inline, nowrap,
       <TransitionText
         style={{ alignItems: 'center' }}
         inline={inline}
-        nowrap={nowrap}
         autoscroll={autoscroll}
         stableId={`${line.current}`}
         {...textProps}

@@ -158,7 +158,7 @@ function PlaybackInfo() {
 
       <Stack className={classes.info}>
         <Flex direction={'column'}>
-          <TransitionText size='1.2em' h='1.5em' fw={700} nowrap autoscroll>
+          <TransitionText size='1.2em' h='1.5em' fw={700} autoscroll>
             {name ?? 'No station'}
           </TransitionText>
           <TransitionText
@@ -166,7 +166,6 @@ function PlaybackInfo() {
             h='1.2em'
             fw={500}
             transition={{ delay: 0.4 }}
-            nowrap
             autoscroll
           >
             {title ?? 'Unknown title'}
@@ -175,7 +174,6 @@ function PlaybackInfo() {
             size="1em"
             h='1.2em'
             transition={{ delay: 0.5 }}
-            nowrap
             autoscroll
           >
             {artist ?? 'Unknown artist'}
