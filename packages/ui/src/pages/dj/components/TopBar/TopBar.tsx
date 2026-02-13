@@ -185,7 +185,7 @@ const TrackPanel: React.FC = () => {
             py={5}
             fw={600}
             size='1rem'
-            h='1.8rem'
+            h='1.3rem'
             transition={{ delay: 0.4 }}
             autoscroll
           >

@@ -34,7 +34,7 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
-        gap: var(--mantine-spacing-xs);
+        gap: 6px;
 
         .info-line {
             justify-content: center;
