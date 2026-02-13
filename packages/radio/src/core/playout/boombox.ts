@@ -829,6 +829,10 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
     return this.#sequencer.currentCrate;
   }
 
+  forcefullySelectCrate(crateId: string, collection: BoomBoxTrackCollection): boolean {
+    return this.#sequencer.forcefullySelectCrate(crateId, collection);
+  }
+
   forcefullySelectCollection(collection: BoomBoxTrackCollection): boolean {
     return this.#sequencer.forcefullySelectCollection(collection);
   }

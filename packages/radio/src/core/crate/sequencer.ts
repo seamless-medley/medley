@@ -386,6 +386,25 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
     return this.#crates.find(c => c.sources.includes(collection)) !== undefined;
   }
 
+  forcefullySelectCrate(crateId: string, collection?: T['collection']): boolean {
+    const crateIndex = this.#crates.findIndex(c => c.id === crateId);
+    if (crateIndex === -1) {
+      return false;
+    }
+
+
+    if (collection !== undefined) {
+      const crate = this.#crates[crateIndex];
+      if (!crate.sources.includes(collection)) {
+        return false;
+      }
+    }
+
+    this.#temporalCollection = collection;
+    this.setCrateIndex(crateIndex, true);
+    return true;
+  }
+
   forcefullySelectCollection(collection: T['collection']): boolean {
     const crateIndex = this.#crates.findIndex(c => c.sources.includes(collection));
     if (crateIndex === -1) {

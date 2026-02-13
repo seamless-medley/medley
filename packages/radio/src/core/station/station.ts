@@ -637,6 +637,22 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.collections.filter(collection => this.#boombox.isKnownCollection(collection));
   }
 
+  forcefullySelectCrate(crateId: string, collectionId: string): true | string {
+    if (this.isLatchActive) {
+      return 'A latch session is currently active';
+    }
+
+    const collection = this.getCollection(collectionId);
+
+    if (!collection) {
+      return 'Unknown collection';
+    }
+
+    return this.#boombox.forcefullySelectCrate(crateId, collection)
+      ? true
+      : 'Invalid crate';
+  }
+
   forcefullySelectCollection(id: string): true | string {
     if (this.isLatchActive) {
       return 'A latch session is currently active';
