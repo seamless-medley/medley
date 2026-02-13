@@ -4,6 +4,7 @@ import { ActionIcon, Badge, Box, Button, Flex, Group, Image, rem, Text, Tooltip 
 import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
+import { useContextMenu } from "mantine-contextmenu";
 import clsx from "clsx";
 import { AutoScroller } from "@ui/components/AutoScroller";
 import { PlayHeadText } from "@ui/components/PlayHeadText";
@@ -19,8 +20,7 @@ import { CollectionRoute } from "@ui/pages/dj/CollectionPage/route";
 import { client } from "@ui/init";
 import fallbackImage from '@ui/fallback-image.svg?inline';
 import classes from './TopBar.module.css';
-import { useContextMenu } from "mantine-contextmenu";
-import type { CrateSource, SequenceLimit, TrackCollection } from "@seamless-medley/remote";
+import type { CrateSource, SequenceChances, SequenceLimit, TrackCollection } from "@seamless-medley/remote";
 
 type StationIdProps = {
   stationId: string;
@@ -166,6 +166,7 @@ const TransportControl: React.FC = () => {
   )
 }
 
+
 const TrackPanel: React.FC = () => {
   const { stationId } = useContext(TopBarContext);
   const { station } = useStation(stationId);
@@ -203,7 +204,7 @@ const TrackPanel: React.FC = () => {
             {artist}
           </TransitionText>
 
-          {trackPlay?.track.collection?.id &&
+          {trackPlay?.track?.collection?.id &&
             <Link
               from={DJConsoleRoute.fullPath}
               to={CollectionRoute.fullPath}
@@ -211,6 +212,14 @@ const TrackPanel: React.FC = () => {
               <Text size="0.7em" h="1.6em">{trackPlay.track.collection.description}</Text>
             </Link>
           }
+
+          {trackPlay?.track?.sequencing &&
+            <Text size="0.7em" h="1.6em">Sequence: {trackPlay.track.sequencing.playOrder[0]}/{trackPlay.track.sequencing.playOrder[1]}</Text>
+          }
+
+          {/* TODO: Show Latch {trackPlay?.track?.sequencing?.latch
+
+          } */}
         </Flex>
 
         <Flex justify='space-between' align="center" style={{ borderTop: '1px solid var(--mantine-color-dark-8)'}}>
@@ -282,8 +291,8 @@ const ProfilePanel: React.FC = () => {
                 [
                   {
                     key: 'switch',
-                    title: 'Switch to this profile',
-                    disabled: station === undefined,
+                    title: `Switch to ${p.name} profile`,
+                    disabled: (station === undefined) || (p.id === currentProfileId),
                     onClick: () => changeProfile(p.id)
                   }
                 ]
@@ -309,13 +318,32 @@ const CratePanel: React.FC = () => {
   const { station } = useStation(stationId);
   const [collections, setCollections] = useState<TrackCollection[]>([]);
   const profiles = useRemotableProp(station, 'profiles');
+  const currentProfileId = useRemotableProp(station, 'currentProfile');
   const { selectedProfileId } = useContext(ProfilePanelContext);
   const crates = profiles?.find(p => p.id === selectedProfileId)?.crates ?? [];
   const currentCrate = useRemotableProp(station, 'currentCrate');
 
+  const itemRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  const storeItemRef = useCallback((id: string) => (el: HTMLElement | null) => {
+    itemRefs.current[id] = el;
+  }, [])
+
   useEffect(() => {
     station?.getCollections().then(setCollections);
   }, [station]);
+
+  useEffect(() => {
+    if (currentCrate) {
+      itemRefs.current[currentCrate]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [selectedProfileId, currentCrate]);
+
+  const changeSequence = useCallback((createId: string, collectionId: string) => {
+    station?.changePlaySequence(createId, collectionId);
+  }, [station]);
+
+  const { showContextMenu } = useContextMenu();
 
   const formatSource = useCallback((source: CrateSource, showWeight: boolean) => {
     const col = collections.find(col => col.id === source.id);
@@ -329,9 +357,29 @@ const CratePanel: React.FC = () => {
     )
   }, [collections]);
 
+  const formatChance = useCallback((chances: SequenceChances) => {
+    if (chances === 'random') {
+      return <span className={classes.sequenceChances}>Randomly</span>
+    }
+
+    if (chances.yes === Infinity) {
+      return <span className={classes.sequenceChances}>Always</span>
+    }
+
+    const total = chances.yes + chances.no;
+
+    return (
+      <>
+        <span className={classes.sequenceChances}>{chances.yes}</span>
+        /
+        <span className={classes.sequenceChances}>{total}</span>
+      </>
+    );
+  }, []);
+
   const formatLimit = useCallback((limit: SequenceLimit) => {
     if (limit === 'entirely') {
-      return <span className={classes.sequenceLimit}>All</span>;
+      return <span className={classes.sequenceLimit}>All tracks</span>;
     }
 
     if (typeof limit === 'number') {
@@ -376,35 +424,42 @@ const CratePanel: React.FC = () => {
     <Panel w={240} header='SEQUENCES'>
       <OverlayScrollbarsComponent>
         <Flex className={classes.listPanel}>
-          {collections.length && crates.map((c) => (
+          {collections.length && crates.map((crate) => (
             <Flex
-              key={c.id}
+              key={crate.id}
               className={classes.item}
-              // ref={storeItemRef(c.id)}
-              // onClick={() => setSelection(c.id)}
-              // onContextMenu={showContextMenu(
-              //   [
-              //     {
-              //       key: 'switch',
-              //       title: 'Switch to this profile',
-              //       disabled: station === undefined,
-              //       onClick: () => changeProfile(p.id)
-              //     }
-              //   ]
-              // )}
+              ref={storeItemRef(crate.id)}
+              onContextMenu={showContextMenu(
+                crate.sources
+                  .map(s => collections.find(col => col.id === s.id)!)
+                  .map(col => ({
+                    key: col.id,
+                    title: `Play from ${col.description}`,
+                    disabled: (currentCrate === crate.id) || (currentProfileId !== selectedProfileId),
+                    onClick: () => changeSequence(crate.id, col.id)
+                  }))
+              )}
             >
               <Flex className={classes.primary}>
-                {c.sources.map(s =>
-                  <Group key={`${c.id}:${s.id}`} gap={0}>
-                    {formatSource(s, c.sources.length > 1)}
+                {crate.sources.map(s =>
+                  <Group key={`${crate.id}:${s.id}`} gap={0}>
+                    <Link
+                      style={{ color: 'white' }}
+                      from={DJConsoleRoute.fullPath}
+                      to={CollectionRoute.fullPath}
+                      params={{ collectionId: s.id }}
+                    >
+                      {formatSource(s, crate.sources.length > 1)}
+                    </Link>
                   </Group>
                 )}
-
-                {/* <Group>{c.sources.map(s => [s.id, s.weight].join(': '))}</Group> */}
-                <Group className={classes.secondary} gap={0}>{formatLimit(c.limit)}</Group>
+                <Group className={classes.secondary} gap={2}>
+                  Chances: {formatChance(crate.chances)}
+                </Group>
+                <Group className={classes.secondary} gap={0}>{formatLimit(crate.limit)}</Group>
               </Flex>
               <Group mr={10}>
-                {c.id === currentCrate && <Badge size='xs' autoContrast>Current</Badge>}
+                {crate.id === currentCrate && <Badge size='xs' autoContrast>Current</Badge>}
               </Group>
             </Flex>
           ))}

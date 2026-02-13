@@ -134,3 +134,7 @@
     font-weight: bold;
     color: var(--mantine-color-teal-9);
 }
+
+.sequence-chances {
+    color: var(--mantine-color-blue-8);
+}
