@@ -239,12 +239,12 @@ const VolumeControl: React.FC<{ orientation: 'horizontal' | 'vertical' }> = ({ o
 
   return (
     <Flex className={clsx(classes.volumeBox, isHorizontal ? classes.horizontal : classes.vertical)}>
-      <IconVolume2 size={20} onPointerDown={ptDownHandler(upState.current, decrease)} onPointerUp={ptUphandler(upState.current)} />
+      <IconVolume2 size={20} onContextMenu={e => e.preventDefault() } onPointerDown={ptDownHandler(upState.current, decrease)} onPointerUp={ptUphandler(upState.current)} />
       <Box className={clsx(classes.volumeControl, isHorizontal ? classes.horizontal : classes.vertical)} ref={ref} style={{ '--gain': gain }}>
         <div className={classes.range} />
         <div className={classes.thumb} />
       </Box>
-      <IconVolume size={20} onPointerDown={ptDownHandler(downState.current, increase)} onPointerUp={ptUphandler(downState.current)} />
+      <IconVolume size={20} onContextMenu={e => e.preventDefault() } onPointerDown={ptDownHandler(downState.current, increase)} onPointerUp={ptUphandler(downState.current)} />
     </Flex>
   )
 }
