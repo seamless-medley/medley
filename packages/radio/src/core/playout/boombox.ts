@@ -599,6 +599,7 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
       if (!nextIsLatch && this.#currentCrate !== nextCrate) {
         if (nextCrate) {
           this.emit('crateChange', this.#currentCrate, nextCrate);
+          this.emit('crateIndexChange', this.#currentCrate, nextCrate);
         }
 
         this.#currentCrate = nextCrate;
