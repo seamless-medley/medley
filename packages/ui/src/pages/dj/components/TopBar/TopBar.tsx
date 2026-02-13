@@ -21,6 +21,7 @@ import { client } from "@ui/init";
 import fallbackImage from '@ui/fallback-image.svg?inline';
 import classes from './TopBar.module.css';
 import type { CrateSource, SequenceChances, SequenceLimit, TrackCollection } from "@seamless-medley/remote";
+import { theme } from "@ui/theme";
 
 type StationIdProps = {
   stationId: string;
@@ -202,22 +203,24 @@ const TrackPanel: React.FC = () => {
             {artist}
           </TransitionText>
 
-          {trackPlay?.track?.collection?.id &&
-            <Link
+          {trackPlay?.track?.collection?.id
+            ? <Link
               from={DJConsoleRoute.fullPath}
               to={CollectionRoute.fullPath}
               params={{ collectionId: trackPlay.track.collection.id }}>
-              <Text size="0.7em" h="1.6em">{trackPlay.track.collection.description}</Text>
+              <Text size="0.7em" h="1.6em" style={{ textWrap: 'nowrap' }}>{trackPlay.track.collection.description}</Text>
             </Link>
+            : <Text size="0.7em" h="1.6em"></Text>
           }
 
           {trackPlay?.track?.sequencing &&
-            <Text size="0.7em" h="1.6em">Sequence: {trackPlay.track.sequencing.playOrder[0]}/{trackPlay.track.sequencing.playOrder[1]}</Text>
+            <Text size="0.7em" h="1.6em" style={{ textWrap: 'nowrap' }}>
+              Sequence: {trackPlay.track.sequencing.playOrder.join('/')}
+              {trackPlay?.track?.sequencing?.latch &&
+                <span> (Latching {trackPlay.track.sequencing.latch.order.join('/')})</span>
+              }
+            </Text>
           }
-
-          {/* TODO: Show Latch {trackPlay?.track?.sequencing?.latch
-
-          } */}
         </Flex>
 
         <Flex justify='space-between' align="center" style={{ borderTop: '1px solid var(--mantine-color-dark-8)'}}>
@@ -289,7 +292,7 @@ const ProfilePanel: React.FC = () => {
                 [
                   {
                     key: 'switch',
-                    title: `Switch to ${p.name} profile`,
+                    title: <>Switch to <span style={{ color: theme.colors.blue[5] }}>{p.name}</span> profile</>,
                     disabled: (station === undefined) || (p.id === currentProfileId),
                     onClick: () => changeProfile(p.id)
                   }
