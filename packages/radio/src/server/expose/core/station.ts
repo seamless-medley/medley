@@ -33,14 +33,14 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#currentCollectionId = station.currentCollection?.id;
     this.#currentProfileId = station.profile.id;
     this.setProfiles(station.profiles);
-    this.#currentCrate = station.currentCrate?.id;
+    this.currentCrate = station.currentCrate?.id;
 
     this.#station.on('deckLoaded', this.#onDeckLoaded);
     this.#station.on('deckUnloaded', this.#onDeckUnloaded);
     this.#station.on('deckStarted', this.#onDeckStarted);
     this.#station.on('deckActive', this.#onDeckActive);
     this.#station.on('collectionChange', this.#onCollectionChange);
-    this.#station.on('crateChange', this.#onCrateChange);
+    this.#station.on('crateIndexChange', this.#onCrateIndexChange);
     this.#station.on('sequenceProfileChange', this.#onSequenceProfileChange);
     this.#station.on('profileChange', this.#onProfileChange);
     this.#station.on('profileBookChange', this.#onProfileBookChange);
@@ -97,7 +97,7 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     );
   }
 
-  #onCrateChange: StationEvents['crateChange'] = (oldCrate, newCrate) => {
+  #onCrateIndexChange: StationEvents['crateIndexChange'] = (oldCrate, newCrate) => {
     this.currentCrate = newCrate.id;
     this.emit('crateChange', oldCrate?.id, newCrate.id);
   }
