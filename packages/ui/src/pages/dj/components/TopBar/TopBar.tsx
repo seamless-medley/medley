@@ -190,7 +190,7 @@ const TrackPanel: React.FC = () => {
             transition={{ delay: 0.4 }}
             autoscroll
           >
-            {title}
+            {title ?? trackPlay?.track?.path}
           </TransitionText>
 
           <TransitionText
