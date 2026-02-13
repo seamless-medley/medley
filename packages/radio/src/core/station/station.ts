@@ -123,6 +123,7 @@ export type StationEvents = {
   trackSkipped: (trackPlay: StationTrackPlay) => void;
   collectionChange: (oldCollection: StationTrackCollection | undefined, newCollection: StationTrackCollection, transitingFromRequestTrack: boolean) => void;
   crateChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
+  crateIndexChange: (oldCrate: StationCrate | undefined, newCrate: StationCrate) => void;
   sequenceProfileChange: (oldProfile: StationProfile | undefined, newProfile: StationProfile) => void;
   profileChange: (oldProfile: StationProfile | undefined, newProfile: StationProfile) => void;
   profileBookChange: () => void;
@@ -259,6 +260,7 @@ export class Station extends TypedEmitter<StationEvents> {
     boombox.on('trackFinished', this.#handleTrackFinished);
     boombox.on('collectionChange', this.#handleCollectionChange);
     boombox.on('crateChange', this.#handleCrateChange);
+    boombox.on('crateIndexChange', this.#handleCrateIndexChange);
     boombox.on('profileChange', this.#handleProfileChange);
     boombox.on('sequenceProfileChange', (o, n) => this.emit('sequenceProfileChange', o, n));
     boombox.on('latchCreated', session => this.emit('latchCreated', session));
@@ -360,6 +362,10 @@ export class Station extends TypedEmitter<StationEvents> {
 
   #handleCrateChange: BoomBoxEventsForStation['crateChange'] = (oldCrate, newCrate) => {
     this.emit('crateChange', oldCrate, newCrate);
+  }
+
+  #handleCrateIndexChange: BoomBoxEventsForStation['crateIndexChange'] = (oldCrate, newCrate) => {
+    this.emit('crateIndexChange', oldCrate, newCrate);
   }
 
   #handleProfileChange: BoomBoxEventsForStation['profileChange'] = (oldProfile, newProfile) => {

@@ -114,6 +114,11 @@ export type BoomBoxEvents<P extends BoomBoxProfile = BoomBoxProfile> = {
    */
   crateChange: (oldCrate: BoomBoxCrate | undefined, newCrate: BoomBoxCrate) => void;
 
+  /**
+   * Similar to `crateChange`, but always emits whenever the crate index has been changed
+   */
+  crateIndexChange: (oldCrate: BoomBoxCrate | undefined, newCrate: BoomBoxCrate) => void;
+
   trackQueued: (track: BoomBoxTrack) => void;
 
   deckLoaded: (deck: DeckIndex, trackPlay: BoomBoxTrackPlay) => void;
@@ -225,7 +230,8 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
       trackVerifier: this.#verifyTrack
     });
 
-    this.#sequencer.on('change', (crate: BoomBoxCrate, oldCrate?: BoomBoxCrate) => this.emit('sequenceChange', crate, oldCrate));
+    this.#sequencer.on('change', (crate, oldCrate) => this.emit('sequenceChange', crate, oldCrate));
+    this.#sequencer.on('indexChange', (create, oldCrate) => this.emit('crateIndexChange', oldCrate, create));
     this.#sequencer.on('profileChange', (oldProfile, newProfile) => this.emit('sequenceProfileChange', oldProfile, newProfile));
     this.#sequencer.on('latchCreated', session => this.emit('latchCreated', session));
     this.#sequencer.on('rescue', (scanned, ignored) => {

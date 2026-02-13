@@ -8,7 +8,16 @@ import { randomUUID } from "crypto";
 import { CrateProfile } from "./profile";
 
 export type CrateSequencerEvents<T extends Track<any>, E extends TrackExtra, P extends CrateProfile<T>> = {
+  /**
+   * The crate has been changed during the sequencing phase
+   */
   change: (crate: Crate<T>, oldCrate?: Crate<T>) => void;
+
+  /**
+   * The crate index has been changed
+   */
+  indexChange: (crate: Crate<T>, oldCrate?: Crate<T>) => void;
+
   rescue: (scanned: number, ignore: number) => void;
   profileChange: (oldProfile: P | undefined, newProfile: P) => void;
   latchCreated: (session: LatchSession<T, E>) => void;
@@ -117,11 +126,14 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
       this.#playCounter = 0;
     }
 
-    this.#crateIndex = crateIndex > -1
+    const newCrateIndex = crateIndex > -1
       ? this.#ensureCrateIndex(crateIndex)
       : 0;
 
     this.emit('profileChange', oldProfile, newProfile);
+
+    this.emit('indexChange', this.#crates[newCrateIndex], this.#crates[this.#crateIndex]);
+    this.#crateIndex = newCrateIndex;
 
     this.#logger.debug(
       {
@@ -154,6 +166,7 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
     const index = (typeof crate !== 'number') ? this.#crates.indexOf(crate) : crate;
 
     if (index >= 0 && index < this.#crates.length) {
+      this.emit('indexChange', this.#crates[index], this.#crates[this.#crateIndex]);
       this.#crateIndex = index;
     }
   }
@@ -168,11 +181,14 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
 
   setCrateIndex(newIndex: number, forceSelect?: boolean) {
     const oldIndex = this.#crateIndex;
-    this.#crateIndex = this.#ensureCrateIndex(newIndex);
+    newIndex = this.#ensureCrateIndex(newIndex);
 
-    if (oldIndex === newIndex) {
+    if (newIndex === oldIndex) {
       return;
     }
+
+    this.emit('indexChange', this.#crates[newIndex], this.#crates[this.#crateIndex]);
+    this.#crateIndex = newIndex;
 
     this.#playCounter = 0;
 
@@ -291,7 +307,9 @@ export class CrateSequencer<T extends Track<E>, E extends TrackExtra, P extends 
               const { shouldPlay, extra } = trackVerifier ? await trackVerifier(track) : { shouldPlay: true, extra: undefined };
 
               if (shouldPlay) {
-                this.#temporalCollection = undefined;
+                if (intendedCollection === this.#temporalCollection) {
+                  this.#temporalCollection = undefined;
+                }
 
                 this.increasePlayCount();
 
