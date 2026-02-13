@@ -31,6 +31,7 @@ class StubbingStation {
   getCollections = noop as any;
 
   changeProfile = noop as any;
+  changePlaySequence = noop as any;
 }
 
 export const StubStation = StubOf<Station>(StubbingStation);
