@@ -11,7 +11,7 @@ import type {
 
 import { Station, type StationEvents, type PlayState, StationProfile, Crate, StationTrack, Chanceable } from "../../../core";
 import { toRemoteDeckInfoWithPositions } from "./deck";
-import { isFunction, zip, zipObject } from "lodash";
+import { isFunction, zip } from "lodash";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
   $Exposing: Station;
