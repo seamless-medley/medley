@@ -476,10 +476,10 @@ const CratePanel: React.FC = () => {
                     </Link>
                   </Group>
                 )}
-                <Group className={classes.secondary} gap={2}>
+                <Group className={classes.secondary} gap={2} wrap="nowrap">
                   Chances: {formatChance(crate.chances)}
                 </Group>
-                <Group className={classes.secondary} gap={0}>{formatLimit(crate.limit)}</Group>
+                <Group className={classes.secondary} gap={0} wrap="nowrap">{formatLimit(crate.limit)}</Group>
               </Flex>
               <Group mr={10}>
                 {crate.id === currentCrate && <Badge size='xs' autoContrast>Current</Badge>}
