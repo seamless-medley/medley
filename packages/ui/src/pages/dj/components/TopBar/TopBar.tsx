@@ -329,9 +329,14 @@ const CratePanel: React.FC = () => {
 
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
 
+  const scrollOptions: ScrollIntoViewOptions = { behavior: 'smooth', block: 'center' };
+
   const storeItemRef = useCallback((id: string) => (el: HTMLElement | null) => {
     itemRefs.current[id] = el;
-  }, []);
+    if (id === currentCrate) {
+      el?.scrollIntoView(scrollOptions);
+    }
+  }, [crates, currentCrate]);
 
   useEffect(() => {
     station?.getCollections().then(setCollections);
@@ -339,9 +344,9 @@ const CratePanel: React.FC = () => {
 
   useEffect(() => {
     if (currentCrate) {
-      itemRefs.current[currentCrate]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      itemRefs.current[currentCrate]?.scrollIntoView(scrollOptions);
     }
-  }, [selectedProfileId, currentCrate]);
+  }, [selectedProfileId, currentCrate, crates]);
 
   const changeSequence = useCallback((createId: string, collectionId: string) => {
     station?.changePlaySequence(createId, collectionId);
