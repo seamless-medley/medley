@@ -43,7 +43,7 @@ export function useAudioLevels(callback: (data: UseAudioLevelsData) => any, deps
   };
 
   const update = useCallback((levels: StationAudioLevels) => {
-    const reduction = normalize(levels.reduction + max);
+    const reduction = normalize(levels.reduction);
 
     callback({
       left: levelToChannelLevel(levels.left),
