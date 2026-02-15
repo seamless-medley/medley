@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { ActionIcon, Badge, Box, Button, Flex, Group, Image, rem, Text, Tooltip } from "@mantine/core";
 import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext } from "@tabler/icons-react";
@@ -6,9 +6,11 @@ import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { useContextMenu } from "mantine-contextmenu";
 import clsx from "clsx";
+import { noop } from "lodash";
+import type { CrateSource, SequenceChances, SequenceLimit, TrackCollection } from "@seamless-medley/remote";
+import { theme } from "@ui/theme";
+import fallbackImage from '@ui/fallback-image.svg?inline';
 import { AutoScroller } from "@ui/components/AutoScroller";
-import { PlayHeadText } from "@ui/components/PlayHeadText";
-import { TransitionText } from "@ui/components/TransitionText";
 import { LyricsBar } from "@ui/components/LyricsBar";
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { usePlayingStationId } from "@ui/hooks/useClient";
@@ -18,11 +20,8 @@ import { Panel } from "@ui/pages/components/Panel";
 import { DJConsoleRoute } from "@ui/pages/dj/DJConsolePage/route";
 import { CollectionRoute } from "@ui/pages/dj/CollectionPage/route";
 import { client } from "@ui/init";
-import fallbackImage from '@ui/fallback-image.svg?inline';
 import classes from './TopBar.module.css';
-import type { CrateSource, SequenceChances, SequenceLimit, TrackCollection } from "@seamless-medley/remote";
-import { theme } from "@ui/theme";
-import { noop } from "lodash";
+import { PlayDeck } from "../PlayDeck";
 
 type StationIdProps = {
   stationId: string;
@@ -88,7 +87,7 @@ const Cover: React.FC = () => {
   const { stationId } = useContext(TopBarContext);
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
-  const info = useDeckInfo(stationId, activeDeck, 'trackPlay');
+  const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
   const { cover } = useDeckCover(stationId, activeDeck);
 
   return (
@@ -98,7 +97,7 @@ const Cover: React.FC = () => {
     >
       <AnimatePresence mode="wait">
         <Image component={motion.img}
-          key={`${info.trackPlay?.uuid}`}
+          key={`${trackPlay?.uuid}`}
           src={cover}
           h="100%"
           fit="cover"
@@ -107,6 +106,7 @@ const Cover: React.FC = () => {
           exit={{ opacity: 0 }}
           fallbackSrc={fallbackImage}
         />
+
       </AnimatePresence>
     </Box>
   )
@@ -126,7 +126,7 @@ const TransportControl: React.FC = () => {
     client.playAudio(stationId);
   }, [station, stationId]);
 
-  const iconSize = rem(32);
+  const iconSize = rem(22);
   const iconStroke = 1.2;
 
   return (
@@ -178,63 +178,12 @@ const TrackPanel: React.FC = () => {
   const artist = trackPlay?.track?.extra?.tags?.artist;
 
   return (
-    <Panel className={classes.playback} direction={'row'} header="PLAYING">
-      <Cover />
-      <Flex className={classes.track}>
-        <Flex direction='column' px={4}>
-          <TransitionText
-            py={5}
-            fw={600}
-            size='1rem'
-            h='1.3rem'
-            transition={{ delay: 0.4 }}
-            autoscroll
-          >
-            {title ?? trackPlay?.track?.path}
-          </TransitionText>
-
-          <TransitionText
-            py={5}
-            size="0.8rem"
-            h='2rem'
-            transition={{ delay: 0.5 }}
-            autoscroll
-          >
-            {artist}
-          </TransitionText>
-
-          {trackPlay?.track?.collection?.id
-            ? <Link
-              from={DJConsoleRoute.fullPath}
-              to={CollectionRoute.fullPath}
-              params={{ collectionId: trackPlay.track.collection.id }}>
-              <Text size="0.7em" h="1.6em" style={{ textWrap: 'nowrap' }}>{trackPlay.track.collection.description}</Text>
-            </Link>
-            : <Text size="0.7em" h="1.6em"></Text>
-          }
-
-          {trackPlay?.track?.sequencing &&
-            <Text size="0.7em" h="1.6em" style={{ textWrap: 'nowrap' }}>
-              Sequence: {trackPlay.track.sequencing.playOrder.join('/')}
-              {trackPlay?.track?.sequencing?.latch &&
-                <span> (Latching {trackPlay.track.sequencing.latch.order.join('/')})</span>
-              }
-            </Text>
-          }
-        </Flex>
-
-        <Flex justify='space-between' align="center" style={{ borderTop: '1px solid var(--mantine-color-dark-8)'}}>
-          <TransportControl />
-          <Group justify="end" p={4}>
-            <PlayHeadText
-              stationId={stationId}
-              deckIndex={activeDeck}
-              c="indigo.3"
-              size="0.85rem"
-            />
-          </Group>
-        </Flex>
-      </Flex>
+    <Panel className={classes.playback} direction={'row'} header="PLAYING" borders={{ right: true }}>
+      <PlayDeck
+        stationId={stationId}
+        index={activeDeck}
+        controlComponent={<TransportControl />}
+      />
     </Panel>
   )
 }
