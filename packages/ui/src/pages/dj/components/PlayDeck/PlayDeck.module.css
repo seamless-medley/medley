@@ -36,7 +36,7 @@
 .info {
     position: relative;
     flex-direction: column;
-    padding: 0 4px;
+    padding: 0 8px 0 4px;
     flex: 1 1 auto;
     min-width: 0;
 
