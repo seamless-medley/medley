@@ -15,7 +15,6 @@
     &:hover {
         &::after {
             background: var(--mantine-color-dark-5) padding-box;
-            /* background-color: red;; */
         }
     }
 
@@ -34,7 +33,6 @@
 
     &.vertical {
         cursor: row-resize;
-        /* margin-bottom: -1px; */
 
         &::after {
             top: -3px;
