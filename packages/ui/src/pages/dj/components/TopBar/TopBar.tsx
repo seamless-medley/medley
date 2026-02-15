@@ -430,16 +430,18 @@ const ProfileAndCrate: React.FC = () => {
 export const TopBar: React.FC<StationIdProps> = React.memo((props) => {
   return (
     <TopBarContext.Provider value={props}>
-      <Flex className={classes.topbar}>
-        <Flex className={classes.main}>
-          <StationPanel />
-          <TrackPanel />
-          <ProfileAndCrate />
-          <Box className={classes.fill} />
+      <Flex className={classes.topbarWrapper}>
+        <Flex className={classes.topbar} w={450 + 240}>
+          <Flex className={classes.main}>
+            <StationPanel />
+            <TrackPanel />
+          </Flex>
+          <Panel className={clsx(classes.lyricsBar)} header="LYRICS" borders={{ right: true }}>
+            <LyricsBar stationId={props.stationId} size="lg" autoscroll />
+          </Panel>
         </Flex>
-        <Panel className={clsx(classes.lyricsBar)} header="LYRICS">
-          <LyricsBar stationId={props.stationId} size="lg" autoscroll />
-        </Panel>
+        <ProfileAndCrate />
+        <Box className={classes.fill} />
       </Flex>
     </TopBarContext.Provider>
   )

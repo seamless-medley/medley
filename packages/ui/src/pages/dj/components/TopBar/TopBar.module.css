@@ -1,7 +1,10 @@
-.topbar {
+.topbar-wrapper {
     --fill-color: hsl(from var(--panel-color) h s calc(l - 2));
     --fill-background: linear-gradient(to right, var(--fill-color), var(--panel-color));
+    height: 100%;
+}
 
+.topbar {
     flex-direction: column;
     height: var(--dj-topbar-height);
     background: var(--mantine-color-body) padding-box;
