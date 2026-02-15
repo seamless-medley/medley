@@ -1,7 +1,8 @@
 import React from "react";
 import { Box, BoxProps, Flex, FlexProps } from "@mantine/core";
-import classes from './Panel.module.css';
 import clsx from "clsx";
+import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
+import classes from './Panel.module.css';
 
 export type PanelHeaderOptions = BoxProps & {
   caption: string;
@@ -42,4 +43,20 @@ export const Panel: React.FC<PanelProps> = ({ className, children, direction = '
       </Flex>
     </Flex>
   )
+}
+
+export type PanelListProps = PanelProps & {
+  classNames?: Partial<Record<'root' | 'list', string>>;
+}
+
+export const PanelList: React.FC<PanelListProps> = ({ children, className, classNames, ...props }) => {
+  return (
+    <Panel className={clsx(className, classNames?.root)} {...props}>
+      <OverlayScrollbarsComponent>
+        <Flex className={clsx(classes.listPanel, classNames?.list)}>
+          {children}
+        </Flex>
+      </OverlayScrollbarsComponent>
+    </Panel>
+  );
 }

@@ -1,5 +1,4 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { ActionIcon, Badge, Box, Button, Flex, Group, Image, rem, Text, Tooltip } from "@mantine/core";
 import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
@@ -228,38 +227,40 @@ const ProfilePanel: React.FC = () => {
   }, [currentProfileId]);
 
   return (
-    <Panel w={240} header='PROFILES' borders={{ right: true }}>
-      <OverlayScrollbarsComponent>
-        <Flex className={classes.listPanel}>
-          {profiles?.map((p) => (
-            <Flex
-              key={p.id}
-              className={clsx(classes.item, selectedProfileId === p.id && classes.selected)}
-              ref={storeItemRef(p.id)}
-              onClick={() => setSelection(p.id)}
-              onContextMenu={showContextMenu(
-                [
-                  {
-                    key: 'switch',
-                    title: <>Switch to <span style={{ color: theme.colors.blue[5] }}>{p.name}</span> profile</>,
-                    disabled: (station === undefined) || (p.id === currentProfileId),
-                    onClick: () => changeProfile(p.id)
-                  }
-                ]
-              )}
-            >
-              <Flex className={classes.primary}>
-                <Group>{p.name}</Group>
-                <Group className={classes.secondary}>{p.description}</Group>
-              </Flex>
-              <Group mr={10}>
-                {p.id === currentProfileId && <Badge size='xs' autoContrast>Current</Badge>}
-              </Group>
-            </Flex>
-          ))}
+    <Panel.List
+      w={240}
+      header='PROFILES'
+      borders={{ right: true }}
+      classNames={{ list: classes.listItems }}
+    >
+      {profiles?.map((p) => (
+        <Flex
+          key={p.id}
+          data-selected={selectedProfileId === p.id}
+          className={clsx(classes.item)}
+          ref={storeItemRef(p.id)}
+          onClick={() => setSelection(p.id)}
+          onContextMenu={showContextMenu(
+            [
+              {
+                key: 'switch',
+                title: <>Switch to <span style={{ color: theme.colors.blue[5] }}>{p.name}</span> profile</>,
+                disabled: (station === undefined) || (p.id === currentProfileId),
+                onClick: () => changeProfile(p.id)
+              }
+            ]
+          )}
+        >
+          <Flex className={classes.listPanelItemText}>
+            <Group>{p.name}</Group>
+            <Group className={classes.secondary}>{p.description}</Group>
+          </Flex>
+          <Group mr={10}>
+            {p.id === currentProfileId && <Badge size='xs' autoContrast>Current</Badge>}
+          </Group>
         </Flex>
-      </OverlayScrollbarsComponent>
-    </Panel>
+      ))}
+    </Panel.List>
   )
 }
 
@@ -281,9 +282,12 @@ const CratePanel: React.FC = () => {
   const scrollOptions: ScrollIntoViewOptions = { behavior: 'smooth', block: 'center' };
 
   const storeItemRef = useCallback((id: string) => (el: HTMLElement | null) => {
-    itemRefs.current[id] = el;
-    if (id === currentCrate) {
+    if (id === currentCrate && !itemRefs.current[id]) {
       el?.scrollIntoView(scrollOptions);
+    }
+
+    if (el) {
+      itemRefs.current[id] = el;
     }
   }, [crates, currentCrate]);
 
@@ -381,63 +385,64 @@ const CratePanel: React.FC = () => {
   const isLatching = trackPlay?.track.sequencing?.latch !== undefined;
 
   return (
-    <Panel w={240} header='SEQUENCES' borders={{ right: true }}>
-      <OverlayScrollbarsComponent>
-        <Flex className={classes.listPanel}>
-          {collections.length && crates.map((crate) => (
-            <Flex
-              key={crate.id}
-              className={classes.item}
-              ref={storeItemRef(crate.id)}
-              onContextMenu={showContextMenu([
-                ...(isLatching
-                  ? [
-                    { key: 'latching', title: 'Latching is active', disabled: true, onClick: noop },
-                  ]
-                  : (currentProfileId !== selectedProfileId)
-                    ? [
-                      { key: 'profile_inactive', title: 'Profile is not active', disabled: true, onClick: noop },
-                    ]
-                    : []
-                ),
-                ...(!isLatching && (currentProfileId === selectedProfileId))
-                ? crate.sources
-                  .map(s => collections.find(col => col.id === s.id)!)
-                  .map(col => ({
-                    key: col.id,
-                    title: <>Play from <span style={{ color: theme.colors.blue[5] }}>{col.description}</span></>,
-                    disabled: (col.id === currentCollection),
-                    onClick: () => changeSequence(crate.id, col.id)
-                  }))
+    <Panel.List
+      w={240}
+      header='SEQUENCES'
+      borders={{ right: true }}
+      classNames={{ list: classes.listItems }}
+    >
+      {collections.length && crates.map((crate) => (
+        <Flex
+          key={crate.id}
+          className={classes.item}
+          ref={storeItemRef(crate.id)}
+          onContextMenu={showContextMenu([
+            ...(isLatching
+              ? [
+                { key: 'latching', title: 'Latching is active', disabled: true, onClick: noop },
+              ]
+              : (currentProfileId !== selectedProfileId)
+                ? [
+                  { key: 'profile_inactive', title: 'Profile is not active', disabled: true, onClick: noop },
+                ]
                 : []
-              ])}
-            >
-              <Flex className={classes.primary}>
-                {crate.sources.map(s =>
-                  <Group key={`${crate.id}:${s.id}`} gap={0}>
-                    <Link
-                      style={{ color: 'white' }}
-                      from={DJConsoleRoute.fullPath}
-                      to={CollectionRoute.fullPath}
-                      params={{ collectionId: s.id }}
-                    >
-                      {formatSource(s, crate.sources.length > 1)}
-                    </Link>
-                  </Group>
-                )}
-                <Group className={classes.secondary} gap={2} wrap="nowrap">
-                  Chances: {formatChance(crate.chances)}
-                </Group>
-                <Group className={classes.secondary} gap={0} wrap="nowrap">{formatLimit(crate.limit)}</Group>
-              </Flex>
-              <Group mr={10}>
-                {crate.id === currentCrate && <Badge size='xs' autoContrast>Current</Badge>}
+            ),
+            ...(!isLatching && (currentProfileId === selectedProfileId))
+            ? crate.sources
+              .map(s => collections.find(col => col.id === s.id)!)
+              .map(col => ({
+                key: col.id,
+                title: <>Play from <span style={{ color: theme.colors.blue[5] }}>{col.description}</span></>,
+                disabled: (col.id === currentCollection),
+                onClick: () => changeSequence(crate.id, col.id)
+              }))
+            : []
+          ])}
+        >
+          <Flex className={classes.listPanelItemText}>
+            {crate.sources.map(s =>
+              <Group key={`${crate.id}:${s.id}`} gap={0}>
+                <Link
+                  style={{ color: 'white' }}
+                  from={DJConsoleRoute.fullPath}
+                  to={CollectionRoute.fullPath}
+                  params={{ collectionId: s.id }}
+                >
+                  {formatSource(s, crate.sources.length > 1)}
+                </Link>
               </Group>
-            </Flex>
-          ))}
+            )}
+            <Group className={classes.secondary} gap={2} wrap="nowrap">
+              Chances: {formatChance(crate.chances)}
+            </Group>
+            <Group className={classes.secondary} gap={0} wrap="nowrap">{formatLimit(crate.limit)}</Group>
+          </Flex>
+          <Group mr={10}>
+            {crate.id === currentCrate && <Badge size='xs' autoContrast>Current</Badge>}
+          </Group>
         </Flex>
-      </OverlayScrollbarsComponent>
-    </Panel>
+      ))}
+    </Panel.List>
   );
 }
 
