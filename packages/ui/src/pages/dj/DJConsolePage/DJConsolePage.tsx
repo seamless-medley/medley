@@ -69,7 +69,7 @@ export const DJConsolePage = () => {
         <ResizablePanel.Resizer />
 
         <ResizablePanel minSize={250} flexSize={0.5}>
-          <Panel header='Requests' h={'100%'} orientation='vertical' />
+          <Panel header='Requests' h={'100%'} orientation='vertical' borders={{ right: true }} />
         </ResizablePanel>
 
         <ResizablePanel.Resizer />
