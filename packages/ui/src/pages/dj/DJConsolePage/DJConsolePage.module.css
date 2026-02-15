@@ -1,0 +1,19 @@
+.dj-console {
+    position: relative;
+    height: calc(100cqh - var(--dj-topbar-height) - var(--navbar-height));
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.decks {
+    flex-direction: column;
+    height: 100%;
+}
+
+.loaded-deck {
+    color: var(--mantine-color-blue-5) !important;
+}
+
+.active-deck {
+    color: var(--mantine-color-green-5) !important;
+}
