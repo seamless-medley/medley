@@ -3,7 +3,7 @@
     --fill-background: linear-gradient(to right, var(--fill-color), var(--panel-color));
 
     flex-direction: column;
-    height: 200px;
+    height: var(--dj-topbar-height);
     background: var(--mantine-color-body) padding-box;
     border-bottom: 1px solid var(--mantine-color-dark-6);
 
