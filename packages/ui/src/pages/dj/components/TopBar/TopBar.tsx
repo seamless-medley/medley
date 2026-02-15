@@ -53,7 +53,7 @@ const StationPanel: React.FC = () => {
   const isListening = (playingStationId !== undefined) && (playingStationId === stationId);
 
   return (
-    <Panel className={classes.station} w={240} header="STATION">
+    <Panel className={classes.station} w={240} header="STATION" borders={{ right: true }}>
       <Flex className={classes.info}>
         <Flex className={classes.infoLine} p={2}>
           <AutoScroller>
@@ -279,7 +279,7 @@ const ProfilePanel: React.FC = () => {
   }, [currentProfileId]);
 
   return (
-    <Panel w={240} header='PROFILES'>
+    <Panel w={240} header='PROFILES' borders={{ right: true }}>
       <OverlayScrollbarsComponent>
         <Flex className={classes.listPanel}>
           {profiles?.map((p) => (
@@ -432,7 +432,7 @@ const CratePanel: React.FC = () => {
   const isLatching = trackPlay?.track.sequencing?.latch !== undefined;
 
   return (
-    <Panel w={240} header='SEQUENCES'>
+    <Panel w={240} header='SEQUENCES' borders={{ right: true }}>
       <OverlayScrollbarsComponent>
         <Flex className={classes.listPanel}>
           {collections.length && crates.map((crate) => (
