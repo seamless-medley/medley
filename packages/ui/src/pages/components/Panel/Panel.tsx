@@ -8,15 +8,30 @@ export type PanelHeaderOptions = BoxProps & {
 }
 
 export type PanelProps = FlexProps & {
+  orientation?: 'horizontal' | 'vertical';
   header?: string | PanelHeaderOptions;
+  borders?: Partial<Record<'left' | 'top' | 'right' | 'bottom', boolean>>;
 }
 
-export const Panel: React.FC<PanelProps> = ({ className, children, direction = 'column', header, w, h, miw, maw, mih, mah, flex, ...props }) => {
+export const Panel: React.FC<PanelProps> = ({ className, children, direction = 'column', orientation, header, borders, w, h, miw, maw, mih, mah, flex, ...props }) => {
   const caption = typeof header === 'string' ? header : header?.caption;
   const { caption: _, className: headerClassName, ...headerProps } = typeof header === 'object' ? header : {};
 
+  const wh = {
+    w: orientation !== 'vertical' ? `calc(${w} + 1lh)` : w,
+    h: orientation === 'vertical' ? `calc(${h} + 1lh)` : h
+  }
+
   return (
-    <Flex className={classes.panel} {...{ w: `calc(${w} + 1lh)`, h, miw, maw, mih, mah, flex }}>
+    <Flex
+      className={classes.panel}
+      data-orientation={orientation}
+      data-border-left={borders?.left}
+      data-border-top={borders?.top}
+      data-border-right={borders?.right}
+      data-border-bottom={borders?.bottom}
+      {...{ ...wh, miw, maw, mih, mah, flex }}
+    >
       {header &&
         <Box className={clsx(classes.header, headerClassName)} {...headerProps}>
           {caption}

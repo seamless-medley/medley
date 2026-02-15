@@ -3,8 +3,24 @@
     overflow: hidden;
     flex-wrap: nowrap;
 
-    &:has(+ .panel) {
+    &[data-orientation='vertical'] {
+        flex-direction: column;
+    }
+
+    &[data-border-left] {
+        margin-left: 1px;
+    }
+
+    &[data-border-top] {
+        margin-top: 1px;
+    }
+
+    &[data-border-right] {
         margin-right: 1px;
+    }
+
+    &[data-border-bottom] {
+        margin-bottom: 1px;
     }
 
     &:hover .header {
@@ -22,7 +38,15 @@
     writing-mode: vertical-lr;
     user-select: none;
 
-    transition: color 0.25s ease, background 0.5s ease;
+    transition: color 1s ease, background 1s ease;
+}
+
+.panel[data-orientation='vertical'] .header {
+    width: 100%;
+    height: 1lh;
+    background: linear-gradient(to right, var(--mantine-color-dark-8), var(--mantine-color-dark-9));
+    padding: 0 4px;
+    writing-mode: unset;
 }
 
 .content {
