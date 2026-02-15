@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Flex } from "@mantine/core";
 import { PlayDeck, PlayDeckProps, PlayHead } from "@ui/pages/dj/components/PlayDeck";
 import { useParams } from "@tanstack/react-router";
@@ -22,6 +23,11 @@ const DeckPanel: React.FC<PlayDeckProps> = ({ ...props }) => {
     idle: undefined
   }[state];
 
+  const controlCompoennt = useMemo(
+    () => <PlayHead stationId={props.stationId} index={props.index} />,
+    [props.stationId, props.index]
+  );
+
   return (
     <Panel
       h={150}
@@ -34,7 +40,7 @@ const DeckPanel: React.FC<PlayDeckProps> = ({ ...props }) => {
     >
       <PlayDeck
         {...props}
-        controlComponent={<PlayHead stationId={props.stationId} index={props.index} />}
+        controlComponent={controlCompoennt}
       />
     </Panel>
   )

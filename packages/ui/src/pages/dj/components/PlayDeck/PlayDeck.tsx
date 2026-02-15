@@ -22,7 +22,7 @@ export type PlayDeckProps = {
   controlComponent?: React.ReactNode;
 }
 
-export const PlayHead: React.FC<PlayDeckProps> = ({ stationId, index }) => {
+export const PlayHead: React.FC<PlayDeckProps> = React.memo(({ stationId, index }) => {
   const positions = useDeckInfo(stationId, index,
     'cp',
     'duration',
@@ -125,7 +125,7 @@ export const PlayHead: React.FC<PlayDeckProps> = ({ stationId, index }) => {
 
     </canvas>
   )
-}
+});
 
 export const PlayDeck: React.FC<PlayDeckProps> = React.memo(({ stationId, index, controlComponent }) => {
   const { trackPlay } = useDeckInfo(stationId, index, 'trackPlay');
