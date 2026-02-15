@@ -1,19 +1,17 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { ActionIcon, Badge, Box, Button, Flex, Group, Image, rem, Text, Tooltip } from "@mantine/core";
+import { ActionIcon, Badge, Box, Button, Flex, Group, rem, Text, Tooltip } from "@mantine/core";
 import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
-import { AnimatePresence, motion } from "motion/react";
 import { useContextMenu } from "mantine-contextmenu";
 import clsx from "clsx";
 import { noop } from "lodash";
 import type { CrateSource, SequenceChances, SequenceLimit, TrackCollection } from "@seamless-medley/remote";
 import { theme } from "@ui/theme";
-import fallbackImage from '@ui/fallback-image.svg?inline';
 import { AutoScroller } from "@ui/components/AutoScroller";
 import { LyricsBar } from "@ui/components/LyricsBar";
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { usePlayingStationId } from "@ui/hooks/useClient";
-import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
+import { useDeckInfo } from "@ui/hooks/useDeck";
 import { useStation } from "@ui/hooks/useStation";
 import { Panel } from "@ui/pages/components/Panel";
 import { DJConsoleRoute } from "@ui/pages/dj/DJConsolePage/route";
@@ -82,35 +80,6 @@ const StationPanel: React.FC = () => {
   )
 }
 
-const Cover: React.FC = () => {
-  const { stationId } = useContext(TopBarContext);
-  const { station } = useStation(stationId);
-  const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
-  const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
-  const { cover } = useDeckCover(stationId, activeDeck);
-
-  return (
-    <Box component={motion.div}
-      style={{ aspectRatio: 1 }}
-      h='100%'
-    >
-      <AnimatePresence mode="wait">
-        <Image component={motion.img}
-          key={`${trackPlay?.uuid}`}
-          src={cover}
-          h="100%"
-          fit="cover"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          fallbackSrc={fallbackImage}
-        />
-
-      </AnimatePresence>
-    </Box>
-  )
-}
-
 const TransportControl: React.FC = () => {
   const { stationId } = useContext(TopBarContext);
   const { station } = useStation(stationId);
@@ -171,10 +140,6 @@ const TrackPanel: React.FC = () => {
   const { stationId } = useContext(TopBarContext);
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
-  const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
-
-  const title = trackPlay?.track?.extra?.tags?.title;
-  const artist = trackPlay?.track?.extra?.tags?.artist;
 
   return (
     <Panel className={classes.playback} direction={'row'} header="PLAYING" borders={{ right: true }}>
