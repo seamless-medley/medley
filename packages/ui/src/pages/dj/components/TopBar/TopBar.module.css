@@ -2,6 +2,7 @@
     --fill-color: hsl(from var(--panel-color) h s calc(l - 2));
     --fill-background: linear-gradient(to right, var(--fill-color), var(--panel-color));
     height: 100%;
+    border-bottom: 1px solid var(--mantine-color-dark-6);
 }
 
 .topbar {
