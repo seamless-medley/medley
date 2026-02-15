@@ -392,11 +392,11 @@ const CratePanel: React.FC = () => {
               onContextMenu={showContextMenu([
                 ...(isLatching
                   ? [
-                    { key: 'latching', title: 'Latching is active', disabled: true, onClick: () => noop },
+                    { key: 'latching', title: 'Latching is active', disabled: true, onClick: noop },
                   ]
                   : (currentProfileId !== selectedProfileId)
                     ? [
-                      { key: 'profile_inactive', title: 'Profile is not active', disabled: true, onClick: () => noop },
+                      { key: 'profile_inactive', title: 'Profile is not active', disabled: true, onClick: noop },
                     ]
                     : []
                 ),
