@@ -49,7 +49,7 @@ const StationPanel: React.FC = () => {
   const isListening = (playingStationId !== undefined) && (playingStationId === stationId);
 
   return (
-    <Panel className={classes.station} w={240} header="STATION" borders={{ right: true }}>
+    <Panel className={classes.station} w={240} header="STATION" borders={{ right: true, bottom: true }}>
       <Flex className={classes.info}>
         <Flex className={classes.infoLine} p={2}>
           <AutoScroller>
@@ -142,7 +142,7 @@ const TrackPanel: React.FC = () => {
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
 
   return (
-    <Panel className={classes.playback} direction={'row'} header="PLAYING" borders={{ right: true }}>
+    <Panel className={classes.playback} direction={'row'} header="PLAYING" borders={{ right: true, bottom: true }}>
       <PlayDeck
         stationId={stationId}
         index={activeDeck}
@@ -195,7 +195,7 @@ const ProfilePanel: React.FC = () => {
     <Panel.List
       w={240}
       header='PROFILES'
-      borders={{ right: true }}
+      borders={{ right: true, bottom: true }}
       classNames={{ list: classes.listItems }}
     >
       {profiles?.map((p) => (
@@ -353,7 +353,7 @@ const CratePanel: React.FC = () => {
     <Panel.List
       w={240}
       header='SEQUENCES'
-      borders={{ right: true }}
+      borders={{ right: true, bottom: true }}
       classNames={{ list: classes.listItems }}
     >
       {collections.length && crates.map((crate) => (
@@ -436,7 +436,7 @@ export const TopBar: React.FC<StationIdProps> = React.memo((props) => {
             <StationPanel />
             <TrackPanel />
           </Flex>
-          <Panel className={clsx(classes.lyricsBar)} header="LYRICS" borders={{ right: true }}>
+          <Panel className={clsx(classes.lyricsBar)} header="LYRICS" borders={{ right: true, bottom: true }}>
             <LyricsBar stationId={props.stationId} size="lg" autoscroll />
           </Panel>
         </Flex>
