@@ -1,5 +1,6 @@
 .container {
     overflow: hidden auto;
+    min-height: 0;
 }
 
 .list-body {

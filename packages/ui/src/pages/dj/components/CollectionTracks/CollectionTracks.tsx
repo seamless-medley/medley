@@ -93,12 +93,12 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
   const { collection } = props;
   const count = useRemotableProp(collection, 'length', 0);
 
-  const tableRef = useRef(null);
+  const containerRef = useRef(null);
 
   // virtual table
   const virt = useVirtualizer({
     count,
-    getScrollElement: () => tableRef.current,
+    getScrollElement: () => containerRef.current,
     estimateSize: () => +px('2.25em'),
     overscan: 20
   });
@@ -171,7 +171,7 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
   const { showContextMenu } = useContextMenu();
 
   return (
-    <Flex ref={tableRef} mih={0} className={classes.container}>
+    <Flex ref={containerRef} className={classes.container}>
       <Table>
         <Table.Thead pos="sticky" bg="dark.7">
           <Table.Tr display="flex" fw='bold'>
