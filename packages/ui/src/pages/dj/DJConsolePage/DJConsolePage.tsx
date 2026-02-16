@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Flex } from "@mantine/core";
+import { Center, Flex } from "@mantine/core";
 import { PlayDeck, PlayDeckProps, PlayHead } from "@ui/pages/dj/components/PlayDeck";
 import { useParams } from "@tanstack/react-router";
 import { ResizablePanel } from "@ui/components/ResizablePanel";
@@ -68,26 +68,32 @@ export const DJConsolePage = () => {
   return (
     <Flex component="section" className={classes.djConsole}>
       <ResizablePanel.Group orientation='horizontal'>
-        <ResizablePanel minSize={400} flexSize={0.3}>
+        <ResizablePanel minSize={400} flexSize={0.5}>
           <Decks />
         </ResizablePanel>
 
         <ResizablePanel.Resizer />
 
-        <ResizablePanel minSize={250} flexSize={0.5}>
-          <Panel header='Requests' h={'100%'} orientation='vertical' borders={{ right: true }} />
+        <ResizablePanel minSize={250} flexSize={1}>
+          <Panel header='Requests' h={'100%'} orientation='vertical' borders={{ right: true }}>
+            <Center h='100%' c='gray.8'>Not yet implemented</Center>
+          </Panel>
         </ResizablePanel>
 
         <ResizablePanel.Resizer />
 
-        <ResizablePanel minSize={250} flexSize={0.5}>
-          <Panel header='Latches' h={'100%'} orientation='vertical' borders={{ right: true }} />
+        <ResizablePanel minSize={250} flexSize={1}>
+          <Panel header='Latches' h={'100%'} orientation='vertical' borders={{ right: true }}>
+            <Center h='100%' c='gray.8'>Not yet implemented</Center>
+          </Panel>
         </ResizablePanel>
 
         <ResizablePanel.Resizer />
 
-        <ResizablePanel minSize={250} flexSize={0.5}>
-          <Panel header='Listeners' h={'100%'} orientation='vertical' borders={{ right: true }} />
+        <ResizablePanel minSize={250} flexSize={1}>
+          <Panel header='Listeners' h={'100%'} orientation='vertical' borders={{ right: true }}>
+            <Center h='100%' c='gray.8'>Not yet implemented</Center>
+          </Panel>
         </ResizablePanel>
 
       </ResizablePanel.Group>
