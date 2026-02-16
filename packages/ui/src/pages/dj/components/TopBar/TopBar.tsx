@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ActionIcon, Badge, Box, Button, Flex, Group, rem, Text, Tooltip } from "@mantine/core";
 import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
@@ -141,12 +141,17 @@ const TrackPanel: React.FC = () => {
   const { station } = useStation(stationId);
   const activeDeck = useRemotableProp(station, 'activeDeck') ?? 0;
 
+  const transportControl = useMemo(
+    () => <TransportControl />,
+    []
+  )
+
   return (
     <Panel className={classes.playback} direction={'row'} header="PLAYING" borders={{ right: true, bottom: true }}>
       <PlayDeck
         stationId={stationId}
         index={activeDeck}
-        controlComponent={<TransportControl />}
+        controlComponent={transportControl}
       />
     </Panel>
   )
