@@ -570,7 +570,8 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
 
       const collectionChange = currentCollection?.id !== nextCollection.id;
 
-      if (nextProfile && nextProfile !== currentProfile) {
+      // Latching shouldn't cause profile change
+      if (!nextIsLatch && nextProfile && nextProfile !== currentProfile) {
         if (!isRequestTrack(currentTrack) && !isRequestTrack(nextTrack)) {
           this.emit('profileChange', currentProfile, nextProfile as P)
           this.#logger.debug('Play profile changed to: %s', nextProfile.id);
