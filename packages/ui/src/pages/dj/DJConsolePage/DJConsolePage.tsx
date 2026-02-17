@@ -34,7 +34,7 @@ const DeckPanel: React.FC<PlayDeckProps> = ({ ...props }) => {
       mih={150}
       borders={{ bottom: true }}
       header={{
-        caption: `Deck${props.index + 1}`,
+        caption: `Deck ${props.index + 1}`,
         className: headerClass,
       }}
     >
@@ -69,13 +69,16 @@ export const DJConsolePage = () => {
     <Flex component="section" className={classes.djConsole}>
       <ResizablePanel.Group orientation='horizontal'>
         <ResizablePanel minSize={400} flexSize={0.5}>
-          <Decks />
+          <Flex direction='column' style={{ width: '100%', height: '100%'}}>
+            <Decks />
+            <Panel header='Requests' h={'calc(100% - 450px)'} w='100%' flex='1 1 auto'></Panel>
+          </Flex>
         </ResizablePanel>
 
         <ResizablePanel.Resizer />
 
         <ResizablePanel minSize={250} flexSize={1}>
-          <Panel header='Requests' h={'100%'} orientation='vertical' borders={{ right: true }}>
+          <Panel header='History' h={'100%'} orientation='vertical' borders={{ right: true }}>
             <Center h='100%' c='gray.8'>Not yet implemented</Center>
           </Panel>
         </ResizablePanel>
