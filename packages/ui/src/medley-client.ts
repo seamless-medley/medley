@@ -77,6 +77,10 @@ export class MedleyClient extends Client<RemoteObjects, MedleyClientEvents> {
     }
   }
 
+  get version() {
+    return this.#global?.version?.();
+  }
+
   override set latency(seconds: number) {
     if (this.#audioTransport) {
       this.#audioTransport.transmissionLatency = seconds;
