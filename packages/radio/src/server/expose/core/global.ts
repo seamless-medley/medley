@@ -1,6 +1,7 @@
 import type { Global as RemoteGlobal, Exposable, Notify } from "@seamless-medley/remote";
 import { MixinEventEmitterOf } from "../../socket";
 import { MedleyServer } from "../../medley-server";
+import { getVersion } from "../../../helper";
 
 export class ExposedGlobal extends MixinEventEmitterOf<RemoteGlobal>() implements Exposable<RemoteGlobal> {
   $Exposing = undefined;
@@ -17,6 +18,10 @@ export class ExposedGlobal extends MixinEventEmitterOf<RemoteGlobal>() implement
 
   dispose(): void {
 
+  }
+
+  get version() {
+    return getVersion();
   }
 
   getStations() {

@@ -3,6 +3,7 @@ import { StubOf } from "@ui/stubs";
 import type { Global as RemoteGlobal } from '@seamless-medley/remote';
 
 class StubbingGlobal {
+  version = undefined as any;
   getStations = noop as any;
 }
 
