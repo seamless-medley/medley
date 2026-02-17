@@ -149,7 +149,7 @@ export const PlayDeck: React.FC<PlayDeckProps> = React.memo(({ stationId, index,
         <AnimatePresence mode='wait'>
           {hasCover &&
             <Image component={motion.img}
-              key={'cover'}
+              key={trackPlay?.uuid ?? 'cover'}
               h='100%'
               fit='cover'
               src={cover}
