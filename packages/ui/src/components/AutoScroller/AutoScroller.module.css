@@ -18,7 +18,7 @@
 
 .scroller {
     --trans-x: 0px;
-    display: flex;
+    display: inline-flex;
     transform: translateX(var(--trans-x));
     white-space: nowrap;
     width: fit-content;
