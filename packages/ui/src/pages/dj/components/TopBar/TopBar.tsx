@@ -49,7 +49,7 @@ const StationPanel: React.FC = () => {
   const isListening = (playingStationId !== undefined) && (playingStationId === stationId);
 
   return (
-    <Panel className={classes.station} w={240} header="STATION" borders={{ right: true, bottom: true }}>
+    <Panel className={classes.station} w={240} header="Station" borders={{ right: true, bottom: true }}>
       <Flex className={classes.info}>
         <Flex className={classes.infoLine} p={2}>
           <AutoScroller>
@@ -147,7 +147,7 @@ const TrackPanel: React.FC = () => {
   )
 
   return (
-    <Panel className={classes.playback} direction={'row'} header="PLAYING" borders={{ right: true, bottom: true }}>
+    <Panel className={classes.playback} direction={'row'} header="Playing" borders={{ right: true, bottom: true }}>
       <PlayDeck
         stationId={stationId}
         index={activeDeck}
@@ -199,7 +199,7 @@ const ProfilePanel: React.FC = () => {
   return (
     <Panel.List
       w={240}
-      header='PROFILES'
+      header='Profiles'
       borders={{ right: true, bottom: true }}
       classNames={{ list: classes.listItems }}
     >
@@ -357,7 +357,7 @@ const CratePanel: React.FC = () => {
   return (
     <Panel.List
       w={240}
-      header='SEQUENCES'
+      header='Sequences'
       borders={{ right: true, bottom: true }}
       classNames={{ list: classes.listItems }}
     >
