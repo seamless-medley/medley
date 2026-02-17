@@ -109,6 +109,7 @@ function HomeLogo() {
         <Image ref={ref} className={classes.logo} src={logo} />
         <Title component='h1' className={classes.title}>
           Medley
+          <Text className={classes.version}>{client?.version ?? ''}</Text>
         </Title>
       </Flex>
     </Link>

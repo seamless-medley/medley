@@ -11,6 +11,7 @@
         );
 
     border-bottom: 1px solid transparent;
+    text-align: left;
 
     z-index: 100;
 
@@ -65,12 +66,29 @@
     }
 
     & .title {
-        font-size: 1rem;
+        font-size: 1.25rem;
         font-weight: 700;
-        margin-top: -6px;
+        margin-top: -0.7em;
+        text-align: center;
 
         @mixin larger-than $mantine-breakpoint-sm {
+            margin-top: -0.25em;
             font-size: 1.5rem;
+        }
+    }
+
+    & .version {
+        font-size: 0.3em;
+        line-height: 0.2em;
+        color: var(--mantine-color-dark-2);
+        text-align: center;
+
+        &::before {
+            content: "v";
+        }
+
+        @mixin larger-than $mantine-breakpoint-sm {
+            text-align: left;
         }
     }
 }
