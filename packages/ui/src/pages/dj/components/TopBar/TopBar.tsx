@@ -4,7 +4,7 @@ import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext } from "@tabler/ic
 import { Link } from "@tanstack/react-router";
 import { useContextMenu } from "mantine-contextmenu";
 import clsx from "clsx";
-import { noop } from "lodash";
+import { debounce, noop } from "lodash";
 import type { CrateSource, SequenceChances, SequenceLimit, TrackCollection } from "@seamless-medley/remote";
 import { theme } from "@ui/theme";
 import { AutoScroller } from "@ui/components/AutoScroller";
@@ -94,6 +94,11 @@ const TransportControl: React.FC = () => {
     client.playAudio(stationId);
   }, [station, stationId]);
 
+  const skip = useCallback(
+    debounce(() => station?.skip(), 500, { leading: true, trailing: false }),
+    [station]
+  );
+
   const iconSize = rem(22);
   const iconStroke = 1.2;
 
@@ -126,7 +131,7 @@ const TransportControl: React.FC = () => {
           aria-label="Skip"
           size={iconSize}
           color="dark.8"
-          onClick={() => station?.skip()}
+          onClick={skip}
           radius={0}
         >
           <IconPlayerTrackNext stroke={iconStroke} size={14}  />
