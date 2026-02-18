@@ -90,7 +90,7 @@ const LoginButton = () => {
   )
 }
 
-function HomeLogo() {
+const HomeLogo = () => {
   const ref = useRef<HTMLImageElement>(null);
 
   const audioLevelsHandler = useCallback((data: UseAudioLevelsData) => {
@@ -116,7 +116,7 @@ function HomeLogo() {
   )
 }
 
-function PlaybackInfo() {
+const PlaybackInfo = () => {
   const stationId = usePlayingStationId();
   const { station } = useStation(stationId);
   const name = useRemotableProp(station, 'name');
@@ -128,6 +128,7 @@ function PlaybackInfo() {
     group: 40,
     getDefaultColors: () => ['black']
   });
+
   const { trackPlay } = useDeckInfo(stationId, activeDeck, 'trackPlay');
 
   const title = trackPlay?.track?.extra?.tags?.title;
@@ -250,7 +251,7 @@ const VolumeControl: React.FC<{ orientation: 'horizontal' | 'vertical' }> = ({ o
   )
 }
 
-export function NavBar() {
+export const NavBar = () => {
   const { user } = useSession();
 
   const vuBarOrientation = useMatches<VUBarProps['orientation']>({
