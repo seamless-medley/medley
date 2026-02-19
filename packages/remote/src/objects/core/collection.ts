@@ -37,7 +37,7 @@ export interface Collection {
   ϟtracksRemove(tracks: Track[]): void;
 }
 
-export interface CollectionView {
+export interface BaseCollectionView<T> {
   length: number;
 
   topIndex: number;
@@ -58,7 +58,11 @@ export interface CollectionView {
 
   items(): Promise<Track[]>;
 
-  itemsWithIndexes(): Array<[index: number, track: MetadataOnlyTrack]>;
+  itemsWithIndexes(): Array<[index: number, track: T]>;
 
   ϟviewChange(): any;
+}
+
+export interface CollectionView extends BaseCollectionView<TrackRecord> {
+
 }

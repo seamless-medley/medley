@@ -5,17 +5,20 @@ import type {
   MusicTrackCollection,
   MusicTrackCollectionEvents,
   Station,
+  Track as CoreTrack,
   TrackCollectionView,
 } from "../../../core";
 
 import { MixinEventEmitterOf } from "../../socket";
 
 import type {
+  BaseCollectionView,
   Collection,
   CollectionView,
   Exposable,
   Notify,
-  Remotable
+  Remotable,
+  Track as RemoteTrack
 } from "@seamless-medley/remote";
 import { toRemoteTrackRecord, toRemoteTrack } from "./track";
 
@@ -116,12 +119,12 @@ export class ExposedCollection extends MixinEventEmitterOf<Collection>() impleme
   }
 }
 
-export class ExposedCollectionView extends MixinEventEmitterOf<CollectionView>() implements Exposable<CollectionView> {
-  $Exposing: TrackCollectionView<MusicTrack<Station>>;
+export abstract class BasedExposedCollectionView<T extends CoreTrack<any>> extends MixinEventEmitterOf<BaseCollectionView<any>>() {
+  $Exposing: TrackCollectionView<T>;
   $Kind = 'collection_view';
   notify!: Notify<CollectionView>;
 
-  constructor(view: TrackCollectionView<MusicTrack<Station>>) {
+  constructor(view: TrackCollectionView<T>) {
     super();
 
     this.$Exposing = view;
@@ -130,12 +133,11 @@ export class ExposedCollectionView extends MixinEventEmitterOf<CollectionView>()
   }
 
   dispose(): void {
-    this.#view.off('viewChange',  this.#onViewChange)
+    this.#view.off('viewChange',  this.#onViewChange);
     this.#view.dispose();
   }
 
   #onViewChange = () => {
-
     this.emit('viewChange');
   }
 
@@ -179,16 +181,89 @@ export class ExposedCollectionView extends MixinEventEmitterOf<CollectionView>()
     return this.#view.isIndexInView(absoluteIndex);
   }
 
+  protected abstract toRemoteTrack(track: T): Promise<RemoteTrack>;
+
+  protected abstract toRemoteMetadataOnlyTrack(track: T): Array<any>;
+
   async at(index: number) {
     const track = this.#view.at(index);
-    return track ? toRemoteTrack(track) : undefined;
+    return track ? this.toRemoteTrack(track) : undefined;
   }
 
   async items() {
-    return Promise.all(this.#view.items().map(item => toRemoteTrack(item)));
+    return Promise.all(this.#view.items().map(item => this.toRemoteTrack(item)));
+  }
+
+  itemsWithIndexes(): Array<[index: number, track: any]> {
+    return this.#view
+      .itemsWithIndexes()
+      .map(([index, track]) =>
+        [
+          index,
+          this.toRemoteMetadataOnlyTrack(track)
+        ] as [index: number, track: any]
+      );
+  }
+}
+
+export class ExposedCollectionView extends BasedExposedCollectionView<MusicTrack<Station>> implements Exposable<CollectionView> {
+  dispose(): void {
+    super.dispose();
+  }
+
+  get length() {
+    return super.length;
+  }
+
+  set length(val) {
+    super.length = val;
+  }
+
+  get topIndex() {
+    return super.topIndex;
+  }
+
+  set topIndex(val) {
+    super.topIndex = val;
+  }
+
+  get bottomIndex() {
+    return super.bottomIndex;
+  }
+
+  get ranges() {
+    return super.ranges;
+  }
+
+  updateView(topIndex: number, length: number): void {
+    super.updateView(topIndex, length);
+  }
+
+  absolute(localIndex: number): number {
+    return super.absolute(localIndex);
+  }
+
+  isIndexInView(absoluteIndex: number): boolean {
+    return super.isIndexInView(absoluteIndex);
+  }
+
+  async at(index: number) {
+    return super.at(index);
+  }
+
+  async items() {
+    return super.items();
   }
 
   itemsWithIndexes() {
-    return this.#view.itemsWithIndexes().map(([index, track]) => [index, toRemoteMetadataOnlyTrack(track)] as [index: number, track: MetadataOnlyTrack]);
+    return super.itemsWithIndexes();
+  }
+
+  protected override toRemoteTrack(track: MusicTrack<Station>): Promise<RemoteTrack> {
+    return toRemoteTrack(track);
+  }
+
+  protected override toRemoteMetadataOnlyTrack(track: MusicTrack<Station>): Array<any> {
+    return toRemoteTrackRecord(track);
   }
 }

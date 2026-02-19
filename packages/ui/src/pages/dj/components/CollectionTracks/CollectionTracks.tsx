@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge, Flex, Group, Table, px } from "@mantine/core";
-import { useDebouncedState } from "@mantine/hooks";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { AutoScroller } from "@ui/components/AutoScroller";
 import type { Collection, CollectionView, TrackRecord, Remotable, TrackKind } from "@seamless-medley/remote";
 
@@ -12,6 +10,7 @@ import { useContextMenu } from "mantine-contextmenu";
 import { IconArrowsShuffle } from "@tabler/icons-react";
 import { contextMenuClassNames } from "@ui/theme";
 import classes from './CollectionTracks.module.css';
+import { useCollectionList } from "@ui/pages/hooks/useCollectionList";
 
 type TrackRowData = {
   id: string;
@@ -21,7 +20,7 @@ type TrackRowData = {
   album?: string;
 }
 
-export type TrackItemProps = {
+type TrackItemProps = {
   size: number;
   start: number;
   data?: TrackRowData;
@@ -31,7 +30,7 @@ export type TrackItemProps = {
 const colors = range(1, 10)
   .flatMap(shade => ['red', 'pink', 'grape', 'violet', 'indigo', 'blue', 'cyan', 'green', 'lime', 'yellow', 'orange', 'teal'].map(name => `${name}.${shade}`));
 
-export const TrackItem = (props: TrackItemProps) => {
+const TrackItem = (props: TrackItemProps) => {
   const { start, size, data, onContextMenu } = props;
 
   const artists = data ? extractArtists(data.artist ?? '') : [];
@@ -91,30 +90,18 @@ const trackToRowData = ([id, kind, artist, title, album]: TrackRecord): TrackRow
 
 export function CollectionTracks(props: { collection: Remotable<Collection> | undefined}) {
   const { collection } = props;
-  const count = useRemotableProp(collection, 'length', 0);
-
-  const containerRef = useRef(null);
-
-  // virtual table
-  const virt = useVirtualizer({
-    count,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => +px('2.25em'),
-    overscan: 20
-  });
-
-  // scroll to top when collection changed
-  useEffect(() => {
-    virt.scrollToOffset(0)
-  }, [collection]);
 
   // Remote view, only gets data needed for display
   const [view, setView] = useState<Remotable<CollectionView>>();
 
-  // The virtual items
-  const virtualItems = virt.getVirtualItems();
-  // The index for the top most in the table viewport
-  const topIndex = virtualItems.at(0)?.index ?? 0;
+  const count = useRemotableProp(collection, 'length', 0);
+
+  const { ref, virtualizer, virtualItems, items: tracks } = useCollectionList<TrackRecord, TrackRowData>(view, {
+    count,
+    getItemData: trackToRowData,
+    estimateSize: () => +px('2.25em'),
+    overscan: 20
+  });
 
   // Create remote view when the collection changed
   useEffect(() => {
@@ -122,56 +109,13 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
       return;
     }
 
-    collection.createView(virtualItems.length, topIndex).then(setView);
+    collection.createView(count, 0).then(setView);
   }, [collection]);
-
-  // A function to fetch items
-  const fetchView = useCallback(async () => {
-    if (!view) {
-      return;
-    }
-
-    const trackList = await view.itemsWithIndexes();
-
-    const tracks = trackList.reduce((o, [index, track]) => {
-      o[index] = trackToRowData(track);
-      return o;
-    }, {} as Array<TrackRowData>);
-
-    setTracks(tracks);
-  }, [view]);
-
-  // Listen for `viewChange` event from the server
-  useEffect(() => {
-    if (!view) {
-      return;
-    }
-
-    view.on('viewChange', fetchView);
-
-    return () => {
-      view?.off('viewChange', fetchView);
-      view?.dispose();
-    }
-  }, [view]);
-
-  // The actual tracks list, the setter is equiped with debouncer
-  const [tracks, setTracks] = useDebouncedState<Array<TrackRowData>>([], 1000 / 120);
-
-  // Update the remote view whe the table moves
-  useEffect(() => {
-    if (!view) {
-      setTracks([]);
-      return;
-    }
-
-    view.updateView(topIndex, virtualItems.length).then(fetchView);
-  }, [view, topIndex, virtualItems.length]);
 
   const { showContextMenu } = useContextMenu();
 
   return (
-    <Flex ref={containerRef} className={classes.container}>
+    <Flex ref={ref} className={classes.container}>
       <Table>
         <Table.Thead pos="sticky" bg="dark.7">
           <Table.Tr display="flex" fw='bold'>
@@ -187,7 +131,7 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
         <Table.Tbody
           pos='relative'
           w='100%'
-          h={virt.getTotalSize()}
+          h={virtualizer.getTotalSize()}
           className={classes.listBody}
         >
           {virtualItems.map(vrow => <TrackItem
@@ -202,7 +146,7 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
                   title: 'Shuffle',
                   icon: <IconArrowsShuffle stroke={1} />,
                   // disabled: collection?.options()?.auxiliary,
-                  onClick: () => collection?.shuffle()
+                  onClick: () => props.collection?.shuffle()
                 }
               ],
               {
