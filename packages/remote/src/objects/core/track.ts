@@ -23,7 +23,7 @@ export type Track = Simplify<Writable<
   }
 >>;
 
-export type MetadataOnlyTrack = [
+export type TrackRecord = [
   id: Track['id'],
   kind: TrackKind,
   artist?: string,

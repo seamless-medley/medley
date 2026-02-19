@@ -14,11 +14,10 @@ import type {
   Collection,
   CollectionView,
   Exposable,
-  MetadataOnlyTrack,
   Notify,
   Remotable
 } from "@seamless-medley/remote";
-import { toRemoteMetadataOnlyTrack, toRemoteTrack } from "./track";
+import { toRemoteTrackRecord, toRemoteTrack } from "./track";
 
 export class ExposedCollection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
   $Exposing: MusicTrackCollection<Station>;

@@ -1,4 +1,4 @@
-import type { MetadataOnlyTrack, Track } from "./track";
+import type { TrackRecord, Track } from "./track";
 import type { TrackCollectionBasicOptions } from "@seamless-medley/radio";
 import { Remotable } from "../../type-utils";
 

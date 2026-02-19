@@ -23,7 +23,7 @@ import type {
   TrackPlay,
   TrackSequencing,
   TrackSequencingLatch,
-  MetadataOnlyTrack
+  TrackRecord
 } from "@seamless-medley/remote";
 
 export const toRemoteTrack = async (
@@ -51,7 +51,7 @@ const trackKinds = ['normal', 'request', 'insert'] as const;
 
 export const trackKindToString = (k: CoreTrackKind): TrackKind => trackKinds[k.valueOf()];
 
-export const toRemoteMetadataOnlyTrack = (track: BoomBoxTrack): MetadataOnlyTrack => {
+export const toRemoteTrackRecord = (track: BoomBoxTrack): TrackRecord => {
   const { id, extra, path } = track;
   const tags = extra?.tags;
   return [

@@ -3,7 +3,7 @@ import { Badge, Flex, Group, Table, px } from "@mantine/core";
 import { useDebouncedState } from "@mantine/hooks";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AutoScroller } from "@ui/components/AutoScroller";
-import type { Collection, CollectionView, MetadataOnlyTrack, Remotable, TrackKind } from "@seamless-medley/remote";
+import type { Collection, CollectionView, TrackRecord, Remotable, TrackKind } from "@seamless-medley/remote";
 
 import { range } from "lodash";
 import { extractArtists, selectConsistentValue } from "@seamless-medley/utils";
@@ -87,7 +87,7 @@ export const TrackItem = (props: TrackItemProps) => {
   )
 }
 
-const trackToRowData = ([id, kind, artist, title, album]: MetadataOnlyTrack): TrackRowData => ({ id, kind, artist, title, album });
+const trackToRowData = ([id, kind, artist, title, album]: TrackRecord): TrackRowData => ({ id, kind, artist, title, album });
 
 export function CollectionTracks(props: { collection: Remotable<Collection> | undefined}) {
   const { collection } = props;
