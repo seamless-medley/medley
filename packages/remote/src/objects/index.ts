@@ -9,7 +9,7 @@ export interface RemoteObjects {
   station: core.Station;
   deck: core.Deck;
   collection: core.Collection;
-  collection_view: core.CollectionView;
+  collection_view: core.BaseCollectionView<any>;
   //
   transponder: rtc.RTCTransponder;
 }
