@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { ShoutConfig } from "./shout";
 import { IcyConfig } from "./icy";
+import { UDPConfig } from "./udp";
 
 export const StreamingConfig = z.discriminatedUnion('type', [
   ShoutConfig,
-  IcyConfig
+  IcyConfig,
+  UDPConfig
 ]);
 
 export type StreamingConfig = z.infer<typeof StreamingConfig>;

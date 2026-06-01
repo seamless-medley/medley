@@ -29,6 +29,7 @@ import { ExposedGlobal } from "./expose/core/global";
 import { MusicDb, Station, StationEvents } from "../core";
 import { Db } from "../db/db";
 import { WebRtcConfig } from "../config/webrtc";
+import { UDPAdapter } from "../streaming/udp/adapter";
 
 const logger = createLogger({ name: 'medley-server' });
 
@@ -214,6 +215,16 @@ export class MedleyServer extends SocketServerController<RemoteObjects> {
           bitrate: config.format.bitrate,
           metadataInterval: config.metadataInterval,
           mountpoint: config.mountpoint,
+          fx: config.fx
+        });
+
+      case 'udp':
+        return new UDPAdapter(station, {
+          address: config.address,
+          port: config.port,
+          frameSize: config.frameSize,
+          sampleRate: config.codec.sampleRate,
+          sampleFormat: config.codec.sampleFormat,
           fx: config.fx
         });
 
