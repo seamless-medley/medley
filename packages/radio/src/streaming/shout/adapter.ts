@@ -81,7 +81,7 @@ export class ShoutAdapter extends FFMpegAdapter {
 
     this.#logger = createLogger({
       name: 'shout',
-      id: `${host}:${port}${this.#getMountPoint()}`
+      id: this.#audience
     });
 
     station.on('deckStarted', this.#handleDeckStarted);
