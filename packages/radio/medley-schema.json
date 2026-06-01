@@ -717,7 +717,8 @@
     "streaming_output": {
       "oneOf": [
         { "$ref": "#/$defs/shout_output" },
-        { "$ref": "#/$defs/icy_output" }
+        { "$ref": "#/$defs/icy_output" },
+        { "$ref": "#/$defs/udp_output"}
       ]
     },
     "shout_output": {
