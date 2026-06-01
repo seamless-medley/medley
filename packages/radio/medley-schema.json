@@ -951,6 +951,68 @@
       "required": ["type",  "station", "format", "mountpoint"],
       "additionalProperties": false
     },
+    "udp_output": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "udp"
+        },
+        "station": {
+          "type": "string",
+          "minLength": 1
+        },
+        "address": {
+          "type": "string",
+          "minLength": 1
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "frameSize": {
+          "type": "integer",
+          "minimum": 1024
+        },
+        "codec": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "pcm"
+                },
+                "sampleRate": {
+                  "type": "integer",
+                  "title": "Sample Rate",
+                  "description": "Sample rate in Hz",
+                  "minimum": 8000,
+                  "maximum": 96000
+                },
+                "sampleFormat": {
+                  "type": "string",
+                  "oneOf": [
+                    { "const": "Int16LE" },
+                    { "const": "Int16BE" },
+                    { "const": "FloatLE" },
+                    { "const": "FloatBE" }
+                  ]
+                }
+              },
+              "required": ["type", "sampleRate", "sampleFormat"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "fx": {
+          "$ref": "#/$defs/fx"
+        }
+      },
+      "required": ["type",  "station", "address", "port", "frameSize", "codec"],
+      "additionalProperties": false
+    },
     "fx": {
       "type": "object",
       "properties": {
