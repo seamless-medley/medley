@@ -34,7 +34,7 @@ interface RTCTransponderEvents extends RTCWorkerEvents {
 }
 
 export class RTCWorker extends TypedEmitter<RTCWorkerEvents> {
-  #dispatcher = new AudioDispatcher();
+  #dispatcher = new AudioDispatcher({ interval: 20 });
 
   #worker!: types.Worker;
   #webrtcServer!: types.WebRtcServer;

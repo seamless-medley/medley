@@ -1,34 +1,23 @@
 // This module works in Node env only
 
-import { Transform, TransformCallback } from "node:stream";
+
+import { Packetizer, PacketizerOptions } from "../packetizer";
 import { Opus, type OpusOptions } from "./loader";
 
-export type OpusPacketEncoderOptions = OpusOptions & {
-  frameSize?: number;
-  backlog?: number
-}
-
-export type EncodedPacketInfo = {
-  opus?: Buffer;
-}
+export type OpusPacketEncoderOptions = OpusOptions & PacketizerOptions;
 
 /**
- * Transform PCM stream into Raw Opus Packet
+ * Transform PCM stream into Raw Opus packets
  *
  */
-export class OpusPacketEncoder extends Transform {
-  #frameSize: number;
-
-  #backlog: number;
-
-  #buffer = Buffer.alloc(0);
-
+export class OpusPacketEncoder extends Packetizer {
   #opus?: Opus;
 
   constructor(options?: Partial<OpusPacketEncoderOptions>) {
-    super({ readableObjectMode: true });
-    this.#frameSize = options?.frameSize ?? 960;
-    this.#backlog = Math.max(0, options?.backlog ?? 0);
+    super({
+      numFrames: 960,
+      ...options
+    });
 
     Opus.create(options).then((opus) => {
       this.#opus = opus;
@@ -46,68 +35,11 @@ export class OpusPacketEncoder extends Transform {
     }
   }
 
-  get blocksInBuffer() {
-    return Math.trunc(this.#buffer.length / this.#blockSizeInBytes);
+  get blockSizeInBytes() {
+    return this.numFrames * 2 * 2; // frameSize * NUM_CHANNEL * SIZE_PER_SAMPLE
   }
 
-  get #blockSizeInBytes() {
-    return this.#frameSize * 2 * 2; // frameSize * NUM_CHANNEL * SIZE_PER_SAMPLE
-  }
-
-  async #processBlock(index: number): Promise<Buffer | false> {
-    const blockSizeInBytes = this.#blockSizeInBytes;
-
-    const start = index * blockSizeInBytes;
-    const end = start + blockSizeInBytes;
-    const block = this.#buffer.subarray(start, end);
-
-    if (block.byteLength !== blockSizeInBytes) {
-      return false;
-    }
-
-    const packet = await this.#opus?.encode(block, this.#frameSize);
-
-    if (!packet) {
-      return false;
-    }
-
-    return packet;
-  }
-
-  async #process() {
-    const numBlocks = Math.max(this.blocksInBuffer - this.#backlog, 0);
-
-    let blocksProcessed = 0;
-    const packets: Buffer[] = [];
-
-    // process each block
-    while (blocksProcessed < numBlocks) {
-      const packet = await this.#processBlock(blocksProcessed);
-
-      if (packet === false) {
-        break;
-      }
-
-      packets.push(packet);
-
-      blocksProcessed++;
-    }
-
-    // remove process blocks
-    if (blocksProcessed > 0) {
-      this.#buffer = this.#buffer.subarray(blocksProcessed * this.#blockSizeInBytes);
-    }
-
-    // emit results
-    while (packets.length > 0) {
-      this.push({
-        opus: packets.shift()
-      });
-    }
-  }
-
-  _transform(chunk: Buffer, encoding: BufferEncoding, done: TransformCallback): void {
-    this.#buffer = Buffer.concat([this.#buffer, chunk]);
-    this.#process().then(() => done());
+  async processBlock(block: Buffer): Promise<Buffer | undefined> {
+    return this.#opus?.encode(block, this.numFrames);
   }
 }

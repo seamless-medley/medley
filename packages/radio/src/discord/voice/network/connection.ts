@@ -563,7 +563,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
     const { connectionData } = this.#state;
     connectionData.packetsPlayed++;
 
-    incRTPData(connectionData);
+    incRTPData(connectionData, 960); // 20ms @ 48KHz
 
     this.setSpeaking(true);
     this.#state.udp.send(audioPacket);

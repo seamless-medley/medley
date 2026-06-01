@@ -1,6 +1,6 @@
 import { encode } from 'notepack.io';
 import type { AudioTransportExtraPayload } from "@seamless-medley/remote";
-import { IExciter, Exciter } from "../../../audio/exciter";
+import { IExciter, OpusExciter } from "../../../audio/exciter";
 import { Station } from '../../../core';
 
 interface WebSocketExciterEvents {
@@ -8,7 +8,7 @@ interface WebSocketExciterEvents {
   audioLatency(ms: number): void;
 }
 
-export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements IExciter {
+export class WebSocketExciter extends OpusExciter<WebSocketExciterEvents> implements IExciter {
   constructor(station: Station, bitrate = 256_000, backlog = 12) {
     super(
       station,
@@ -27,7 +27,7 @@ export class WebSocketExciter extends Exciter<WebSocketExciterEvents> implements
   #preparedAudioLatencyInfo?: number;
 
   override prepare(): void {
-    const { opus } = this.read();
+    const opus = this.read();
 
     if (!opus) {
       this.#preparedPacket = undefined;

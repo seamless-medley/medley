@@ -1,5 +1,5 @@
 import { Station } from "../../../core";
-import { Exciter, ICarriableExciter } from "../../../audio/exciter";
+import { OpusExciter, ICarriableExciter } from "../../../audio/exciter";
 
 export type DiscordAudioPlayerOptions = {
   gain?: number;
@@ -7,7 +7,7 @@ export type DiscordAudioPlayerOptions = {
   backlog?: number;
 }
 
-export class DiscordAudioPlayer extends Exciter implements ICarriableExciter {
+export class DiscordAudioPlayer extends OpusExciter implements ICarriableExciter {
 
   constructor(station: Station, options: DiscordAudioPlayerOptions) {
     const { gain = 1.0, bitrate = 256_000, backlog = 12 } = options;

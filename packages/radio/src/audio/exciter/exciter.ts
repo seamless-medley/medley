@@ -3,13 +3,13 @@ import { pipeline, Readable } from 'node:stream';
 import type { KaraokeUpdateParams, RequestAudioOptions, RequestAudioStreamResult } from '@seamless-medley/medley';
 import { ListenerSignature, TypedEmitter } from 'tiny-typed-emitter';
 import { Station } from '../../core';
-import { EncodedPacketInfo, OpusPacketEncoder, OpusPacketEncoderOptions } from '../codecs/opus/stream';
+import { OpusPacketEncoder, OpusPacketEncoderOptions } from '../codecs/opus/stream';
 import { AudioDispatcher, DispatcherPrivate } from './dispatcher';
+import { PCMPacketizer } from '../codecs/packetizer';
 
 export interface IExciter {
   readonly station: Station;
   readonly audioOptions: RequestAudioOptions;
-  readonly encoderOptions: Partial<OpusPacketEncoderOptions>;
 
   /**
    * Start this exciter using the specified dispatcher to drive audio stream
@@ -18,10 +18,6 @@ export interface IExciter {
   start(dispatcher: AudioDispatcher): Promise<void>;
 
   stop(): void;
-
-  get bitrate(): number;
-
-  set bitrate(value: number);
 
   setGain(gain: number): void;
 
@@ -49,22 +45,178 @@ export interface ICarrier {
 }
 
 /**
- * An Exciter read PCM stream from node-medley and encode it into Opus packets.
+ * Exciter reads PCM stream from node-medley packetize the PCM stream into stream of packets
  */
 export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {}> extends TypedEmitter<Listeners> implements ICarriableExciter {
   protected dispatcher?: AudioDispatcher;
   protected request?: RequestAudioStreamResult;
+
+  // This must be assigned on start, the stream must be operating in object mode
   protected outlet?: Readable;
-  protected opusEncoder?: OpusPacketEncoder;
+
+  #ref = 0;
 
   protected readonly carriers: ICarrier[] = [];
 
   constructor(
     readonly station: Station,
-    readonly audioOptions: RequestAudioOptions,
-    readonly encoderOptions: Partial<OpusPacketEncoderOptions>
+    readonly audioOptions: RequestAudioOptions
   ) {
     super();
+  }
+
+  abstract start(dispatcher: AudioDispatcher): Promise<void>;
+
+  stop() {
+    (this.dispatcher as unknown as DispatcherPrivate)?.remove(this);
+
+    if (!this.request) {
+      return;
+    }
+
+    this.station.deleteAudioStream(this.request.id);
+    this.request = undefined;
+
+    this.outlet?.destroy;
+    this.outlet = undefined;
+  }
+
+  get started() {
+    return this.outlet !== undefined;
+  }
+
+  setGain(gain: number) {
+    if (!this.request) {
+      return;
+    }
+
+    this.station.updateAudioStream(this.request.id, { gain });
+  }
+
+  get isPlayable(): boolean {
+    return this.request?.stream?.readable ?? false;
+  }
+
+  protected get playableCarriers() {
+    return this.carriers.filter(c => c.isReady);
+  }
+
+  protected prepareAudioPacket(packet: Buffer): Buffer {
+    return packet;
+  }
+
+  protected read(): Buffer | undefined {
+    return this.outlet?.read();
+  }
+
+  prepare(): void {
+    const packet = this.read();
+
+    if (!packet) {
+      return;
+    }
+
+    const prepared = this.prepareAudioPacket(packet);
+
+    for (const carrier of this.playableCarriers) {
+			carrier.prepareAudioPacket(prepared);
+		}
+  }
+
+  dispatch(): void {
+    for (const carrier of this.playableCarriers) {
+			carrier.dispatchAudio();
+		}
+  }
+
+  incRef(): number {
+    return ++this.#ref;
+  }
+
+  get refCount(): number {
+    return this.#ref;
+  }
+
+  addCarrier(carrier: ICarrier) {
+    if (this.carriers.includes(carrier)) {
+      return this.carriers.length;
+    }
+
+    return this.carriers.push(carrier);
+  }
+
+  removeCarrier(carrier: ICarrier) {
+    const index = this.carriers.indexOf(carrier);
+
+    if (index > -1) {
+      this.carriers.splice(index, 1);
+    }
+
+    return this.carriers.length;
+  }
+
+  hasCarrier() {
+    return this.carriers.length > 0;
+  }
+
+  setKaraokeParams(params: KaraokeUpdateParams): boolean {
+    if (!this.request) {
+      return false;
+    }
+
+    return this.request.setFx('karaoke', params);
+  }
+}
+
+export class PCMExciter<Listeners extends ListenerSignature<Listeners> = {}> extends Exciter<Listeners> {
+  #packetizer: PCMPacketizer;
+
+  constructor(
+    station: Station,
+    audioOptions: RequestAudioOptions,
+    numFrames: number
+  ) {
+    super(station, audioOptions);
+    this.#packetizer = new PCMPacketizer(numFrames);
+  }
+
+  async start(dispatcher: AudioDispatcher) {
+    if (this.dispatcher === dispatcher) {
+      return;
+    }
+
+    if (this.dispatcher) {
+      throw new Error('An exciter could not be used multiple times');
+    }
+
+    this.dispatcher = dispatcher;
+    this.request = await this.station.requestAudioStream(this.audioOptions);
+
+    this.outlet = pipeline(
+      [
+        this.request!.stream as unknown as NodeJS.ReadableStream,
+        this.#packetizer! as unknown as NodeJS.WritableStream,
+      ],
+      noop
+    ) as unknown as Readable;
+
+    (dispatcher as unknown as DispatcherPrivate).add(this);
+  }
+}
+
+
+/**
+ * OpusExciter reads PCM stream from node-medley and encode it into Opus packets.
+ */
+export class OpusExciter<Listeners extends ListenerSignature<Listeners> = {}> extends Exciter<Listeners> {
+  protected opusEncoder?: OpusPacketEncoder;
+
+  constructor(
+    station: Station,
+    audioOptions: RequestAudioOptions,
+    readonly encoderOptions: Partial<OpusPacketEncoderOptions>
+  ) {
+    super(station, audioOptions);
   }
 
   async start(dispatcher: AudioDispatcher) {
@@ -103,24 +255,6 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     });
   }
 
-  stop() {
-    (this.dispatcher as unknown as DispatcherPrivate)?.remove(this);
-
-    if (!this.request) {
-      return;
-    }
-
-    this.station.deleteAudioStream(this.request.id);
-    this.request = undefined;
-
-    this.outlet?.destroy;
-    this.outlet = undefined;
-  }
-
-  get started() {
-    return this.outlet !== undefined;
-  }
-
   get bitrate() {
     return this.opusEncoder?.bitrate ?? this.encoderOptions.bitrate ?? 0;
   }
@@ -129,30 +263,6 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
     if (this.opusEncoder) {
       this.opusEncoder.bitrate = value;
     }
-  }
-
-  setGain(gain: number) {
-    if (!this.request) {
-      return;
-    }
-
-    this.station.updateAudioStream(this.request.id, { gain });
-  }
-
-  get isPlayable(): boolean {
-    return this.request?.stream?.readable ?? false;
-  }
-
-  protected read(): EncodedPacketInfo {
-    return this.outlet?.read() || {};
-  }
-
-  protected get playableCarriers() {
-    return this.carriers.filter(c => c.isReady);
-  }
-
-  protected prepareAudioPacket(opus: Buffer): Buffer {
-    return opus;
   }
 
   #calculateLatency() {
@@ -191,66 +301,6 @@ export abstract class Exciter<Listeners extends ListenerSignature<Listeners> = {
    */
   get audioLatencyMs() {
     return this.#audioLatencyMs;
-  }
-
-  prepare(): void {
-    const { opus } = this.read();
-
-    if (!opus) {
-      return;
-    }
-
-    const prepared = this.prepareAudioPacket(opus);
-
-    for (const carrier of this.playableCarriers) {
-			carrier.prepareAudioPacket(prepared);
-		}
-  }
-
-  dispatch(): void {
-    for (const carrier of this.playableCarriers) {
-			carrier.dispatchAudio();
-		}
-  }
-
-  addCarrier(carrier: ICarrier) {
-    if (this.carriers.includes(carrier)) {
-      return this.carriers.length;
-    }
-
-    return this.carriers.push(carrier);
-  }
-
-  removeCarrier(carrier: ICarrier) {
-    const index = this.carriers.indexOf(carrier);
-
-    if (index > -1) {
-      this.carriers.splice(index, 1);
-    }
-
-    return this.carriers.length;
-  }
-
-  hasCarrier() {
-    return this.carriers.length > 0;
-  }
-
-  #ref = 0;
-
-  incRef(): number {
-    return ++this.#ref;
-  }
-
-  get refCount(): number {
-    return this.#ref;
-  }
-
-  setKaraokeParams(params: KaraokeUpdateParams): boolean {
-    if (!this.request) {
-      return false;
-    }
-
-    return this.request.setFx('karaoke', params);
   }
 }
 

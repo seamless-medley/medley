@@ -13,7 +13,7 @@ export class AudioWebSocketServer extends EventEmitter {
 
   #sockets: AudioWebSocket[] = [];
 
-  #dispatcher = new AudioDispatcher();
+  #dispatcher = new AudioDispatcher({ interval: 20 });
 
   #published = new Map<Station, WebSocketExciter>();
 

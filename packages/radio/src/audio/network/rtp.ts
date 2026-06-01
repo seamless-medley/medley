@@ -4,9 +4,9 @@ export interface RTPData {
 	timestamp: number;
 }
 
-export function incRTPData(data: RTPData) {
+export function incRTPData(data: RTPData, increment: number) {
   data.sequence++;
-  data.timestamp += 960;
+  data.timestamp += increment;
 
   if (data.sequence >= 2 ** 16) {
     data.sequence = 0;

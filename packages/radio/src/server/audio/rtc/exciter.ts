@@ -3,7 +3,7 @@ import { type types } from 'mediasoup';
 import { randomNBit } from "@seamless-medley/utils";
 import type { AudioTransportExtraPayload } from "@seamless-medley/remote";
 
-import { Exciter, IExciter } from "../../../audio/exciter";
+import { OpusExciter, IExciter } from "../../../audio/exciter";
 import { RTPData, createRTPHeader, incRTPData } from "../../../audio/network/rtp";
 import { createLogger, type Logger } from "../../../logging";
 import { Station } from "../../../core";
@@ -30,7 +30,7 @@ export type RTCExciterOptions = {
   backlog?: number;
 }
 
-export class RTCExciter extends Exciter implements IExciter {
+export class RTCExciter extends OpusExciter implements IExciter {
   #ssrc = makeSSRC();
   #transport: types.DirectTransport;
   #producer?: types.Producer;
@@ -117,7 +117,7 @@ export class RTCExciter extends Exciter implements IExciter {
   }
 
   override prepare(): void {
-    const { opus } = this.read();
+    const opus = this.read();
 
     if (!opus) {
       this.#preparedPacket = undefined;
@@ -167,7 +167,7 @@ export class RTCExciter extends Exciter implements IExciter {
           this.#audioLevelDataProducer?.send(this.#preparedAudioLevelInfo);
         }
 
-        incRTPData(this.#rtpData);
+        incRTPData(this.#rtpData, 960); // 20ms of 48KHz, 0.02 * 48000
       }
       catch (e) {
         this.#logger.error('Error while dispatching packet');

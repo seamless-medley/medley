@@ -8,22 +8,32 @@ export interface DispatcherPrivate {
   remove(exciter: IExciter): void;
 }
 
+export type AudioDispatcherOptions = {
+  interval: number;
+}
+
 /**
  * An AudioDispatcher is responsible for driving audio stream from exciters
  */
 export class AudioDispatcher {
   #exciters: IExciter[] = [];
 
+  #interval: number;
+
   #nextTime = -1;
 
   #timer?: NodeJS.Timeout;
+
+  constructor(opts: AudioDispatcherOptions) {
+    this.#interval = opts.interval;
+  }
 
   #cycle = () => {
     if (this.#nextTime === -1) {
       return;
     }
 
-    this.#nextTime += 20;
+    this.#nextTime += this.#interval;
 
     const available = this.#exciters.filter(exciter => exciter.isPlayable);
 

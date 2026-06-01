@@ -176,7 +176,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
     this.#stations = stations;
 
-    this.#audioDispatcher = new AudioDispatcher();
+    this.#audioDispatcher = new AudioDispatcher({ interval: 20 });
 
     this.#client = new Client({
       intents: [
