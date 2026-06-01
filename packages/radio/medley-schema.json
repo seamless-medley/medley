@@ -75,7 +75,8 @@
                 "maximum": 65535
               },
               "announcedIp": {
-                "title": "Useful when running behind NAT with private IP",
+                "title": "Announced IP",
+                "description": "Required when running behind NAT with a private IP",
                 "$ref": "#/$defs/ipAddress"
               }
             },
@@ -129,8 +130,8 @@
       }
     },
     "automatons": {
-      "title": "Automaton",
-      "description": "List of Discord bot",
+      "title": "Automatons",
+      "description": "List of Discord bots",
       "type": "object",
       "patternProperties": {
         "^.+$": {
@@ -253,7 +254,7 @@
         "profiles": {
           "title": "Station profiles",
           "type": "object",
-          "description": "Map of station profile profile, at least the default profile must be defined",
+          "description": "Map of station profiles; at least the default profile must be defined",
           "patternProperties": {
             "^.+$": {
               "$ref": "#/$defs/stationProfile"
@@ -281,7 +282,7 @@
         "owners": {
           "type": "array",
           "title": "Owners",
-          "description": "List of bot owner ID",
+          "description": "List of bot owner IDs",
           "items": {
             "type": "string",
             "minLength": 1
@@ -598,14 +599,14 @@
       ]
     },
     "sweeperRuleFrom": {
-      "description": "List of collection id that this sweeper should be inserted while transiting from",
+      "description": "List of collection IDs that this sweeper should be inserted while transitioning from",
       "type": "array",
       "items": {
         "type": "string"
       }
     },
     "sweeperRuleTo": {
-      "description": "List of collection id that this sweeper should be inserted while transiting to",
+      "description": "List of collection IDs that this sweeper should be inserted while transitioning to",
       "type": "array",
       "items": {
         "type": "string"
@@ -772,8 +773,8 @@
                 },
                 "sampleRate": {
                   "type": "integer",
-                  "title": "Bitrate",
-                  "description": "Bitrate in Kbps",
+                  "title": "Sample Rate",
+                  "description": "Sample rate in Hz",
                   "minimum": 8000,
                   "maximum": 192000
                 }
