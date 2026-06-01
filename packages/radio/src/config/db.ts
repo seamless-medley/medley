@@ -1,5 +1,5 @@
 import { type MongoClientOptions as MongoClientOptionsType } from "mongodb";
-import { getErrorMap, z } from "zod";
+import { z } from "zod";
 
 export const MongoClientOptions = z.object({
   replicaSet: z.string(),

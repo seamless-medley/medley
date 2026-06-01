@@ -13,7 +13,7 @@ export const AacOptions = z.object({
     z.literal(44100),
     z.literal(48000)
   ]),
-  bitrate: z.number().int().min(16).max(320)
+  bitrate: z.int().min(16).max(320)
 }).strict();
 
 
@@ -29,7 +29,7 @@ export const HeAAcOptions = z.object({
     z.literal(44100),
     z.literal(48000)
   ]),
-  bitrate: z.number().int().min(16).max(320)
+  bitrate: z.int().min(16).max(320)
 }).strict();
 
 export const VorbisOptions = z.object({
@@ -45,7 +45,7 @@ export const VorbisOptions = z.object({
     z.literal(44100),
     z.literal(48000)
   ]),
-  bitrate: z.number().int().min(8).max(320)
+  bitrate: z.int().min(8).max(320)
 }).strict();
 
 export const OpusOptions = z.object({
@@ -58,12 +58,12 @@ export const OpusOptions = z.object({
     z.literal(44100),
     z.literal(48000)
   ]),
-  bitrate: z.number().int().min(8).max(320)
+  bitrate: z.int().min(8).max(320)
 }).strict();
 
 export const FlacOptions = z.object({
   codec: z.literal('flac'),
-  sampleRate: z.number().int().min(8_000).max(192_000)
+  sampleRate: z.int().min(8_000).max(192_000)
 }).strict();
 
 export const Mp3Options = z.object({
@@ -79,7 +79,7 @@ export const Mp3Options = z.object({
     z.literal(44100),
     z.literal(48000)
   ]),
-  bitrate: z.number().int().min(80).max(320)
+  bitrate: z.int().min(80).max(320)
 }).strict();
 
 const ShoutFormat = z.discriminatedUnion('codec', [

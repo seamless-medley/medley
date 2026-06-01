@@ -3,7 +3,7 @@ import { z } from "zod";
 export const ListenInfo = z.object({
   protocol: z.enum(['tcp', 'udp']),
   ip: z.ipv4(),
-  port: z.number().min(1).max(65535).optional(),
+  port: z.int().min(1).max(65535).optional(),
   announcedIp: z.ipv4().optional()
 }).superRefine(({ announcedIp, ip }, ctx) => {
   if (!announcedIp && (ip === '0.0.0.0') || (ip === '::')) {

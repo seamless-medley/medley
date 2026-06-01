@@ -9,9 +9,9 @@ export const StreamingConfigTrait = z.object({
       enabled: z.boolean().optional(),
       dontTransit: z.boolean().optional(),
       mix: z.number().min(0).max(1).optional(),
-      lowpassCutoff: z.number().int().min(10).max(20_000).optional(),
+      lowpassCutoff: z.int().min(10).max(20_000).optional(),
       lowpassQ: z.number().min(0.01).max(10.0).optional(),
-      highpassCutoff: z.number().int().min(10).max(20_000).optional(),
+      highpassCutoff: z.int().min(10).max(20_000).optional(),
       highpassQ: z.number().min(0.01).max(10.0).optional(),
     }).strict().optional()
   }).strict().optional()

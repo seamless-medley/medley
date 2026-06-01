@@ -13,7 +13,7 @@ export const AdtsOptions = z.object({
     z.literal(44100),
     z.literal(48000)
   ]),
-  bitrate: z.number().int().min(16).max(320)
+  bitrate: z.int().min(16).max(320)
 }).strict();
 
 export const Mp3Options = z.object({
@@ -29,7 +29,7 @@ export const Mp3Options = z.object({
     z.literal(44100),
     z.literal(48000)
   ]),
-  bitrate: z.number().int().min(80).max(320)
+  bitrate: z.int().min(80).max(320)
 }).strict();
 
 const IcyFormat = z.discriminatedUnion('codec', [
@@ -41,5 +41,5 @@ export const IcyConfig = StreamingConfigTrait.extend({
   type: z.literal('icy'),
   format: IcyFormat,
   mountpoint: z.string().regex(/^\/[^\/\s]+$/, { error: issue => `Invalid mountpoint '${issue.input}': must be in '/path' format` }),
-  metadataInterval: z.number().int().optional()
+  metadataInterval: z.int().optional()
 })
