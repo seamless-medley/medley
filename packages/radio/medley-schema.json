@@ -10,23 +10,28 @@
       "type": "object",
       "properties": {
         "port": {
+          "title": "Port",
+          "description": "HTTP server port number",
           "type": "integer",
           "minimum": 1,
           "maximum": 65535
         },
         "address": {
+          "title": "Address",
+          "description": "IP address to bind the server to",
           "$ref": "#/$defs/ipAddress"
         },
         "audioBitrate": {
-          "title": "Bitrate",
-          "description": "Bitrate for Opus, in kbps",
+          "title": "Audio Bitrate",
+          "description": "Bitrate for Opus audio, in kbps",
           "type": "integer",
           "minimum": 0,
           "maximum": 256
         },
         "secret": {
+          "title": "Secret",
           "type": "string",
-          "description": "Secret used to sign session",
+          "description": "Secret used to sign sessions",
           "minLength": 16
         }
       },
@@ -34,15 +39,20 @@
       "additionalProperties": false
     },
     "webrtc": {
+      "title": "WebRTC",
+      "description": "WebRTC server configuration",
       "properties": {
         "listens": {
+          "title": "Listen Addresses",
+          "description": "List of network interfaces and ports to listen on",
           "type": "array",
           "items": {
             "type": "object",
             "title": "Listen",
             "properties": {
               "protocol": {
-                "title": "Network protocol",
+                "title": "Network Protocol",
+                "description": "Transport protocol to use",
                 "oneOf": [
                   {
                     "type": "string",
@@ -56,6 +66,7 @@
               },
               "ip": {
                 "title": "Listening IP",
+                "description": "IP address to listen on",
                 "anyOf": [
                   {
                     "const": "0.0.0.0",
@@ -70,6 +81,7 @@
               },
               "port": {
                 "title": "Port",
+                "description": "Port number to listen on",
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 65535
@@ -107,7 +119,7 @@
         },
         "bitrate": {
           "title": "Bitrate",
-          "description": "Bitrate for Opus, in kbps",
+          "description": "Bitrate for Opus audio, in kbps",
           "type": "integer",
           "minimum": 0,
           "maximum": 256
@@ -121,7 +133,7 @@
     },
     "stations": {
       "title": "Stations",
-      "description": "List of stations",
+      "description": "Map of stations",
       "type": "object",
       "patternProperties": {
         "^.+$": {
@@ -131,7 +143,7 @@
     },
     "automatons": {
       "title": "Automatons",
-      "description": "List of Discord bots",
+      "description": "Map of Discord bots",
       "type": "object",
       "patternProperties": {
         "^.+$": {
@@ -140,8 +152,8 @@
       }
     },
     "streaming": {
-      "title": "Streaming outputs",
-      "description": "Specify list of streaming outputs",
+      "title": "Streaming Outputs",
+      "description": "List of streaming outputs",
       "type": "array",
       "items": {
         "$ref": "#/$defs/streaming_output"
@@ -152,23 +164,30 @@
   "additionalProperties": false,
   "$defs": {
     "db": {
+      "title": "Database",
       "oneOf": [
         {
           "type": "object",
-          "description": "MongoDB options",
+          "title": "MongoDB",
+          "description": "MongoDB connection options",
           "properties": {
             "driver": {
               "const": "mongodb"
             },
             "url": {
+              "title": "URL",
+              "description": "MongoDB connection string",
               "type": "string",
               "minLength": 1
             },
             "database": {
+              "title": "Database",
+              "description": "Database name",
               "type": "string",
               "minLength": 1
             },
             "connectionOptions": {
+              "title": "Connection Options",
               "type": "object",
               "markdownDescription": "See: [Driver Documentation](https://www.mongodb.com/docs/manual/reference/connection-string)"
             },
@@ -194,57 +213,64 @@
     },
     "station": {
       "title": "Station",
-      "description": "Define a station",
+      "description": "Station configuration",
       "type": "object",
       "properties": {
         "name": {
+          "title": "Name",
           "type": "string",
           "description": "Station name",
           "minLength": 1
         },
         "description": {
+          "title": "Description",
           "type": "string",
           "description": "Station description"
         },
         "url": {
+          "title": "URL",
           "type": "string",
           "description": "Station URL"
         },
         "iconURL": {
+          "title": "Icon URL",
           "type": "string",
-          "description": "Station URL for icon"
+          "description": "URL of the station icon"
         },
         "maxTrackHistory": {
+          "title": "Max Track History",
           "type": "integer",
           "description": "Number of tracks to keep in history",
           "minimum": 0,
           "default": 20
         },
         "artistBacklog": {
+          "title": "Artist Backlog",
           "oneOf": [
             {
               "type": "boolean",
               "const": false,
-              "description": "No artist duplication check"
+              "description": "Disable artist duplication check"
             },
             {
               "type": "integer",
               "minimum": 0,
               "default": 50,
-              "description": "Number of last tracks used to check for duplicated artists"
+              "description": "Number of recent tracks to check for duplicate artists"
             }
           ]
         },
         "duplicationSimilarity": {
+          "title": "Duplication Similarity",
           "type": "number",
           "minimum": 0,
           "maximum": 1,
-          "description": "A fraction from 0 to 1 which indicates the degree of similarity between the two artists"
+          "description": "Similarity threshold from 0 to 1 for detecting duplicate artists"
         },
         "musicCollections": {
           "title": "Music Collections",
           "type": "object",
-          "description": "Map of music collection",
+          "description": "Map of music collections",
           "patternProperties": {
             "^.+$": {
               "$ref": "#/$defs/musicCollection"
@@ -252,7 +278,7 @@
           }
         },
         "profiles": {
-          "title": "Station profiles",
+          "title": "Station Profiles",
           "type": "object",
           "description": "Map of station profiles; at least the default profile must be defined",
           "patternProperties": {
@@ -268,14 +294,18 @@
     },
     "automaton": {
       "title": "Automaton",
-      "description": "Automaton (Bot)",
+      "description": "Discord bot configuration",
       "type": "object",
       "properties": {
         "clientId": {
+          "title": "Client ID",
+          "description": "Discord application client ID",
           "type": "string",
           "minLength": 1
         },
         "botToken": {
+          "title": "Bot Token",
+          "description": "Discord bot token",
           "type": "string",
           "minLength": 1
         },
@@ -289,21 +319,24 @@
           }
         },
         "stations": {
+          "title": "Stations",
           "type": "array",
-          "description": "List of station id to allow tuning from this automaton, or leave blank to allow all stations",
+          "description": "List of station IDs allowed to be tuned from this bot; leave empty to allow all stations",
           "items": {
             "type": "string"
           }
         },
         "baseCommand": {
+          "title": "Base Command",
           "type": "string",
-          "description": "Base command",
+          "description": "Base slash command name",
           "minLength": 1,
           "default": "medley"
         },
         "guilds": {
+          "title": "Guilds",
           "type": "object",
-          "description": "Guild specific configurations",
+          "description": "Guild-specific configurations",
           "patternProperties": {
             "^.+$": {
               "$ref": "#/$defs/guildConfig"
@@ -315,10 +348,12 @@
       "additionalProperties": false
     },
     "musicCollection": {
-      "title": "Music collection",
+      "title": "Music Collection",
       "type": "object",
       "properties": {
         "paths": {
+          "title": "Paths",
+          "description": "List of directories to scan for music files",
           "type": "array",
           "minItems": 1,
           "items": {
@@ -326,31 +361,38 @@
           }
         },
         "description": {
+          "title": "Description",
+          "description": "Collection description",
           "type": "string"
         },
         "auxiliary": {
+          "title": "Auxiliary",
           "type": "boolean",
-          "description": "Mark this collection as an auxiliary\nAn auxiliary collection cannot be used in a playing sequence"
+          "description": "Mark this collection as auxiliary; an auxiliary collection cannot be used in a playing sequence"
         },
         "noFollowOnRequest": {
+          "title": "No Follow On Request",
           "type": "boolean",
           "description": "Disable crate following on a requested track",
           "default": false
         },
         "disableLatch": {
+          "title": "Disable Latch",
           "type": "boolean",
           "description": "Disable latching",
           "default": false
         },
         "newTracksAddingMode": {
+          "title": "New Tracks Adding Mode",
           "type": "string",
-          "description": "Specify how the new tracks should be added to the collection",
+          "description": "How new tracks are added to the collection",
           "enum": ["prepend", "append", "spread"],
           "default": "spread"
         },
         "reshuffleEvery": {
+          "title": "Reshuffle Every",
           "type": "integer",
-          "description": "Specify a number of tracks played from this collection that will trigger re-shuffling",
+          "description": "Number of tracks played from this collection before re-shuffling",
           "minimum": 0
         }
       },
@@ -358,21 +400,26 @@
       "additionalProperties": false
     },
     "sequence": {
-      "title": "Play sequence",
+      "title": "Play Sequence",
       "type": "object",
       "properties": {
         "collections": {
+          "title": "Collections",
           "type": "array",
           "description": "List of collection IDs and weights",
           "items": {
-            "title": "Sequence collection",
+            "title": "Sequence Collection",
             "type": "object",
             "properties": {
               "id": {
+                "title": "ID",
+                "description": "Collection ID",
                 "type": "string",
                 "minLength": 1
               },
               "weight": {
+                "title": "Weight",
+                "description": "Relative weight for random selection",
                 "type": "number"
               }
             },
@@ -381,8 +428,8 @@
           }
         },
         "chance": {
-          "title": "Sequence Chance",
-          "description": "Chance of this collection being selected",
+          "title": "Chance",
+          "description": "Probability of this sequence being selected",
           "oneOf": [
             {
               "type": "string",
@@ -390,17 +437,19 @@
             },
             {
               "type": "object",
-              "title": "Yes/No chance",
+              "title": "Yes/No Chance",
               "properties": {
                 "yes": {
+                  "title": "Yes",
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Chance of being selected"
+                  "description": "Weight for being selected"
                 },
                 "no": {
+                  "title": "No",
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Chance of not being selected"
+                  "description": "Weight for not being selected"
                 }
               },
               "required": ["yes", "no"],
@@ -409,8 +458,8 @@
           ]
         },
         "limit": {
-          "title": "Sequence play limit",
-          "description": "Limit number of tracks to play after being selected",
+          "title": "Limit",
+          "description": "Number of tracks to play after being selected",
           "oneOf": [
             {
               "type": "integer",
@@ -418,19 +467,21 @@
             },
             {
               "type": "string",
-              "description": "Limit by the total number of tracks\nUsing this value will cause the entire collection to be played before switching to the next collection",
+              "description": "Play the entire collection before switching to the next",
               "const": "entirely"
             },
             {
               "type": "object",
-              "title": "Up to limit",
-              "description": "Limit by the `upto` value",
+              "title": "Up To Limit",
+              "description": "Play up to a fixed number of tracks",
               "properties": {
                 "by": {
                   "type": "string",
                   "const": "upto"
                 },
                 "upto": {
+                  "title": "Up To",
+                  "description": "Maximum number of tracks to play",
                   "type": "integer",
                   "minimum": 0
                 }
@@ -440,21 +491,26 @@
             },
             {
               "type": "object",
-              "title": "Range limit",
-              "description": "Limit by the `range` value",
+              "title": "Range Limit",
+              "description": "Play a random number of tracks within a range",
               "properties": {
                 "by": {
                   "type": "string",
                   "const": "range"
                 },
                 "range": {
+                  "title": "Range",
                   "type": "object",
                   "properties": {
                     "min": {
+                      "title": "Min",
+                      "description": "Minimum number of tracks",
                       "type": "integer",
                       "minimum": 0
                     },
                     "max": {
+                      "title": "Max",
+                      "description": "Maximum number of tracks",
                       "type": "integer",
                       "minimum": 0
                     }
@@ -468,15 +524,16 @@
             },
             {
               "type": "object",
-              "title": "Sample limit",
-              "description": "Limit by the `list` value",
+              "title": "Sample Limit",
+              "description": "Play a count randomly picked from a list",
               "properties": {
                 "by": {
                   "type": "string",
                   "enum": ["sample", "one-of"]
                 },
                 "list": {
-                  "description": "List of number of tracks\nA value from this list will be picked randomly",
+                  "title": "List",
+                  "description": "List of track counts; one value is picked randomly",
                   "type": "array",
                   "items": {
                     "type": "integer",
@@ -494,20 +551,23 @@
       "additionalProperties": false
     },
     "stationProfile": {
+      "title": "Station Profile",
       "type": "object",
       "properties": {
         "name": {
+          "title": "Name",
           "type": "string",
           "description": "Profile name",
           "minLength": 1
         },
         "description": {
+          "title": "Description",
           "type": "string",
           "description": "Profile description"
         },
         "intros": {
           "title": "Intros",
-          "description": "List of directories for picking up a file to play randomly before starting this profile",
+          "description": "List of directories to pick an intro file from when starting this profile",
           "type": "array",
           "items": {
             "type": "string",
@@ -516,7 +576,7 @@
         },
         "sweeperRules": {
           "title": "Sweeper Rules",
-          "description": "List of rules for inserting jingle track while transiting between music collections",
+          "description": "List of rules for inserting a jingle track when transitioning between music collections",
           "type": "array",
           "items": {
             "$ref": "#/$defs/sweeperRule"
@@ -525,25 +585,27 @@
         "requestSweepers": {
           "title": "Request Sweepers",
           "type": "array",
-          "description": "List of directories for picking up a file to play randomly before transiting into a new request session",
+          "description": "List of directories to pick a sweeper file from when transitioning into a new request session",
           "items": {
             "type": "string",
             "minLength": 1
           }
         },
         "followCollectionAfterRequestTrack": {
+          "title": "Follow Collection After Request Track",
           "type": "boolean",
-          "description": "Whether to follow collection on a requested track",
+          "description": "Whether to follow the collection after playing a requested track",
           "default": true
         },
         "noRequestSweeperOnIdenticalCollection": {
+          "title": "No Request Sweeper On Identical Collection",
           "type": "boolean",
-          "description": "When enabled, a request sweeper will not be inserted\nif the consecutive tracks are from the same collection",
+          "description": "Skip inserting a request sweeper when consecutive tracks are from the same collection",
           "default": true
         },
         "sequences": {
           "title": "Sequences",
-          "description": "List of crates containing rules for selecting music track to play",
+          "description": "List of play sequences defining how music tracks are selected",
           "type": "array",
           "items": {
             "$ref": "#/$defs/sequence"
@@ -599,6 +661,7 @@
       ]
     },
     "sweeperRuleFrom": {
+      "title": "From Collections",
       "description": "List of collection IDs that this sweeper should be inserted while transitioning from",
       "type": "array",
       "items": {
@@ -606,6 +669,7 @@
       }
     },
     "sweeperRuleTo": {
+      "title": "To Collections",
       "description": "List of collection IDs that this sweeper should be inserted while transitioning to",
       "type": "array",
       "items": {
@@ -613,28 +677,36 @@
       }
     },
     "dirPath": {
+      "title": "Directory Path",
       "type": "string",
-      "description": "Path to a directory\nRecursively scan and watch for music files",
+      "description": "Path to a directory; recursively scanned and watched for music files",
       "minLength": 1
     },
     "guildConfig": {
+      "title": "Guild Configuration",
       "type": "object",
-      "description": "Guild specific configuration",
+      "description": "Guild-specific configuration",
       "properties": {
         "autotune": {
+          "title": "Auto Tune",
           "type": "string",
-          "description": "Station id to initially tune-in",
+          "description": "Station ID to tune into automatically on bot join",
           "minLength": 1
         },
         "autojoin": {
+          "title": "Auto Join",
           "type": "string",
-          "description": "Voice channel id to automatically join",
+          "description": "Voice channel ID to join automatically",
           "minLength": 1
         },
         "trackMessage": {
+          "title": "Track Message",
+          "description": "Configuration for track announcement messages",
           "type": "object",
           "properties": {
             "type": {
+              "title": "Type",
+              "description": "Track message display style",
               "default": "extended",
               "oneOf": [
                 {
@@ -652,37 +724,41 @@
               ]
             },
             "max": {
+              "title": "Max",
               "type": "integer",
-              "description": "Number of last messages to be kept in a guild",
+              "description": "Number of recent track messages to keep in the channel",
               "minimum": 0
             },
             "channel": {
+              "title": "Channel",
               "type": "string",
-              "description": "Text channel id for sending track message",
+              "description": "Text channel ID for sending track messages",
               "minLength": 1
             },
             "retainOnReaction": {
+              "title": "Retain On Reaction",
               "type": "boolean",
               "description": "Keep the message if a reaction has been added to it"
             },
             "always": {
+              "title": "Always",
               "type": "boolean",
-              "description": "Always received track messages even if there aren't any audiences"
+              "description": "Always send track messages even when there are no listeners"
             }
           },
           "additionalProperties": false
         },
         "bitrate": {
           "title": "Bitrate",
-          "description": "Bitrate for Opus, in kbps",
+          "description": "Bitrate for Opus audio, in kbps",
           "type": "integer",
           "minimum": 0,
           "maximum": 256,
           "default": 256
         },
-        "volume": {
-          "title": "Volume",
-          "markdownDescription": "Volume\n- 0 => 0%\n- 0.5 => 50%\n- 1.0 => 100%",
+        "gain": {
+          "title": "Gain",
+          "markdownDescription": "Audio gain level\n- 0 → 0%\n- 0.5 → 50%\n- 1.0 → 100%",
           "type": "number",
           "minimum": 0,
           "maximum": 1,
@@ -690,7 +766,7 @@
         },
         "djRoles": {
           "title": "DJ Roles",
-          "description": "List of role IDs for DJ",
+          "description": "List of role IDs with DJ permissions",
           "type": "array",
           "items": {
             "type": "string",
@@ -715,6 +791,7 @@
       ]
     },
     "streaming_output": {
+      "title": "Streaming Output",
       "oneOf": [
         { "$ref": "#/$defs/shout_output" },
         { "$ref": "#/$defs/icy_output" },
@@ -722,6 +799,8 @@
       ]
     },
     "shout_output": {
+      "title": "Shout Output",
+      "description": "Streaming output to an Icecast server via libshout",
       "type": "object",
       "properties": {
         "type": {
@@ -729,44 +808,69 @@
           "const": "shout"
         },
         "station": {
+          "title": "Station",
+          "description": "Station ID to stream from",
           "type": "string",
           "minLength": 1
         },
         "icecast": {
           "type": "object",
           "title": "Icecast",
-          "description": "Details of the Icecast server to connect to",
+          "description": "Icecast server connection details",
           "properties": {
             "host": {
+              "title": "Host",
+              "description": "Icecast server hostname or IP address",
               "type": "string",
               "minLength": 1
             },
             "port": {
+              "title": "Port",
+              "description": "Icecast server port number",
               "type": "integer",
               "minimum": 1,
               "maximum": 65535
             },
+            "tls": {
+              "title": "TLS",
+              "description": "Enable TLS for the connection",
+              "type": "boolean"
+            },
             "mountpoint": {
+              "title": "Mountpoint",
+              "description": "Stream mountpoint path",
               "type": "string",
               "pattern": "^/[^/\\s]+$"
             },
             "username": {
+              "title": "Username",
+              "description": "Icecast source username",
               "type": "string",
               "minLength": 1
             },
             "password": {
+              "title": "Password",
+              "description": "Icecast source password",
               "type": "string",
               "minLength": 1
+            },
+            "public": {
+              "title": "Public",
+              "description": "Advertise this stream on the Icecast directory",
+              "type": "boolean"
             }
           },
           "required": ["host", "port", "mountpoint", "username", "password"],
           "additionalProperties": false
         },
         "format": {
+          "title": "Format",
+          "description": "Audio encoding format",
           "type": "object",
           "required": ["codec"],
           "oneOf": [
             {
+              "title": "FLAC",
               "type": "object",
               "properties": {
                 "codec": {
@@ -784,6 +888,7 @@
               "additionalProperties": false
             },
             {
+              "title": "MP3",
               "type": "object",
               "properties": {
                 "codec": {
@@ -792,11 +897,13 @@
                 "bitrate": {
                   "type": "integer",
                   "title": "Bitrate",
-                  "description": "Bitrate in Kbps",
+                  "description": "Bitrate in kbps",
                   "minimum": 80,
                   "maximum": 320
                 },
                 "sampleRate": {
+                  "title": "Sample Rate",
+                  "description": "Sample rate in Hz",
                   "enum": [
                     8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
                   ]
@@ -806,6 +913,7 @@
               "additionalProperties": false
             },
             {
+              "title": "AAC / HE-AAC",
               "type": "object",
               "properties": {
                 "codec": {
@@ -814,11 +922,13 @@
                 "bitrate": {
                   "type": "integer",
                   "title": "Bitrate",
-                  "description": "Bitrate in Kbps",
+                  "description": "Bitrate in kbps",
                   "minimum": 16,
                   "maximum": 320
                 },
                 "sampleRate": {
+                  "title": "Sample Rate",
+                  "description": "Sample rate in Hz",
                   "enum": [
                     11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
                   ]
@@ -828,6 +938,7 @@
               "additionalProperties": false
             },
             {
+              "title": "Vorbis",
               "type": "object",
               "properties": {
                 "codec": {
@@ -836,11 +947,13 @@
                 "bitrate": {
                   "type": "integer",
                   "title": "Bitrate",
-                  "description": "Bitrate in Kbps",
+                  "description": "Bitrate in kbps",
                   "minimum": 8,
                   "maximum": 320
                 },
                 "sampleRate": {
+                  "title": "Sample Rate",
+                  "description": "Sample rate in Hz",
                   "enum": [
                     8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
                   ]
@@ -850,6 +963,7 @@
               "additionalProperties": false
             },
             {
+              "title": "Opus",
               "type": "object",
               "properties": {
                 "codec": {
@@ -858,11 +972,13 @@
                 "bitrate": {
                   "type": "integer",
                   "title": "Bitrate",
-                  "description": "Bitrate in Kbps",
+                  "description": "Bitrate in kbps",
                   "minimum": 8,
                   "maximum": 320
                 },
                 "sampleRate": {
+                  "title": "Sample Rate",
+                  "description": "Sample rate in Hz",
                   "enum": [
                     8000, 12000, 16000, 24000, 44100, 48000
                   ]
@@ -881,6 +997,8 @@
       "additionalProperties": false
     },
     "icy_output": {
+      "title": "ICY Output",
+      "description": "Streaming output using the ICY protocol (HTTP audio streaming)",
       "type": "object",
       "properties": {
         "type": {
@@ -888,18 +1006,31 @@
           "const": "icy"
         },
         "station": {
+          "title": "Station",
+          "description": "Station ID to stream from",
           "type": "string",
           "minLength": 1
         },
         "mountpoint": {
+          "title": "Mountpoint",
+          "description": "Stream mountpoint path",
           "type": "string",
           "pattern": "^/[^/\\s]+$"
         },
+        "metadataInterval": {
+          "title": "Metadata Interval",
+          "description": "Interval in bytes between ICY metadata chunks",
+          "type": "integer",
+          "minimum": 0
+        },
         "format": {
+          "title": "Format",
+          "description": "Audio encoding format",
           "type": "object",
           "required": ["codec"],
           "oneOf": [
             {
+              "title": "MP3",
               "type": "object",
               "properties": {
                 "codec": {
@@ -908,11 +1039,13 @@
                 "bitrate": {
                   "type": "integer",
                   "title": "Bitrate",
-                  "description": "Bitrate in Kbps",
+                  "description": "Bitrate in kbps",
                   "minimum": 80,
                   "maximum": 320
                 },
                 "sampleRate": {
+                  "title": "Sample Rate",
+                  "description": "Sample rate in Hz",
                   "enum": [
                     8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
                   ]
@@ -922,6 +1055,7 @@
               "additionalProperties": false
             },
             {
+              "title": "ADTS (Raw AAC)",
               "type": "object",
               "properties": {
                 "codec": {
@@ -931,11 +1065,13 @@
                 "bitrate": {
                   "type": "integer",
                   "title": "Bitrate",
-                  "description": "Bitrate in Kbps",
+                  "description": "Bitrate in kbps",
                   "minimum": 16,
                   "maximum": 320
                 },
                 "sampleRate": {
+                  "title": "Sample Rate",
+                  "description": "Sample rate in Hz",
                   "enum": [
                     11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
                   ]
@@ -954,6 +1090,8 @@
       "additionalProperties": false
     },
     "udp_output": {
+      "title": "UDP Output",
+      "description": "Streaming output over UDP",
       "type": "object",
       "properties": {
         "type": {
@@ -961,25 +1099,36 @@
           "const": "udp"
         },
         "station": {
+          "title": "Station",
+          "description": "Station ID to stream from",
           "type": "string",
           "minLength": 1
         },
         "address": {
+          "title": "Address",
+          "description": "Destination hostname or IP address",
           "type": "string",
           "minLength": 1
         },
         "port": {
+          "title": "Port",
+          "description": "Destination port number",
           "type": "integer",
           "minimum": 1,
           "maximum": 65535
         },
         "frameSize": {
+          "title": "Frame Size",
+          "description": "Audio frame size in samples",
           "type": "integer",
           "minimum": 1024
         },
         "codec": {
+          "title": "Codec",
+          "description": "Audio codec configuration",
           "oneOf": [
             {
+              "title": "PCM",
               "type": "object",
               "properties": {
                 "type": {
@@ -994,6 +1143,8 @@
                   "maximum": 96000
                 },
                 "sampleFormat": {
+                  "title": "Sample Format",
+                  "description": "PCM sample format and byte order",
                   "type": "string",
                   "oneOf": [
                     { "const": "Int16LE" },
@@ -1016,17 +1167,65 @@
       "additionalProperties": false
     },
     "fx": {
+      "title": "Effects",
+      "description": "Audio effects configuration",
       "type": "object",
       "properties": {
         "karaoke": {
+          "title": "Karaoke",
+          "description": "Karaoke effect (vocal removal)",
           "type": "object",
           "properties": {
             "enabled": {
+              "title": "Enabled",
+              "description": "Enable the karaoke effect",
               "type": "boolean"
+            },
+            "dontTransit": {
+              "title": "Don't Transit",
+              "description": "Do not apply the effect during track transitions",
+              "type": "boolean"
+            },
+            "mix": {
+              "title": "Mix",
+              "description": "Wet/dry mix from 0.0 (dry) to 1.0 (full effect)",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "lowpassCutoff": {
+              "title": "Lowpass Cutoff",
+              "description": "Lowpass filter cutoff frequency in Hz",
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 20000
+            },
+            "lowpassQ": {
+              "title": "Lowpass Q",
+              "description": "Lowpass filter Q factor",
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 10.0
+            },
+            "highpassCutoff": {
+              "title": "Highpass Cutoff",
+              "description": "Highpass filter cutoff frequency in Hz",
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 20000
+            },
+            "highpassQ": {
+              "title": "Highpass Q",
+              "description": "Highpass filter Q factor",
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 10.0
             }
-          }
+          },
+          "additionalProperties": false
         }
-      }
+      },
+      "additionalProperties": false
     }
   }
 }
