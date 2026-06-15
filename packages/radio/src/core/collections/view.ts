@@ -123,7 +123,7 @@ export class TrackCollectionView<
     }
 
     this.#numItems = val;
-    this.#invalidate({ noEmit: true });
+    this.#invalidate();
   }
 
   /**

@@ -173,8 +173,9 @@ export class TrackCollection<
   push(track: T): number {
     if (track) {
       this.trackIdMap.set(track.id, track);
+      const index = this.tracks.push(track) - 1;
       this.emit('trackPush', track);
-      return this.tracks.push(track) - 1;
+      return index;
     }
 
     return -1;
