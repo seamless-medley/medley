@@ -70,26 +70,25 @@ export const Resizer: React.FC = () => {
     const delta = position - startState.current.pointer;
 
     const totalSize = startState.current.size.prev + startState.current.size.next;
-    const totalFlex = +prev.ref.current!.style.flexGrow + +next.ref.current!.style.flexGrow;
 
     const minSize = [prev.props.minSize, next.props.minSize];
     const maxSize = [prev.props.maxSize ?? Number.MAX_SAFE_INTEGER, next.props.maxSize ?? Number.MAX_SAFE_INTEGER];
 
-    const newSize = [
-        clamp(startState.current.size.prev + delta,
-          Math.max(minSize[0], totalSize - maxSize[1]),
-          Math.min(maxSize[0], totalSize - minSize[1])
-        ),
-        clamp(startState.current.size.next - delta,
-          Math.max(minSize[1], totalSize - maxSize[0]),
-          Math.min(maxSize[1], totalSize - minSize[0])
-        )
-    ];
+    const newPrevSize = clamp(
+      startState.current.size.prev + delta,
+      Math.max(minSize[0], totalSize - maxSize[1]),
+      Math.min(maxSize[0], totalSize - minSize[1])
+    );
 
-    const flex = newSize.map(s => s / totalSize * totalFlex);
+    const newNextSize = totalSize - newPrevSize;
 
-    prev.ref.current!.style.flexGrow = flex[0].toString();
-    next.ref.current!.style.flexGrow = flex[1].toString();
+    const allPanels = Array.from(panels.values());
+    const isNextLast = next.id === allPanels[allPanels.length - 1]?.id;
+
+    prev.ref.current!.style.flexBasis = `${newPrevSize}px`;
+    if (!isNextLast) {
+      next.ref.current!.style.flexBasis = `${newNextSize}px`;
+    }
   }, []);
 
   const onPoinerUp = useCallback((event: PointerEvent) => {
@@ -110,20 +109,37 @@ export const Resizer: React.FC = () => {
 
     const getSize = (el?: HTMLElement | null) => (isHorizontal ? el?.clientWidth : el?.clientHeight) ?? 0;
 
+    const allPanels = Array.from(panels.values());
+    for (const panel of allPanels) {
+      const el = panel.ref.current;
+      if (el) {
+        const px = getSize(el);
+        el.style.flexGrow = '0';
+        el.style.flexShrink = '0';
+        el.style.flexBasis = `${px}px`;
+      }
+    }
+
+    // last panel absorbs remaining space
+    const lastEl = allPanels[allPanels.length - 1]?.ref.current;
+    if (lastEl) {
+      lastEl.style.flexGrow = '1';
+      lastEl.style.flexBasis = '0';
+    }
+
     startState.current = {
       pointerId: event.pointerId,
       pointer: isHorizontal ? event.clientX : event.clientY,
       size: {
         prev: getSize(prev?.ref?.current),
         next: getSize(next?.ref?.current),
-      }
-    }
+      },
+    };
 
     nodeRef.current!.setPointerCapture(event.pointerId);
     subscribe('pointermove', onPointerMove);
     subscribe('pointerup', onPoinerUp);
   }, [getAdjacentPanels]);
-
 
   const ref: RefCallback<HTMLElement | null>  = useCallback((node) => {
     if (!node) return;
