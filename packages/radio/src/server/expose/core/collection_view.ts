@@ -21,11 +21,11 @@ export abstract class BasedExposedCollectionView<T extends CoreTrack<any>> exten
 
     this.$Exposing = view;
 
-    view.on('viewChange',  this.#onViewChange);
+    view.on('viewChange', this.#onViewChange);
   }
 
   dispose(): void {
-    this.#view.off('viewChange',  this.#onViewChange);
+    this.#view.off('viewChange', this.#onViewChange);
     this.#view.dispose();
   }
 
@@ -75,7 +75,7 @@ export abstract class BasedExposedCollectionView<T extends CoreTrack<any>> exten
 
   protected abstract toRemoteTrack(track: T): Promise<RemoteTrack>;
 
-  protected abstract toRemoteMetadataOnlyTrack(track: T): Array<any>;
+  protected abstract toRemoteTrackRecord(track: T): Array<any>;
 
   async at(index: number) {
     const track = this.#view.at(index);
@@ -92,7 +92,7 @@ export abstract class BasedExposedCollectionView<T extends CoreTrack<any>> exten
       .map(([index, track]) =>
         [
           index,
-          this.toRemoteMetadataOnlyTrack(track)
+          this.toRemoteTrackRecord(track)
         ] as [index: number, track: any]
       );
   }

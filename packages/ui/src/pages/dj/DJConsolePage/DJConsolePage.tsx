@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Center, Flex } from "@mantine/core";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Box, Center, Flex, px } from "@mantine/core";
 import { PlayDeck, PlayDeckProps, PlayHead } from "@ui/pages/dj/components/PlayDeck";
 import { useParams } from "@tanstack/react-router";
 import { ResizablePanel } from "@ui/components/ResizablePanel";
@@ -7,6 +7,10 @@ import { Panel } from "@ui/pages/components/Panel";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { useDeckInfo } from "@ui/hooks/useDeck";
 import classes from './DJConsolePage.module.css';
+import { useStation } from "@ui/hooks/useStation";
+import { Remotable, RequestCollectionView, RequestTrackRecord } from "@seamless-medley/remote";
+import { useRemotableProp } from "@ui/hooks/remotable";
+import { useCollectionList } from "@ui/pages/hooks/useCollectionList";
 
 const DeckPanel: React.FC<PlayDeckProps> = ({ ...props }) => {
   const info = useDeckInfo(props.stationId, props.index, 'active', 'trackPlay');
@@ -64,20 +68,74 @@ const Decks = () => {
   )
 }
 
+const RequestedTracks = () => {
+  const { station: stationId } = useParams({ strict: false });
+
+  const { station } = useStation(stationId);
+
+  const [view, setView] = useState<Remotable<RequestCollectionView>>();
+
+  const count = useRemotableProp(station, 'requestsCount') ?? 0;
+
+const getItemData = useCallback(([id, artist, title]: RequestTrackRecord) => ({ id, artist, title }), []);
+
+  const { ref, virtualizer, virtualItems, items } = useCollectionList(view, {
+    count,
+    estimateSize: () => +px('2.25em'),
+    overscan: 20,
+    getItemData
+  });
+
+  useEffect(() => {
+    if (!station) {
+      return;
+    }
+
+    let currentView: Remotable<RequestCollectionView> | undefined;
+
+    station.createRequestView(0).then(v => {
+      currentView = v;
+      setView(v);
+    });
+
+    return () => {
+      currentView?.dispose();
+    };
+  }, [station]);
+
+  return (
+    <div ref={ref} style={{ height: '100%', overflowY: 'auto' }}>
+      <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+        {virtualItems.map(vrow => {
+          const item = items[vrow.index];
+          return (
+            <div
+              key={vrow.key}
+              style={{ position: 'absolute', top: vrow.start, height: vrow.size, width: '100%' }}
+            >
+              {item ? `${item.artist ?? ''} - ${item.title ?? ''}` : 'Loading...'}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )
+}
+
 export const DJConsolePage = () => {
   return (
     <Flex component="section" className={classes.djConsole}>
       <ResizablePanel.Group orientation='horizontal'>
-        <ResizablePanel minSize={400} flexSize={0.5}>
-          <Flex direction='column' style={{ width: '100%', height: '100%'}}>
-            <Decks />
-            <Panel header='Requests' h={'calc(100% - 450px)'} w='100%' flex='1 1 auto'></Panel>
-          </Flex>
+        <ResizablePanel minSize={400} flexSize={0.6} style={{ 'flexDirection': 'column'}}>
+          <Decks />
+          <Panel header='Requests' h='calc(100% - 450px - 2px)' innerHeight='100%'>
+            <RequestedTracks />
+          </Panel>
         </ResizablePanel>
 
         <ResizablePanel.Resizer />
 
-        <ResizablePanel minSize={250} flexSize={1}>
+        <ResizablePanel minSize={250} flexSize={0.8}>
           <Panel header='History' h={'100%'} orientation='vertical' borders={{ right: true }}>
             <Center h='100%' c='gray.8'>Not yet implemented</Center>
           </Panel>
@@ -85,7 +143,7 @@ export const DJConsolePage = () => {
 
         <ResizablePanel.Resizer />
 
-        <ResizablePanel minSize={250} flexSize={1}>
+        <ResizablePanel minSize={250} flexSize={0.8}>
           <Panel header='Latches' h={'100%'} orientation='vertical' borders={{ right: true }}>
             <Center h='100%' c='gray.8'>Not yet implemented</Center>
           </Panel>
@@ -93,7 +151,7 @@ export const DJConsolePage = () => {
 
         <ResizablePanel.Resizer />
 
-        <ResizablePanel minSize={250} flexSize={1}>
+        <ResizablePanel minSize={250} flexSize={0.8}>
           <Panel header='Listeners' h={'100%'} orientation='vertical' borders={{ right: true }}>
             <Center h='100%' c='gray.8'>Not yet implemented</Center>
           </Panel>

@@ -5,13 +5,18 @@ import type {
   Station as RemoteStation,
   StationProfile as RemoteProfile,
   Create as RemoteCrate,
+  Track as RemoteTrack,
   Exposable,
-  Notify
+  Notify,
+  Remotable,
+  RequestCollectionView,
+  RequestTrackRecord
 } from "@seamless-medley/remote";
 
-import { Station, type StationEvents, type PlayState, StationProfile, Crate, StationTrack, Chanceable } from "../../../core";
+import { Station, type StationEvents, type PlayState, StationProfile, Crate, StationTrack, TrackWithRequester, Requester } from "../../../core";
 import { toRemoteDeckInfoWithPositions } from "./deck";
 import { isFunction, zip } from "lodash";
+import { BasedExposedCollectionView } from "./collection_view";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
   $Exposing: Station;
@@ -26,6 +31,8 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   #currentCrate?: string;
 
+  #requestsCount: number = 0;
+
   constructor(station: Station) {
     super();
     this.$Exposing = station;
@@ -34,6 +41,7 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#currentProfileId = station.profile.id;
     this.setProfiles(station.profiles);
     this.currentCrate = station.currentCrate?.id;
+    this.#requestsCount = station.requestsCount;
 
     this.#station.on('deckLoaded', this.#onDeckLoaded);
     this.#station.on('deckUnloaded', this.#onDeckUnloaded);
@@ -44,7 +52,8 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#station.on('sequenceProfileChange', this.#onSequenceProfileChange);
     this.#station.on('profileChange', this.#onProfileChange);
     this.#station.on('profileBookChange', this.#onProfileBookChange);
-
+    this.#station.on('requestTrackAdded', this.#onRequestTrackAdded);
+    this.#station.on('requestTracksRemoved', this.#onRequestTracksRemoved);
   }
 
   dispose() {
@@ -53,6 +62,12 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#station.off('deckStarted', this.#onDeckStarted);
     this.#station.off('deckActive', this.#onDeckActive);
     this.#station.off('collectionChange', this.#onCollectionChange);
+    this.#station.off('crateIndexChange', this.#onCrateIndexChange);
+    this.#station.off('sequenceProfileChange', this.#onSequenceProfileChange);
+    this.#station.off('profileChange', this.#onProfileChange);
+    this.#station.off('profileBookChange', this.#onProfileBookChange);
+    this.#station.off('requestTrackAdded', this.#onRequestTrackAdded);
+    this.#station.off('requestTracksRemoved', this.#onRequestTracksRemoved);
   }
 
   get #station() {
@@ -119,6 +134,16 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.emit('profileBookChange');
   }
 
+  #onRequestTrackAdded: StationEvents['requestTrackAdded'] = () => {
+    this.requestsCount = this.#station.requestsCount;
+    this.emit('requestTrackAdded');
+  }
+
+  #onRequestTracksRemoved: StationEvents['requestTracksRemoved'] = () => {
+    this.requestsCount = this.#station.requestsCount;
+    this.emit('requestTracksRemoved');
+  }
+
   get audienceCount() {
     return this.#station.audienceCount;
   }
@@ -177,6 +202,15 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   get currentCollection() {
     return this.#currentCollectionId;
+  }
+
+  get requestsCount() {
+    return this.#requestsCount;
+  }
+
+  @PureExpose
+  private set requestsCount(value) {
+    this.#requestsCount = value;
   }
 
   @PureExpose
@@ -251,6 +285,10 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
   changePlaySequence(crateId: string, collectionId: string): true | string {
     return this.#station.forcefullySelectCrate(crateId, collectionId);
   }
+
+  createRequestView(topIndex?: number) {
+    return new ExposedRequestView(this.#station.createRequestView(topIndex)) as unknown as Remotable<RequestCollectionView>;
+  }
 };
 
 export const toRemoteStationProfile = (p: StationProfile): RemoteProfile => ({
@@ -266,3 +304,77 @@ export const toRemoteCrate = (c: Crate<StationTrack>): RemoteCrate => ({
   limit: isFunction(c.limit) ? c.limit.sequenceLimit : c.limit,
   chances: c.chance.chances
 });
+
+export class ExposedRequestView extends BasedExposedCollectionView<TrackWithRequester<StationTrack, Requester>> implements Exposable<RequestCollectionView> {
+  dispose(): void {
+    super.dispose();
+  }
+
+  get length() {
+    return super.length;
+  }
+
+  set length(val) {
+    super.length = val;
+  }
+
+  get topIndex() {
+    return super.topIndex;
+  }
+
+  set topIndex(val) {
+    super.topIndex = val;
+  }
+
+  get bottomIndex() {
+    return super.bottomIndex;
+  }
+
+  get ranges() {
+    return super.ranges;
+  }
+
+  updateView(topIndex: number, length: number): void {
+    super.updateView(topIndex, length);
+  }
+
+  absolute(localIndex: number): number {
+    return super.absolute(localIndex);
+  }
+
+  isIndexInView(absoluteIndex: number): boolean {
+    return super.isIndexInView(absoluteIndex);
+  }
+
+  async at(index: number) {
+    return super.at(index);
+  }
+
+  async items() {
+    return super.items();
+  }
+
+  itemsWithIndexes() {
+    return super.itemsWithIndexes();
+  }
+
+  protected override toRemoteTrack(track: TrackWithRequester<StationTrack, Requester>): Promise<RemoteTrack> {
+    return super.toRemoteTrack(track as any);
+  }
+
+  protected override toRemoteTrackRecord(track: TrackWithRequester<StationTrack, Requester>): Array<any> {
+    const { id, extra, path, requestedBy: requesters } = track;
+    const tags = extra?.tags;
+
+    // TODO: requesters
+
+    const r = [
+      id,
+      tags?.artist,
+      tags?.title ?? path,
+    ] satisfies RequestTrackRecord;
+
+
+    return r;
+  }
+}

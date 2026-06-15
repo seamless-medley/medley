@@ -31,28 +31,48 @@ export function useCollectionList<Item, ItemData>(view: Remotable<BaseCollection
       return;
     }
 
-    const trackList = await view.itemsWithIndexes();
+    const itemList = await view.itemsWithIndexes();
 
-    setItems(trackList.reduce((o, [index, track]) => {
+    setItems(itemList.reduce((o, [index, track]) => {
       o[index] = options.getItemData(track);
       return o;
-    }, {} as Array<ItemData>));
-  }, [view]);
+    }, [] as Array<ItemData>));
+  }, [view, options.getItemData]);
 
   // scroll to top when collection changed
   useEffect(() => {
-    virtualizer.scrollToOffset(0)
+    virtualizer.scrollToOffset(0);
   }, [view]);
 
-  // Update the remote view whe the table moves
+  // Listen for `viewChange` event from the server
+  useEffect(() => {
+    if (!view) {
+      return;
+    }
+
+    view.on('viewChange', fetchView);
+
+    return () => {
+      view?.off('viewChange', fetchView);
+    }
+  }, [view, fetchView]);
+
+  // Dispose view when it changes or unmounts
+  useEffect(() => {
+    return () => {
+      view?.dispose();
+    }
+  }, [view]);
+
+  // Update the remote view when the table moves or total count changes
   useEffect(() => {
     if (!view) {
       setItems([]);
       return;
     }
 
-    view.updateView(topIndex, virtualItems.length).then(fetchView);
-  }, [view, topIndex, virtualItems.length]);
+    view.updateView(topIndex, options.count).then(fetchView);
+  }, [view, topIndex, virtualItems.length, options.count]);
 
   return {
     ref: containerRef,
