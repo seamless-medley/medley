@@ -17,6 +17,7 @@ import { Station, type StationEvents, type PlayState, StationProfile, Crate, Sta
 import { toRemoteDeckInfoWithPositions } from "./deck";
 import { isFunction, zip } from "lodash";
 import { BasedExposedCollectionView } from "./collection_view";
+import { toRemoteTrack } from "./track";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
   $Exposing: Station;
@@ -359,7 +360,7 @@ export class ExposedRequestView extends BasedExposedCollectionView<TrackWithRequ
   }
 
   protected override toRemoteTrack(track: TrackWithRequester<StationTrack, Requester>): Promise<RemoteTrack> {
-    return super.toRemoteTrack(track as any);
+    return toRemoteTrack(track as any);
   }
 
   protected override toRemoteTrackRecord(track: TrackWithRequester<StationTrack, Requester>): Array<any> {
