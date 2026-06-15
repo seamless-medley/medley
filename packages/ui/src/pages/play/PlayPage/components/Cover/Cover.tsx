@@ -104,27 +104,26 @@ type CoverDisc = React.ComponentType & {
 
 const CoverDisc = forwardRef<CoverDisc, PropsWithChildren<ColorsProp>>((props, ref) => {
   const [background, setBackground] = useState<string>();
+  const [lightning, setLightning] = useState<string>();
 
   useEffect(() => {
     const pColors = props.colors || [];
     const colors = pColors.concat(first(pColors) || '').join(', ');
-    const gradient = `conic-gradient(from var(--angle), ${colors})`;
     const fColor = first(props.colors) || 'black';
 
     setBackground([
       discAreas(fColor),
       createTracks(fColor),
-      highlights,
       createGrooves(fColor),
-      weakLightning,
-      strongLightning,
-      gradient
+      `conic-gradient(from 0deg, ${colors})`,
     ].join(','));
 
+    setLightning([highlights, weakLightning, strongLightning].join(','));
   }, [props.colors]);
 
   return (
     <div className={classes.disc} style={{ background }}>
+      <div className={classes.lightning} style={{ background: lightning }} />
       {props.children}
     </div>
   );
@@ -209,13 +208,15 @@ export const Cover: React.FC<CoverProps> = ({ center, url, colors, uuid, visible
   return (
     <>
       <div ref={containerEl} className={clsx(classes.container, classes.revealed, visible && classes.visible)}>
-        <CoverDisc colors={discColors}>
-          <img ref={imageEl}
-            className={classes.image}
-            style={{ opacity: url ? 0.85 : 0 }}
-          />
-          <div className={classes.decorator} />
-        </CoverDisc>
+        <div className={classes.wiggler}>
+          <CoverDisc colors={discColors}>
+            <img ref={imageEl}
+              className={classes.image}
+              style={{ opacity: url ? 0.85 : 0 }}
+            />
+            <div className={classes.decorator} />
+          </CoverDisc>
+        </div>
       </div>
     </>
   )
