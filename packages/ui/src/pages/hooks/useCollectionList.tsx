@@ -71,7 +71,7 @@ export function useCollectionList<Item, ItemData>(view: Remotable<BaseCollection
       return;
     }
 
-    view.updateView(topIndex, options.count).then(fetchView);
+    view.updateView(topIndex, virtualItems.length).then(fetchView);
   }, [view, topIndex, virtualItems.length, options.count]);
 
   return {
