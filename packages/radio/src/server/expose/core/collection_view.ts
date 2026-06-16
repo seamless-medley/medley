@@ -75,7 +75,7 @@ export abstract class BasedExposedCollectionView<T extends CoreTrack<any>> exten
 
   protected abstract toRemoteTrack(track: T): Promise<RemoteTrack>;
 
-  protected abstract toRemoteTrackRecord(track: T): Array<any>;
+  protected abstract toRemoteTrackRecord(track: T): Promise<any[]>;
 
   async at(index: number) {
     const track = this.#view.at(index);
@@ -86,14 +86,7 @@ export abstract class BasedExposedCollectionView<T extends CoreTrack<any>> exten
     return Promise.all(this.#view.items().map(item => this.toRemoteTrack(item)));
   }
 
-  itemsWithIndexes(): Array<[index: number, track: any]> {
-    return this.#view
-      .itemsWithIndexes()
-      .map(([index, track]) =>
-        [
-          index,
-          this.toRemoteTrackRecord(track)
-        ] as [index: number, track: any]
-      );
+  async itemsWithIndexes(): Promise<Array<[index: number, track: any]>> {
+    return Promise.all(this.#view.itemsWithIndexes().map(async ([index, track]) => [index, await this.toRemoteTrackRecord(track)] as [number, any]));
   }
 }

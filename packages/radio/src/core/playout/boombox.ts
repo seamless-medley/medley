@@ -512,6 +512,10 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
     }
   }
 
+  createRequestView(topIndex: number = 0) {
+    return this.#requests.createView(this.requestsCount, topIndex);
+  }
+
   #enqueue: EnqueueListener = async (done) => {
     if (this.queue.length > 0) {
       done(true);

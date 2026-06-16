@@ -51,13 +51,15 @@ const trackKinds = ['normal', 'request', 'insert'] as const;
 
 export const trackKindToString = (k: CoreTrackKind): TrackKind => trackKinds[k.valueOf()];
 
-export const toRemoteTrackRecord = (track: BoomBoxTrack): TrackRecord => {
+export const toRemoteTrackRecord = async (track: BoomBoxTrack): Promise<TrackRecord> => {
   const { id, extra, path } = track;
   const tags = extra?.tags;
   return [
     id,
     extra?.kind ? trackKindToString(extra.kind) : 'normal',
-    tags?.artist, tags?.title ?? path, tags?.album
+    tags?.artist,
+    tags?.title ?? path,
+    tags?.album
   ]
 }
 

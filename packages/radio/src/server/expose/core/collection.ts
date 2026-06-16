@@ -166,7 +166,7 @@ export class ExposedCollectionView extends BasedExposedCollectionView<MusicTrack
     return super.items();
   }
 
-  itemsWithIndexes() {
+  async itemsWithIndexes() {
     return super.itemsWithIndexes();
   }
 
@@ -174,7 +174,7 @@ export class ExposedCollectionView extends BasedExposedCollectionView<MusicTrack
     return toRemoteTrack(track);
   }
 
-  protected override toRemoteMetadataOnlyTrack(track: MusicTrack<Station>): Array<any> {
+  protected override toRemoteTrackRecord(track: MusicTrack<Station>): Promise<any[]> {
     return toRemoteTrackRecord(track);
   }
 }

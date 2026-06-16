@@ -50,12 +50,14 @@ export function useCollectionList<Item, ItemData>(view: Remotable<BaseCollection
       return;
     }
 
-    view.on('viewChange', fetchView);
+    const onViewChange = () => view.updateView(topIndex, virtualItems.length).then(fetchView);
+
+    view.on('viewChange', onViewChange);
 
     return () => {
-      view?.off('viewChange', fetchView);
+      view?.off('viewChange', onViewChange);
     }
-  }, [view, fetchView]);
+  }, [view, fetchView, topIndex, virtualItems.length]);
 
   // Dispose view when it changes or unmounts
   useEffect(() => {

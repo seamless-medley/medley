@@ -316,6 +316,10 @@ export class Station extends TypedEmitter<StationEvents> {
 
   #handleTrackQueued: BoomBoxEventsForStation['trackQueued'] = (track: StationTrack) => {
     this.emit('trackQueued', track);
+
+    if (isRequestTrack(track)) {
+      this.emit('requestTracksRemoved', [track as unknown as StationRequestedTrack]);
+    }
   }
 
   #handleDeckLoaded: BoomBoxEventsForStation['deckLoaded'] = (deck, trackPlay: StationTrackPlay) => {
@@ -831,6 +835,10 @@ export class Station extends TypedEmitter<StationEvents> {
     }
 
     return result;
+  }
+
+  createRequestView(topIndex?: number) {
+    return this.#boombox.createRequestView(topIndex);
   }
 
   getTracksFromQueue() {

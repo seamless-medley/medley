@@ -10,7 +10,9 @@ import type {
   Notify,
   Remotable,
   RequestCollectionView,
-  RequestTrackRecord
+  RequestTrackRecord,
+  Requester as RemoteRequester,
+  DiscordRequester as RemoteDiscordRequester
 } from "@seamless-medley/remote";
 
 import { Station, type StationEvents, type PlayState, StationProfile, Crate, StationTrack, TrackWithRequester, Requester } from "../../../core";
@@ -18,6 +20,7 @@ import { toRemoteDeckInfoWithPositions } from "./deck";
 import { isFunction, zip } from "lodash";
 import { BasedExposedCollectionView } from "./collection_view";
 import { toRemoteTrack } from "./track";
+import { ImageURLOptions } from "discord.js";
 
 export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() implements Exposable<RemoteStation> {
   $Exposing: Station;
@@ -306,6 +309,31 @@ export const toRemoteCrate = (c: Crate<StationTrack>): RemoteCrate => ({
   chances: c.chance.chances
 });
 
+export const toRemoteRequester = async (r: Requester): Promise<RemoteRequester> => {
+  if (r.type !== 'discord') {
+    return r;
+  }
+
+  const guildMember = r.data.guildMember ? await (await r.data.guildMember).fetch() : undefined;
+
+  const imageOption: ImageURLOptions = { extension: 'webp', size: 256 };
+
+  return {
+    type: 'discord',
+    group: r.group,
+    requesterId: r.requesterId,
+    data: guildMember ? {
+      avatar: guildMember.displayAvatarURL(imageOption) || undefined,
+      displayName: guildMember.displayName,
+      guild: {
+        id: guildMember.guild.id,
+        name: guildMember.guild.name,
+        icon: guildMember.guild.iconURL(imageOption) || undefined
+      }
+    } : undefined
+  } satisfies RemoteDiscordRequester;
+}
+
 export class ExposedRequestView extends BasedExposedCollectionView<TrackWithRequester<StationTrack, Requester>> implements Exposable<RequestCollectionView> {
   dispose(): void {
     super.dispose();
@@ -355,7 +383,7 @@ export class ExposedRequestView extends BasedExposedCollectionView<TrackWithRequ
     return super.items();
   }
 
-  itemsWithIndexes() {
+  async itemsWithIndexes() {
     return super.itemsWithIndexes();
   }
 
@@ -363,19 +391,17 @@ export class ExposedRequestView extends BasedExposedCollectionView<TrackWithRequ
     return toRemoteTrack(track as any);
   }
 
-  protected override toRemoteTrackRecord(track: TrackWithRequester<StationTrack, Requester>): Array<any> {
+  protected override async toRemoteTrackRecord(track: TrackWithRequester<StationTrack, Requester>): Promise<any[]> {
     const { id, extra, path, requestedBy: requesters } = track;
     const tags = extra?.tags;
 
-    // TODO: requesters
-
-    const r = [
+    const record = [
       id,
       tags?.artist,
       tags?.title ?? path,
+      await Promise.all(requesters.map(toRemoteRequester))
     ] satisfies RequestTrackRecord;
 
-
-    return r;
+    return Promise.resolve(record);
   }
 }

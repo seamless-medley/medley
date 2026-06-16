@@ -58,7 +58,7 @@ export interface BaseCollectionView<T> {
 
   items(): Promise<Track[]>;
 
-  itemsWithIndexes(): Array<[index: number, track: T]>;
+  itemsWithIndexes(): Promise<Array<[index: number, track: T]>>;
 
   ϟviewChange(): any;
 }

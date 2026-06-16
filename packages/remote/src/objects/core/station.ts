@@ -1,7 +1,17 @@
 import type { DeckIndex, DeckPositions } from "@seamless-medley/medley";
 import type { DeckInfoWithPositions, DeckPositionsWithTrackKind } from "./deck";
-import type { TrackCollection } from "./track";
-import type { SequenceChances, SequenceLimit } from "@seamless-medley/radio";
+import type { Track, TrackCollection } from "./track";
+import type {
+  Requester as CoreRequester,
+  DiscordRequester as CoreDiscordRequester,
+  SequenceChances,
+  SequenceLimit
+} from "@seamless-medley/radio";
+
+import { BaseCollectionView } from "./collection";
+import { Remotable } from "../../type-utils";
+import { ConditionalPick, Jsonifiable, Simplify, Writable } from "type-fest";
+
 export type { SequenceLimit, SequenceChances } from '@seamless-medley/radio';
 
 export type PlayState = 'idle' | 'playing' | 'paused';
@@ -21,6 +31,7 @@ export interface Station {
   readonly currentProfile: string | undefined;
   readonly profiles: StationProfile[];
   readonly currentCrate: string | undefined;
+  readonly requestsCount: number;
 
   start(): void;
   pause(): void;
@@ -34,6 +45,8 @@ export interface Station {
   changeProfile(id: string): boolean;
   changePlaySequence(crateId: string, collectionId: string): true | string;
 
+  createRequestView(topIndex: number): Remotable<RequestCollectionView>;
+
   ϟdeckLoaded(deckIndex: number, info: DeckInfoWithPositions): void;
   ϟdeckUnloaded(deckIndex: number): void;
   ϟdeckStarted(deckIndex: number, position: DeckPositionsWithTrackKind): void;
@@ -43,6 +56,8 @@ export interface Station {
   ϟcrateChange: (oldCrate: string | undefined, newCrate: string) => void;
   ϟprofileChange: (oldProfile: string | undefined, newProfile: string) => void;
   ϟprofileBookChange: () => void;
+  ϟrequestTrackAdded: () => void;
+  ϟrequestTracksRemoved: () => void;
 }
 
 export interface StationProfile {
@@ -67,4 +82,31 @@ export interface Create {
   readonly limit: SequenceLimit;
 
   readonly chances: SequenceChances;
+}
+
+export type DiscordRequester = Simplify<ConditionalPick<Omit<CoreDiscordRequester, 'data'>, Jsonifiable | undefined> & {
+  data?: {
+    displayName: string;
+    avatar?: string;
+    guild: {
+      id: string;
+      name: string;
+      icon?: string;
+    }
+  }
+}>;
+
+export type Requester = Simplify<Writable<
+  DiscordRequester | ConditionalPick<Exclude<CoreRequester, CoreDiscordRequester>, Jsonifiable | undefined>
+>>;
+
+export type RequestTrackRecord = [
+  id: Track['id'],
+  artist: string | undefined,
+  title: string | undefined,
+  requesters: Requester[],
+];
+
+export interface RequestCollectionView extends BaseCollectionView<RequestTrackRecord> {
+
 }
