@@ -21,41 +21,7 @@
     "turbo": "^2.6.3",
     "typescript": "5.9.2"
   },
-  "packageManager": "pnpm@10.29.3",
-  "pnpm": {
-    "peerDependencyRules": {
-      "ignoreMissing": [
-        "@babel/*"
-      ],
-      "allowedVersions": {
-        "@discordjs/opus": "0.9",
-        "rimraf": "3.0.2"
-      }
-    },
-    "allowedDeprecatedVersions": {
-      "babel-merge": "*",
-      "are-we-there-yet": "*",
-      "npmlog": "*",
-      "gauge": "*",
-      "glob": "*",
-      "inflight": "*",
-      "rimraf": "*",
-      "node-domexception": "*"
-    },
-    "overrides": {
-      "typescript": "5.9.2",
-      "micromatch": ">=4.0.8"
-    },
-    "onlyBuiltDependencies": [
-      "@discordjs/opus",
-      "@parcel/watcher",
-      "@swc/core",
-      "bufferutil",
-      "esbuild",
-      "ffmpeg-static",
-      "mediasoup"
-    ]
-  },
+  "packageManager": "pnpm@11.7.0",
   "commitlint": {
     "rules": {
       "header-max-length": [

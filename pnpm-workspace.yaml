@@ -1,6 +1,38 @@
 packages:
   - packages/*
+
+peerDependencyRules:
+  ignoreMissing:
+    - "@babel/*"
+  allowedVersions:
+    "@discordjs/opus": "0.9"
+    rimraf: "3.0.2"
+
+allowedDeprecatedVersions:
+  babel-merge: "*"
+  are-we-there-yet: "*"
+  npmlog: "*"
+  gauge: "*"
+  glob: "*"
+  inflight: "*"
+  rimraf: "*"
+  node-domexception: "*"
+
+overrides:
+  typescript: "5.9.2"
+  micromatch: ">=4.0.8"
+
 ignoreWorkspaceCycles: true
+
+allowBuilds:
+  '@discordjs/opus': true
+  '@parcel/watcher': true
+  '@swc/core': true
+  bufferutil: true
+  esbuild: true
+  mediasoup: true
+  ffmpeg-static: true
+
 onlyBuiltDependencies:
   - "@discordjs/opus"
   - "@parcel/watcher"
