@@ -3,6 +3,7 @@ import { emptyDir, copy, outputJson, outputFile } from 'fs-extra';
 import type { PackageJson } from 'type-fest';
 import { chain } from 'lodash';
 import simpleGit  from 'simple-git';
+import yaml from 'yaml';
 
 async function getVersionString(mainVersion: string) {
   const git = simpleGit();
@@ -76,16 +77,16 @@ async function packageApp() {
   ].join('\n'));
 
   // Create pnpm-workspace.yaml to allow build scripts
-  await outputFile(join(packagePath, 'pnpm-workspace.yaml'), [
-    'packages:',
-    '  - "."',
-    'onlyBuiltDependencies:',
-    '  - "@discordjs/opus"',
-    '  - "@parcel/watcher"',
-    '  - bufferutil',
-    '  - mediasoup',
-    '  - ffmpeg-static',
-  ].join('\n'));
+  await outputFile(join(packagePath, 'pnpm-workspace.yaml'), yaml.stringify({
+    package: ["."],
+    allowBuilds: {
+      "@discordjs/opus": true,
+      "@parcel/watcher": true,
+      "bufferutil": true,
+      "mediasoup": true,
+      "ffmpeg-static": true
+    }
+  }));
 }
 
 packageApp();
