@@ -1,16 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Box, Center, Flex, px } from "@mantine/core";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Center, Flex, Group, px, Tooltip } from "@mantine/core";
 import { PlayDeck, PlayDeckProps, PlayHead } from "@ui/pages/dj/components/PlayDeck";
 import { useParams } from "@tanstack/react-router";
 import { ResizablePanel } from "@ui/components/ResizablePanel";
 import { Panel } from "@ui/pages/components/Panel";
+import { CORSImage } from "@ui/components/CORSImage";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { useDeckInfo } from "@ui/hooks/useDeck";
 import classes from './DJConsolePage.module.css';
 import { useStation } from "@ui/hooks/useStation";
-import { Remotable, RequestCollectionView, RequestTrackRecord } from "@seamless-medley/remote";
+import { Remotable, RequestCollectionView, Requester, RequestTrackRecord, Track } from "@seamless-medley/remote";
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { useCollectionList } from "@ui/pages/hooks/useCollectionList";
+import { AutoScroller } from "@ui/components/AutoScroller";
 
 const DeckPanel: React.FC<PlayDeckProps> = ({ ...props }) => {
   const info = useDeckInfo(props.stationId, props.index, 'active', 'trackPlay');
@@ -68,6 +70,25 @@ const Decks = () => {
   )
 }
 
+const RequesterInfo: React.FC<{ requester: Requester }>  = ({ requester }) => {
+  return (
+    <Group className={classes.avatarBox}>
+      {requester.type === 'discord' && requester.data !== undefined
+        ? <Tooltip label={`Discord user ${requester.data.displayName} via ${requester.data.guild.name}`} style={{ fontSize: '0.7em'}}>
+          {requester.data?.avatar
+            ? <CORSImage className={classes.avatar} src={requester.data.avatar} />
+            : <div className={classes.dummyAvatar} />
+          }
+          </Tooltip>
+        :
+          <Tooltip label={`${requester.requesterId} via ${requester.type} (${requester.group})`}>
+            <div className={classes.dummyAvatar} />
+          </Tooltip>
+      }
+    </Group>
+  )
+}
+
 const RequestedTracks = () => {
   const { station: stationId } = useParams({ strict: false });
 
@@ -77,12 +98,12 @@ const RequestedTracks = () => {
 
   const count = useRemotableProp(station, 'requestsCount') ?? 0;
 
-const getItemData = useCallback(([id, artist, title]: RequestTrackRecord) => ({ id, artist, title }), []);
+  const getItemData = useCallback(([id, artist, title, requesters]: RequestTrackRecord) => ({ id, artist, title, requesters }), []);
 
-  const { ref, virtualizer, virtualItems, items } = useCollectionList(view, {
+  const { ref, virtualItems, items } = useCollectionList(view, {
     count,
     estimateSize: () => +px('2.25em'),
-    overscan: 20,
+    overscan: 10,
     getItemData
   });
 
@@ -104,33 +125,53 @@ const getItemData = useCallback(([id, artist, title]: RequestTrackRecord) => ({ 
   }, [station]);
 
   return (
-    <div ref={ref} style={{ height: '100%', overflowY: 'auto' }}>
-      <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+    <Flex ref={ref} className={classes.requestsList}>
+      <Panel.List header='Requests' innerHeight='100%' w='100%'>
         {virtualItems.map(vrow => {
           const item = items[vrow.index];
+
+          const children = item
+            ? (
+              <Flex className={classes.item}>
+                <AutoScroller stableId={item.id}>
+                  {item.artist} - {item.title}
+                </AutoScroller>
+
+                <AutoScroller stableId={`avatar-${item.id}`}>
+                  <Group gap={2} className={classes.requestedBy}>
+                    Requested by
+                    <Group gap={4} wrap="nowrap">
+                      {item.requesters.map(r => <RequesterInfo requester={r} />)}
+                    </Group>
+                  </Group>
+                </AutoScroller>
+              </Flex>
+
+            )
+            : (
+              <>
+                Loading...
+              </>
+            )
+
           return (
-            <div
-              key={vrow.key}
-              style={{ position: 'absolute', top: vrow.start, height: vrow.size, width: '100%' }}
-            >
-              {item ? `${item.artist ?? ''} - ${item.title ?? ''}` : 'Loading...'}
-            </div>
+            <Flex key={vrow.key} className={classes.itemContainer}>
+              {children}
+            </Flex>
           );
         })}
-      </div>
-    </div>
-  )
+      </Panel.List>
+    </Flex>
+  );
 }
 
 export const DJConsolePage = () => {
   return (
     <Flex component="section" className={classes.djConsole}>
       <ResizablePanel.Group orientation='horizontal'>
-        <ResizablePanel minSize={400} flexSize={0.6} style={{ 'flexDirection': 'column'}}>
+        <ResizablePanel minSize={400} flexSize={0.6}>
           <Decks />
-          <Panel header='Requests' h='calc(100% - 450px - 2px)' innerHeight='100%'>
-            <RequestedTracks />
-          </Panel>
+          <RequestedTracks />
         </ResizablePanel>
 
         <ResizablePanel.Resizer />

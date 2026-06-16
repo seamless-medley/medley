@@ -7,7 +7,6 @@
 
 .decks {
     flex-direction: column;
-    height: 100%;
     width: 100%;
 }
 
@@ -17,4 +16,48 @@
 
 .active-deck {
     color: var(--mantine-color-green-5) !important;
+}
+
+.requests-list {
+    height: calc(100% - 450px - 2px);
+    width: 100%;
+
+    .item-container {
+        flex-direction: column;
+        min-height: 2.25lh;
+        font-size: 0.7rem;
+        overflow: hidden;
+    }
+
+    .item {
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        justify-content: space-around;
+    }
+
+    .requested-by {
+        color: var(--mantine-color-teal-9);
+        user-select: none;
+    }
+
+    .avatar-box {
+        display: flex;
+        width: 1em;
+        height: 1em;
+    }
+
+    .avatar {
+        object-fit: contain;
+        height: 100%;
+        width: 100%;
+        border-radius: 100%;
+    }
+
+    .dummy-avatar {
+        height: 100%;
+        width: 100%;
+        border-radius: 100%;
+        background-color: white;
+    }
 }
