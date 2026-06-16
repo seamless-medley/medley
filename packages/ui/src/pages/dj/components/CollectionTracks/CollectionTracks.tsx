@@ -3,12 +3,12 @@ import { Badge, Flex, Group, Table, px } from "@mantine/core";
 import { AutoScroller } from "@ui/components/AutoScroller";
 import type { Collection, CollectionView, TrackRecord, Remotable, TrackKind } from "@seamless-medley/remote";
 
-import { range } from "lodash";
+import { chain, range } from "lodash";
 import { extractArtists, selectConsistentValue } from "@seamless-medley/utils";
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { useContextMenu } from "mantine-contextmenu";
 import { IconArrowsShuffle } from "@tabler/icons-react";
-import { contextMenuClassNames } from "@ui/theme";
+import { contextMenuClassNames, theme } from "@ui/theme";
 import classes from './CollectionTracks.module.css';
 import { useCollectionList } from "@ui/pages/hooks/useCollectionList";
 
@@ -27,8 +27,11 @@ type TrackItemProps = {
   onContextMenu?: React.MouseEventHandler<HTMLTableRowElement>;
 }
 
-const colors = range(1, 10)
-  .flatMap(shade => ['red', 'pink', 'grape', 'violet', 'indigo', 'blue', 'cyan', 'green', 'lime', 'yellow', 'orange', 'teal'].map(name => `${name}.${shade}`));
+const colors = chain(theme.colors)
+  .keys()
+  .without('dark', 'gray')
+  .flatMap(name => range(1, 10).map(shade => `${name}.${shade}`))
+  .value();
 
 const TrackItem = (props: TrackItemProps) => {
   const { start, size, data, onContextMenu } = props;
