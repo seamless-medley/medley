@@ -160,7 +160,7 @@ export const PlayDeck: React.FC<PlayDeckProps> = React.memo(({ stationId, index,
 
           {trackPlay && !hasCover &&
             <motion.div key={'no_image'} className={classes.coverInfo} {...animatePresenceProps}>
-              <Text className={clsx(classes.coverText)}>
+              <Text className={classes.coverText}>
                 No Image
               </Text>
             </motion.div>
@@ -168,7 +168,7 @@ export const PlayDeck: React.FC<PlayDeckProps> = React.memo(({ stationId, index,
 
           {!trackPlay &&
             <motion.div key={'idle'} className={classes.coverInfo} {...animatePresenceProps}>
-              <Text className={clsx(classes.coverText)}>
+              <Text className={classes.coverText}>
                 Idle
               </Text>
             </motion.div>

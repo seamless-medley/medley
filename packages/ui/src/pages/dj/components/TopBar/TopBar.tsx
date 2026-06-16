@@ -3,7 +3,6 @@ import { ActionIcon, Badge, Box, Button, Flex, Group, rem, Text, Tooltip } from 
 import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useContextMenu } from "mantine-contextmenu";
-import clsx from "clsx";
 import { debounce, noop } from "lodash";
 import type { CrateSource, SequenceChances, SequenceLimit, TrackCollection } from "@seamless-medley/remote";
 import { theme } from "@ui/theme";
@@ -212,7 +211,7 @@ const ProfilePanel: React.FC = () => {
         <Flex
           key={p.id}
           data-selected={selectedProfileId === p.id}
-          className={clsx(classes.item)}
+          className={classes.item}
           ref={storeItemRef(p.id)}
           onClick={() => setSelection(p.id)}
           onContextMenu={showContextMenu(
@@ -446,7 +445,7 @@ export const TopBar: React.FC<StationIdProps> = React.memo((props) => {
             <StationPanel />
             <TrackPanel />
           </Flex>
-          <Panel className={clsx(classes.lyricsBar)} header="LYRICS" borders={{ right: true, bottom: true }}>
+          <Panel className={classes.lyricsBar} header="LYRICS" borders={{ right: true, bottom: true }}>
             <LyricsBar stationId={props.stationId} size="lg" autoscroll />
           </Panel>
         </Flex>
