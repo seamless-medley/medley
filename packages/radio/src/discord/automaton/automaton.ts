@@ -44,7 +44,6 @@ import {
   Station,
   makeAudienceGroupId as makeStationAudienceGroup,
   AudienceGroupId,
-  AudienceType,
   extractAudienceGroupFromId,
   StationEvents,
   StationTrack,
@@ -898,7 +897,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
    * Make audience group for Discord based on automatonId and guildId
    */
   makeAudienceGroup(guildId: string): AudienceGroupId {
-    return makeStationAudienceGroup(AudienceType.Discord, this.id, guildId);
+    return makeStationAudienceGroup('discord', this.id, guildId);
   }
 
   /**
@@ -913,7 +912,7 @@ export class MedleyAutomaton extends TypedEmitter<AutomatonEvents> {
 
         const { type, groupId } = extractAudienceGroupFromId(group);
 
-        if (type !== AudienceType.Discord) {
+        if (type !== 'discord') {
           return;
         }
 

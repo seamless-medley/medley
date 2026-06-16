@@ -2,7 +2,7 @@ import dgram from 'node:dgram';
 import { Router } from "express";
 import { AudioFormat, RequestAudioOptions } from "@seamless-medley/medley";
 import { StreamingAdapter } from "../types";
-import { AudienceType, makeAudienceGroupId, Station } from "../../core";
+import { makeAudienceGroupId, Station } from "../../core";
 import { AudioDispatcher, ICarrier, PCMExciter } from "../../audio/exciter";
 import { createLogger, Logger } from '../../logging';
 
@@ -34,7 +34,7 @@ function calculateFraming(sampleRate: number, channels: number, sampleSize: numb
   return { numFrames, frameSize, interval, minBufferSize };
 }
 
-const audienceGroup = makeAudienceGroupId(AudienceType.Streaming, 'udp');
+const audienceGroup = makeAudienceGroupId('streaming', 'udp');
 
 export type UDPAdapterOptions = {
   sampleFormat: AudioFormat;

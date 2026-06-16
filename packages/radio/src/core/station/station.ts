@@ -37,6 +37,7 @@ import {
 import { SearchQueryField } from "../library/search";
 import { CrateProfile } from "../crate/profile";
 import { MetadataHelper } from '../metadata';
+import { type GuildMember } from 'discord.js';
 
 export enum PlayState {
   Idle = 'idle',
@@ -69,33 +70,33 @@ export type StationOptions = {
   duplicationSimilarity?: number;
 }
 
-export enum AudienceType {
-  Discord = 'discord',
-  Web = 'web',
-  Icy = 'icy',
-  Streaming = 'streaming'
-}
+export type AudienceType = 'discord' | 'web' | 'icy' | 'streaming';
 
 export type AudienceOfGroup<A extends AudienceType, G extends string[]> = `${A}$${Join<G, '/'>}`;
 
-export type DiscordAudienceGroupId = AudienceOfGroup<AudienceType.Discord, [automatonId: string, guildId: string]>;
+export type DiscordAudienceGroupId = AudienceOfGroup<'discord', [automatonId: string, guildId: string]>;
 
-export type AudienceGroupId = DiscordAudienceGroupId | AudienceOfGroup<Exclude<AudienceType, AudienceType.Discord>, [string]>;
+export type AudienceGroupId = DiscordAudienceGroupId | AudienceOfGroup<Exclude<AudienceType, 'discord'>, [string]>;
 
-type RequesterT<T extends AudienceType, G> = {
+type RequesterT<T extends AudienceType, G, D = any> = {
   type: T;
   group: G;
   requesterId: string;
+  data: D;
 }
 
-export type DiscordRequester = RequesterT<AudienceType.Discord, {
-  automatonId: string;
-  guildId: string;
-}>
+export type DiscordRequester = RequesterT<
+  'discord',
+  {
+    automatonId: string;
+    guildId: string;
+  },
+  DiscordRequesterData
+>
 
-export type StreamingRequester = RequesterT<AudienceType.Icy | AudienceType.Streaming, string>;
+export type StreamingRequester = RequesterT<'icy' | 'streaming', string>;
 
-export type WebRequester = RequesterT<AudienceType.Web, string>;
+export type WebRequester = RequesterT<'web', string>;
 
 export type Requester = DiscordRequester | StreamingRequester | WebRequester;
 
@@ -813,7 +814,7 @@ export class Station extends TypedEmitter<StationEvents> {
   sortRequests(scoped: boolean = false) {
     this.#boombox.sortRequests(
       scoped
-        ? t => t.requestedBy.map(a => a.type + ':' + (a.type === AudienceType.Discord ? a.group.guildId : a.group))
+        ? t => t.requestedBy.map(a => a.type + ':' + (a.type === 'discord' ? a.group.guildId : a.group))
         : undefined
     );
   }
@@ -1008,8 +1009,8 @@ export class StationProfile extends CrateProfile<StationTrack> {
   followCollectionAfterRequestTrack: boolean = true;
 }
 
-export function makeAudienceGroupId(type: AudienceType.Discord, automatonId: string, guildId: string): DiscordAudienceGroupId;
-export function makeAudienceGroupId(type: Exclude<AudienceType, AudienceType.Discord>, groupId: string): AudienceGroupId;
+export function makeAudienceGroupId(type: 'discord', automatonId: string, guildId: string): DiscordAudienceGroupId;
+export function makeAudienceGroupId(type: Exclude<AudienceType, 'discord'>, groupId: string): AudienceGroupId;
 export function makeAudienceGroupId(type: AudienceType, ...groupIds: string[]): AudienceGroupId {
   return `${type}$${groupIds.join('/')}` as AudienceGroupId;
 }
@@ -1025,12 +1026,17 @@ export const extractAudienceGroupFromId = (agid: AudienceGroupId) => {
 
 export function extractRequesterGroup({ group }: Requester): Requester['group'] { return group; }
 
-export function makeRequester(type: AudienceType.Discord, group: DiscordRequester['group'], snowflake: string): DiscordRequester;
-export function makeRequester(type: AudienceType, group: any, requesterId: string): Requester {
+export type DiscordRequesterData = {
+  guildMember?: Promise<GuildMember>;
+}
+
+export function makeRequester(type: 'discord', group: DiscordRequester['group'], snowflake: string, data?: DiscordRequesterData): DiscordRequester;
+export function makeRequester(type: AudienceType, group: any, requesterId: string, data: any): Requester {
   return {
     type,
     group,
-    requesterId
+    requesterId,
+    data
   }
 }
 

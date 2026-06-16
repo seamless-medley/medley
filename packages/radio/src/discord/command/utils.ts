@@ -22,7 +22,6 @@ import {
   getTrackBanner,
   TrackPeek,
   Station,
-  AudienceType,
   TrackWithRequester,
   BoomBoxTrack,
   Requester
@@ -159,7 +158,7 @@ function previewTrack(options: PreviewTrackOptions) {
 }
 
 export function isTrackRequestedFromGuild(track: TrackWithRequester<BoomBoxTrack, Requester>, guildId: string) {
-  return track.requestedBy.some(({ type, group }) => (type === AudienceType.Discord) && (group.guildId === guildId));
+  return track.requestedBy.some(({ type, group }) => (type === 'discord') && (group.guildId === guildId));
 }
 
 export type GuildTrackPeek = TrackPeek<TrackWithRequester<BoomBoxTrack, Requester>>;

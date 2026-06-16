@@ -5,7 +5,6 @@ import type { DeckPositions, Metadata, MetadataFields } from "@seamless-medley/m
 
 import {
   Requester,
-  AudienceType,
   isRequestTrack,
   Station,
   StationTrack,
@@ -181,7 +180,7 @@ export function getEmbedDataForTrack({ path, extra, sequencing, collection }: St
 export function extractRequestersForGuild(guildId: string, requesters: Requester[]) {
   return chain(requesters)
     .map(({ type, group, requesterId }) => {
-      if (type !== AudienceType.Discord) {
+      if (type !== 'discord') {
         return;
       }
 

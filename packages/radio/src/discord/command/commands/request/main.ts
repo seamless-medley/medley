@@ -33,7 +33,6 @@ import { MedleyAutomaton } from "../../../automaton";
 import { GuildState } from "../../../automaton/guild-state";
 
 import {
-  AudienceType,
   fetchAudioProps,
   getStationTrackSorters,
   getTrackBanner,
@@ -76,12 +75,22 @@ type MakeRequestOptions = {
 const makeRequest = async (options: MakeRequestOptions) => {
   const { station, automaton, guildId, noSweep, interaction, done } = options;
 
+  const guildMember = interaction.inGuild()
+    ? interaction.inCachedGuild()
+      ? Promise.resolve(interaction.member)
+      : interaction.guild!.members.fetch(interaction.user.id)
+    : undefined;
+
+  const requesterData: { guildMember?: typeof guildMember; displayName?: string } = { guildMember };
+  guildMember?.then(m => { requesterData.displayName = m.displayName; });
+
   const result = await station.request(
     options.trackId,
     makeRequester(
-      AudienceType.Discord,
+      'discord',
       { automatonId: automaton.id, guildId },
-      interaction.user.id
+      interaction.user.id,
+      requesterData
     ),
     noSweep
   );

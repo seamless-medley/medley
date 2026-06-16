@@ -7,7 +7,6 @@ import { CommandDescriptor, GuildHandlerFactory, InteractionHandlerFactory, Opti
 import { deferReply, guildStationGuard, isTrackRequestedFromGuild, joinStrings, makeRequestPreview, reply, warn } from "../utils";
 import {
   Requester,
-  AudienceType,
   getTrackBanner,
   makeRequester,
   RequestTrackLockPredicate,
@@ -282,7 +281,18 @@ async function handleVoteCommand(automaton: MedleyAutomaton, interaction: Comman
                 contributors = contributors.concat(userIds);
 
                 request.requestedBy = chain(request.requestedBy)
-                  .concat(userIds.map(id => makeRequester(AudienceType.Discord, { automatonId: automaton.id, guildId }, id)))
+                  .concat(userIds.map(id => makeRequester(
+                    'discord',
+                    { automatonId: automaton.id, guildId },
+                    id,
+                    {
+                      guildMember: interaction.inGuild()
+                        ? interaction.inCachedGuild()
+                          ? Promise.resolve(interaction.member)
+                          : interaction.guild!.members.fetch(id)
+                        : undefined
+                    }
+                  )))
                   .uniqWith(isEqual)
                   .reject(audience => audience.requesterId === automaton.client.user!.id)
                   .value();

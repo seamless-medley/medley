@@ -7,7 +7,7 @@ import { RTCExciter } from './exciter';
 import { AudioDispatcher } from '../../../audio/exciter';
 import type { ListenInfo, WebRtcConfig } from '../../../config/webrtc';
 import { createLogger, Logger } from "../../../logging";
-import { AudienceType, makeAudienceGroupId, Station } from '../../../core';
+import { makeAudienceGroupId, Station } from '../../../core';
 import { type Socket } from '../../socket';
 
 export type ClientTransportData = {
@@ -243,7 +243,7 @@ export class RTCWorker extends TypedEmitter<RTCWorkerEvents> {
       this.#logger.debug('removing transport from station audience');
 
       station?.removeAudience(
-        makeAudienceGroupId(AudienceType.Web, `rtc`),
+        makeAudienceGroupId('web', `rtc`),
         transport.id
       );
     }
@@ -293,7 +293,7 @@ export class RTCWorker extends TypedEmitter<RTCWorkerEvents> {
     }
 
     station.addAudience(
-      makeAudienceGroupId(AudienceType.Web, `rtc`),
+      makeAudienceGroupId('web', `rtc`),
       transportId
     );
 

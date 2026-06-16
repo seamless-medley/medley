@@ -1,5 +1,4 @@
 import {
-  AudienceType,
   BoomBoxTrackPlay,
   getTrackBanner,
   makeAudienceGroupId,
@@ -182,7 +181,7 @@ export class IcyAdapter extends FFMpegAdapter {
 
     const url = new URL(req.url, `http://${req.headers.host ?? '0.0.0.0'}`);
 
-    const audienceGroup = makeAudienceGroupId(AudienceType.Icy, `${url.host}${url.pathname}`);
+    const audienceGroup = makeAudienceGroupId('icy', `${url.host}${url.pathname}`);
     const audienceId = `${req.ip}:${req.socket.remotePort}`;
 
     this.station.addAudience(audienceGroup, audienceId);

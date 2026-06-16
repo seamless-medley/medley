@@ -5,9 +5,9 @@ import { FFMpegCapabilities, FFmpegChildProcess, FFMpegLine, getFFmpegCaps, Info
 import { AdapterOptions, audioFormatToAudioType, FFMpegAdapter } from "../types";
 import { getVersion } from "../../helper";
 import { createLogger, type Logger } from "../../logging";
-import { AudienceType, BoomBoxTrackPlay, getTrackBanner, makeAudienceGroupId, Station, StationEvents, TrackKind } from "../../core";
+import { BoomBoxTrackPlay, getTrackBanner, makeAudienceGroupId, Station, StationEvents, TrackKind } from "../../core";
 
-const audienceGroup = makeAudienceGroupId(AudienceType.Streaming, 'shout');
+const audienceGroup = makeAudienceGroupId('streaming', 'shout');
 
 const outputFormats = ['mp3', 'aac', 'he-aac', 'vorbis', 'opus', 'flac'] as const;
 

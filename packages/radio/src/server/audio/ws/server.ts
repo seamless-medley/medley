@@ -6,7 +6,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import type { AudioSocketCommand, AudioSocketReply } from "@seamless-medley/remote";
 import { AudioDispatcher } from "../../../audio/exciter/dispatcher";
 import { WebSocketExciter } from "./exciter";
-import { AudienceType, makeAudienceGroupId, Station } from "../../../core";
+import { makeAudienceGroupId, Station } from "../../../core";
 
 export class AudioWebSocketServer extends EventEmitter {
   #server: WebSocketServer;
@@ -61,7 +61,7 @@ export class AudioWebSocketServer extends EventEmitter {
         const station = this.#stationFromId(stationId);
 
         station?.removeAudience(
-          makeAudienceGroupId(AudienceType.Web, `ws`),
+          makeAudienceGroupId('web', `ws`),
           socketId
         );
       }
@@ -100,7 +100,7 @@ export class AudioWebSocketServer extends EventEmitter {
 
     if (socket.socketId) {
       station.addAudience(
-        makeAudienceGroupId(AudienceType.Web, `ws`),
+        makeAudienceGroupId('web', `ws`),
         socket.socketId
       );
     }
@@ -139,7 +139,7 @@ export class AudioWebSocketServer extends EventEmitter {
 
     if (socket.socketId) {
       station.removeAudience(
-        makeAudienceGroupId(AudienceType.Web, `ws`),
+        makeAudienceGroupId('web', `ws`),
         socket.socketId
       );
     }

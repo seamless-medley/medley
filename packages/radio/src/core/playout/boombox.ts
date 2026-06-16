@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'node:path';
-import { camelCase, chain, flatten, isEqual, mapValues, matches, reject, some, toLower, uniq, without } from "lodash";
+import { camelCase, chain, flatten, isEqual, mapValues, matches, omit, reject, some, toLower, uniq, without } from "lodash";
 import { isString } from 'lodash/fp';
 import { TypedEmitter } from "tiny-typed-emitter";
 import { createLogger, type Logger } from '../../logging';
@@ -7,7 +7,7 @@ import { extractArtists, formatTags } from '@seamless-medley/utils';
 import type { DeckListener, Medley, EnqueueListener, Queue, TrackPlay, Metadata, CoverAndLyrics, DeckIndex, DeckPositions, AudioProperties } from "@seamless-medley/medley";
 import { Crate, CrateSequencer, LatchOptions, LatchSession, TrackValidator, TrackVerifier, TrackVerifierResult } from "../crate";
 import { Track, TrackExtra } from "../track";
-import { TrackCollection, TrackIndex, WatchTrackCollection } from "../collections";
+import { TrackCollection, TrackIndex } from "../collections";
 import { SweeperInserter } from "./sweeper";
 import { MetadataHelper } from '../metadata';
 import { MusicDb } from '../library/music_db';
@@ -473,15 +473,19 @@ export class BoomBox<R extends BaseRequester, P extends BoomBoxProfile = CratePr
     return this.#requests;
   }
 
+  #createRequesterMatches(requester: R) {
+    return matches(omit(requester, 'data'));
+  }
+
   getRequestsOf(requester: R) {
-    const matchRequester = matches(requester);
+    const matchRequester = this.#createRequesterMatches(requester);
     return this.#requests.filter(r => r.requestedBy.some(matchRequester));
   }
 
   unrequest(requestIds: number[], requester?: R) {
     const removed = (() => {
       if (requester) {
-        const matchRequester = matches(requester);
+        const matchRequester = this.#createRequesterMatches(requester);
 
         const requests = this.#requests.filter(r => requestIds.includes(r.rid) && r.requestedBy.some(matchRequester));
 

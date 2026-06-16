@@ -18,7 +18,7 @@ import { MedleyAutomaton } from "../automaton";
 import { deferReply, guildIdGuard, joinStrings, makeColoredMessage, reply } from "./utils";
 import { Strings } from "./type";
 
-export type InteractorMessageBuilder = () => Promise<Omit<InteractionReplyOptions, 'flags'> & Pick<MessageEditOptions, 'flags'>>;
+export type InteractorMessageBuilder = () => Promise<Omit<InteractionReplyOptions, 'flags'> & { flags: number }>;
 
 export type InteractorOnCollectParams<D> = {
   data?: D;
@@ -84,16 +84,18 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
 
   const makeTimeout = () => ttl ? (formatTimeout ?? defaultFunctions.formatTimeout)(formatTime(Math.trunc((Date.now() + ttl) / 1000), 'R')) : undefined;
 
-  const content = joinStrings([
-    !interaction.isChatInputCommand() ? `${userMention(issuer)} ` : undefined,
-    makeTimeout(),
-    ...await makeCaption(options.data)
-  ]);
-
   const flags = (ephemeral ? MessageFlags.Ephemeral : 0) as MessageFlags;
 
-  const buildMessage: InteractorMessageBuilder = useComponentV2
-    ? async () => ({
+  const buildMessage: InteractorMessageBuilder = async () => {
+    const content = joinStrings([
+      !interaction.isChatInputCommand() ? `${userMention(issuer)} ` : undefined,
+      makeTimeout(),
+      ...await makeCaption(options.data)
+    ]);
+
+
+    return useComponentV2
+      ? ({
         withResponse: true,
         flags: flags | MessageFlags.IsComponentsV2,
         components: [
@@ -102,12 +104,13 @@ export async function interact<D>(options: InteractorOptions<D>): Promise<void> 
           ...await makeComponents(options.data)
         ]
       })
-    : async () => ({
+      : ({
         withResponse: true,
         flags,
         content,
         components: await makeComponents(options.data)
       })
+  }
 
   const replyMessage = async () => (await reply(interaction, await buildMessage())) as Message<boolean>;
 
