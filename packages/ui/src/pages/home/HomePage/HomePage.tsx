@@ -148,7 +148,7 @@ const TrackBar: React.FC<{ stationId: string }> = ({ stationId }) => {
   return (
     <Group justify="space-between" align="center" gap="xs">
       <Box style={{ flex: 1, minWidth: 0 }}>
-        <TransitionText nowrap autoscroll>
+        <TransitionText autoscroll>
           {tags ? formatTags(tags) : undefined}
         </TransitionText>
       </Box>
@@ -210,7 +210,7 @@ const StationCard: React.FC<{ stationId: string }> = ({ stationId }) => {
         </Stack>
 
         <Stack p={0} gap="xs">
-          <LyricsBar stationId={stationId} nowrap autoscroll />
+          <LyricsBar stationId={stationId} autoscroll />
           <TrackBar stationId={stationId} />
         </Stack>
       </Stack>
