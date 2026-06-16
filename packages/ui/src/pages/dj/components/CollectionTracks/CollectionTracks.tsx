@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Badge, Flex, Group, Table, px } from "@mantine/core";
 import { AutoScroller } from "@ui/components/AutoScroller";
-import type { Collection, CollectionView, TrackRecord, Remotable, TrackKind } from "@seamless-medley/remote";
+import type { Collection, TrackRecord, Remotable, TrackKind, BaseCollectionView } from "@seamless-medley/remote";
 
 import { chain, range } from "lodash";
 import { extractArtists, selectConsistentValue } from "@seamless-medley/utils";
@@ -20,7 +20,7 @@ type TrackRowData = {
   album?: string;
 }
 
-type TrackItemProps = {
+export type TrackItemProps = {
   size: number;
   start: number;
   data?: TrackRowData;
@@ -33,7 +33,7 @@ const colors = chain(theme.colors)
   .flatMap(name => range(1, 10).map(shade => `${name}.${shade}`))
   .value();
 
-const TrackItem = (props: TrackItemProps) => {
+export const TrackItem = (props: TrackItemProps) => {
   const { start, size, data, onContextMenu } = props;
 
   const artists = data ? extractArtists(data.artist ?? '') : [];
@@ -91,20 +91,20 @@ const TrackItem = (props: TrackItemProps) => {
 
 const trackToRowData = ([id, kind, artist, title, album]: TrackRecord): TrackRowData => ({ id, kind, artist, title, album });
 
-export function CollectionTracks(props: { collection: Remotable<Collection> | undefined}) {
+export function CollectionTracks(props: { collection: Remotable<Collection> | undefined }) {
   const { collection } = props;
-
   // Remote view, only gets data needed for display
-  const [view, setView] = useState<Remotable<CollectionView>>();
+  const [view, setView] = useState<Remotable<BaseCollectionView<TrackRecord>>>();
 
   const count = useRemotableProp(collection, 'length', 0);
 
-  const { ref, virtualizer, virtualItems, items: tracks } = useCollectionList<TrackRecord, TrackRowData>(view, {
+  const { virtualizer, virtualItems, items: tracks, ref: containerRef } = useCollectionList(view, {
     count,
-    getItemData: trackToRowData,
     estimateSize: () => +px('2.25em'),
-    overscan: 20
+    overscan: 20,
+    getItemData: trackToRowData
   });
+
 
   // Create remote view when the collection changed
   useEffect(() => {
@@ -112,13 +112,13 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
       return;
     }
 
-    collection.createView(count, 0).then(setView);
+    collection.createView(virtualItems.length, 0).then(view => setView(view as any));
   }, [collection]);
 
   const { showContextMenu } = useContextMenu();
 
   return (
-    <Flex ref={ref} className={classes.container}>
+    <Flex ref={containerRef} className={classes.container}>
       <Table>
         <Table.Thead pos="sticky" bg="dark.7">
           <Table.Tr display="flex" fw='bold'>
