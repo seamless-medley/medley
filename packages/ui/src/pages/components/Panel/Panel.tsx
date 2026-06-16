@@ -12,9 +12,11 @@ export type PanelProps = FlexProps & {
   orientation?: 'horizontal' | 'vertical';
   header?: string | PanelHeaderOptions;
   borders?: Partial<Record<'left' | 'top' | 'right' | 'bottom', boolean>>;
+  innerWidth?: FlexProps['w'];
+  innerHeight?: FlexProps['h'];
 }
 
-export const Panel: React.FC<PanelProps> = ({ className, children, direction = 'column', orientation, header, borders, w, h, miw, maw, mih, mah, flex, ...props }) => {
+export const Panel: React.FC<PanelProps> = ({ className, children, direction = 'column', orientation, header, borders, w, h, miw, maw, mih, mah, innerWidth, innerHeight, flex, ...props }) => {
   const caption = typeof header === 'string' ? header : header?.caption;
   const { caption: _, className: headerClassName, ...headerProps } = typeof header === 'object' ? header : {};
 
@@ -38,7 +40,7 @@ export const Panel: React.FC<PanelProps> = ({ className, children, direction = '
           {caption}
         </Box>
       }
-      <Flex className={clsx(classes.content, className)} direction={direction} {...props} w={w?.toString()?.replace('%', 'cqw')} h={h}>
+      <Flex className={clsx(classes.content, className)} direction={direction} {...props} w={(innerWidth ?? w)?.toString()?.replace('%', 'cqw')} h={innerHeight ?? h}>
         {children}
       </Flex>
     </Flex>
