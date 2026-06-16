@@ -20,6 +20,8 @@ const logger = getLogger(['transport', 'ws']);
  *  - Cross-Origin-Embedder-Policy: require-corp
  *  - Cross-Origin-Opener-Policy: same-origin
  *
+ * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements
+ *
  * - The page is in a secure context:
  *  - URL is local, e.g. http://127.0.0.1, http://localhost, http://*.localhost
  *  - Any other URLs must be served over HTTPS
