@@ -573,11 +573,11 @@ export class Client<Types extends { [key: string]: any }, E extends {}> extends 
               status: 'exception',
               message: 'Could not retrieve remote object information'
             }
-          }
-
-          response = {
-            status: 'exception',
-            message: 'The exposed object returned by the remote invocation is invalid'
+          } else {
+            response = {
+              status: 'exception',
+              message: 'The exposed object returned by the remote invocation is invalid'
+            }
           }
         }
 
