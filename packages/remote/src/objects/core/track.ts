@@ -34,13 +34,6 @@ export type TrackRecord = [
 
 export type TrackKind = 'normal' | 'request' | 'insert';
 
-export type RequestTrackRecord = [
-  id: Track['id'],
-  artist?: string,
-  title?: string,
-  requesters?: Requester[]
-];
-
 export type TrackExtra = Simplify<Writable<
   ConditionalPick<Omit<BoomBoxTrackExtra, 'kind'>, Jsonifiable | undefined> & {
     kind: TrackKind,
