@@ -1,4 +1,4 @@
-import React, { RefObject, CSSProperties, PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { CSSProperties, PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { linearGradient, rgba, setSaturation, parseToHsl, mix } from 'polished';
 import { clamp, findIndex, findLastIndex } from 'lodash';
@@ -6,9 +6,8 @@ import { clamp, findIndex, findLastIndex } from 'lodash';
 import type { LyricLine, Timeline, EnhancedLine, EnhancedLineElement } from '@seamless-medley/utils';
 import { interpolate, findLyricLine } from '@seamless-medley/utils';
 import type { DeckIndex } from '@seamless-medley/medley';
-import { useElementSize } from '@mantine/hooks';
+import { useMergedRef, useResizeObserver } from '@mantine/hooks';
 
-import { attrs } from '@ui/utils/attrs';
 import { useDeck, useDeckInfo } from '@ui/hooks/useDeck';
 import { client } from '@ui/init';
 import { createCssStrokeFx } from '@ui/utils';
@@ -75,7 +74,7 @@ export const Container: React.FC<PropsWithChildren<BackgroundProp>> = (props) =>
   )
 }
 const TickerContainer: React.FC<PropsWithChildren<LineLayoutProps & BeatProps>> = (props) => {
-  const { ref, height } = useElementSize();
+  const [ref, { height }] = useResizeObserver();
 
   const fontSize = height / (props.lines * props.lineHeight);
   const beatInterval = ((props.beatInterval ?? 0.66)).toFixed(2);
@@ -272,7 +271,8 @@ export type LyricsProps = {
 
 export const Lyrics: React.FC<LyricsProps> = (props) => {
   const [line, setLine] = useState(-1);
-  const { ref: tickerRef, width, height } = useElementSize<HTMLDivElement>();
+  const [resizeRef, { width, height }] = useResizeObserver<HTMLDivElement>();
+  const tickerRef = useRef<HTMLDivElement>(null);
   const lineRefs = useRef<(Line | null)[]>([]);
   const { deck } = useDeck(props.stationId, props.deckIndex);
   const { trackPlay } = useDeckInfo(props.stationId, props.deckIndex, 'trackPlay');
@@ -479,7 +479,7 @@ export const Lyrics: React.FC<LyricsProps> = (props) => {
     <>
       <Container background={colors.background}>
         <Ticker
-          ref={tickerRef as RefObject<HTMLDivElement> | undefined}
+          ref={useMergedRef(tickerRef, resizeRef)}
           lines={props.lines}
           lineHeight={props.lineHeight}
           beatInterval={beatInterval}

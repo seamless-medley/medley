@@ -1,7 +1,7 @@
 import { chain, sumBy } from "lodash";
 import { Ref, useEffect, useMemo, useState } from "react";
 import { Box, Button, Flex, Group, type MantineStyleProps, Stack, Text, Title as TextTitle } from "@mantine/core";
-import { useFullscreen, useSetState } from "@mantine/hooks";
+import { useFullscreenElement, useSetState } from "@mantine/hooks";
 
 import {
   setLightness,
@@ -367,7 +367,7 @@ const StationCoverAndLyrics: React.FC<StationCoverAndLyricsProps> = ({ lyricsRef
 
 export const PlayPage: React.FC = () => {
   const { station: stationId } = Route.useParams();
-  const { toggle, fullscreen, ref } = useFullscreen();
+  const { toggle, fullscreen, ref } = useFullscreenElement();
 
   const playingStation = usePlayingStationId();
   const isListening = playingStation === stationId;
