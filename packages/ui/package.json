@@ -13,7 +13,6 @@
     "@fontsource-variable/murecho": "^5.0.18",
     "@fontsource/gowun-dodum": "^5.0.12",
     "@logtape/logtape": "^2.0.2",
-    "@mantine/carousel": "^8.3.9",
     "@mantine/core": "8.3.11",
     "@mantine/hooks": "8.3.11",
     "@mantine/notifications": "^8.3.10",
