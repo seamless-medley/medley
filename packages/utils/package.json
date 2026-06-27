@@ -16,7 +16,7 @@
     "@types/lodash": "^4.17.24",
     "mkdirp": "^3.0.1",
     "rimraf": "^6.0.1",
-    "tsx": "^4.6.2",
+    "tsx": "^4.22.4",
     "type-fest": "^5.7.0",
     "typescript": "5.9.2"
   }
