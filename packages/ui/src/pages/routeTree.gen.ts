@@ -50,7 +50,7 @@ export interface FileRoutesByFullPath {
   '/': typeof homeHomePageRouteRoute
   '/play/$station': typeof playPlayPageRouteRoute
   '/dj': typeof djDjLayoutRouteWithChildren
-  '/dj/$station': typeof djDJConsolePageRouteRoute
+  '/dj/$station/': typeof djDJConsolePageRouteRoute
   '/dj/$station/collection/$collectionId': typeof djCollectionPageRouteRoute
 }
 export interface FileRoutesByTo {
@@ -75,7 +75,7 @@ export interface FileRouteTypes {
     | '/'
     | '/play/$station'
     | '/dj'
-    | '/dj/$station'
+    | '/dj/$station/'
     | '/dj/$station/collection/$collectionId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -103,7 +103,7 @@ declare module '@tanstack/react-router' {
     '/_layout': {
       id: '/_layout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof mainLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -131,7 +131,7 @@ declare module '@tanstack/react-router' {
     '/_layout/dj/_dj-layout/$station/': {
       id: '/_layout/dj/_dj-layout/$station/'
       path: '/$station'
-      fullPath: '/dj/$station'
+      fullPath: '/dj/$station/'
       preLoaderRoute: typeof djDJConsolePageRouteRouteImport
       parentRoute: typeof djDjLayoutRoute
     }
