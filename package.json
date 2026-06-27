@@ -14,11 +14,11 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.2.0",
-    "@commitlint/config-conventional": "^20.2.0",
-    "@types/node": "^20.19.24",
+    "@commitlint/cli": "^21.1.0",
+    "@commitlint/config-conventional": "^21.1.0",
+    "@types/node": "^24.1.0",
     "husky": "^9.1.7",
-    "turbo": "^2.6.3",
+    "turbo": "^2.10.0",
     "typescript": "6.0.3"
   },
   "packageManager": "pnpm@11.7.0",
