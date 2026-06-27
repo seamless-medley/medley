@@ -2,20 +2,21 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["DOM", "ES2022"],
-    "module": "commonjs",
+    "module": "nodenext",
     "allowJs": true,
     "strict": true,
     "experimentalDecorators": true,
     "esModuleInterop": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "nodenext",
     "isolatedModules": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
+    "rootDir": "./src",
     "outDir": "./build"
   },
   "include": [
-    "src"
+    "./src"
   ]
 }

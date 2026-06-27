@@ -2,19 +2,20 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
-    "module": "commonjs",
+    "module": "nodenext",
     "allowJs": false,
     "declaration": false,
     "removeComments": true,
     "isolatedModules": true,
     "strict": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "outDir": "out"
+    "rootDir": "./src",
+    "outDir": "./out"
   },
-  "include": ["src"]
+  "include": ["./src"]
 }

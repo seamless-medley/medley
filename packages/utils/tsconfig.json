@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
-    "module": "commonjs",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "module": "nodenext",
     "allowJs": false,
     "declaration": false,
     "removeComments": true,
@@ -10,12 +11,12 @@
     "strict": true,
     "experimentalDecorators": true,
     "esModuleInterop": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "nodenext",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap" : true,
-    "rootDir": "src",
+    "rootDir": "./src",
     "outDir": "./dist"
   },
-  "include": ["src"]
+  "include": ["./src"]
 }

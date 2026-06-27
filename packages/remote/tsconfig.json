@@ -2,13 +2,13 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["DOM", "ES2022"],
-    "module": "commonjs",
+    "module": "nodenext",
     "jsx": "react-jsx",
     "allowJs": true,
     "strict": true,
     "experimentalDecorators": true,
     "esModuleInterop": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "nodenext",
     "isolatedModules": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
@@ -17,6 +17,6 @@
     "noEmit": true
   },
   "include": [
-    "src"
+    "./src"
   ]
 }

@@ -13,7 +13,7 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
-    "baseUrl": ".",
+    "rootDir": "./src",
     "paths": {
       "@ui/*": [
         "./src/*"
@@ -30,6 +30,6 @@
     ]
   },
   "include": [
-    "src"
+    "./src"
   ]
 }
