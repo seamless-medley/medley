@@ -1,11 +1,11 @@
 import { readFile } from 'node:fs/promises';
+import { pickBy } from 'lodash';
 import { parse } from 'yaml';
 import { z } from 'zod';
+import { paraphrase, dollar } from "paraphrase";
 import { DbConfig } from './db';
 import { StationConfig } from './station';
 import { AutomatonConfig } from './automaton';
-import { pickBy } from 'lodash';
-import { paraphrase, dollar } from "paraphrase";
 import { ServerConfig } from './server';
 import { WebRtcConfig } from './webrtc';
 import { StreamingConfigs } from './streaming';
