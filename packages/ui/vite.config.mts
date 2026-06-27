@@ -37,13 +37,13 @@ export default defineConfig({
     react(),
     babel({
       presets: [
-        '@babel/preset-typescript',
         ['@babel/preset-react', { runtime: 'automatic' }]
       ],
       plugins: [
-        ["@babel/plugin-proposal-decorators", { legacy: true }],
-        ["@babel/plugin-transform-class-properties", { loose: true }],
-        ["@babel/plugin-transform-private-methods", { loose: true }],
+        ["@babel/plugin-transform-typescript", { allowDeclareFields: true }],
+        ["@babel/plugin-proposal-decorators", { version: "legacy" }],
+        ["@babel/plugin-transform-class-properties", {}],
+        ["@babel/plugin-transform-private-methods", {}]
       ]
     })
   ],

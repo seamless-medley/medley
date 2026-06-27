@@ -45,11 +45,12 @@
     "socket.io-msgpack-parser": "^3.0.2"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-decorators": "^7.23.2",
-    "@babel/plugin-transform-class-properties": "^7.23.3",
-    "@babel/plugin-transform-private-methods": "^7.23.3",
-    "@babel/preset-react": "^7.26.3",
-    "@babel/preset-typescript": "^7.27.0",
+    "@babel/core": "^8.0.1",
+    "@babel/plugin-proposal-decorators": "^8.0.2",
+    "@babel/plugin-transform-class-properties": "^8.0.1",
+    "@babel/plugin-transform-private-methods": "^8.0.1",
+    "@babel/plugin-transform-typescript": "^8.0.1",
+    "@babel/preset-react": "^8.0.1",
     "@rolldown/plugin-babel": "^0.2.3",
     "@tanstack/router-plugin": "^1.145.2",
     "@types/audioworklet": "^0.0.95",
