@@ -12,9 +12,9 @@ export function attrs<P extends {}, Q extends Partial<P>>(
     (props, ref) => {
       return (
         <Component
-          {...(props as P)}
+          {...(props as unknown as P)}
           {...(isFunction(propsFactory)
-            ? propsFactory(props)
+            ? propsFactory(props as unknown as Defaultize<P, Q>)
             : propsFactory)}
           ref={ref}
         />
