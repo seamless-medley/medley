@@ -5,7 +5,6 @@ import { OverlayScrollbars } from "overlayscrollbars";
 import { ContextMenuProvider } from "mantine-contextmenu";
 import { getLogger } from "@logtape/logtape";
 
-
 import { initLogging, initRoot } from './init';
 import { theme } from "./theme/theme";
 
