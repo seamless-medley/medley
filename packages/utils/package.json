@@ -10,10 +10,10 @@
   "author": "",
   "license": "GPL-3.0",
   "dependencies": {
-    "lodash": "^4.17.21"
+    "lodash": "^4.18.1"
   },
   "devDependencies": {
-    "@types/lodash": "^4.14.200",
+    "@types/lodash": "^4.17.24",
     "mkdirp": "^3.0.1",
     "rimraf": "^6.0.1",
     "tsx": "^4.6.2",
