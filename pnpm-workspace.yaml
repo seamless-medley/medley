@@ -9,7 +9,6 @@ peerDependencyRules:
     rimraf: "3.0.2"
 
 allowedDeprecatedVersions:
-  babel-merge: "*"
   are-we-there-yet: "*"
   npmlog: "*"
   gauge: "*"
@@ -17,9 +16,11 @@ allowedDeprecatedVersions:
   inflight: "*"
   rimraf: "*"
   node-domexception: "*"
+  tar: "*"
+  tsconfck: "*"
+  uuid: "*"
 
 overrides:
-  typescript: "5.9.2"
   micromatch: ">=4.0.8"
 
 ignoreWorkspaceCycles: true
@@ -32,12 +33,4 @@ allowBuilds:
   esbuild: true
   mediasoup: true
   ffmpeg-static: true
-
-onlyBuiltDependencies:
-  - "@discordjs/opus"
-  - "@parcel/watcher"
-  - "@swc/core"
-  - bufferutil
-  - esbuild
-  - mediasoup
-  - ffmpeg-static
+  less: true
