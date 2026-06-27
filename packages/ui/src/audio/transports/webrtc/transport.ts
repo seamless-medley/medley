@@ -122,7 +122,7 @@ export class WebRTCAudioTransport extends EventEmitter<AudioTransportEvents> imp
   }
 
   async #createTransport() {
-    const transportInfo = await this.#transponder.newClientTransport(this.#rtcId, this.#device.sctpCapabilities).catch(stubFalse);
+    const transportInfo = await this.#transponder.newClientTransport(this.#rtcId).catch(stubFalse);
     if (!transportInfo) {
       return;
     }
