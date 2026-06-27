@@ -34,8 +34,8 @@ export class ExposedTransponder extends MixinEventEmitterOf<RemoteRTCTransponder
     return this.#transponder.getCaps();
   }
 
-  newClientTransport(rtcId: string, sctpCaps: types.SctpCapabilities): Promise<ClientTransportInfo> {
-    return this.#transponder.newClientTransport(rtcId, sctpCaps, last(arguments));
+  newClientTransport(rtcId: string): Promise<ClientTransportInfo> {
+    return this.#transponder.newClientTransport(rtcId, last(arguments));
   }
 
   closeClientTransport(transportId: string) {

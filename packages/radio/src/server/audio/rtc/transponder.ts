@@ -149,14 +149,13 @@ export class RTCWorker extends TypedEmitter<RTCWorkerEvents> {
     return this.#router.rtpCapabilities;
   }
 
-  async newClientTransport(sctpCaps: types.SctpCapabilities, socket: Socket): Promise<ClientTransportInfo> {
+  async newClientTransport(socket: Socket): Promise<ClientTransportInfo> {
     const transport = await this.#router.createWebRtcTransport<ClientTransportData>({
       webRtcServer: this.#webrtcServer,
       enableTcp: true,
       enableUdp: true,
       preferTcp: true,
       enableSctp: true,
-      numSctpStreams: sctpCaps.numStreams
     });
 
     const disconnectHandler = () => {
@@ -459,7 +458,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
     return result;
   }
 
-  async newClientTransport(workerId: string, sctpCaps: types.SctpCapabilities, socket: Socket): Promise<ClientTransportInfo> {
+  async newClientTransport(workerId: string, socket: Socket): Promise<ClientTransportInfo> {
     const worker = this.#workers.get(workerId);
 
     if (!worker) {
@@ -468,7 +467,7 @@ export class RTCTransponder extends TypedEmitter<RTCTransponderEvents> {
 
     socket.data.rtcWorker = worker;
 
-    return worker.newClientTransport(sctpCaps, socket);
+    return worker.newClientTransport(socket);
   }
 
   async closeClientTransport(transportId: string, socket: Socket) {
