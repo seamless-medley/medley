@@ -1,20 +1,22 @@
 import { defineConfig } from "vite";
 import mkcert from 'vite-plugin-mkcert';
 import react from "@vitejs/plugin-react";
-import tsconfigPaths from 'vite-tsconfig-paths'
-import topLevelAwait from "vite-plugin-top-level-await";
-import { tanstackRouter  } from '@tanstack/router-plugin/vite'
-import pkg from './package.json';
+import { tanstackRouter  } from '@tanstack/router-plugin/vite';
+import babel from '@rolldown/plugin-babel';
+import { version } from './package.json';
+
+const matchPkg = (...names: string[]) => (id: string) => names.some(n => id.includes(`/node_modules/${n}/`) || id.includes(`\\node_modules\\${n}\\`));
 
 export default defineConfig({
   root: './src',
   publicDir: '../public',
   define: {
-    __UI_VERSION__: `${JSON.stringify(pkg.version)}`
+    __UI_VERSION__: `${JSON.stringify(version)}`
+  },
+  resolve: {
+    tsconfigPaths: true
   },
   plugins: [
-    tsconfigPaths(),
-    topLevelAwait(),
     mkcert(),
     {
       name: "configure-response-headers",
@@ -32,15 +34,17 @@ export default defineConfig({
       routesDirectory: './pages',
       generatedRouteTree: './pages/routeTree.gen.ts'
     }),
-    react({
-      babel: {
-        presets: ['@babel/preset-typescript', ['@babel/preset-react', { runtime: 'automatic' }]],
-        plugins: [
-          ["@babel/plugin-transform-private-methods", { loose: true }],
-          ["@babel/plugin-transform-class-properties", { loose: true }],
-          ["@babel/plugin-proposal-decorators", { legacy: true }]
-        ]
-      }
+    react(),
+    babel({
+      presets: [
+        '@babel/preset-typescript',
+        ['@babel/preset-react', { runtime: 'automatic' }]
+      ],
+      plugins: [
+        ["@babel/plugin-proposal-decorators", { legacy: true }],
+        ["@babel/plugin-transform-class-properties", { loose: true }],
+        ["@babel/plugin-transform-private-methods", { loose: true }],
+      ]
     })
   ],
   css: {
@@ -68,54 +72,23 @@ export default defineConfig({
     outDir: '../dist',
     emptyOutDir: false,
     chunkSizeWarningLimit: 640,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          lodash: ['lodash'],
-          react: [
-            'react', 'react-dom',
-            'polished',
-            'motion',
-            'motion/react'
-          ],
-          react_misc: [
-            'overlayscrollbars',
-            'overlayscrollbars-react',
-            '@tabler/icons-react'
-          ],
-          tanstack: [
-            '@tanstack/react-router',
-            '@tanstack/react-form',
-            '@tanstack/react-router-devtools',
-            '@tanstack/virtual-file-routes'
-          ],
-          mantine: [
-            '@mantine/core', '@mantine/hooks', '@mantine/carousel', '@mantine/hooks', '@mantine/notifications',
-            'mantine-contextmenu'
-          ],
-          rtc: [
-            'mediasoup-client',
-            'notepack.io',
-            'opus-decoder'
-          ],
-          socket: [
-            'socket.io-client',
-            'socket.io-msgpack-parser'
-          ],
-          utils: [
-            '@seamless-medley/utils'
+        codeSplitting: {
+          groups: [
+            { name: 'lodash', test: matchPkg('lodash'), priority: 10 },
+            { name: 'react', test: matchPkg('react', 'react-dom', 'polished', 'motion'), priority: 10 },
+            { name: 'react_misc', test: matchPkg('overlayscrollbars', 'overlayscrollbars-react', '@tabler/icons-react'), priority: 10 },
+            { name: 'tanstack', test: matchPkg('@tanstack/react-router', '@tanstack/react-form', '@tanstack/react-router-devtools', '@tanstack/virtual-file-routes'), priority: 10 },
+            { name: 'mantine', test: matchPkg('@mantine/core', '@mantine/hooks', '@mantine/carousel', '@mantine/notifications', 'mantine-contextmenu'), priority: 10 },
+            { name: 'rtc', test: matchPkg('mediasoup-client', 'notepack.io', 'opus-decoder'), priority: 10 },
+            { name: 'socket', test: matchPkg('socket.io-client', 'socket.io-msgpack-parser'), priority: 10 },
+            { name: 'utils', test: matchPkg('@seamless-medley/utils'), priority: 10 },
           ]
         },
         assetFileNames: 'assets/[ext]/[name]-[hash][extname]',
         chunkFileNames: 'js/[name]-[hash].js'
       },
-      onwarn: (warning, handler) => {
-        if (['SOURCEMAP_ERROR', 'INVALID_ANNOTATION'].includes(warning.code ?? '')) {
-          return;
-        }
-
-        handler(warning);
-      }
     }
   }
 });
