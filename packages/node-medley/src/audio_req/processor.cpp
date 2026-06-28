@@ -25,7 +25,7 @@ void AudioRequestProcessor::Process(uint64_t requestedNumSamples)
     auto outputBytesPerSample = request->outputBytesPerSample;
     auto numChannels = request->numChannels;
 
-    auto numSamples = juce::jmin((uint64_t)request->buffer.getNumReady(), requestedNumSamples);
+    auto numSamples = std::min((uint64_t)request->buffer.getNumReady(), requestedNumSamples);
 
     if (numSamples == 0) {
         return;
