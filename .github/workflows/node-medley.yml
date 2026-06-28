@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - runs-on: windows-latest
+          - runs-on: windows-2022
             node_version: 24.18.0
             node_arch: x64
             build-arch: win32-x64
