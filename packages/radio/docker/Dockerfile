@@ -1,4 +1,4 @@
-FROM node:24.12.0-bookworm AS builder
+FROM node:24.18.0-bookworm-slim AS builder
 
 RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@11.7.0
 
@@ -26,7 +26,7 @@ WORKDIR /app
 RUN pnpm install
 
 # ----------------------------------------------------------------------------------------------------
-FROM node:24.12.0-bookworm-slim AS application
+FROM node:24.18.0-bookworm-slim AS application
 
 ARG ARCH=amd64
 

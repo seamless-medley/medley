@@ -1,7 +1,7 @@
 # This is for building linux native module using docker
 # Usage: pnpm prebuild:linux[-arm64]
 
-FROM node:20.19.5
+FROM node:24.18.0-bookworm
 
 RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@10.28.0
 
