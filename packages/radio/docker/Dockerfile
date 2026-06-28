@@ -1,6 +1,6 @@
 FROM node:24.18.0-bookworm-slim AS builder
 
-RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@11.7.0
+RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@11.9.0
 
 # install build dependencies
 RUN apt update \

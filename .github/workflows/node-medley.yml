@@ -41,12 +41,12 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.7.0
 
       - name: Make sure pnpm fetch Node
         shell: bash
         run: |
           pnpm &>/dev/null || true
+          version: 11.9.0
 
       - name: Get pnpm store directory
         id: pnpm-cache
