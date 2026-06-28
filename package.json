@@ -21,14 +21,12 @@
     "turbo": "^2.10.0",
     "typescript": "6.0.3"
   },
-  "packageManager": "pnpm@11.7.0",
-  "commitlint": {
-    "rules": {
-      "header-max-length": [
-        2,
-        "always",
-        200
-      ]
+  "packageManager": "pnpm@11.9.0",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.18.0",
+      "onFail": "download"
     }
   }
 }
