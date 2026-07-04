@@ -28,7 +28,9 @@ export class TrackCollectionView<
     this.length = numItems;
 
     collection.on('trackShift', this.#handleTrackShift);
+    collection.on('trackUnshift', this.#handleTrackUnshift);
     collection.on('trackPush', this.#handleTrackPush);
+    collection.on('trackPop', this.#handleTrackPop);
     collection.on('tracksAdd', this.#handleTrackAdd);
     collection.on('tracksRemove', this.#handleTrackRemove);
     collection.on('tracksUpdate', this.#handleTrackUpdate);
@@ -39,7 +41,9 @@ export class TrackCollectionView<
 
   dispose() {
     this.#collection.off('trackShift', this.#handleTrackShift);
+    this.#collection.off('trackUnshift', this.#handleTrackUnshift);
     this.#collection.off('trackPush', this.#handleTrackPush);
+    this.#collection.off('trackPop', this.#handleTrackPop);
     this.#collection.off('tracksAdd', this.#handleTrackAdd);
     this.#collection.off('tracksRemove', this.#handleTrackRemove);
     this.#collection.off('tracksUpdate', this.#handleTrackUpdate);
@@ -50,7 +54,15 @@ export class TrackCollectionView<
     this.#invalidate();
   }
 
+  #handleTrackUnshift: TrackCollectionEvents<T>['trackUnshift'] = () => {
+    this.#invalidate();
+  }
+
   #handleTrackPush: TrackCollectionEvents<T>['trackPush'] = () => {
+    this.#invalidate();
+  }
+
+  #handleTrackPop: TrackCollectionEvents<T>['trackPop'] = () => {
     this.#invalidate();
   }
 

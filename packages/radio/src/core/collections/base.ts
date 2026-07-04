@@ -61,7 +61,9 @@ export type TrackCollectionEvents<T extends Track<any>> = {
   ready: () => void;
   refresh: () => void;
   trackShift: (track: T) => void;
+  trackUnshift: (track: T) => void;
   trackPush: (track: T) => void;
+  trackPop: (track: T) => void;
   tracksAdd: (tracks: T[], chunkIndex: number, totalChunks: number) => void;
   tracksRemove: (tracks: T[]) => void;
   tracksUpdate: (event: TracksUpdateEvent<T>) => void;
@@ -170,6 +172,17 @@ export class TrackCollection<
     return track;
   }
 
+  unshift(track: T): number {
+    if (track) {
+      this.trackIdMap.set(track.id, track);
+      this.tracks.unshift(track);
+      this.emit('trackUnshift', track);
+      return 0;
+    }
+
+    return -1;
+  }
+
   push(track: T): number {
     if (track) {
       this.trackIdMap.set(track.id, track);
@@ -179,6 +192,17 @@ export class TrackCollection<
     }
 
     return -1;
+  }
+
+  pop(): T | undefined {
+    const track = this.tracks.pop();
+
+    if (track) {
+      this.trackIdMap.delete(track.id);
+      this.emit('trackPop', track);
+    }
+
+    return track;
   }
 
   static isKnownFileExtension(filename: string) {
