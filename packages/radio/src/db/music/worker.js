@@ -417,7 +417,7 @@ const search_unmatchedItems = async(stationId) => {
 /**
  * @type {TrackHistory['add']}
  */
- const track_add = async(stationId, record, max) => {
+const history_add = async(stationId, record, max) => {
   if (!max) {
     return;
   }
@@ -458,20 +458,26 @@ const search_unmatchedItems = async(stationId) => {
       { _id: { $in: ids }}
     );
   }
- }
+}
 
  /**
   * @type {TrackHistory['getAll']}
   */
- const track_getAll = async (stationId) => await trackHistory
-    .find({ stationId })
-    .sort('playedTime', 'asc')
-    .map(({ _id, ...record }) => record)
-    .toArray()
-    .catch((e) => {
-      logError(e, 'Error in TrackHistory::getAll');
-      return [];
-    });
+const history_getAll = async (stationId) => await trackHistory
+  .find({ stationId })
+  .sort('playedTime', 'asc')
+  .map(({ _id, ...record }) => record)
+  .toArray()
+  .catch((e) => {
+    logError(e, 'Error in TrackHistory::getAll');
+    return [];
+  });
+
+/**
+ *
+ * @type {TrackHistory['count']}
+ */
+const history_count = async (stationId) => await trackHistory.countDocuments({ stationId });
 
 workerpool.worker({
   configure,
@@ -484,6 +490,7 @@ workerpool.worker({
   search_add,
   search_recentItems,
   search_unmatchedItems,
-  track_add,
-  track_getAll
+  history_add,
+  history_getAll,
+  history_count
 })

@@ -25,6 +25,8 @@ export interface TrackHistory {
   add(scope: string, record: TimestampedTrackRecord, max: number): Promise<void>;
 
   getAll(scope: string): Promise<TimestampedTrackRecord[]>;
+
+  count(scope: string): Promise<number>;
 }
 
 export type UpdateInfo = {
@@ -142,7 +144,9 @@ export class InMemoryMusicDb implements MusicDb {
 
     },
 
-    getAll: async (scope) => []
+    getAll: async (scope) => [],
+
+    count: async (scope) => 0
   }
 
   dispose(): void {

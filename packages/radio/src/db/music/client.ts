@@ -17,7 +17,7 @@ type PrefixRemap<Prefix extends string, T> = {
 
 type WorkerMethods = MusicDb &
   PrefixRemap<'search_', SearchHistory> &
-  PrefixRemap<'track_', TrackHistory>;
+  PrefixRemap<'history_', TrackHistory>;
 
 export class MusicDbClient extends WorkerPoolAdapter<WorkerMethods> implements MusicDb {
   #logger: Logger;
@@ -182,12 +182,16 @@ export class MusicDbClient extends WorkerPoolAdapter<WorkerMethods> implements M
   readonly #trackHistory: TrackHistory = {
     add: async (stationId, track, max) => {
       if (max > 0) {
-        return this.exec('track_add', stationId, track, max);
+        return this.exec('history_add', stationId, track, max);
       }
     },
 
     getAll: async (stationId) => {
-      return this.exec('track_getAll', stationId);
+      return this.exec('history_getAll', stationId);
+    },
+
+    count: async (stationId) => {
+      return this.exec('history_count', stationId);
     }
   }
 
