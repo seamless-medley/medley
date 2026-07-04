@@ -3,24 +3,43 @@ import { useDebouncedState } from "@mantine/hooks";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { BaseCollectionView, Remotable } from "@seamless-medley/remote";
 
-export type UseCollectionListOptions<Item, ItemData> = Omit<Parameters<typeof useVirtualizer>[0], 'getScrollElement'> & {
+type UseVirtualizerOptions = Parameters<typeof useVirtualizer>[0];
+
+type BaseOptions<Item, ItemData> = Omit<UseVirtualizerOptions, 'getScrollElement' | 'estimateSize'> & {
   getItemData: (item: Item) => ItemData;
 }
 
+export type UseCollectionListVirtualOptions<Item, ItemData> = BaseOptions<Item, ItemData> & {
+  virtualize?: true | undefined;
+  estimateSize: UseVirtualizerOptions['estimateSize'];
+  getScrollElement?: UseVirtualizerOptions['getScrollElement'];
+}
+
+export type UseCollectionListNonVirtualOptions<Item, ItemData> = BaseOptions<Item, ItemData> & {
+  virtualize: false;
+}
+
+export type UseCollectionListOptions<Item, ItemData> =
+  | UseCollectionListVirtualOptions<Item, ItemData>
+  | UseCollectionListNonVirtualOptions<Item, ItemData>;
+
 export function useCollectionList<Item, ItemData>(view: Remotable<BaseCollectionView<Item>> | undefined, options: UseCollectionListOptions<Item, ItemData>) {
-  const containerRef = useRef(null);
+  const virtualize = options.virtualize !== false;
+
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
     getScrollElement: () => containerRef.current,
     count: options.count,
-    estimateSize: options.estimateSize,
+    estimateSize: (virtualize ? options.estimateSize : undefined) ?? (() => 0),
     overscan: options.overscan
   });
 
   // The virtual items
   const virtualItems = virtualizer.getVirtualItems();
   // The index for the top most in the table viewport
-  const topIndex = virtualItems.at(0)?.index ?? 0;
+  const topIndex = virtualize ? (virtualItems.at(0)?.index ?? 0) : 0;
+  const windowLength = virtualize ? virtualItems.length : options.count;
 
   // The actual tracks list, the setter is equiped with debouncer
   const [items, setItems] = useDebouncedState<Array<ItemData>>([], 1000 / 120);
@@ -50,14 +69,14 @@ export function useCollectionList<Item, ItemData>(view: Remotable<BaseCollection
       return;
     }
 
-    const onViewChange = () => view.updateView(topIndex, virtualItems.length).then(fetchView);
+    const onViewChange = () => view.updateView(topIndex, windowLength).then(fetchView);
 
     view.on('viewChange', onViewChange);
 
     return () => {
       view?.off('viewChange', onViewChange);
     }
-  }, [view, fetchView, topIndex, virtualItems.length]);
+  }, [view, fetchView, topIndex, windowLength]);
 
   // Dispose view when it changes or unmounts
   useEffect(() => {
@@ -72,9 +91,8 @@ export function useCollectionList<Item, ItemData>(view: Remotable<BaseCollection
       setItems([]);
       return;
     }
-
-    view.updateView(topIndex, virtualItems.length).then(fetchView);
-  }, [view, topIndex, virtualItems.length, options.count]);
+    view.updateView(topIndex, windowLength).then(fetchView);
+  }, [view, topIndex, windowLength, options.count]);
 
   return {
     ref: containerRef,
