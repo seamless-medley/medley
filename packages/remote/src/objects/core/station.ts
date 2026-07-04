@@ -32,6 +32,7 @@ export interface Station {
   readonly profiles: StationProfile[];
   readonly currentCrate: string | undefined;
   readonly requestsCount: number;
+  readonly historyCount: number;
 
   start(): void;
   pause(): void;
@@ -46,6 +47,8 @@ export interface Station {
   changePlaySequence(crateId: string, collectionId: string): true | string;
 
   createRequestView(topIndex: number): Remotable<RequestCollectionView>;
+
+  createHistoryView(topIndex: number): Remotable<HistoryCollectionView>;
 
   ϟdeckLoaded(deckIndex: number, info: DeckInfoWithPositions): void;
   ϟdeckUnloaded(deckIndex: number): void;
@@ -108,5 +111,18 @@ export type RequestTrackTuple = [
 ];
 
 export interface RequestCollectionView extends BaseCollectionView<RequestTrackTuple> {
+
+}
+
+export type HistoricalTrackTuple = [
+  id: Track['id'],
+  artists: string[],
+  title: string | undefined,
+  playedTime: number,
+  collectionId: string,
+  collection: string
+];
+
+export interface HistoryCollectionView extends BaseCollectionView<HistoricalTrackTuple> {
 
 }
