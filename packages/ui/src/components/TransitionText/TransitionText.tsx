@@ -34,7 +34,7 @@ export const TransitionText: React.FC<TransitionTextProps> = React.memo((props) 
   const key = stableId ?? children?.toString();
 
   const text = (
-    <Text {...textProps}>
+    <Text component="div" {...textProps}>
       {children}
     </Text>
   );
