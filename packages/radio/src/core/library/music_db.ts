@@ -1,6 +1,6 @@
 import type { Metadata } from "@seamless-medley/medley";
 import normalizePath from "normalize-path";
-import type { TrackRecord } from "../playout";
+import type { TimestampedTrackRecord, TrackRecord } from "../playout";
 import type { SearchQuery, SearchQueryKey } from "./search";
 
 export type RecentSearchRecord = [term: string, count: number, timestamp: Date];
@@ -19,10 +19,6 @@ export interface SearchHistory {
   recentItems(scope: string, key: SearchQueryKey, limit?: number): Promise<RecentSearchRecord[]>;
 
   unmatchedItems(scope: string): Promise<SearchRecord[]>;
-}
-
-export type TimestampedTrackRecord = TrackRecord & {
-  playedTime: Date;
 }
 
 export interface TrackHistory {

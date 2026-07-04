@@ -21,6 +21,10 @@ export type TrackRecord = {
   isrc?: string;
 }
 
+export type TimestampedTrackRecord = TrackRecord & {
+  playedTime: Date;
+}
+
 export enum TrackKind {
   Normal,
   Request,
