@@ -19,6 +19,7 @@ allowedDeprecatedVersions:
   tar: "*"
   tsconfck: "*"
   uuid: "*"
+  git-raw-commits: "*"
 
 overrides:
   micromatch: ">=4.0.8"
