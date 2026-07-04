@@ -67,7 +67,7 @@ type IndexQueueTask<O> = {
   collection: WatchTrackCollection<MusicTrack<O>>;
 }
 
-export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicLibraryEvents<O>> {
+export class MusicLibrary<O> extends BaseLibrary<MusicTrackCollection<O>, MusicLibraryEvents<MusicTrackCollection<O>>> {
   #logger: Logger;
 
   #searchEngine = new SearchEngine();
