@@ -19,6 +19,7 @@ class StubbingStation {
   currentProfile = undefined as any;
   currentCrate = undefined as any;
   requestsCount = undefined as any;
+  historyCount = undefined as any;
 
   profiles = undefined as any;
 
@@ -34,6 +35,8 @@ class StubbingStation {
   changeProfile = noop as any;
   changePlaySequence = noop as any;
   createRequestView = noop as any;
+  createHistoryView = noop as any;
+  trackHistory = noop as any;
 }
 
 export const StubStation = StubOf<Station>(StubbingStation);
