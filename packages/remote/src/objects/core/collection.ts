@@ -1,4 +1,4 @@
-import type { TrackRecord, Track } from "./track";
+import type { TrackTuple, Track } from "./track";
 import type { TrackCollectionBasicOptions } from "@seamless-medley/radio";
 import { Remotable } from "../../type-utils";
 
@@ -63,6 +63,6 @@ export interface BaseCollectionView<T> {
   ϟviewChange(): any;
 }
 
-export interface CollectionView extends BaseCollectionView<TrackRecord> {
+export interface CollectionView extends BaseCollectionView<TrackTuple> {
 
 }

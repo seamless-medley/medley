@@ -24,7 +24,7 @@ export type Track = Simplify<Writable<
   }
 >>;
 
-export type TrackRecord = [
+export type TrackTuple = [
   id: Track['id'],
   kind: TrackKind,
   artist?: string,

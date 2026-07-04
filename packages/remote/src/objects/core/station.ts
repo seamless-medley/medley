@@ -100,13 +100,13 @@ export type Requester = Simplify<Writable<
   DiscordRequester | ConditionalPick<Exclude<CoreRequester, CoreDiscordRequester>, Jsonifiable | undefined>
 >>;
 
-export type RequestTrackRecord = [
+export type RequestTrackTuple = [
   id: Track['id'],
   artist: string | undefined,
   title: string | undefined,
   requesters: Requester[],
 ];
 
-export interface RequestCollectionView extends BaseCollectionView<RequestTrackRecord> {
+export interface RequestCollectionView extends BaseCollectionView<RequestTrackTuple> {
 
 }
