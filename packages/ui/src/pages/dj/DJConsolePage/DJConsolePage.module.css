@@ -19,6 +19,8 @@
 }
 
 .requests-list {
+    container-type: size;
+
     height: calc(100% - 450px - 2px);
     width: 100%;
 
@@ -41,23 +43,11 @@
         user-select: none;
     }
 
-    .avatar-box {
-        display: flex;
-        width: 1em;
-        height: 1em;
     }
 
-    .avatar {
-        object-fit: contain;
         height: 100%;
-        width: 100%;
-        border-radius: 100%;
     }
 
-    .dummy-avatar {
         height: 100%;
-        width: 100%;
-        border-radius: 100%;
-        background-color: white;
     }
 }

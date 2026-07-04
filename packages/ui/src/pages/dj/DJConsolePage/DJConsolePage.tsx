@@ -110,41 +110,54 @@ const RequestedTracks = () => {
 
   return (
     <Flex ref={ref} className={classes.requestsList}>
-      <Panel.List header='Requests' innerHeight='100%' w='100%'>
-        {virtualItems.map(vrow => {
-          const item = items[vrow.index];
+      {virtualItems.length
+        ? (
+          <Panel.List header='Requests' innerHeight='100%' w='100%'>
+            {virtualItems.map(vrow => {
+              const item = items[vrow.index];
 
-          const children = item
-            ? (
-              <Flex className={classes.item}>
-                <AutoScroller stableId={item.id}>
-                  {item.artist} - {item.title}
-                </AutoScroller>
+              const children = item
+                ? (
+                  <Flex className={classes.item}>
+                    <AutoScroller stableId={item.id}>
+                      {item.artist} - {item.title}
+                    </AutoScroller>
 
-                <AutoScroller stableId={`avatar-${item.id}`}>
-                  <Group gap={2} className={classes.requestedBy}>
-                    Requested by
-                    <Group gap={4} wrap="nowrap">
-                      {item.requesters.map(r => <RequesterInfo requester={r} />)}
-                    </Group>
-                  </Group>
-                </AutoScroller>
-              </Flex>
+                    <AutoScroller stableId={`avatar-${item.id}`}>
+                      <Group gap={4} className={classes.requestedBy}>
+                        Requested by
+                        <Group gap={4} wrap="nowrap">
+                          {item.requesters.map(r => <RequesterInfo key={r.requesterId} requester={r} />)}
+                        </Group>
+                      </Group>
+                    </AutoScroller>
+                  </Flex>
 
-            )
-            : (
-              <>
-                Loading...
-              </>
-            )
+                )
+                : (
+                  <>
+                    Loading...
+                  </>
+                )
 
-          return (
-            <Flex key={vrow.key} className={classes.itemContainer}>
-              {children}
-            </Flex>
-          );
-        })}
-      </Panel.List>
+              return (
+                <Flex key={vrow.key} className={classes.itemContainer}>
+                  {children}
+                </Flex>
+              );
+            })}
+          </Panel.List>
+        )
+        : (
+          <Panel header='Requests' w='100%'>
+            <Center h='100%' w='100%' c='gray.8'>Requests list is empty</Center>
+          </Panel>
+        )
+      }
+    </Flex>
+  );
+}
+
     </Flex>
   );
 }
