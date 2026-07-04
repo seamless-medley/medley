@@ -161,41 +161,113 @@ const TrackPanel: React.FC = () => {
   )
 }
 
-type ProfileContextValue = {
-  selectedProfileId: string | undefined;
-  setSelectedProfileId: (newValue: string) => any;
+type SelectionStore = {
+  current: string | undefined;
+  listeners: Set<(id: string | undefined) => void>;
+  set: (id: string) => void;
+  subscribe: (fn: (id: string | undefined) => void) => () => void;
 }
 
-const ProfilePanelContext = createContext<ProfileContextValue>(null!);
+const ProfileSelectionContext = createContext<SelectionStore>(null!);
+
+function useIsSelected(id: string): boolean {
+  const store = useContext(ProfileSelectionContext);
+  const [selected, setSelected] = useState(() => store.current === id);
+
+  useEffect(() => {
+    setSelected(store.current === id);
+    return store.subscribe((current) => setSelected(current === id));
+  }, [store, id]);
+
+  return selected;
+}
+
+function useSelectedProfileId(): string | undefined {
+  const store = useContext(ProfileSelectionContext);
+  const [id, setId] = useState(() => store.current);
+
+  useEffect(() => {
+    setId(store.current);
+    return store.subscribe(setId);
+  }, [store]);
+
+  return id;
+}
+
+type ProfileItemProps = {
+  profile: { id: string; name: string; description?: string };
+  currentProfileId: string | undefined;
+  itemRef: (el: HTMLElement | null) => void;
+  onSelect: (id: string) => void;
+  onChangeProfile: (id: string) => void;
+  stationDefined: boolean;
+}
+
+const ProfileItem = React.memo<ProfileItemProps>(({ profile: p, currentProfileId, itemRef, onSelect, onChangeProfile, stationDefined }) => {
+  const isSelected = useIsSelected(p.id);
+  const { showContextMenu } = useContextMenu();
+
+  return (
+    <Flex
+      data-selected={isSelected}
+      className={classes.item}
+      ref={itemRef}
+      gap={4}
+      onClick={() => onSelect(p.id)}
+      onContextMenu={showContextMenu(
+        [
+          {
+            key: 'switch',
+            title: <>Switch to <span style={{ color: theme.colors.blue[5] }}>{p.name}</span> profile</>,
+            disabled: !stationDefined || (p.id === currentProfileId),
+            onClick: () => onChangeProfile(p.id)
+          }
+        ]
+      )}
+    >
+      <Flex className={classes.listPanelItemText}>
+        <span>{p.name}</span>
+        {p.description &&
+          <AutoScroller>
+            <Group className={classes.secondary}>{p.description}</Group>
+          </AutoScroller>
+        }
+      </Flex>
+      {p.id === currentProfileId &&
+        <Group mr={4}>
+          <Badge size='xs' miw='4rem' autoContrast>Current</Badge>
+        </Group>
+      }
+    </Flex>
+  );
+});
 
 const ProfilePanel: React.FC = () => {
   const { stationId } = useContext(TopBarContext);
   const { station } = useStation(stationId);
   const currentProfileId = useRemotableProp(station, 'currentProfile');
   const profiles = useRemotableProp(station, 'profiles');
-  const { selectedProfileId, setSelectedProfileId } = useContext(ProfilePanelContext);
+  const store = useContext(ProfileSelectionContext);
 
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const storeItemRef = useCallback((id: string) => (el: HTMLElement | null) => {
     itemRefs.current[id] = el;
-  }, [])
-
-  const { showContextMenu } = useContextMenu();
+  }, []);
 
   const setSelection = useCallback((id: string) => {
-    setSelectedProfileId(id);
+    store.set(id);
     itemRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, []);
+  }, [store]);
 
   const changeProfile = useCallback((id: string) => {
     if (station?.changeProfile?.(id)) {
       setSelection(id);
     }
-  }, [station]);
+  }, [station, setSelection]);
 
   useEffect(() => {
-    if (currentProfileId && !selectedProfileId) {
+    if (currentProfileId && !store.current) {
       setSelection(currentProfileId);
     }
   }, [currentProfileId]);
@@ -208,31 +280,15 @@ const ProfilePanel: React.FC = () => {
       classNames={{ list: classes.listItems }}
     >
       {profiles?.map((p) => (
-        <Flex
+        <ProfileItem
           key={p.id}
-          data-selected={selectedProfileId === p.id}
-          className={classes.item}
-          ref={storeItemRef(p.id)}
-          onClick={() => setSelection(p.id)}
-          onContextMenu={showContextMenu(
-            [
-              {
-                key: 'switch',
-                title: <>Switch to <span style={{ color: theme.colors.blue[5] }}>{p.name}</span> profile</>,
-                disabled: (station === undefined) || (p.id === currentProfileId),
-                onClick: () => changeProfile(p.id)
-              }
-            ]
-          )}
-        >
-          <Flex className={classes.listPanelItemText}>
-            <Group>{p.name}</Group>
-            <Group className={classes.secondary}>{p.description}</Group>
-          </Flex>
-          <Group mr={10}>
-            {p.id === currentProfileId && <Badge size='xs' autoContrast>Current</Badge>}
-          </Group>
-        </Flex>
+          profile={p}
+          currentProfileId={currentProfileId}
+          itemRef={storeItemRef(p.id)}
+          onSelect={setSelection}
+          onChangeProfile={changeProfile}
+          stationDefined={station !== undefined}
+        />
       ))}
     </Panel.List>
   )
@@ -244,7 +300,7 @@ const CratePanel: React.FC = () => {
   const [collections, setCollections] = useState<TrackCollection[]>([]);
   const profiles = useRemotableProp(station, 'profiles');
   const currentProfileId = useRemotableProp(station, 'currentProfile');
-  const { selectedProfileId } = useContext(ProfilePanelContext);
+  const selectedProfileId = useSelectedProfileId();
   const crates = profiles?.find(p => p.id === selectedProfileId)?.crates ?? [];
   const currentCrate = useRemotableProp(station, 'currentCrate');
   const currentCollection = useRemotableProp(station, 'currentCollection');
@@ -370,6 +426,7 @@ const CratePanel: React.FC = () => {
           key={crate.id}
           className={classes.item}
           ref={storeItemRef(crate.id)}
+          gap={4}
           onContextMenu={showContextMenu([
             ...(isLatching
               ? [
@@ -394,26 +451,35 @@ const CratePanel: React.FC = () => {
           ])}
         >
           <Flex className={classes.listPanelItemText}>
-            {crate.sources.map(s =>
-              <Group key={`${crate.id}:${s.id}`} gap={0}>
-                <Link
-                  style={{ color: 'white' }}
-                  from={DJConsoleRoute.fullPath}
-                  to={CollectionRoute.fullPath}
-                  params={{ collectionId: s.id }}
-                >
-                  {formatSource(s, crate.sources.length > 1)}
-                </Link>
-              </Group>
-            )}
-            <Group className={classes.secondary} gap={2} wrap="nowrap">
+            <Box>
+              {crate.sources.map(s =>
+                <AutoScroller key={`${crate.id}:${s.id}`}>
+                  <Link
+                    style={{ color: 'white' }}
+                    from={DJConsoleRoute.fullPath}
+                    to={CollectionRoute.fullPath}
+                    params={{ collectionId: s.id }}
+                  >
+                    {formatSource(s, crate.sources.length > 1)}
+                  </Link>
+                </AutoScroller>
+              )}
+            </Box>
+
+            <Flex className={classes.secondary} gap={2} wrap="nowrap">
               Chances: {formatChance(crate.chances)}
-            </Group>
-            <Group className={classes.secondary} gap={0} wrap="nowrap">{formatLimit(crate.limit)}</Group>
+            </Flex>
+
+            <Flex className={classes.secondary} gap={0} wrap="nowrap">
+              {formatLimit(crate.limit)}
+            </Flex>
           </Flex>
-          <Group mr={10}>
-            {crate.id === currentCrate && <Badge size='xs' autoContrast>Current</Badge>}
-          </Group>
+
+          {crate.id === currentCrate &&
+            <Group mr={4}>
+              <Badge size='xs' miw='4rem' autoContrast>Current</Badge>
+            </Group>
+          }
         </Flex>
       ))}
     </Panel.List>
@@ -421,18 +487,21 @@ const CratePanel: React.FC = () => {
 }
 
 const ProfileAndCrate: React.FC = () => {
-  const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>(undefined);
-
-  const profileContext: ProfileContextValue = {
-    selectedProfileId,
-    setSelectedProfileId
-  }
+  const store = useMemo<SelectionStore>(() => {
+    const listeners = new Set<(id: string | undefined) => void>();
+    return {
+      current: undefined,
+      listeners,
+      set(id) { this.current = id; listeners.forEach(fn => fn(id)); },
+      subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+    };
+  }, []);
 
   return (
-    <ProfilePanelContext value={profileContext}>
+    <ProfileSelectionContext value={store}>
       <ProfilePanel />
       <CratePanel />
-    </ProfilePanelContext>
+    </ProfileSelectionContext>
   );
 }
 

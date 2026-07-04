@@ -88,6 +88,7 @@
     flex-direction: column;
     justify-content: center;
     text-wrap: nowrap;
+    overflow: hidden;
 }
 
 .secondary {
