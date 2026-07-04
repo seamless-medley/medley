@@ -890,6 +890,14 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.#boombox.createRequestView(topIndex);
   }
 
+  createHistoryView(topIndex?: number) {
+    return this.#history.createView(this.historyCount, topIndex);
+  }
+
+  get historyCount() {
+    return this.#history.length;
+  }
+
   getTracksFromQueue() {
     return this.queue.toArray();
   }

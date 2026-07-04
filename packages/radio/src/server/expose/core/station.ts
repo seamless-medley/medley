@@ -12,10 +12,12 @@ import type {
   RequestCollectionView,
   RequestTrackTuple,
   Requester as RemoteRequester,
-  DiscordRequester as RemoteDiscordRequester
+  DiscordRequester as RemoteDiscordRequester,
+  HistoryCollectionView,
+  HistoricalTrackTuple
 } from "@seamless-medley/remote";
 
-import { Station, type StationEvents, type PlayState, StationProfile, Crate, StationTrack, TrackWithRequester, Requester } from "../../../core";
+import { Station, type StationEvents, type PlayState, StationProfile, Crate, StationTrack, TrackWithRequester, Requester, HistoricalTrack } from "../../../core";
 import { toRemoteDeckInfoWithPositions } from "./deck";
 import { isFunction, zip } from "lodash";
 import { BasedExposedCollectionView } from "./collection_view";
@@ -37,6 +39,8 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   #requestsCount: number = 0;
 
+  #historyCount: number = 0;
+
   constructor(station: Station) {
     super();
     this.$Exposing = station;
@@ -46,6 +50,7 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.setProfiles(station.profiles);
     this.currentCrate = station.currentCrate?.id;
     this.#requestsCount = station.requestsCount;
+    this.#historyCount = station.historyCount;
 
     this.#station.on('deckLoaded', this.#onDeckLoaded);
     this.#station.on('deckUnloaded', this.#onDeckUnloaded);
@@ -89,6 +94,7 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   #onDeckStarted: StationEvents['deckStarted'] = async (deckIndex: number) => {
     const { positions, trackPlay } = await this.getDeckInfo(deckIndex);
+    this.historyCount = this.#station.historyCount;
     this.emit('deckStarted', deckIndex, {
       ...positions,
       kind: trackPlay?.track.extra?.kind
@@ -217,6 +223,15 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
     this.#requestsCount = value;
   }
 
+  get historyCount() {
+    return this.#historyCount;
+  }
+
+  @PureExpose
+  private set historyCount(value) {
+    this.#historyCount = value;
+  }
+
   @PureExpose
   private set currentCollection(value) {
     this.#currentCollectionId = value;
@@ -292,6 +307,10 @@ export class ExposedStation extends MixinEventEmitterOf<RemoteStation>() impleme
 
   createRequestView(topIndex?: number) {
     return new ExposedRequestView(this.#station.createRequestView(topIndex)) as unknown as Remotable<RequestCollectionView>;
+  }
+
+  createHistoryView(topIndex: number) {
+    return new ExposedHistoryView(this.#station.createHistoryView(topIndex)) as unknown as Remotable<HistoryCollectionView>;
   }
 };
 
@@ -401,6 +420,79 @@ export class ExposedRequestView extends BasedExposedCollectionView<TrackWithRequ
       tags?.title ?? path,
       await Promise.all(requesters.map(toRemoteRequester))
     ] satisfies RequestTrackTuple;
+
+    return Promise.resolve(record);
+  }
+}
+
+export class ExposedHistoryView extends BasedExposedCollectionView<HistoricalTrack> implements Exposable<HistoryCollectionView> {
+dispose(): void {
+    super.dispose();
+  }
+
+  get length() {
+    return super.length;
+  }
+
+  set length(val) {
+    super.length = val;
+  }
+
+  get topIndex() {
+    return super.topIndex;
+  }
+
+  set topIndex(val) {
+    super.topIndex = val;
+  }
+
+  get bottomIndex() {
+    return super.bottomIndex;
+  }
+
+  get ranges() {
+    return super.ranges;
+  }
+
+  updateView(topIndex: number, length: number): void {
+    super.updateView(topIndex, length);
+  }
+
+  absolute(localIndex: number): number {
+    return super.absolute(localIndex);
+  }
+
+  isIndexInView(absoluteIndex: number): boolean {
+    return super.isIndexInView(absoluteIndex);
+  }
+
+  async at(index: number) {
+    return super.at(index);
+  }
+
+  async items() {
+    return super.items();
+  }
+
+  async itemsWithIndexes() {
+    return super.itemsWithIndexes();
+  }
+
+  protected override toRemoteTrack(track: HistoricalTrack): Promise<RemoteTrack> {
+    return toRemoteTrack(track as any);
+  }
+
+  protected override async toRemoteTrackTuple(track: HistoricalTrack): Promise<any[]> {
+    const { id, artists, title, playedTime, collectionId, collection } = track;
+
+    const record = [
+      id,
+      artists,
+      title,
+      playedTime.valueOf(),
+      collectionId,
+      collection?.extra?.description ?? collectionId,
+    ] satisfies HistoricalTrackTuple;
 
     return Promise.resolve(record);
   }
