@@ -1,18 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Center, Flex, Group, px, Tooltip } from "@mantine/core";
+import { Center, Flex, Group, px, Text, Tooltip } from "@mantine/core";
 import { PlayDeck, PlayDeckProps, PlayHead } from "@ui/pages/dj/components/PlayDeck";
-import { useParams } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 import { ResizablePanel } from "@ui/components/ResizablePanel";
 import { Panel } from "@ui/pages/components/Panel";
-import { CORSImage } from "@ui/components/CORSImage";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { useDeckInfo } from "@ui/hooks/useDeck";
 import classes from './DJConsolePage.module.css';
 import { useStation } from "@ui/hooks/useStation";
-import { Remotable, RequestCollectionView, Requester, RequestTrackTuple, Track } from "@seamless-medley/remote";
+import { HistoricalTrackTuple, HistoryCollectionView, Remotable, RequestCollectionView, RequestTrackTuple } from "@seamless-medley/remote";
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { useCollectionList } from "@ui/pages/hooks/useCollectionList";
 import { AutoScroller } from "@ui/components/AutoScroller";
+import { format, startOfDay } from "date-fns";
+import { colorForArtist } from "../components/CollectionTracks";
+import { DJConsoleRoute } from "./route";
+import { CollectionRoute } from "../CollectionPage/route";
 import { RequesterInfo } from "../components/RequesterInfo";
 
 const DeckPanel: React.FC<PlayDeckProps> = ({ ...props }) => {
@@ -158,6 +161,101 @@ const RequestedTracks = () => {
   );
 }
 
+
+const TrackHistory = () => {
+  const { station: stationId } = useParams({ strict: false });
+  const { station } = useStation(stationId);
+
+  const [view, setView] = useState<Remotable<HistoryCollectionView>>();
+
+  const count = useRemotableProp(station, 'historyCount') ?? 0;
+
+  const getItemData = useCallback(([id, artists, title, playedTime, collectionId, collection]: HistoricalTrackTuple) => ({ id, artists, title, playedTime, collectionId, collection }), []);
+
+  const { items } = useCollectionList(view, {
+    count,
+    getItemData,
+    virtualize: false
+  });
+
+  useEffect(() => {
+    if (!station) return;
+
+    let currentView: Remotable<HistoryCollectionView> | undefined;
+
+    station.createHistoryView(0).then(v => {
+      currentView = v;
+      setView(v);
+    });
+
+    return () => {
+      currentView?.dispose();
+    };
+  }, [station]);
+
+  return (
+    <Flex className={classes.historyList}>
+      {count > 0
+        ? (
+          <Panel.List header='History' orientation="vertical">
+            {items.reduce<React.ReactNode[]>((groups, item, index) => {
+              if (!item) return groups;
+
+              const day = startOfDay(item.playedTime).getTime();
+              const prevDay = index > 0 && items[index - 1] ? startOfDay(items[index - 1].playedTime).getTime() : -1;
+
+              if (day !== prevDay) {
+                groups.push(
+                  <div key={`header-${day}`} className={classes.historyDateHeader} data-section>
+                    {format(new Date(day), 'dd/MM/yyyy')}
+                  </div>
+                );
+              }
+
+              groups.push(
+                <Group key={`${item.id}-${item.playedTime}`} className={classes.historyItem}>
+                  <Tooltip label={format(new Date(item.playedTime), 'dd/MM/yyyy HH:mm:ss')} classNames={{ tooltip: classes.historyTooltip }}>
+                    <div className={classes.playedTime}>
+                      {format(new Date(item.playedTime), 'HH:mm:ss')}
+                    </div>
+                  </Tooltip>
+                  <Flex className={classes.historyTrack}>
+                    <Flex className={classes.historyTags}>
+                      <AutoScroller stableId={`${item.id}-title`}>
+                        <div className={classes.historyTitle}>{item.title ?? item.id}</div>
+                      </AutoScroller>
+
+                      <AutoScroller stableId={`${item.id}-artist`}>
+                        <Group gap='0.5ch' wrap='nowrap'>
+                          {item.artists.map((a, i) => (
+                            <Text key={`${a}-${i}`} className={classes.historyArtist} c={colorForArtist(a)} size="xs">
+                              {a}
+                            </Text>
+                          ))}
+                        </Group>
+                      </AutoScroller>
+                    </Flex>
+
+                    <Text size="0.8em" pb={4}>
+                      <Link
+                        from={DJConsoleRoute.fullPath}
+                        to={CollectionRoute.fullPath}
+                        params={{ collectionId: item.collectionId }}>
+                        {item.collection ?? item.collectionId}
+                      </Link>
+                    </Text>
+                  </Flex>
+                </Group>
+              );
+
+              return groups;
+            }, [])}
+          </Panel.List>
+        )
+        : (
+          <Center flex={1} w='100%' c='gray.8'>History is empty</Center>
+        )
+      }
     </Flex>
   );
 }
@@ -174,9 +272,7 @@ export const DJConsolePage = () => {
         <ResizablePanel.Resizer />
 
         <ResizablePanel minSize={250} flexSize={0.8}>
-          <Panel header='History' h={'100%'} orientation='vertical' borders={{ right: true }}>
-            <Center h='100%' c='gray.8'>Not yet implemented</Center>
-          </Panel>
+          <TrackHistory />
         </ResizablePanel>
 
         <ResizablePanel.Resizer />

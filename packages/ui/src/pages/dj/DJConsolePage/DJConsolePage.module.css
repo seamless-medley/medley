@@ -42,12 +42,79 @@
         color: var(--mantine-color-teal-9);
         user-select: none;
     }
+}
 
+.history-list {
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+.history-scroll-container {
+    height: 100%;
+    width: 100%;
+    overflow: hidden auto;
+    min-height: 0;
+}
+
+.history-date-header {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--mantine-color-dark-2);
+    padding: 0.4em 0.5em;
+    background: var(--mantine-color-dark-6);
+    user-select: none;
+    cursor: default;
+}
+
+.history-tooltip {
+    font-size: 0.7em;
+}
+
+.history-item {
+    width: 100%;
+    min-height: 3lh;
+    font-size: 0.7rem;
+    overflow: hidden;
+    align-items: center;
+    gap: 0.5em;
+    flex-wrap: nowrap;
+
+    .played-time {
+        position: sticky;
+        margin: 0 0.5em 0 0;
+        flex: 0 0 auto;
+        white-space: nowrap;
+        color: var(--mantine-color-dark-3);
+        font-variant-numeric: tabular-nums;
     }
 
+    .history-track {
+        display: flex;
+        flex-direction: column;
         height: 100%;
+        min-width: 0;
+        flex: 1 1 0;
+        justify-content: space-between;
     }
 
+    .history-tags {
+        display: flex;
+        flex-direction: column;
         height: 100%;
+        min-width: 0;
+    }
+
+    .history-artist {
+        &:has(+ .history-artist)::after {
+            color: #999;
+            padding: 0 0 0 0.5ch;
+            content: "/";
+        }
+    }
+
+    .history-title {
+        min-width: 0;
+        overflow: hidden;
     }
 }
