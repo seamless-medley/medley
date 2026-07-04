@@ -23,7 +23,7 @@ import type {
   TrackPlay,
   TrackSequencing,
   TrackSequencingLatch,
-  TrackRecord
+  TrackTuple
 } from "@seamless-medley/remote";
 
 export const toRemoteTrack = async (
@@ -51,7 +51,7 @@ const trackKinds = ['normal', 'request', 'insert'] as const;
 
 export const trackKindToString = (k: CoreTrackKind): TrackKind => trackKinds[k.valueOf()];
 
-export const toRemoteTrackRecord = async (track: BoomBoxTrack): Promise<TrackRecord> => {
+export const toRemoteTrackTuple = async (track: BoomBoxTrack): Promise<TrackTuple> => {
   const { id, extra, path } = track;
   const tags = extra?.tags;
   return [

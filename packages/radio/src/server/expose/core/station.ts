@@ -10,7 +10,7 @@ import type {
   Notify,
   Remotable,
   RequestCollectionView,
-  RequestTrackRecord,
+  RequestTrackTuple,
   Requester as RemoteRequester,
   DiscordRequester as RemoteDiscordRequester
 } from "@seamless-medley/remote";
@@ -391,7 +391,7 @@ export class ExposedRequestView extends BasedExposedCollectionView<TrackWithRequ
     return toRemoteTrack(track as any);
   }
 
-  protected override async toRemoteTrackRecord(track: TrackWithRequester<StationTrack, Requester>): Promise<any[]> {
+  protected override async toRemoteTrackTuple(track: TrackWithRequester<StationTrack, Requester>): Promise<any[]> {
     const { id, extra, path, requestedBy: requesters } = track;
     const tags = extra?.tags;
 
@@ -400,7 +400,7 @@ export class ExposedRequestView extends BasedExposedCollectionView<TrackWithRequ
       tags?.artist,
       tags?.title ?? path,
       await Promise.all(requesters.map(toRemoteRequester))
-    ] satisfies RequestTrackRecord;
+    ] satisfies RequestTrackTuple;
 
     return Promise.resolve(record);
   }

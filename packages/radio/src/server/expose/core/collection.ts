@@ -17,7 +17,7 @@ import type {
   Remotable,
   Track as RemoteTrack
 } from "@seamless-medley/remote";
-import { toRemoteTrackRecord, toRemoteTrack } from "./track";
+import { toRemoteTrackTuple, toRemoteTrack } from "./track";
 import { BasedExposedCollectionView } from "./collection_view";
 
 export class ExposedCollection extends MixinEventEmitterOf<Collection>() implements Exposable<Collection> {
@@ -174,7 +174,7 @@ export class ExposedCollectionView extends BasedExposedCollectionView<MusicTrack
     return toRemoteTrack(track);
   }
 
-  protected override toRemoteTrackRecord(track: MusicTrack<Station>): Promise<any[]> {
-    return toRemoteTrackRecord(track);
+  protected override toRemoteTrackTuple(track: MusicTrack<Station>): Promise<any[]> {
+    return toRemoteTrackTuple(track);
   }
 }
