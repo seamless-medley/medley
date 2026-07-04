@@ -35,3 +35,6 @@ allowBuilds:
   mediasoup: true
   ffmpeg-static: true
   less: true
+
+minimumReleaseAgeExclude:
+  - '@seamless-medley/medley'
