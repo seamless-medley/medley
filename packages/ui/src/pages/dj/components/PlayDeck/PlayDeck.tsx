@@ -1,20 +1,26 @@
 import React, { useEffect, useRef } from "react";
-import clsx from "clsx";
 import { Link } from "@tanstack/react-router";
-import { Box, Flex, Image, Text } from "@mantine/core";
+import { Box, Flex, Group, Image, Text } from "@mantine/core";
 import { useElementSize, useMergedRef } from "@mantine/hooks";
 import { transparentize } from "polished";
 import { AnimatePresence, motion, MotionNodeOptions } from "motion/react";
 
 import type { DeckIndex } from "@seamless-medley/medley";
+import { extractArtists } from "@seamless-medley/utils";
+
 import { useDeckCover, useDeckInfo } from "@ui/hooks/useDeck";
 import { theme } from "@ui/theme";
 import { PlayHeadText } from "@ui/components/PlayHeadText";
-import fallbackImage from '@ui/fallback-image.svg?inline';
+import { AutoScroller } from "@ui/components/AutoScroller";
 import { TransitionText } from "@ui/components/TransitionText";
+
+import fallbackImage from '@ui/fallback-image.svg?inline';
+
+import classes from './PlayDeck.module.css';
 import { DJConsoleRoute } from "../../DJConsolePage/route";
 import { CollectionRoute } from "../../CollectionPage/route";
-import classes from './PlayDeck.module.css';
+import { colorForArtist } from "../CollectionTracks";
+import { RequesterInfo } from "../RequesterInfo";
 
 export type PlayDeckProps = {
   stationId: string | undefined;
@@ -134,7 +140,9 @@ export const PlayDeck: React.FC<PlayDeckProps> = React.memo(({ stationId, index,
   const hasCover = (trackPlay?.track?.extra?.coverAndLyrics?.cover?.byteLength ?? 0) !== 0;
 
   const title = trackPlay?.track?.extra?.tags?.title;
-  const artist = trackPlay?.track?.extra?.tags?.artist;
+  const artist = trackPlay?.track?.extra?.tags?.artist ?? '';
+  const artists = extractArtists(artist);
+  const requesters = trackPlay?.track?.requesters ?? [];
 
   const animatePresenceProps: MotionNodeOptions = {
     initial: { opacity: 0 },
@@ -177,48 +185,69 @@ export const PlayDeck: React.FC<PlayDeckProps> = React.memo(({ stationId, index,
       </Box>
       <Flex className={classes.infoBox}>
         <Flex className={classes.info}>
-          <TransitionText
-            py={5}
-            fw={600}
-            size='1rem'
-            h='1.3rem'
-            transition={{ delay: 0.4 }}
-            autoscroll
-          >
-            {title ?? trackPlay?.track?.path}
-          </TransitionText>
+          <Flex gap={0} className={classes.infoTags}>
+            <TransitionText
+              fw={600}
+              transition={{ delay: 0.4 }}
+              autoscroll
+              py={4}
+              stableId={title}
+            >
+              {title ?? trackPlay?.track?.path}
+            </TransitionText>
 
-          <TransitionText
-            py={5}
-            size="0.8rem"
-            h='2rem'
-            transition={{ delay: 0.5 }}
-            autoscroll
-          >
-            {artist}
-          </TransitionText>
+            <TransitionText
+              transition={{ delay: 0.5 }}
+              autoscroll
+              stableId={artist}
+            >
+              <Group className={classes.infoArtistLine}>
+                {artists.map((a, i) => (
+                  <Text key={`${a}-${i}`} size="0.8rem" className={classes.infoArtist} c={colorForArtist(a)}>
+                    {a}
+                  </Text>
+                ))}
+              </Group>
+            </TransitionText>
+          </Flex>
 
-          <Text className={classes.infoText}>
-            {trackPlay?.track?.collection?.id &&
-              <Link
-                from={DJConsoleRoute.fullPath}
-                to={CollectionRoute.fullPath}
-                params={{ collectionId: trackPlay.track.collection.id }}>
-                {trackPlay.track.collection.description}
-              </Link>
-            }
-          </Text>
+          <Flex className={classes.infoSeq}>
+            <Flex className={classes.infoText}>
+              {trackPlay?.track?.collection?.id &&
+                <AutoScroller>
+                  <Link
+                    from={DJConsoleRoute.fullPath}
+                    to={CollectionRoute.fullPath}
+                    params={{ collectionId: trackPlay.track.collection.id }}>
+                    {trackPlay.track.collection.description}
+                  </Link>
+                </AutoScroller>
+              }
+            </Flex>
 
-          <Text className={classes.infoText}>
             {trackPlay?.track?.sequencing &&
-              <>
+              <Text className={classes.infoText}>
                 Sequence: {trackPlay.track.sequencing.playOrder.join('/')}
                 {trackPlay?.track?.sequencing?.latch &&
                   <span> (Latching {trackPlay.track.sequencing.latch.order.join('/')})</span>
                 }
-              </>
+              </Text>
             }
-          </Text>
+
+            {requesters.length > 0 &&
+              <Group className={classes.infoRequesters}>
+                Requested By:
+
+                <Box className={classes.box}>
+                  <AutoScroller>
+                    <Flex className={classes.avatars}>
+                      {requesters.map(r => <RequesterInfo key={r.requesterId} requester={r} />)}
+                    </Flex>
+                  </AutoScroller>
+                </Box>
+              </Group>
+            }
+          </Flex>
 
         </Flex>
 

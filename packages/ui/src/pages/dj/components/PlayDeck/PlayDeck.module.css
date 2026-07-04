@@ -35,22 +35,63 @@
 
 .info {
     position: relative;
+    display: flex;
     flex-direction: column;
+    justify-content: space-between;
     padding: 0 8px 0 4px;
     flex: 1 1 auto;
     min-width: 0;
+    height: 100%;
+}
 
+.info-tags {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-seq {
+    display: flex;
+    flex-direction: column;
+    height: 3.5em;
+    justify-content: start;
+}
+
+.info-artistLine {
+    gap: 0.5ch;
+    flex-wrap: nowrap;
+}
+
+.info-artist {
+    &:has(+ .info-artist)::after {
+        color: #999;
+        padding: 0 0 0 0.5ch;
+        content: "/";
+    }
 }
 
 .info-text {
     align-items: center;
     text-wrap: nowrap;
     width: 100%;
-    height: 1.6em;
     font-size: 0.7em;
-    line-height: 0.7em;
     text-overflow: ellipsis;
-    overflow: clip;
+}
+
+.info-requesters {
+    align-items: center;
+    text-wrap: nowrap;
+    width: 100%;
+    font-size: 0.7em;
+    gap: 4px;
+    flex-wrap: nowrap;
+
+    & .box {
+        min-width: 0;
+
+        & .avatars {
+            gap: 4px;
+        }
+    }
 }
 
 .control-box {
