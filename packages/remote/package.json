@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "main": "src/index.ts",
   "devDependencies": {
-    "@seamless-medley/medley": "0.5.4",
+    "@seamless-medley/medley": "0.5.5",
     "@seamless-medley/radio": "../radio",
     "@seamless-medley/utils": "../utils",
     "mediasoup": "^3.20.10",
