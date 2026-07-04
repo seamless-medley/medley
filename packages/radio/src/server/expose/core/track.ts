@@ -1,17 +1,6 @@
 import { parseLyrics } from "@seamless-medley/utils";
 
 import type {
-  BoomBoxTrack,
-  TrackKind as CoreTrackKind,
-  BoomBoxTrackExtra,
-  BoomBoxTrackPlay
-} from "../../../core";
-
-import {
-  isRequestTrack,
-} from "../../../core";
-
-import type {
   IdOnly,
   LatchSession,
   Sequencing,
@@ -26,8 +15,21 @@ import type {
   TrackTuple
 } from "@seamless-medley/remote";
 
+import type {
+  BoomBoxTrack,
+  TrackKind as CoreTrackKind,
+  BoomBoxTrackExtra,
+  StationTrack,
+  Requester,
+  StationTrackPlay
+} from "../../../core";
+
+import {
+  isRequestTrack,
+} from "../../../core";
+
 export const toRemoteTrack = async (
-  track: BoomBoxTrack,
+  track: StationTrack,
   noCover?: boolean
 ): Promise<Track> => {
   const { id, path, musicId, cueInPosition, cueOutPosition, disableNextLeadIn, extra, sequencing, collection } = track;
@@ -120,7 +122,7 @@ export const toRemoteLatchSession = (
   collection: toRemoteTrackCollection(collection)
 })
 
-export const toRemoteTrackPlay = async ({ uuid, track, duration }: BoomBoxTrackPlay): Promise<TrackPlay> => ({
+export const toRemoteTrackPlay = async ({ uuid, track, duration }: StationTrackPlay): Promise<TrackPlay> => ({
   uuid,
   duration,
   track: await toRemoteTrack(track),
