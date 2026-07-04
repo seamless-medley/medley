@@ -107,7 +107,7 @@ jobs:
           pnpm test
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.build-arch }}
           path: ./packages/node-medley/prebuilds
@@ -150,7 +150,7 @@ jobs:
           docker rm ${{ env.ephemeral_container_id }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.build-arch }}
           path: ./packages/node-medley/prebuilds
