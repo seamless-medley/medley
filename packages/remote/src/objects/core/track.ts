@@ -5,10 +5,10 @@ import type { Lyrics } from "@seamless-medley/utils";
 import type { Collection } from "./collection";
 
 import type {
-  BoomBoxTrack,
   BoomBoxTrackExtra,
-  BoomBoxTrackPlay,
-  LatchSession as CoreLatchSession
+  StationTrackPlay,
+  StationTrack,
+  LatchSession as CoreLatchSession,
 } from "@seamless-medley/radio";
 import { Requester } from "./station";
 
@@ -17,7 +17,7 @@ export type IdOnly<T extends { id: any }> = Writable<Pick<T, 'id'>>;
 export type TrackCollection = Pick<Collection, 'id' | 'description'>;
 
 export type Track = Simplify<Writable<
-  ConditionalPick<BoomBoxTrack, Jsonifiable | undefined> & {
+  ConditionalPick<StationTrack, Jsonifiable | undefined> & {
     collection: TrackCollection;
     extra?: TrackExtra;
     sequencing?: TrackSequencing;
@@ -43,7 +43,7 @@ export type TrackExtra = Simplify<Writable<
   }
 >>;
 
-export type Sequencing = NonNullable<BoomBoxTrack['sequencing']>;
+export type Sequencing = NonNullable<StationTrack['sequencing']>;
 export type SequencingLatch = NonNullable<Sequencing['latch']>;
 
 export type TrackSequencing = Simplify<Writable<
@@ -54,7 +54,7 @@ export type TrackSequencing = Simplify<Writable<
 >>;
 
 export type TrackPlay = Simplify<Writable<
-  ConditionalPick<BoomBoxTrackPlay, Jsonifiable | undefined> & {
+  ConditionalPick<StationTrackPlay, Jsonifiable | undefined> & {
     track: Track;
   }
 >>;
@@ -66,7 +66,7 @@ export type TrackSequencingLatch = Simplify<Writable<
 >>;
 
 export type LatchSession = Simplify<Writable<
-  ConditionalPick<CoreLatchSession<BoomBoxTrack, BoomBoxTrackExtra>, Jsonifiable | undefined> & {
+  ConditionalPick<CoreLatchSession<StationTrack, BoomBoxTrackExtra>, Jsonifiable | undefined> & {
     collection: TrackCollection;
   }
 >>;
