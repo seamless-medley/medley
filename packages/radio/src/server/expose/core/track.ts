@@ -15,6 +15,8 @@ import type {
   TrackTuple
 } from "@seamless-medley/remote";
 
+import { toRemoteRequester } from "./station";
+
 import type {
   BoomBoxTrack,
   TrackKind as CoreTrackKind,
@@ -32,9 +34,11 @@ export const toRemoteTrack = async (
   track: StationTrack,
   noCover?: boolean
 ): Promise<Track> => {
-  const { id, path, musicId, cueInPosition, cueOutPosition, disableNextLeadIn, extra, sequencing, collection } = track;
+  const { id, path, musicId, cueInPosition, cueOutPosition, disableNextLeadIn, sequencing, collection } = track;
 
-  const actualExtra = isRequestTrack(track) ? track.original.extra : extra;
+  const r = isRequestTrack<StationTrack, Requester>(track);
+  const extra = r ? track.original.extra : track.extra;
+  const requesters = r ? track.requestedBy : undefined
 
   return {
     id,
@@ -43,8 +47,9 @@ export const toRemoteTrack = async (
     cueInPosition,
     cueOutPosition,
     disableNextLeadIn,
-    extra: actualExtra ? await toRemoteTrackExtra(actualExtra, noCover) : undefined,
+    extra: extra ? await toRemoteTrackExtra(extra, noCover) : undefined,
     sequencing: sequencing ? toRemoteTrackSequencing(sequencing): undefined,
+    requesters: requesters ? await Promise.all(requesters.map(toRemoteRequester)) : undefined,
     collection: toRemoteTrackCollection(collection)
   }
 }
