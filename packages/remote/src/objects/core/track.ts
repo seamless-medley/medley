@@ -10,7 +10,8 @@ import type {
   StationTrack,
   LatchSession as CoreLatchSession,
 } from "@seamless-medley/radio";
-import { Requester } from "./station";
+
+import type { Requester } from "./station";
 
 export type IdOnly<T extends { id: any }> = Writable<Pick<T, 'id'>>;
 
@@ -21,6 +22,7 @@ export type Track = Simplify<Writable<
     collection: TrackCollection;
     extra?: TrackExtra;
     sequencing?: TrackSequencing;
+    requesters?: Requester[];
   }
 >>;
 
