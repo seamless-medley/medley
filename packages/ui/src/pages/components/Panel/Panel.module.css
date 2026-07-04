@@ -67,15 +67,17 @@
         padding: 0 4px;
         width: 100%;
         justify-content: space-between;
-        flex: 1 0 auto;
-
         border-bottom: 1px solid var(--mantine-color-dark-7);
+
+        &:not([data-section]) {
+            flex: 1 0 auto;
+        }
 
         &[data-selected=true] {
             background-color: var(--mantine-primary-color-filled-hover);
         }
 
-        &:not([data-selected=true]):hover {
+        &:not([data-selected=true]):not([data-section]):hover {
             background-color: var(--mantine-primary-color-light-hover);
         }
     }
