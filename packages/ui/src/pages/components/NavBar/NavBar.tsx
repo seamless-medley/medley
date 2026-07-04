@@ -160,7 +160,7 @@ const PlaybackInfo = () => {
 
       <Stack className={classes.info}>
         <Flex direction={'column'}>
-          <TransitionText size='1.2em' h='1.5em' fw={700} autoscroll>
+          <TransitionText size='1.2em' fw={700} autoscroll>
             {name ?? 'No station'}
           </TransitionText>
           <TransitionText
@@ -181,7 +181,7 @@ const PlaybackInfo = () => {
             {artist ?? 'Unknown artist'}
           </TransitionText>
         </Flex>
-        <Flex h='1.2em' align={'center'} mb={4}>
+        <Flex h='1.2em' align={'center'} mb={2}>
           <PlayHeadText
             stationId={stationId}
             deckIndex={activeDeck}
