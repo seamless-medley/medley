@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Badge, Flex, Group, Table, px } from "@mantine/core";
 import { AutoScroller } from "@ui/components/AutoScroller";
-import type { Collection, TrackRecord, Remotable, TrackKind, BaseCollectionView } from "@seamless-medley/remote";
+import type { Collection, TrackTuple, Remotable, TrackKind, BaseCollectionView } from "@seamless-medley/remote";
 
 import { chain, range } from "lodash";
 import { extractArtists, selectConsistentValue } from "@seamless-medley/utils";
@@ -89,12 +89,12 @@ export const TrackItem = (props: TrackItemProps) => {
   )
 }
 
-const trackToRowData = ([id, kind, artist, title, album]: TrackRecord): TrackRowData => ({ id, kind, artist, title, album });
+const trackToRowData = ([id, kind, artist, title, album]: TrackTuple): TrackRowData => ({ id, kind, artist, title, album });
 
 export function CollectionTracks(props: { collection: Remotable<Collection> | undefined }) {
   const { collection } = props;
   // Remote view, only gets data needed for display
-  const [view, setView] = useState<Remotable<BaseCollectionView<TrackRecord>>>();
+  const [view, setView] = useState<Remotable<BaseCollectionView<TrackTuple>>>();
 
   const count = useRemotableProp(collection, 'length', 0);
 

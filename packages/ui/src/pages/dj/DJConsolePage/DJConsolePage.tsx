@@ -9,7 +9,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { useDeckInfo } from "@ui/hooks/useDeck";
 import classes from './DJConsolePage.module.css';
 import { useStation } from "@ui/hooks/useStation";
-import { Remotable, RequestCollectionView, Requester, RequestTrackRecord, Track } from "@seamless-medley/remote";
+import { Remotable, RequestCollectionView, Requester, RequestTrackTuple, Track } from "@seamless-medley/remote";
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { useCollectionList } from "@ui/pages/hooks/useCollectionList";
 import { AutoScroller } from "@ui/components/AutoScroller";
@@ -98,7 +98,7 @@ const RequestedTracks = () => {
 
   const count = useRemotableProp(station, 'requestsCount') ?? 0;
 
-  const getItemData = useCallback(([id, artist, title, requesters]: RequestTrackRecord) => ({ id, artist, title, requesters }), []);
+  const getItemData = useCallback(([id, artist, title, requesters]: RequestTrackTuple) => ({ id, artist, title, requesters }), []);
 
   const { ref, virtualItems, items } = useCollectionList(view, {
     count,
