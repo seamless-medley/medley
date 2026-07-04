@@ -27,11 +27,13 @@ export type TrackItemProps = {
   onContextMenu?: React.MouseEventHandler<HTMLTableRowElement>;
 }
 
-const colors = chain(theme.colors)
+export const artistColors = chain(theme.colors)
   .keys()
   .without('dark', 'gray')
   .flatMap(name => range(1, 10).map(shade => `${name}.${shade}`))
   .value();
+
+export const colorForArtist = (artist: string) => selectConsistentValue(artist, artistColors);
 
 export const TrackItem = (props: TrackItemProps) => {
   const { start, size, data, onContextMenu } = props;
@@ -49,7 +51,7 @@ export const TrackItem = (props: TrackItemProps) => {
                   key={i}
                   autoContrast={true}
                   fw="normal"
-                  color={selectConsistentValue(a, colors)}
+                  color={colorForArtist(a)}
                   styles={{
                     root: { textTransform: 'none' },
                     label: { overflow: 'visible' }
@@ -104,7 +106,6 @@ export function CollectionTracks(props: { collection: Remotable<Collection> | un
     overscan: 20,
     getItemData: trackToRowData
   });
-
 
   // Create remote view when the collection changed
   useEffect(() => {
