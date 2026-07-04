@@ -106,8 +106,8 @@ importers:
         specifier: ^2.3.0
         version: 2.5.1
       '@seamless-medley/medley':
-        specifier: 0.5.5-alpha.1
-        version: 0.5.5-alpha.1
+        specifier: 0.5.5
+        version: 0.5.5
       '@seamless-medley/remote':
         specifier: ../remote
         version: link:../remote
@@ -355,6 +355,9 @@ importers:
       color.js:
         specifier: ^1.2.0
         version: 1.2.0
+      date-fns:
+        specifier: ^4.4.0
+        version: 4.4.0
       eventemitter3:
         specifier: ^5.0.1
         version: 5.0.1
@@ -2218,8 +2221,8 @@ packages:
     resolution: {integrity: sha512-VI1wtaoAyH8a3n7Cfb29yBS/js1MLtkgWcMxKwMNBWoBjiFlKu2+cf2TNAsHNJNpGXceTkw70oM0DVCDuvVjlA==}
     engines: {node: '>=18'}
 
-  '@seamless-medley/medley@0.5.5-alpha.1':
-    resolution: {integrity: sha512-Rdo4AO05vsgT4TeYraaoUa/eoLoptNpScTnWhI345d4OahOuX6XxCnpZ87orw1BVSUf1b/iMB53j43BsOgsRrg==}
+  '@seamless-medley/medley@0.5.5':
+    resolution: {integrity: sha512-6/5mefqH+P/sAXHC/tMpPPYwtkqS7F/6Q9e0TosmSajNtjqF9GREK9wdLZKi4sxhBDWKP5pFSJHQsEUthsyizg==}
     engines: {node: '>=18'}
 
   '@sec-ant/readable-stream@0.4.1':
@@ -3318,6 +3321,9 @@ packages:
     resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
     engines: {node: '>= 12'}
 
+  date-fns@4.4.0:
+    resolution: {integrity: sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w==}
+
   date-time@3.1.0:
     resolution: {integrity: sha512-uqCUKXE5q1PNBXjPqvwhwJf9SwMoAHBgWJ6DcrnS5o+W2JOiIILl0JEdVD8SGujrNS02GGxgwAg2PN2zONgtjg==}
     engines: {node: '>=6'}
@@ -3745,6 +3751,7 @@ packages:
   git-raw-commits@5.0.1:
     resolution: {integrity: sha512-Y+csSm2GD/PCSh6Isd/WiMjNAydu0VBiG9J7EdQsNA5P9uXvLayqjmTsNlK5Gs9IhblFZqOU0yid5Il5JPoLiQ==}
     engines: {node: '>=18'}
+    deprecated: Deprecated and no longer maintained. Use @conventional-changelog/git-client instead.
     hasBin: true
 
   glob-parent@5.1.2:
@@ -7529,7 +7536,7 @@ snapshots:
     dependencies:
       node-gyp-build: 4.8.4
 
-  '@seamless-medley/medley@0.5.5-alpha.1':
+  '@seamless-medley/medley@0.5.5':
     dependencies:
       node-gyp-build: 4.8.4
 
@@ -8613,6 +8620,8 @@ snapshots:
       array-find-index: 1.0.2
 
   data-uri-to-buffer@4.0.1: {}
+
+  date-fns@4.4.0: {}
 
   date-time@3.1.0:
     dependencies:
