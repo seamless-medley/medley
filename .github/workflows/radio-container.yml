@@ -21,7 +21,7 @@ jobs:
       prerelease_tag: ${{ steps.package-version.outputs.prerelease_tag }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           sparse-checkout: |
             packages/radio/package.json
@@ -70,7 +70,7 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
