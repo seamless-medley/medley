@@ -281,8 +281,8 @@ importers:
   packages/remote:
     devDependencies:
       '@seamless-medley/medley':
-        specifier: 0.5.4
-        version: 0.5.4
+        specifier: 0.5.5
+        version: 0.5.5
       '@seamless-medley/radio':
         specifier: ../radio
         version: link:../radio
@@ -323,8 +323,8 @@ importers:
         specifier: ^9.4.0
         version: 9.4.0(@mantine/core@9.4.0(@mantine/hooks@9.4.0(react@19.2.1))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@mantine/hooks@9.4.0(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@seamless-medley/medley':
-        specifier: 0.5.4
-        version: 0.5.4
+        specifier: 0.5.5
+        version: 0.5.5
       '@seamless-medley/remote':
         specifier: ../remote
         version: link:../remote
@@ -2216,10 +2216,6 @@ packages:
   '@sapphire/snowflake@3.5.5':
     resolution: {integrity: sha512-xzvBr1Q1c4lCe7i6sRnrofxeO1QTP/LKQ6A6qy0iB4x5yfiSfARMEQEghojzTNALDTcv8En04qYNIco9/K9eZQ==}
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
-
-  '@seamless-medley/medley@0.5.4':
-    resolution: {integrity: sha512-VI1wtaoAyH8a3n7Cfb29yBS/js1MLtkgWcMxKwMNBWoBjiFlKu2+cf2TNAsHNJNpGXceTkw70oM0DVCDuvVjlA==}
-    engines: {node: '>=18'}
 
   '@seamless-medley/medley@0.5.5':
     resolution: {integrity: sha512-6/5mefqH+P/sAXHC/tMpPPYwtkqS7F/6Q9e0TosmSajNtjqF9GREK9wdLZKi4sxhBDWKP5pFSJHQsEUthsyizg==}
@@ -7531,10 +7527,6 @@ snapshots:
   '@sapphire/snowflake@3.5.3': {}
 
   '@sapphire/snowflake@3.5.5': {}
-
-  '@seamless-medley/medley@0.5.4':
-    dependencies:
-      node-gyp-build: 4.8.4
 
   '@seamless-medley/medley@0.5.5':
     dependencies:
