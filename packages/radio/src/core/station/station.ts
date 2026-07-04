@@ -17,7 +17,7 @@ import type { StationAudioLevels } from '@seamless-medley/remote';
 
 import { createLogger, type Logger } from '../../logging';
 
-import { RescanOptions, TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
+import { RescanOptions, TrackCollection, TrackCollectionBasicOptions, TrackIndex, WatchTrackCollection } from "../collections";
 import { Crate, LatchOptions, LatchSession } from "../crate";
 import { FindByCommentOptions, Library, LibrarySearchParams, LibraryOverallStats, MusicCollectionDescriptor, MusicDb, MusicLibrary, MusicLibraryEvents, MusicTrack, MusicTrackCollection } from "../library";
 import {
@@ -107,6 +107,13 @@ export type StationRequestedTrack = TrackWithRequester<StationTrack, Requester> 
   disallowSweepers?: boolean;
 }
 
+export type HistoricalTrack = StationTrack & {
+  title?: string;
+  artists: string[];
+  playedTime: Date;
+  collectionId: string;
+}
+
 export type StationTrackIndex = TrackIndex<StationRequestedTrack>;
 
 export type StationCrate = Crate<StationTrack>;
@@ -148,7 +155,6 @@ type BoomBoxEventsForStation = BoomBoxEvents<StationProfile>;
 export type StationSearchOptions = LibrarySearchParams & {
   noHistory?: boolean;
 }
-
 export class Station extends TypedEmitter<StationEvents> {
   readonly id: string;
 
@@ -169,9 +175,11 @@ export class Station extends TypedEmitter<StationEvents> {
 
   #profile = new StationProfile({ id: '$empty', name: '' });
 
-  maxTrackHistory: number = 50;
+  readonly maxTrackHistory: number = 50;
 
-  #audiences: Map<AudienceGroupId, Set<string>> = new Map();
+  readonly #history = new TrackCollection<HistoricalTrack>('$_history', undefined, {});
+
+  readonly #audiences: Map<AudienceGroupId, Set<string>> = new Map();
 
   #audienceCount = 0;
 
@@ -234,6 +242,7 @@ export class Station extends TypedEmitter<StationEvents> {
       this.metadataHelper
     );
 
+    this.#library.on('add', this.#handleLibraryAdd);
     this.#library.on('stats', this.#handleLibraryStats);
     this.#library.on('changed', this.#handleLibraryChanged);
 
@@ -270,6 +279,18 @@ export class Station extends TypedEmitter<StationEvents> {
     this.#musicDb.trackHistory
       .getAll(this.id)
       .then((records) => {
+        for (const r of records) {
+          this.#history.unshift({
+            id: r.trackId,
+            playedTime: r.playedTime,
+            title: r.title,
+            artists: r.artists,
+            path: r.path,
+            collectionId: r.collectionId,
+            collection: undefined as any
+          });
+        }
+
         boombox.artistHistory = records.map(r => r.artists);
       });
 
@@ -303,6 +324,14 @@ export class Station extends TypedEmitter<StationEvents> {
     return {
       ...levels,
       reduction
+    }
+  }
+
+  #handleLibraryAdd: MusicLibraryEvents<StationTrackCollection>['add'] = (collection) => {
+    for (const h of this.#history) {
+      if (h.collection === undefined && h.collectionId === collection.id) {
+        (h.collection as TrackCollection<any>) = collection;
+      }
     }
   }
 
@@ -345,12 +374,32 @@ export class Station extends TypedEmitter<StationEvents> {
 
   #handleTrackStarted: BoomBoxEventsForStation['trackStarted'] = (deck, trackPlay: StationTrackPlay, lastTrackPlay?: StationTrackPlay) => {
     this.#starting = false;
-    this.emit('trackStarted', deck, trackPlay, lastTrackPlay);
+
+    const { track } = trackPlay;
+    const playedTime = new Date();
+
+    const record = trackRecordOf(track);
+
+    this.#history.unshift({
+      id: record.trackId,
+      artists: record.artists,
+      title: record.title,
+      path: record.path,
+      collection: track.collection,
+      collectionId: track.collection.id,
+      playedTime
+    });
+
+    if (this.#history.length > this.maxTrackHistory) {
+      this.#history.pop();
+    }
 
     this.#musicDb.trackHistory.add(this.id, {
-      ...trackRecordOf(trackPlay.track),
-      playedTime: new Date()
+      ...record,
+      playedTime
     }, this.maxTrackHistory);
+
+    this.emit('trackStarted', deck, trackPlay, lastTrackPlay);
   }
 
   #handleTrackActive: BoomBoxEventsForStation['trackActive'] = (deck, trackPlay: StationTrackPlay) => {

@@ -19,6 +19,8 @@ export type TrackRecord = {
   title?: string;
   artists: string[];
   isrc?: string;
+  path: string;
+  collectionId: string;
 }
 
 export type TimestampedTrackRecord = TrackRecord & {
@@ -918,7 +920,9 @@ export function trackRecordOf(track: BoomBoxTrack): TrackRecord {
     trackId: track.id,
     title: extra?.tags?.title,
     artists: extra ? getArtistStrings(extra) : [],
-    isrc: extra?.tags?.isrc
+    isrc: extra?.tags?.isrc,
+    path: track.path,
+    collectionId: track.collection.id
   }
 }
 
