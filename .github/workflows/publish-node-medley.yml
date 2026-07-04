@@ -61,7 +61,7 @@ jobs:
 
       - name: Download
         id: download
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v21
         with:
           run_id: ${{ github.event_name == 'workflow_dispatch' && inputs.run_id || github.event.workflow_run.id }}
           name_is_regexp: true
