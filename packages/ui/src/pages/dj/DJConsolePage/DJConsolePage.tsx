@@ -13,6 +13,7 @@ import { Remotable, RequestCollectionView, Requester, RequestTrackTuple, Track }
 import { useRemotableProp } from "@ui/hooks/remotable";
 import { useCollectionList } from "@ui/pages/hooks/useCollectionList";
 import { AutoScroller } from "@ui/components/AutoScroller";
+import { RequesterInfo } from "../components/RequesterInfo";
 
 const DeckPanel: React.FC<PlayDeckProps> = ({ ...props }) => {
   const info = useDeckInfo(props.stationId, props.index, 'active', 'trackPlay');
@@ -70,24 +71,7 @@ const Decks = () => {
   )
 }
 
-const RequesterInfo: React.FC<{ requester: Requester }>  = ({ requester }) => {
-  return (
-    <Group className={classes.avatarBox}>
-      {requester.type === 'discord' && requester.data !== undefined
-        ? <Tooltip label={`Discord user ${requester.data.displayName} via ${requester.data.guild.name}`} style={{ fontSize: '0.7em'}}>
-          {requester.data?.avatar
-            ? <CORSImage className={classes.avatar} src={requester.data.avatar} />
-            : <div className={classes.dummyAvatar} />
-          }
-          </Tooltip>
-        :
-          <Tooltip label={`${requester.requesterId} via ${requester.type} (${requester.group})`}>
-            <div className={classes.dummyAvatar} />
-          </Tooltip>
-      }
-    </Group>
-  )
-}
+
 
 const RequestedTracks = () => {
   const { station: stationId } = useParams({ strict: false });
