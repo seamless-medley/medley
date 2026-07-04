@@ -49,7 +49,7 @@ jobs:
         run: |
           echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         name: Setup pnpm cache
         with:
           path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
@@ -78,7 +78,7 @@ jobs:
 
       - name: Cache vcpkg
         if: contains(matrix.build-arch, 'win32')
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             C:\vcpkg\packages
