@@ -322,8 +322,9 @@ const CratePanel: React.FC = () => {
   }, [crates, currentCrate]);
 
   useEffect(() => {
+    setCollections([]);
     station?.getCollections().then(setCollections);
-  }, [station]);
+  }, [stationId, station]);
 
   useEffect(() => {
     if (currentCrate) {
@@ -440,7 +441,8 @@ const CratePanel: React.FC = () => {
             ),
             ...(!isLatching && (currentProfileId === selectedProfileId))
             ? crate.sources
-              .map(s => collections.find(col => col.id === s.id)!)
+              .map(s => collections.find(col => col.id === s.id))
+              .filter(col => col !== undefined)
               .map(col => ({
                 key: col.id,
                 title: <>Play from <span style={{ color: theme.colors.blue[5] }}>{col.description}</span></>,
