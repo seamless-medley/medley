@@ -40,7 +40,7 @@ export const TransitionText: React.FC<TransitionTextProps> = React.memo((props) 
   );
 
   return (
-    <motion.div className={className} style={{...style, position: 'relative', minHeight: '1lh' }}>
+    <motion.div className={className} style={{...style, position: 'relative', minHeight: '1lh', alignContent: 'center' }}>
       <AnimatePresence>
         <motion.div
           key={key}
