@@ -1,5 +1,5 @@
-import { CSSProperties, PointerEvent, useCallback, useRef, useState } from 'react';
-import { Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image, Text, Flex, useMatches } from '@mantine/core';
+import { CSSProperties, PointerEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { Group, Title, Button, Popover, Box, TextInput, PasswordInput, Stack, Avatar, Image, Text, Flex, useMatches, Menu } from '@mantine/core';
 import { useMove, UseMovePosition } from '@mantine/hooks';
 import { IconVinyl, IconVolume, IconVolume2 } from '@tabler/icons-react';
 import { useForm } from '@tanstack/react-form';
@@ -19,8 +19,10 @@ import { TransitionText } from '@ui/components/TransitionText';
 import { PlayHeadText } from '@ui/components/PlayHeadText';
 import { VUBar, VUBarProps } from '@ui/components/VUBar';
 import classes from './NavBar.module.css';
+import { DJConsoleRoute } from '@ui/pages/dj/DJConsolePage/route';
 import fallbackImage from '@ui/fallback-image.svg?inline';
 import { useAudioLevels, UseAudioLevelsData } from '@ui/hooks/useAudioLevels';
+import { useSurrogate } from '@ui/hooks/surrogate';
 
 const LoginButton = () => {
   const [opened, setOpened] = useState(false);
@@ -250,8 +252,29 @@ const VolumeControl: React.FC<{ orientation: 'horizontal' | 'vertical' }> = ({ o
   )
 }
 
+const StationLink: React.FC<{ stationId: string }> = ({ stationId }) => {
+  const { station } = useStation(stationId);
+  const name = useRemotableProp(station, 'name');
+  return (
+    <Menu.Item component={DJConsoleRoute.Link} params={{ station: stationId }}>
+      {name ?? stationId}
+    </Menu.Item>
+  )
+}
+
 export const NavBar = () => {
   const { user } = useSession();
+
+  const [stations, setStations] = useState<string[]>([]);
+  const { surrogate: $global } = useSurrogate('global', '$');
+
+  useEffect(() => {
+    if (!$global) {
+      return;
+    }
+
+    $global.getStations().then(setStations);
+  }, [$global]);
 
   const vuBarOrientation = useMatches<VUBarProps['orientation']>({
     base: 'vertical',
@@ -272,12 +295,18 @@ export const NavBar = () => {
 
       <PlaybackInfo />
 
-      {/* <Flex className={classes.rightPane}>
-        { user
-          ? <Avatar name={user} color='initials' />
-          : <LoginButton />
-        }
-      </Flex> */}
+      <Flex className={classes.rightPane}>
+        <Menu>
+          <Menu.Target>
+            <Button size="xs">DJ Console</Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            {stations.map(id => (
+              <StationLink key={id} stationId={id} />
+            ))}
+          </Menu.Dropdown>
+        </Menu>
+      </Flex>
     </Flex>
   );
 }
