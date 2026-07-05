@@ -158,38 +158,37 @@ const PlaybackInfo = () => {
         </AnimatePresence>
       </Box>
 
-      <Stack className={classes.info}>
-        <Flex direction={'column'}>
-          <TransitionText size='1.2em' fw={700} autoscroll>
-            {name ?? 'No station'}
-          </TransitionText>
+      <Flex className={classes.info} direction='column'>
+        <TransitionText size='1.2em' fw={700} autoscroll>
+          {name ?? 'No station'}
+        </TransitionText>
+
+        <Flex direction='column' justify='space-evenly'>
           <TransitionText
             size="1em"
-            h='1.2em'
             fw={500}
             transition={{ delay: 0.4 }}
             autoscroll
           >
             {title ?? 'Unknown title'}
           </TransitionText>
+
           <TransitionText
             size="1em"
-            h='1.2em'
             transition={{ delay: 0.5 }}
             autoscroll
           >
             {artist ?? 'Unknown artist'}
           </TransitionText>
         </Flex>
-        <Flex h='1.2em' align={'center'} mb={2}>
-          <PlayHeadText
-            stationId={stationId}
-            deckIndex={activeDeck}
-            size='1em'
-            c='indigo.4'
-          />
+
+        <PlayHeadText
+          stationId={stationId}
+          deckIndex={activeDeck}
+          size='1em'
+          c='indigo.4'
+        />
         </Flex>
-      </Stack>
     </Group>
   )
 }
