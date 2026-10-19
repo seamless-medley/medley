@@ -1,0 +1,10 @@
+[project]
+name = "stemia"
+version = "0.1.0"
+description = "Stem separation service for Medley"
+authors = [
+    { name = "Wittawas Nakkasem", email = "vittee@hotmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+]
