@@ -21,6 +21,17 @@ class StemServer:
                     log.warning("invalid binary frame: %s", e)
                     continue
 
+                if frame.msg_type & FLAG_RESPONSE:
+                    log.warning("malformed request: response flag set in client frame 0x%02x", frame.msg_type)
+                    continue
+
+                # file/blob frames
+                if frame.msg_type & FLAG_BLOB:
+                    pass
+                # command frames
+                else:
+                    pass
+
         except websockets.ConnectionClosed:
             pass
         finally:

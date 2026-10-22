@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from enum import IntEnum
 
 
+FLAG_BLOB     = 1 << 7
+FLAG_RESPONSE = 1 << 6
+
+
 class MsgType(IntEnum):
     JOB_SUBMIT        = 0x00
     JOB_CANCEL        = 0x01
