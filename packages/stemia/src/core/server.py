@@ -7,10 +7,12 @@ from pathlib import Path
 import websockets
 from websockets.server import ServerProtocol
 
-from core.models import Job
 from core.protocol import MsgType, FLAG_BLOB, FLAG_RESPONSE, encode_frame, encode_command, decode_frame, decode_command
+from core.models import Job, MeasureTask
 
 log = logging.getLogger("stemia")
+
+OUTPUT_CHUNK_SIZE = 256 * 1024  # 256 KB per output chunk
 
 
 class StemServer:
@@ -41,6 +43,19 @@ class StemServer:
         except websockets.ConnectionClosed:
             pass
 
+    async def send_file_chunked(self, ws: ServerProtocol, job_id: str, data: bytes):
+        total = len(data)
+        offset = 0
+        try:
+            while offset < total:
+                end = min(offset + OUTPUT_CHUNK_SIZE, total)
+                chunk = data[offset:end]
+                offset = end
+                is_last = (offset >= total)
+                msg_type = MsgType.FILE_OUTPUT_END if is_last else MsgType.FILE_OUTPUT_CHUNK
+                await ws.send(encode_frame(msg_type, job_id, chunk))
+        except websockets.ConnectionClosed:
+            pass
 
     async def fetch_job(self) -> Job:
         while True:

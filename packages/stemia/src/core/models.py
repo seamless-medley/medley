@@ -17,3 +17,13 @@ class Job:
     def cleanup_temp(self) -> None:
         if self.temp_dir:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+
+@dataclass
+class MeasureTask:
+    job: Job
+    input_path: str
+    stem_path: str
+    orig: object
+    no_vocals: object
+    sr: int

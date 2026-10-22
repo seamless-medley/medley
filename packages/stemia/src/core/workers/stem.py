@@ -10,6 +10,8 @@ from demucs.api import Separator
 from demucs.audio import save_audio
 
 from core.protocol import MsgType, encode_command
+from core.models import MeasureTask
+
 from ..server import StemServer
 
 
@@ -121,6 +123,15 @@ async def stem_worker(server: StemServer):
 
             if job.ws:
                 await server.send_command(job.ws, MsgType.JOB_PROGRESS, {"jobId": job.job_id, "stage": "measuring"})
+
+            await server.measure_queue.put(MeasureTask(
+                job=job,
+                input_path=job.input_path,
+                stem_path=str(stem_path),
+                orig=orig,
+                no_vocals=no_vocals,
+                sr=sr,
+            ))
 
         except Exception as e:
             log.exception("job %s failed during separation", job.job_id)
