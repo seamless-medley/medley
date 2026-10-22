@@ -1,3 +1,38 @@
+"""
+stemia binary frame protocol.
+
+Frame layout:
+  [1 byte : msg_type]
+  [4 bytes: job_id length, big-endian uint32]
+  [N bytes: job_id (UTF-8)]
+  [R bytes: payload]
+
+For file frames, job_id identifies the job and payload is raw bytes.
+For command frames, job_id is "" and payload is UTF-8 JSON.
+
+OpCode bit flags:
+  bit 7 = 1 → blob/file frame  (0 = command frame)
+  bit 6 = 1 → server → client  (0 = client → server)
+
+OpCode types — commands, client → server  (0x00–0x3f), payload = UTF-8 JSON:
+  0x00  job:submit   { jobId, trackId, priority, inputPath?, outputDir?, inputName? }
+  0x01  job:cancel   { jobId }
+
+OpCode types — commands, server → client  (0x40–0x7f), payload = UTF-8 JSON:
+  0x40  job:accepted { jobId }
+  0x41  job:progress { jobId, stage, progress }
+  0x42  job:done     { jobId, trackId, result }
+  0x43  job:error    { jobId, trackId, error }
+
+OpCode types — file, client → server  (0x80–0xbf):
+  0x80  file:input:chunk  one chunk of a chunked upload
+  0x81  file:input:end    last chunk; server reassembles
+
+OpCode types — file, server → client  (0xc0–0xff):
+  0xc0  file:output:chunk one chunk of a chunked download
+  0xc1  file:output:end   last chunk; client reassembles
+"""
+
 import json
 import struct
 from dataclasses import dataclass
