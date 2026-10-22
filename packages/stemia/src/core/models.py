@@ -1,3 +1,4 @@
+import shutil
 from dataclasses import dataclass, field
 from websockets import ServerProtocol
 

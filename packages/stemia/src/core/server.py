@@ -7,8 +7,9 @@ from pathlib import Path
 import websockets
 from websockets.server import ServerProtocol
 
-from core.protocol import MsgType, FLAG_BLOB, FLAG_RESPONSE, decode_frame, decode_command
 from core.models import Job
+from core.protocol import MsgType, FLAG_BLOB, FLAG_RESPONSE, encode_frame, encode_command, decode_frame, decode_command
+
 log = logging.getLogger("stemia")
 
 
@@ -29,6 +30,11 @@ class StemServer:
 
         # jobId → accumulated chunks for chunked uploads
         self.input_chunks: dict[str, list[bytes]] = {}
+
+    def discard_job(self, job_id: str) -> None:
+        self.pending.pop(job_id, None)
+        self.input_ready.pop(job_id, None)
+
     async def send_command(self, ws: ServerProtocol, msg_type: MsgType, data: dict):
         try:
             await ws.send(encode_command(msg_type, data))
@@ -69,6 +75,29 @@ class StemServer:
                 # file/blob frames
                 if frame.msg_type & FLAG_BLOB:
                     match frame.msg_type:
+                        case MsgType.FILE_INPUT_CHUNK:
+                            if frame.job_id not in self.input_chunks:
+                                self.input_chunks[frame.job_id] = []
+                            self.input_chunks[frame.job_id].append(frame.payload)
+
+                        case MsgType.FILE_INPUT_END:
+                            chunks = self.input_chunks.pop(frame.job_id, [])
+
+                            if frame.payload:
+                                chunks.append(frame.payload)
+
+
+                            if (job := self.pending.get(frame.job_id)) and job.temp_dir:
+                                data = b"".join(chunks)
+
+                                Path(job.input_path).write_bytes(data)
+                                event = self.input_ready.get(frame.job_id)
+
+                                if event:
+                                    event.set()
+
+                                log.info("job %s received input file (%d bytes)", frame.job_id, len(data))
+
                         case _:
                             log.warning("unknown file/blob msg_type: 0x%02x", frame.msg_type)
 

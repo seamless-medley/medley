@@ -118,3 +118,6 @@ async def stem_worker(server: StemServer):
                 log.info("job %s cancelled after separation", job.job_id)
                 job.cleanup_temp()
                 continue
+
+            if job.ws:
+                await server.send_command(job.ws, MsgType.JOB_PROGRESS, {"jobId": job.job_id, "stage": "measuring"})
