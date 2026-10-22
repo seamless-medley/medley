@@ -8,6 +8,14 @@ log = logging.getLogger("stemia")
 
 
 class StemServer:
+        # jobId → Job for cancellation / binary frame routing
+        self.pending: dict[str, Job] = {}
+    async def send_command(self, ws: ServerProtocol, msg_type: MsgType, data: dict):
+        try:
+            await ws.send(encode_command(msg_type, data))
+        except websockets.ConnectionClosed:
+            pass
+
     async def handle(self, ws: ServerProtocol):
         log.info("client connected: %s", ws.remote_address)
         try:
@@ -42,7 +50,15 @@ class StemServer:
 
                     match frame.msg_type:
                         case MsgType.JOB_SUBMIT:
-                            pass
+                            job_id = msg["jobId"]
+                            job = Job(
+                                job_id=job_id,
+                            )
+                            self.pending[job_id] = job
+
+                            await self.send_command(ws, MsgType.JOB_ACCEPTED, {"jobId": job_id})
+
+                            log.info("job %s accepted", job_id)
 
                         case MsgType.JOB_CANCEL:
                             pass

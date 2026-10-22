@@ -10,6 +10,7 @@ class MsgType(IntEnum):
     JOB_SUBMIT        = 0x00
     JOB_CANCEL        = 0x01
 
+    JOB_ACCEPTED      = FLAG_RESPONSE | 0x00
 
 
 @dataclass
