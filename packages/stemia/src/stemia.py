@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
 
 import asyncio
+import logging
 
+from rich.logging import RichHandler
+
+
+logging.basicConfig(level=logging.INFO, handlers=[RichHandler(rich_tracebacks=True, show_path=False)])
+log = logging.getLogger("stemia")
 async def main():
-    pass
+    host = os.environ.get("STEMIA_HOST", "0.0.0.0")
+    port = int(os.environ.get("STEMIA_PORT", "3002"))
 
+
+    log.info("running on %s:%d", host, port)
 
 if __name__ == "__main__":
     try:
