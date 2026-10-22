@@ -15,7 +15,11 @@ class StemServer:
                     log.warning("unexpected text frame from client")
                     continue
 
-                pass
+                try:
+                    frame = decode_frame(raw)
+                except Exception as e:
+                    log.warning("invalid binary frame: %s", e)
+                    continue
 
         except websockets.ConnectionClosed:
             pass
