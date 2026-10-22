@@ -11,6 +11,11 @@ import core
 
 logging.basicConfig(level=logging.INFO, handlers=[RichHandler(rich_tracebacks=True, show_path=False)])
 log = logging.getLogger("stemia")
+
+# Suppress unauthenticated HF Hub warning — model is pre-cached in Docker; locally rate limits are fine
+os.environ.setdefault("HF_HUB_VERBOSITY", "error")
+logging.getLogger("httpx2").setLevel(logging.WARNING)
+
 async def main():
     host = os.environ.get("STEMIA_HOST", "0.0.0.0")
     port = int(os.environ.get("STEMIA_PORT", "3002"))
