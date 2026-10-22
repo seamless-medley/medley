@@ -9,3 +9,9 @@ log = logging.getLogger("stemia")
 class StemServer:
     async def handle(self, ws: ServerProtocol):
         log.info("client connected: %s", ws.remote_address)
+        try:
+            pass
+        except websockets.ConnectionClosed:
+            pass
+        finally:
+            log.info("client disconnected: %s", ws.remote_address)
