@@ -19,3 +19,13 @@ def decode_frame(data: bytes) -> Frame:
         raise ValueError("frame too short")
 
     msg_type = MsgType(data[0])
+    (job_id_len,) = struct.unpack_from(">I", data, 1)
+
+    offset = 5 + job_id_len
+    if len(data) < offset:
+        raise ValueError("frame truncated")
+
+    job_id = data[5:offset].decode()
+    payload = data[offset:]
+
+    return Frame(msg_type=msg_type, job_id=job_id, payload=payload)
