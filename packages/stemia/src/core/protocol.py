@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import Any
 
 
 FLAG_BLOB     = 1 << 7

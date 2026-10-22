@@ -1,5 +1,8 @@
 import asyncio
 import logging
+import os
+import tempfile
+from pathlib import Path
 
 import websockets
 from websockets.server import ServerProtocol
@@ -15,8 +18,17 @@ class StemServer:
         self.high_queue: asyncio.Queue[Job] = asyncio.Queue()
         self.normal_queue: asyncio.Queue[Job] = asyncio.Queue()
 
+        # Measurement queue
+        self.measure_queue: asyncio.Queue[MeasureTask] = asyncio.Queue()
+
         # jobId → Job for cancellation / binary frame routing
         self.pending: dict[str, Job] = {}
+
+        # jobId → asyncio.Event, set when file:input binary frame arrives
+        self.input_ready: dict[str, asyncio.Event] = {}
+
+        # jobId → accumulated chunks for chunked uploads
+        self.input_chunks: dict[str, list[bytes]] = {}
     async def send_command(self, ws: ServerProtocol, msg_type: MsgType, data: dict):
         try:
             await ws.send(encode_command(msg_type, data))
@@ -72,10 +84,27 @@ class StemServer:
                         case MsgType.JOB_SUBMIT:
                             job_id = msg["jobId"]
                             priority = msg.get("priority", "normal")
+                            transfer_mode = "inputName" in msg and "inputPath" not in msg
+
+                            if transfer_mode:
+                                tmp = tempfile.mkdtemp(prefix="stemia_")
+                                input_path = os.path.join(tmp, msg["inputName"])
+                                output_dir = tmp
+                                self.input_ready[job_id] = asyncio.Event()
+                            else:
+                                tmp = None
+                                input_path = msg["inputPath"]
+                                output_dir = msg["outputDir"]
+
                             job = Job(
                                 job_id=job_id,
+                                track_id=msg["trackId"],
+                                input_path=input_path,
+                                output_dir=output_dir,
                                 ws=ws,
                                 priority=priority,
+                                transfer_mode=transfer_mode,
+                                temp_dir=tmp,
                             )
                             self.pending[job_id] = job
 
@@ -90,6 +119,9 @@ class StemServer:
 
                             if job := self.pending.get(job_id):
                                 job.cancelled = True
+                                if event := self.input_ready.get(job_id):
+                                    event.set()
+
                                 log.info("job %s marked cancelled", job_id)
 
                         case _:
@@ -101,6 +133,9 @@ class StemServer:
             for job in list(self.pending.values()):
                 if job.ws is ws:
                     job.cancelled = True
+                    if event := self.input_ready.get(job.job_id):
+                        event.set()
+
                     log.info("job %s cancelled: client disconnected", job.job_id)
 
             log.info("client disconnected: %s", ws.remote_address)
