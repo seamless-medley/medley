@@ -6,3 +6,4 @@ class Job:
     job_id: str
     ws: ServerProtocol = field(default=None, repr=False)
     priority: str = "normal"
+    cancelled: bool = False

@@ -86,7 +86,11 @@ class StemServer:
                             log.info("job %s accepted", job_id, priority, transfer_mode)
 
                         case MsgType.JOB_CANCEL:
-                            pass
+                            job_id = msg["jobId"]
+
+                            if job := self.pending.get(job_id):
+                                job.cancelled = True
+                                log.info("job %s marked cancelled", job_id)
 
                         case _:
                             log.warning("unknown command msg_type: 0x%02x", frame.msg_type)
@@ -94,4 +98,9 @@ class StemServer:
         except websockets.ConnectionClosed:
             pass
         finally:
+            for job in list(self.pending.values()):
+                if job.ws is ws:
+                    job.cancelled = True
+                    log.info("job %s cancelled: client disconnected", job.job_id)
+
             log.info("client disconnected: %s", ws.remote_address)
