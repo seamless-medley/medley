@@ -14,6 +14,7 @@ async def main():
 
     server = core.StemServer()
 
+    asyncio.create_task(core.stem_worker(server))
     async with websockets.serve(server.handle, host, port, max_size=None):
         log.info("running on %s:%d", host, port)
         return await asyncio.Future()
