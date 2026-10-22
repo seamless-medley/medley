@@ -33,3 +33,8 @@ def decode_frame(data: bytes) -> Frame:
     payload = data[offset:]
 
     return Frame(msg_type=msg_type, job_id=job_id, payload=payload)
+
+
+def decode_command(frame: Frame) -> dict[str, Any]:
+    """Decode payload of a command frame as JSON."""
+    return json.loads(frame.payload.decode())

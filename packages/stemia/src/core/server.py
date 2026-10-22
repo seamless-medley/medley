@@ -3,6 +3,7 @@ import logging
 import websockets
 from websockets.server import ServerProtocol
 
+from core.protocol import MsgType, FLAG_BLOB, FLAG_RESPONSE, decode_frame, decode_command
 log = logging.getLogger("stemia")
 
 
@@ -33,7 +34,21 @@ class StemServer:
 
                 # command frames
                 else:
-                    pass
+                    try:
+                        msg = decode_command(frame)
+                    except Exception as e:
+                        log.warning("invalid command payload: %s", e)
+                        continue
+
+                    match frame.msg_type:
+                        case MsgType.JOB_SUBMIT:
+                            pass
+
+                        case MsgType.JOB_CANCEL:
+                            pass
+
+                        case _:
+                            log.warning("unknown command msg_type: 0x%02x", frame.msg_type)
 
         except websockets.ConnectionClosed:
             pass
