@@ -27,7 +27,10 @@ class StemServer:
 
                 # file/blob frames
                 if frame.msg_type & FLAG_BLOB:
-                    pass
+                    match frame.msg_type:
+                        case _:
+                            log.warning("unknown file/blob msg_type: 0x%02x", frame.msg_type)
+
                 # command frames
                 else:
                     pass
