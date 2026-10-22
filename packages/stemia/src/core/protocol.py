@@ -1,12 +1,20 @@
+from dataclasses import dataclass
 from enum import IntEnum
 
 
 class MsgType(IntEnum):
-    pass
+    JOB_SUBMIT        = 0x00
+    JOB_CANCEL        = 0x01
 
 
 
-def decode_frame(data: bytes):
+@dataclass
+class Frame:
+    msg_type: MsgType
+    job_id: str       # can be empty
+    payload: bytes
+
+def decode_frame(data: bytes) -> Frame:
     if len(data) < 5:
         raise ValueError("frame too short")
 
