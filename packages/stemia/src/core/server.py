@@ -10,7 +10,13 @@ class StemServer:
     async def handle(self, ws: ServerProtocol):
         log.info("client connected: %s", ws.remote_address)
         try:
-            pass
+            async for raw in ws:
+                if not isinstance(raw, bytes):
+                    log.warning("unexpected text frame from client")
+                    continue
+
+                pass
+
         except websockets.ConnectionClosed:
             pass
         finally:
