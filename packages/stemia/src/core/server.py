@@ -16,6 +16,11 @@ class StemServer:
         except websockets.ConnectionClosed:
             pass
 
+
+    async def fetch_job(self) -> Job:
+        while True:
+            await asyncio.sleep(0.05)
+
     async def handle(self, ws: ServerProtocol):
         log.info("client connected: %s", ws.remote_address)
         try:
