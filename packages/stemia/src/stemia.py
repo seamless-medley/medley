@@ -12,8 +12,12 @@ async def main():
     host = os.environ.get("STEMIA_HOST", "0.0.0.0")
     port = int(os.environ.get("STEMIA_PORT", "3002"))
 
+    server = core.StemServer()
 
-    log.info("running on %s:%d", host, port)
+    async with websockets.serve(server.handle, host, port, max_size=None):
+        log.info("running on %s:%d", host, port)
+        return await asyncio.Future()
+
 
 if __name__ == "__main__":
     try:
