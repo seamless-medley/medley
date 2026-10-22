@@ -2,9 +2,12 @@
 
 import asyncio
 import logging
+import os
 
+import websockets
 from rich.logging import RichHandler
 
+import core
 
 logging.basicConfig(level=logging.INFO, handlers=[RichHandler(rich_tracebacks=True, show_path=False)])
 log = logging.getLogger("stemia")
