@@ -53,6 +53,7 @@ class StemServer:
                             job_id = msg["jobId"]
                             job = Job(
                                 job_id=job_id,
+                                ws=ws,
                             )
                             self.pending[job_id] = job
 
