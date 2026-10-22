@@ -121,3 +121,10 @@ async def stem_worker(server: StemServer):
 
             if job.ws:
                 await server.send_command(job.ws, MsgType.JOB_PROGRESS, {"jobId": job.job_id, "stage": "measuring"})
+
+        except Exception as e:
+            log.exception("job %s failed during separation", job.job_id)
+            if job.ws:
+                await server.send_command(job.ws, MsgType.JOB_ERROR, {"jobId": job.job_id, "trackId": job.track_id, "error": str(e)})
+            server.discard_job(job.job_id)
+            job.cleanup_temp()
