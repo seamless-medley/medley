@@ -7,7 +7,28 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "torch",
+    "torchaudio",
+    "demucs @ git+https://github.com/seamless-medley/demucs@fix/numpy-dep",
+    "numpy>=2.0",
+    "scipy",
+    "av",
     "websockets",
     "rich>=15.0.0",
 ]
+
+[tool.uv]
+package = false
+environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'win32'",
 ]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu126" }
+torchaudio = { index = "pytorch-cu126" }
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
