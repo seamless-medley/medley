@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import websockets
@@ -8,6 +9,11 @@ log = logging.getLogger("stemia")
 
 
 class StemServer:
+    def __init__(self):
+        # Separation queues (high drained first)
+        self.high_queue: asyncio.Queue[Job] = asyncio.Queue()
+        self.normal_queue: asyncio.Queue[Job] = asyncio.Queue()
+
         # jobId → Job for cancellation / binary frame routing
         self.pending: dict[str, Job] = {}
     async def send_command(self, ws: ServerProtocol, msg_type: MsgType, data: dict):
@@ -19,6 +25,14 @@ class StemServer:
 
     async def fetch_job(self) -> Job:
         while True:
+            try:
+                return self.high_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+            try:
+                return self.normal_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
             await asyncio.sleep(0.05)
 
     async def handle(self, ws: ServerProtocol):
@@ -56,15 +70,19 @@ class StemServer:
                     match frame.msg_type:
                         case MsgType.JOB_SUBMIT:
                             job_id = msg["jobId"]
+                            priority = msg.get("priority", "normal")
                             job = Job(
                                 job_id=job_id,
                                 ws=ws,
+                                priority=priority,
                             )
                             self.pending[job_id] = job
 
+                            await (self.high_queue if priority == "high" else self.normal_queue).put(job)
+
                             await self.send_command(ws, MsgType.JOB_ACCEPTED, {"jobId": job_id})
 
-                            log.info("job %s accepted", job_id)
+                            log.info("job %s accepted", job_id, priority, transfer_mode)
 
                         case MsgType.JOB_CANCEL:
                             pass
