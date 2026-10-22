@@ -5,6 +5,7 @@ import websockets
 from websockets.server import ServerProtocol
 
 from core.protocol import MsgType, FLAG_BLOB, FLAG_RESPONSE, decode_frame, decode_command
+from core.models import Job
 log = logging.getLogger("stemia")
 
 
