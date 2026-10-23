@@ -156,7 +156,7 @@ class StemServer:
 
                             await self.send_command(ws, MsgType.JOB_ACCEPTED, {"jobId": job_id})
 
-                            log.info("job %s accepted", job_id, priority, transfer_mode)
+                            log.info("job %s accepted (priority=%s, transfer_mode=%s)", job_id, priority, transfer_mode)
 
                         case MsgType.JOB_CANCEL:
                             job_id = msg["jobId"]
