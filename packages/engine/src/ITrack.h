@@ -1,10 +1,18 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <optional>
 
 using namespace juce;
 
 namespace medley {
+
+struct TrackVariation {
+    File file;
+    double offsetSeconds = 0.0;
+    float gainDb = 0.0f;
+};
+
 class ITrack : public ReferenceCountedObject {
 public:
     virtual File getFile() = 0;
@@ -14,6 +22,10 @@ public:
     virtual double getCueOutPosition() { return -1.0; }
 
     virtual bool getDisableNextTrackLeadIn() { return false; }
+
+    virtual std::optional<TrackVariation> getVariation(const juce::String& name) { return {}; }
+
+    virtual StringArray getVariationNames() { return {}; }
 
     using Ptr = ReferenceCountedObjectPtr<ITrack>;
 };
