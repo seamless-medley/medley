@@ -241,6 +241,13 @@ bool Deck::loadTrackInternal(const ITrack::Ptr track)
     this->track = track;
     _isTrackLoading = false;
 
+    // Apply varations
+    for (auto& name : track->getVariationNames()) {
+        if (auto v = track->getVariation(name)) {
+            addVariation(name, *v);
+        }
+    }
+
     listeners.call([this](Callback& cb) {
         this->trackPlay = TrackPlay(this->track, getDuration());
 
@@ -258,6 +265,15 @@ void Deck::unloadTrackInternal()
     started = false;
     stopped = true;
     fadingOut = false;
+
+    // Release variations
+    {
+        const ScopedLock sl(variationsLock);
+        for (auto& [n, var] : variations) {
+            var.release();
+        }
+        variations.clear();
+    }
 
     bool deckUnloaded = false;
     {
@@ -795,6 +811,19 @@ void Deck::prepareToPlay(int samplesPerBlockExpected, double newSampleRate)
         resamplerSource->setResamplingRatio(sourceSampleRate / sampleRate);
     }
 
+    {
+        const ScopedLock sl2(variationsLock);
+        for (auto& [n, variation] : variations) {
+            if (!variation.resampler) {
+                continue;
+            }
+
+            variation.resampler->setResamplingRatio(variation.sourceSampleRate / sampleRate);
+            variation.resampler->prepareToPlay(samplesPerBlockExpected, sampleRate);
+            variation.deckSampleRate = sampleRate;
+        }
+    }
+
     inputStreamEOF = false;
     isPrepared = true;
 }
@@ -803,8 +832,6 @@ void Deck::releaseResources()
 {
     releaseChainedResources();
 }
-
-
 
 void Deck::setSource(AudioFormatReaderSource* newSource)
 {
@@ -936,4 +963,44 @@ int Deck::PlayHead::useTimeSlice()
     return deck.hasStarted() ? 10 : 250;
 }
 
+bool Deck::addVariation(const juce::String& name, const TrackVariation& v)
+{
+    auto reader = formatMgr.createReaderFor(v.file);
+    if (!reader) {
+        logger->warn("addVariation: could not open " + v.file.getFullPathName());
+        return false;
+    }
+
+    Variation variation(reader, readAheadThread, v, sampleRate, blockSize, isPrepared);
+
+    {
+        const ScopedLock sl(variationsLock);
+
+        auto it = variations.find(name);
+        if (it != variations.end()) {
+            it->second.release();
+        }
+
+        variations.insert_or_assign(name, variation);
+    }
+
+    logger->debug("addVariation: loaded '" + name + "' offset=" + String(v.offsetSeconds) + "s gain=" + String(v.gainDb) + "dB");
+    return true;
+}
+
+void Deck::removeVariation(const juce::String& name)
+{
+    const ScopedLock sl(variationsLock);
+    auto it = variations.find(name);
+    if (it == variations.end()) return;
+
+    it->second.release();
+    variations.erase(it);
+}
+
+bool Deck::hasVariation(const juce::String& name) const
+{
+    const ScopedLock sl(variationsLock);
+    return variations.count(name) > 0;
+}
 }

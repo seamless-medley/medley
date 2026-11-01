@@ -78,6 +78,12 @@ public:
 
     ITrack::Ptr getTrack() const { return track; }
 
+    bool addVariation(const juce::String& name, const TrackVariation& v);
+
+    void removeVariation(const juce::String& name);
+
+    bool hasVariation(const juce::String& name) const;
+
     TrackPlay& getTrackPlay() { return trackPlay; }
 
     bool start();
@@ -266,6 +272,9 @@ private:
     bool inputStreamEOF = false;
 
     CriticalSection sourceLock;
+
+    std::map<juce::String, Variation> variations;
+    CriticalSection variationsLock;
     //
     ListenerList<Callback> listeners;
     //
