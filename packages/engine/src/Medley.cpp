@@ -193,6 +193,27 @@ float Medley::setKaraokeParams(DeFXKaraoke::Param param, float newValue)
     return mixer.processor.setKaraokeParams(param, newValue);
 }
 
+bool Medley::setCurrentVariation(const juce::String& name)
+{
+    mixer.currentVariation = name;
+    return true;
+}
+
+juce::String Medley::getCurrentVariation() const
+{
+    return mixer.currentVariation;
+}
+
+void Medley::setVariationMix(float wet)
+{
+    mixer.variationMix.store(jlimit(0.0f, 1.0f, wet));
+}
+
+float Medley::getVariationMix() const
+{
+    return mixer.variationMix.load();
+}
+
 double Medley::getDuration(int deckIndex) const
 {
     if (auto deck = getDeck(deckIndex)) {
@@ -958,6 +979,48 @@ void Medley::Mixer::getNextAudioBlock(const AudioSourceChannelInfo& info) {
     }
 
     if (prepared) {
+        // Variation blend — equal-power crossfade between primary (dry) and variation (wet)
+        const float wet = variationMix.load();
+
+        if (currentVariation.isNotEmpty()) {
+            const float theta = wet * MathConstants<float>::halfPi;
+            const float wetGain = std::sin(theta);
+            const float dryGain = std::cos(theta);
+
+            const int numSamples = info.numSamples;
+            const int numCh = info.buffer->getNumChannels();
+
+            variationBuffer.setSize(numCh, numSamples, false, false, true);
+            variationBuffer.clear();
+
+            bool blended = false;
+
+            for (int i = 0; i < Medley::numDecks; i++) {
+                auto* deck = medley.decks[i].get();
+
+                if (!deck->hasStarted()) {
+                    continue;
+                }
+
+                AudioBuffer<float> deckVariationBuffer(numCh, numSamples);
+
+                if (deck->readVariation(currentVariation, deckVariationBuffer, deck->getNextReadPosition() - numSamples, numSamples)) {
+                    for (int ch = 0; ch < numCh; ch++) {
+                        variationBuffer.addFrom(ch, 0, deckVariationBuffer, ch, 0, numSamples);
+                    }
+
+                    blended = true;
+                }
+            }
+
+            if (blended) {
+                for (int i = numCh; --i >= 0;) {
+                    info.buffer->applyGain(i, info.startSample, numSamples, dryGain);
+                    info.buffer->addFrom(i, info.startSample, variationBuffer, i, 0, numSamples, wetGain);
+                }
+            }
+        }
+
         // Main Volume
         {
             faderGain = fader.update(currentTime);
@@ -1015,6 +1078,7 @@ void Medley::Mixer::updateAudioConfig()
         sampleRate = (int)config.sampleRate;
 
         tapBuffer.setSize(numChannels, numSamples);
+        variationBuffer.setSize(numChannels, numSamples);
 
         ProcessSpec audioSpec{ config.sampleRate, (uint32)numSamples, (uint32)numChannels };
 

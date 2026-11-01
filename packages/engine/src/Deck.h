@@ -84,6 +84,8 @@ public:
 
     bool hasVariation(const juce::String& name) const;
 
+    bool readVariation(const juce::String& name, AudioBuffer<float>& outBuffer, int64 primaryPositionSamples, int numSamples);
+
     TrackPlay& getTrackPlay() { return trackPlay; }
 
     bool start();

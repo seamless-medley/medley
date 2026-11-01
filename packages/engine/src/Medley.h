@@ -191,6 +191,14 @@ public:
 
     float setKaraokeParams(DeFXKaraoke::Param param, float newValue) override;
 
+    bool setCurrentVariation(const juce::String& name);
+
+    juce::String getCurrentVariation() const;
+
+    void setVariationMix(float wet);
+
+    float getVariationMix() const;
+
 private:
     friend class Deck;
 
@@ -290,6 +298,10 @@ private:
         Fader fader;
 
         AudioBuffer<float> tapBuffer;
+        AudioBuffer<float> variationBuffer;
+
+        juce::String currentVariation;
+        std::atomic<float> variationMix{ 0.0f };
 
         PostProcessor processor;
     };

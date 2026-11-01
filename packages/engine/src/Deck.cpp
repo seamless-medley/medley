@@ -1003,4 +1003,47 @@ bool Deck::hasVariation(const juce::String& name) const
     const ScopedLock sl(variationsLock);
     return variations.count(name) > 0;
 }
+
+bool Deck::readVariation(const juce::String& name, AudioBuffer<float>& outBuffer, int64 primaryPositionSamples, int numSamples)
+{
+    const ScopedLock sl(variationsLock);
+
+    auto it = variations.find(name);
+    if (it == variations.end()) {
+        return false;
+    }
+
+    auto& var = it->second;
+    if (!var.buffer) {
+        return false;
+    }
+
+    // Convert primary position (deck sample rate) to source sample rate, then apply offset
+    const double ratio = var.sourceSampleRate / var.deckSampleRate;
+    auto pos = jmax((int64)0, (int64)(primaryPositionSamples * ratio) - var.offsetSamples);
+
+    // Variation exhausted — return false so mixer falls back to dry-only
+    if (pos >= var.reader->lengthInSamples) {
+        return false;
+    }
+
+    var.buffer->setNextReadPosition(pos);
+
+    // Flush resampler only on a seek (position jumped by more than one block)
+    if (var.lastPos >= 0 && std::abs(pos - var.lastPos) > numSamples * 2) {
+        var.resampler->flushBuffers();
+    }
+
+    var.lastPos = pos;
+
+    AudioSourceChannelInfo info(&outBuffer, 0, numSamples);
+    var.resampler->getNextAudioBlock(info);
+
+    if (var.gain != 1.0f) {
+        outBuffer.applyGain(var.gain);
+    }
+
+    return true;
+}
+
 }
