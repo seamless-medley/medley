@@ -134,6 +134,24 @@ public:
 private:
     friend class Medley;
 
+    class Variation {
+    public:
+        Variation(AudioFormatReader* reader, TimeSliceThread& readAheadThread, const TrackVariation& v, double deckSampleRate, int deckBlockSize, bool isPrepared);
+        void release();
+    private:
+        friend class Deck;
+
+        AudioFormatReader* reader = nullptr;
+        AudioFormatReaderSource* source = nullptr;
+        BufferingAudioSource* buffer = nullptr;
+        ResamplingAudioSource* resampler = nullptr;
+        double sourceSampleRate = 44100.0;
+        double deckSampleRate = 44100.0;
+        int64 offsetSamples = 0;
+        float gain = 1.0f;
+        int64 lastPos = -1;
+    };
+
     class Loader : public TimeSliceClient {
     public:
         Loader(Deck& deck) : deck(deck) {}

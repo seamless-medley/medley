@@ -19,6 +19,35 @@ namespace medley {
 
 using namespace medley::utils;
 
+Deck::Variation::Variation(AudioFormatReader* reader, TimeSliceThread& readAheadThread, const TrackVariation& v, double deckSampleRate, int deckBlockSize, bool isPrepared)
+    :
+    reader(reader),
+    source(new AudioFormatReaderSource(reader, false)),
+    buffer(new BufferingAudioSource(source, readAheadThread, false, (int)(reader->sampleRate * 4), 2)),
+    resampler(new ResamplingAudioSource(buffer, false, 2)),
+    sourceSampleRate(reader->sampleRate),
+    deckSampleRate(deckSampleRate),
+    offsetSamples((int64)(v.offsetSeconds * reader->sampleRate)),
+    gain(Decibels::decibelsToGain(v.gainDb))
+{
+    if (isPrepared) {
+        resampler->setResamplingRatio(reader->sampleRate / deckSampleRate);
+        resampler->prepareToPlay(deckBlockSize, deckSampleRate);
+    }
+}
+
+void Deck::Variation::release() {
+    delete resampler;
+    delete buffer;
+    delete source;
+    delete reader;
+
+    resampler = nullptr;
+    buffer = nullptr;
+    source = nullptr;
+    reader = nullptr;
+}
+
 Deck::Deck(uint8_t index, const String& name, ILoggerWriter* logWriter, AudioFormatManager& formatMgr, TimeSliceThread& loadingThread, TimeSliceThread& readAheadThread)
     :
     formatMgr(formatMgr),
