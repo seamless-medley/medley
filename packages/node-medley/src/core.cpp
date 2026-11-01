@@ -493,71 +493,84 @@ void Medley::setReplayGainBoost(const CallbackInfo& info, const Napi::Value& val
 Napi::Value Medley::getDeckMetadata(const CallbackInfo& info) {
     auto env = info.Env();
 
-    if (info.Length() < 1) {
-        RangeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+    medley::Deck* deck = nullptr;
+
+    if (info.Length() >= 1 && info[0].IsNumber()) {
+        auto index = info[0].ToNumber().Int32Value();
+
+        if (index < 0 || index >= engine->numDecks) {
+            RangeError::New(env, "Invalid deck " + std::to_string(index)).ThrowAsJavaScriptException();
+            return env.Undefined();
+        }
+
+        deck = engine->getDeck(index);
+    }
+
+    if (!deck) {
+        deck = engine->getMainDeck();
+    }
+
+    if (!deck) {
+        deck = engine->getDeck(0);
+    }
+
+    if (!deck) {
         return env.Undefined();
     }
 
-    auto arg1 = info[0];
-    if (!arg1.IsNumber()) {
-        RangeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
+    if (!deck->isTrackLoaded()) {
         return env.Undefined();
     }
 
-    auto index = arg1.ToNumber().Int32Value();
-    if (index < 0 || index >= engine->numDecks) {
-        RangeError::New(env, "Invalid deck " + std::to_string(index)).ThrowAsJavaScriptException();
-        return env.Undefined();
-    }
-
-    auto& deck = (index == 0) ? engine->getDeck1() : (index == 1 ? engine->getDeck2() : engine->getDeck3());
-
-    if (!deck.isTrackLoaded()) {
-        return env.Undefined();
-    }
-
-    auto metadata = deck.metadata();
+    auto metadata = deck->metadata();
     return createJSMetadata(env, metadata);
 }
 
 Napi::Value Medley::getDeckPositions(const CallbackInfo& info) {
     auto env = info.Env();
 
-    if (info.Length() < 1) {
-        RangeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+    medley::Deck* deck = nullptr;
+
+    if (info.Length() >= 1 && info[0].IsNumber()) {
+        auto index = info[0].ToNumber().Int32Value();
+
+        if (index < 0 || index >= engine->numDecks) {
+            RangeError::New(env, "Invalid deck " + std::to_string(index)).ThrowAsJavaScriptException();
+            return env.Undefined();
+        }
+
+        deck = engine->getDeck(index);
+    }
+
+    if (!deck) {
+        deck = engine->getMainDeck();
+    }
+
+    if (!deck) {
+        deck = engine->getDeck(0);
+    }
+
+    if (!deck) {
         return env.Undefined();
     }
 
-    auto arg1 = info[0];
-    if (!arg1.IsNumber()) {
-        RangeError::New(env, "Invalid parameter").ThrowAsJavaScriptException();
-        return env.Undefined();
-    }
+    auto nextDeck = engine->getNextDeck(deck);
 
-    auto index = arg1.ToNumber().Int32Value();
-    if (index < 0 || index >= engine->numDecks) {
-        RangeError::New(env, "Invalid deck " + std::to_string(index)).ThrowAsJavaScriptException();
-        return env.Undefined();
-    }
+    auto sr = deck->getSourceSampleRate();
+    auto first = deck->getFirstAudiblePosition();
+    auto last = deck->getEndPosition();
 
-    auto& deck = (index == 0) ? engine->getDeck1() : (index == 1 ? engine->getDeck2() : engine->getDeck3());
-    auto nextDeck = engine->getNextDeck(&deck);
-
-    auto sr = deck.getSourceSampleRate();
-    auto first = deck.getFirstAudiblePosition();
-    auto last = deck.getEndPosition();
-
-    auto leading = deck.getLeadingSamplePosition() / sr;
-    auto trailing = deck.getTrailingSamplePosition() / sr;
+    auto leading = deck->getLeadingSamplePosition() / sr;
+    auto trailing = deck->getTrailingSamplePosition() / sr;
 
     auto nextLeading = (float)((nextDeck != nullptr && nextDeck->isTrackLoaded() && !nextDeck->isMain()) ? nextDeck->getLeadingDuration() : 0);
-    auto cuePoint = deck.getTransitionCuePosition();
-    auto transitionStart = (float)deck.getTransitionStartPosition() - nextLeading;
-    auto transitionEnd = (float)deck.getTransitionEndPosition();
+    auto cuePoint = deck->getTransitionCuePosition();
+    auto transitionStart = (float)deck->getTransitionStartPosition() - nextLeading;
+    auto transitionEnd = (float)deck->getTransitionEndPosition();
 
     auto result = Object::New(env);
-    result.Set("current", deck.getPosition());
-    result.Set("duration", deck.getDuration());
+    result.Set("current", deck->getPosition());
+    result.Set("duration", deck->getDuration());
     result.Set("first", first);
     result.Set("last", last);
     result.Set("leading", leading);
