@@ -123,6 +123,16 @@ public:
 
     Napi::Value reqAudioSetFx(const CallbackInfo& info);
 
+    Napi::Value getCurrentVariation(const CallbackInfo& info);
+
+    void setCurrentVariation(const CallbackInfo& info, const Napi::Value& value);
+
+    Napi::Value getVariationMix(const CallbackInfo& info);
+
+    void setVariationMix(const CallbackInfo& info, const Napi::Value& value);
+
+    Napi::Value addTrackVariation(const CallbackInfo& info);
+
     static Napi::Value static_getMetadata(const Napi::CallbackInfo& info);
 
     static Napi::Value static_getAudioProperties(const Napi::CallbackInfo& info);

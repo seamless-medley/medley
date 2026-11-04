@@ -86,6 +86,9 @@ void Medley::Initialize(Object& exports) {
 
         InstanceMethod<&Medley::getFx>("getFx"),
         InstanceMethod<&Medley::setFx>("setFx"),
+        InstanceMethod<&Medley::addTrackVariation>("addTrackVariation"),
+        InstanceAccessor<&Medley::getCurrentVariation, &Medley::setCurrentVariation>("currentVariation"),
+        InstanceAccessor<&Medley::getVariationMix, &Medley::setVariationMix>("variationMix"),
         //
         InstanceAccessor<&Medley::level>("level"),
         InstanceAccessor<&Medley::reduction>("reduction"),
@@ -656,6 +659,87 @@ void Medley::setKaraokeParams(KaraokeParamController& ctrl, const Napi::Object& 
 
         ctrl.setKaraokeEnabled(enabled, dontTransit);
     }
+}
+
+Napi::Value Medley::getCurrentVariation(const CallbackInfo& info) {
+    auto s = engine->getCurrentVariation();
+    return s.isNotEmpty() ? Napi::String::New(info.Env(), s.toRawUTF8()) : info.Env().Undefined();
+}
+
+void Medley::setCurrentVariation(const CallbackInfo& info, const Napi::Value& value) {
+    juce::String name;
+    if (value.IsString()) {
+        name = juce::String(value.ToString().Utf8Value());
+    }
+    engine->setCurrentVariation(name);
+}
+
+Napi::Value Medley::getVariationMix(const CallbackInfo& info) {
+    return Napi::Number::New(info.Env(), engine->getVariationMix());
+}
+
+void Medley::setVariationMix(const CallbackInfo& info, const Napi::Value& value) {
+    engine->setVariationMix(value.ToNumber().FloatValue());
+}
+
+Napi::Value Medley::addTrackVariation(const CallbackInfo& info) {
+    auto env = info.Env();
+
+    if (info.Length() < 3) {
+        TypeError::New(env, "Insufficient parameter").ThrowAsJavaScriptException();
+        return Boolean::From(env, false);
+    }
+
+    auto filePath = juce::File(info[0].ToString().Utf8Value());
+    auto name = juce::String(info[1].ToString().Utf8Value());
+
+    if (!info[2].IsObject()) {
+        TypeError::New(env, "Invalid variation parameter").ThrowAsJavaScriptException();
+        return Boolean::From(env, false);
+    }
+
+    auto obj = info[2].ToObject();
+    medley::TrackVariation v;
+    v.file = juce::File(obj.Get("path").ToString().Utf8Value());
+
+    auto offset = obj.Get("offsetSeconds");
+    if (!offset.IsUndefined() && !offset.IsNull()) {
+        v.offsetSeconds = offset.ToNumber().DoubleValue();
+    }
+
+    auto gain = obj.Get("gainDb");
+    if (!gain.IsUndefined() && !gain.IsNull()) {
+        v.gainDb = gain.ToNumber().FloatValue();
+    }
+
+    bool found = false;
+
+    // Update any matching track in the queue (not yet loaded into a deck)
+    for (auto& trackPtr : *queue) {
+        if (trackPtr->getFile() == filePath) {
+            trackPtr->addVariation(name, v);
+            found = true;
+        }
+    }
+
+    // Also update any deck that already has this track loaded
+    for (int i = 0; i < Engine::numDecks; i++) {
+        auto* deck = engine->getDeck(i);
+        if (!deck || !deck->isTrackLoaded()) {
+            continue;
+        }
+
+        auto* trackPtr = static_cast<Track*>(deck->getTrack().get());
+        if (trackPtr->getFile() != filePath) {
+            continue;
+        }
+
+        trackPtr->addVariation(name, v);
+        deck->addVariation(name, v);
+        found = true;
+    }
+
+    return Boolean::From(env, found);
 }
 
 Napi::Value Medley::requestAudioStream(const CallbackInfo& info) {

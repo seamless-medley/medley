@@ -1,6 +1,7 @@
 #pragma once
 
 #include <napi.h>
+#include <map>
 #include "Medley.h"
 
 class Track : public medley::ITrack {
@@ -33,6 +34,21 @@ public:
 
     File getFile() override {
         return file;
+    }
+
+    std::optional<medley::TrackVariation> getVariation(const juce::String& name) override {
+        auto it = variations.find(name);
+        return it != variations.end() ? std::optional(it->second) : std::nullopt;
+    }
+
+    juce::StringArray getVariationNames() override {
+        juce::StringArray names;
+        for (auto& [k, _] : variations) names.add(k);
+        return names;
+    }
+
+    void addVariation(const juce::String& name, const medley::TrackVariation& v) {
+        variations[name] = v;
     }
 
     double getCueInPosition() override {
@@ -86,6 +102,37 @@ private:
         if (!disableNextLeadIn.IsUndefined() && !disableNextLeadIn.IsNull()) {
             this->disableNextLeadIn = disableNextLeadIn.ToBoolean().Value();
         }
+
+        auto variationsVal = ref.Get("variations");
+        if (variationsVal.IsObject()) {
+            auto variationsObj = variationsVal.ToObject();
+            auto names = variationsObj.GetPropertyNames();
+            for (uint32_t i = 0; i < names.Length(); i++) {
+                auto key = names.Get(i).ToString().Utf8Value();
+                auto entry = variationsObj.Get(key);
+
+                if (!entry.IsObject()) {
+                    continue;
+                }
+
+                auto entryObj = entry.ToObject();
+
+                medley::TrackVariation v;
+                v.file = juce::File(entryObj.Get("path").ToString().Utf8Value());
+
+                auto offset = entryObj.Get("offsetSeconds");
+                if (!offset.IsUndefined() && !offset.IsNull()) {
+                    v.offsetSeconds = offset.ToNumber().DoubleValue();
+                }
+
+                auto gain = entryObj.Get("gainDb");
+                if (!gain.IsUndefined() && !gain.IsNull()) {
+                    v.gainDb = gain.ToNumber().FloatValue();
+                }
+
+                variations[juce::String(key)] = v;
+            }
+        }
     }
 
     Napi::ObjectReference ref;
@@ -93,4 +140,5 @@ private:
     double cueIn = -1.0;
     double cueOut = -1.0;
     bool disableNextLeadIn = false;
+    std::map<juce::String, medley::TrackVariation> variations;
 };

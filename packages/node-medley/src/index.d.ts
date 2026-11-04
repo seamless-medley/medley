@@ -27,9 +27,17 @@ export interface TrackInfo {
    * usually presented in a track which has smooth beginning.
    */
   readonly disableNextLeadIn?: boolean;
+
+  readonly variations?: Record<string, TrackVariation>;
 }
 
 export type TrackDescriptor<T extends TrackInfo> = string | T;
+
+export type TrackVariation = {
+  path: string;
+  offsetSeconds?: number;
+  gainDb?: number;
+};
 
 export declare class Queue<T extends TrackInfo = TrackInfo> {
   constructor(tracks?: TrackDescriptor<T> | TrackDescriptor<T>[]);
@@ -192,6 +200,12 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
   get replayGainBoost(): number;
   set replayGainBoost(decibels: number);
 
+  get currentVariation(): string | undefined;
+  set currentVariation(variation: string | undefined);
+
+  get variationMix(): number;
+  set variationMix(wet: number);
+
   /**
    * Start the engine, also clear the `paused` state.
    */
@@ -248,6 +262,8 @@ export declare class Medley<T extends TrackInfo = TrackInfo> {
 
   setFx(type: 'karaoke', params: KaraokeUpdateParams): boolean;
   setFx(type: any, params: never): false;
+
+  addTrackVariation(originalPath: string, name: string, variation: TrackVariation): boolean;
 
   static getMetadata(path: string): Metadata | undefined;
 
